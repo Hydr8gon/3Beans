@@ -17,29 +17,27 @@
     along with 3Beans. If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <wx/wx.h>
-#include "../core.h"
+#pragma once
 
-class b3App: public wxApp
+#include <cstdint>
+class Core;
+
+class Memory
 {
+    public:
+        Memory(Core *core): core(core) {};
+        bool loadBootRoms();
+
+        template <typename T> T read(bool arm9, uint32_t address);
+        template <typename T> void write(bool arm9, uint32_t address, T value);
+
     private:
-        bool OnInit();
+        Core *core;
+
+        uint8_t fcram[0x8000000] = {}; // 128MB FCRAM
+        uint8_t vram[0x600000]   = {}; // 6MB VRAM
+        uint8_t dspWram[0x80000] = {}; // 512KB DSP code/data RAM
+        uint8_t axiWram[0x80000] = {}; // 512KB AXI WRAM
+        uint8_t boot11[0x10000]  = {}; // 64KB ARM11 boot ROM
+        uint8_t boot9[0x10000]   = {}; // 64KB ARM9 boot ROM
 };
-
-bool b3App::OnInit()
-{
-    // Print the first boot ROM opcodes to ensure memory works
-    Core *core = new Core();
-    uint32_t opcode11 = core->memory.read<uint32_t>(false, 0xFFFF0000);
-    uint32_t opcode9 = core->memory.read<uint32_t>(true, 0xFFFF0000);
-    printf("First opcodes: 0x%08X, 0x%08X\n", opcode11, opcode9);
-
-    // Make a useless window because there's nothing else to show :)
-    SetAppName("3Beans");
-    wxFrame *frame = new wxFrame(nullptr, wxID_ANY, "3Beans");
-    frame->Show(true);
-    return true;
-}
-
-// Let wxWidgets handle the main function
-wxIMPLEMENT_APP(b3App);

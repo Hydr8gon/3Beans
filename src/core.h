@@ -17,29 +17,14 @@
     along with 3Beans. If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <wx/wx.h>
-#include "../core.h"
+#pragma once
 
-class b3App: public wxApp
+#include "memory.h"
+
+class Core
 {
-    private:
-        bool OnInit();
+    public:
+        Core();
+
+        Memory memory;
 };
-
-bool b3App::OnInit()
-{
-    // Print the first boot ROM opcodes to ensure memory works
-    Core *core = new Core();
-    uint32_t opcode11 = core->memory.read<uint32_t>(false, 0xFFFF0000);
-    uint32_t opcode9 = core->memory.read<uint32_t>(true, 0xFFFF0000);
-    printf("First opcodes: 0x%08X, 0x%08X\n", opcode11, opcode9);
-
-    // Make a useless window because there's nothing else to show :)
-    SetAppName("3Beans");
-    wxFrame *frame = new wxFrame(nullptr, wxID_ANY, "3Beans");
-    frame->Show(true);
-    return true;
-}
-
-// Let wxWidgets handle the main function
-wxIMPLEMENT_APP(b3App);
