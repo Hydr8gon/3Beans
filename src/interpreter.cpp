@@ -20,7 +20,7 @@
 #include "interpreter.h"
 #include "core.h"
 
-Interpreter::Interpreter(Core *core, bool arm9): core(core), arm9(arm9)
+Interpreter::Interpreter(Core *core, CpuId id): core(core), id(id), cp15(core, id)
 {
     // Initialize the registers for user mode
     for (int i = 0; i < 32; i++)
@@ -31,7 +31,7 @@ void Interpreter::init()
 {
     // Prepare to execute the boot ROM
     setCpsr(0x000000D3); // Supervisor, interrupts off
-    registersUsr[15] = 0xFFFF0000;
+    registersUsr[15] = (id == ARM9) ? 0xFFFF0000 : 0x10000;
     flushPipeline();
 }
 
@@ -43,8 +43,9 @@ void Interpreter::resetCycles()
 
 void Interpreter::runFrame(Core *core)
 {
-    Interpreter &arm11 = core->cpus[0];
-    Interpreter &arm9 = core->cpus[1];
+    Interpreter &arm11a = core->cpus[ARM11A];
+    Interpreter &arm11b = core->cpus[ARM11B];
+    Interpreter &arm9 = core->cpus[ARM9];
 
     // Run a frame of CPU instructions and events
     while (core->running.exchange(true))
@@ -52,16 +53,21 @@ void Interpreter::runFrame(Core *core)
         // Run the CPUs until the next scheduled task
         while (core->events[0].cycles > core->globalCycles)
         {
-            // Run the ARM11
-            if (!arm11.halted && core->globalCycles >= arm11.cycles)
-                arm11.cycles = core->globalCycles + arm11.runOpcode();
+            // Run the first ARM11 core
+            if (!arm11a.halted && core->globalCycles >= arm11a.cycles)
+                arm11a.cycles = core->globalCycles + arm11a.runOpcode();
 
-            // Run the ARM7 at half the speed of the ARM9
+            // Run the second ARM11 core
+            if (!arm11b.halted && core->globalCycles >= arm11b.cycles)
+                arm11b.cycles = core->globalCycles + arm11b.runOpcode();
+
+            // Run the ARM9 at half the speed of the ARM11
             if (!arm9.halted && core->globalCycles >= arm9.cycles)
                 arm9.cycles = core->globalCycles + (arm9.runOpcode() << 1);
 
             // Count cycles up to the next soonest event
-            core->globalCycles = std::min<uint32_t>(arm11.halted ? -1 : arm11.cycles, arm9.halted ? -1 : arm9.cycles);
+            core->globalCycles = std::min<uint32_t>(arm9.halted ? -1 : arm9.cycles,
+                std::min<uint32_t>(arm11a.halted ? -1 : arm11a.cycles, arm11b.halted ? -1 : arm11b.cycles));
         }
 
         // Jump to the next scheduled event
@@ -86,7 +92,7 @@ FORCE_INLINE int Interpreter::runOpcode()
     if (cpsr & BIT(5)) // THUMB mode
     {
         // Fill the pipeline, incrementing the program counter
-        pipeline[1] = core->memory.read<uint16_t>(arm9, *registers[15] += 2);
+        pipeline[1] = core->memory.read<uint16_t>(id, *registers[15] += 2);
 
         // Execute a THUMB instruction
         return (this->*thumbInstrs[(opcode >> 6) & 0x3FF])(opcode);
@@ -94,7 +100,7 @@ FORCE_INLINE int Interpreter::runOpcode()
     else // ARM mode
     {
         // Fill the pipeline, incrementing the program counter
-        pipeline[1] = core->memory.read<uint32_t>(arm9, *registers[15] += 4);
+        pipeline[1] = core->memory.read<uint32_t>(id, *registers[15] += 4);
 
         // Execute an ARM instruction based on its condition
         switch (condition[((opcode >> 24) & 0xF0) | (cpsr >> 28)])
@@ -115,7 +121,7 @@ void Interpreter::sendInterrupt(int bit)
     if (ie & irf)
     {
         if (~cpsr & BIT(7))
-            core->schedule(Task(INTERRUPT_11 + arm9), arm9 + 1);
+            core->schedule(Task(INTERRUPT_11A + id), (id == ARM9) + 1);
         halted = false;
     }
 }
@@ -136,7 +142,7 @@ int Interpreter::exception(uint8_t vector)
     static const uint8_t modes[] = { 0x13, 0x1B, 0x13, 0x17, 0x17, 0x13, 0x12, 0x11 };
     setCpsr((cpsr & ~0x3F) | BIT(7) | modes[vector >> 2], true); // ARM, interrupts off, new mode
     *registers[14] = *registers[15] + ((*spsr & BIT(5)) >> 4);
-    *registers[15] = vector;
+    *registers[15] = cp15.exceptAddr + vector;
     flushPipeline();
     return 3;
 }
@@ -147,14 +153,14 @@ void Interpreter::flushPipeline()
     if (cpsr & BIT(5)) // THUMB mode
     {
         *registers[15] = (*registers[15] & ~0x1) + 2;
-        pipeline[0] = core->memory.read<uint16_t>(arm9, *registers[15] - 2);
-        pipeline[1] = core->memory.read<uint16_t>(arm9, *registers[15]);
+        pipeline[0] = core->memory.read<uint16_t>(id, *registers[15] - 2);
+        pipeline[1] = core->memory.read<uint16_t>(id, *registers[15]);
     }
     else // ARM mode
     {
         *registers[15] = (*registers[15] & ~0x3) + 4;
-        pipeline[0] = core->memory.read<uint32_t>(arm9, *registers[15] - 4);
-        pipeline[1] = core->memory.read<uint32_t>(arm9, *registers[15]);
+        pipeline[0] = core->memory.read<uint32_t>(id, *registers[15] - 4);
+        pipeline[1] = core->memory.read<uint32_t>(id, *registers[15]);
     }
 }
 
@@ -233,7 +239,7 @@ void Interpreter::setCpsr(uint32_t value, bool save)
                 break;
 
             default:
-                LOG_CRIT("Unknown ARM%d CPU mode: 0x%X\n", arm9 ? 9 : 11, value & 0x1F);
+                LOG_CRIT("Unknown ARM%d CPU mode: 0x%X\n", (id == ARM9) ? 9 : 11, value & 0x1F);
                 break;
         }
     }
@@ -244,7 +250,7 @@ void Interpreter::setCpsr(uint32_t value, bool save)
 
     // Trigger an interrupt if the conditions are met
     if ((ie & irf) && !(cpsr & BIT(7)))
-        core->schedule(Task(INTERRUPT_11 + arm9), arm9 + 1);
+        core->schedule(Task(INTERRUPT_11A + id), (id == ARM9) + 1);
 }
 
 int Interpreter::handleReserved(uint32_t opcode)
@@ -260,14 +266,14 @@ int Interpreter::handleReserved(uint32_t opcode)
 int Interpreter::unkArm(uint32_t opcode)
 {
     // Handle an unknown ARM opcode
-    LOG_CRIT("Unknown ARM%d ARM opcode: 0x%X\n", arm9 ? 9 : 11, opcode);
+    LOG_CRIT("Unknown ARM%d ARM opcode: 0x%X\n", (id == ARM9) ? 9 : 11, opcode);
     return 1;
 }
 
 int Interpreter::unkThumb(uint16_t opcode)
 {
     // Handle an unknown THUMB opcode
-    LOG_CRIT("Unknown ARM%d THUMB opcode: 0x%X\n", arm9 ? 9 : 11, opcode);
+    LOG_CRIT("Unknown ARM%d THUMB opcode: 0x%X\n", (id == ARM9) ? 9 : 11, opcode);
     return 1;
 }
 
@@ -279,7 +285,7 @@ void Interpreter::writeIe(uint32_t mask, uint32_t value)
 
     // Trigger an interrupt if the conditions are met
     if ((ie & irf) && !(cpsr & BIT(7)))
-        core->schedule(Task(INTERRUPT_11 + arm9), arm9 + 1);
+        core->schedule(Task(INTERRUPT_11A + id), (id == ARM9) + 1);
 }
 
 void Interpreter::writeIrf(uint32_t mask, uint32_t value)

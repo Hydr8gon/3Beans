@@ -20,18 +20,19 @@
 #include <algorithm>
 #include "core.h"
 
-Core::Core(): cpus { Interpreter(this, false), Interpreter(this, true) }, memory(this)
+Core::Core(): cpus { Interpreter(this, ARM11A), Interpreter(this, ARM11B), Interpreter(this, ARM9) }, memory(this)
 {
     // Load the boot ROMs and initialize CPUs
     memory.loadBootRoms();
-    cpus[0].init();
-    cpus[1].init();
+    for (int i = 0; i < MAX_CPUS; i++)
+        cpus[i].init();
 
     // Define the tasks that can be scheduled
-    tasks[RESET_CYCLES] = std::bind(&Core::resetCycles, this);
-    tasks[END_FRAME]    = std::bind(&Core::endFrame, this);
-    tasks[INTERRUPT_11] = std::bind(&Interpreter::interrupt, &cpus[0]);
-    tasks[INTERRUPT_9]  = std::bind(&Interpreter::interrupt, &cpus[1]);
+    tasks[RESET_CYCLES]  = std::bind(&Core::resetCycles, this);
+    tasks[END_FRAME]     = std::bind(&Core::endFrame, this);
+    tasks[INTERRUPT_11A] = std::bind(&Interpreter::interrupt, &cpus[ARM11A]);
+    tasks[INTERRUPT_11B] = std::bind(&Interpreter::interrupt, &cpus[ARM11B]);
+    tasks[INTERRUPT_9]   = std::bind(&Interpreter::interrupt, &cpus[ARM9]);
 
     // Schedule the initial tasks
     schedule(RESET_CYCLES, 0x7FFFFFFF);
@@ -43,8 +44,8 @@ void Core::resetCycles()
     // Reset the global cycle count periodically to prevent overflow
     for (size_t i = 0; i < events.size(); i++)
         events[i].cycles -= globalCycles;
-    cpus[0].resetCycles();
-    cpus[1].resetCycles();
+    for (int i = 0; i < MAX_CPUS; i++)
+        cpus[i].resetCycles();
     globalCycles -= globalCycles;
     schedule(RESET_CYCLES, 0x7FFFFFFF);
 }

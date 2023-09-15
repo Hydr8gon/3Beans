@@ -28,8 +28,8 @@ class Memory
         Memory(Core *core): core(core) {};
         bool loadBootRoms();
 
-        template <typename T> T read(bool arm9, uint32_t address);
-        template <typename T> void write(bool arm9, uint32_t address, T value);
+        template <typename T> T read(CpuId id, uint32_t address);
+        template <typename T> void write(CpuId id, uint32_t address, T value);
 
     private:
         Core *core;
@@ -40,4 +40,6 @@ class Memory
         uint8_t axiWram[0x80000] = {}; // 512KB AXI WRAM
         uint8_t boot11[0x10000]  = {}; // 64KB ARM11 boot ROM
         uint8_t boot9[0x10000]   = {}; // 64KB ARM9 boot ROM
+        uint8_t itcm[0x8000]     = {}; // 32KB ARM9 ITCM
+        uint8_t dtcm[0x4000]     = {}; // 16KB ARM9 DTCM
 };

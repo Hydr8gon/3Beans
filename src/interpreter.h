@@ -20,12 +20,16 @@
 #pragma once
 
 #include <cstdint>
+#include "cp15.h"
 class Core;
 
 class Interpreter
 {
     public:
-        Interpreter(Core *core, bool arm9);
+        Cp15 cp15;
+        bool halted = false;
+
+        Interpreter(Core *core, CpuId id);
         void init();
 
         void resetCycles();
@@ -42,7 +46,7 @@ class Interpreter
 
     private:
         Core *core;
-        bool arm9;
+        CpuId id;
 
         uint32_t *registers[32]   = {};
         uint32_t registersUsr[16] = {};
@@ -55,9 +59,7 @@ class Interpreter
         uint32_t cpsr = 0, *spsr = nullptr;
         uint32_t spsrFiq = 0, spsrSvc = 0, spsrAbt = 0, spsrIrq = 0, spsrUnd = 0;
         uint32_t pipeline[2] = {};
-
         uint32_t cycles = 0;
-        bool halted = false;
 
         uint32_t ie = 0;
         uint32_t irf = 0;

@@ -19,39 +19,28 @@
 
 #pragma once
 
-#include <cstdio>
+#include <cstdint>
+#include "defines.h"
+class Core;
 
-enum CpuId
+class Cp15
 {
-    ARM11A,
-    ARM11B,
-    ARM9,
-    MAX_CPUS
+    public:
+        uint32_t exceptAddr = 0;
+        bool dtcmRead = false, dtcmWrite = false;
+        bool itcmRead = false, itcmWrite = false;
+        uint32_t dtcmAddr = 0, dtcmSize = 0;
+        uint32_t itcmSize = 0;
+
+        Cp15(Core *core, CpuId id): core(core), id(id) {}
+        uint32_t read(uint8_t cn, uint8_t cm, uint8_t cp);
+        void write(uint8_t cn, uint8_t cm, uint8_t cp, uint32_t value);
+
+    private:
+        Core *core;
+        CpuId id;
+
+        uint32_t ctrlReg = 0x78;
+        uint32_t dtcmReg = 0;
+        uint32_t itcmReg = 0;
 };
-
-// Simple bit macro
-#define BIT(i) (1 << (i))
-
-// Macro to force inlining
-#define FORCE_INLINE inline __attribute__((always_inline))
-
-// If enabled, print critical logs in red
-#if LOG_LEVEL > 0
-#define LOG_CRIT(...) printf("\x1b[31m" __VA_ARGS__)
-#else
-#define LOG_CRIT(...) (0)
-#endif
-
-// If enabled, print warning logs in yellow
-#if LOG_LEVEL > 1
-#define LOG_WARN(...) printf("\x1b[33m" __VA_ARGS__)
-#else
-#define LOG_WARN(...) (0)
-#endif
-
-// If enabled, print info logs normally
-#if LOG_LEVEL > 2
-#define LOG_INFO(...) printf("\x1b[0m" __VA_ARGS__)
-#else
-#define LOG_INFO(...) (0)
-#endif

@@ -23,6 +23,7 @@
 #include <functional>
 #include <vector>
 
+#include "cp15.h"
 #include "defines.h"
 #include "interpreter.h"
 #include "memory.h"
@@ -31,7 +32,8 @@ enum Task
 {
     RESET_CYCLES,
     END_FRAME,
-    INTERRUPT_11,
+    INTERRUPT_11A,
+    INTERRUPT_11B,
     INTERRUPT_9,
     MAX_TASKS
 };
@@ -48,7 +50,7 @@ struct Event
 class Core
 {
     public:
-        Interpreter cpus[2];
+        Interpreter cpus[MAX_CPUS];
         Memory memory;
 
         std::atomic<bool> running;

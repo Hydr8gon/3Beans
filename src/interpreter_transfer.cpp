@@ -139,7 +139,7 @@ FORCE_INLINE int Interpreter::ldrsbOf(uint32_t opcode, uint32_t op2) // LDRSB Rd
     // Signed byte load, pre-adjust without writeback
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
-    *op0 = (int8_t)core->memory.read<uint8_t>(arm9, op1 + op2);
+    *op0 = (int8_t)core->memory.read<uint8_t>(id, op1 + op2);
 
     // Handle pipelining
     if (op0 != registers[15]) return 1;
@@ -152,7 +152,7 @@ FORCE_INLINE int Interpreter::ldrshOf(uint32_t opcode, uint32_t op2) // LDRSH Rd
     // Signed half-word load, pre-adjust without writeback
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
-    *op0 = (int16_t)core->memory.read<uint16_t>(arm9, op1 += op2);
+    *op0 = (int16_t)core->memory.read<uint16_t>(id, op1 += op2);
 
     // Handle pipelining
     if (op0 != registers[15]) return 1;
@@ -165,7 +165,7 @@ FORCE_INLINE int Interpreter::ldrbOf(uint32_t opcode, uint32_t op2) // LDRB Rd,[
     // Byte load, pre-adjust without writeback
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
-    *op0 = core->memory.read<uint8_t>(arm9, op1 + op2);
+    *op0 = core->memory.read<uint8_t>(id, op1 + op2);
 
     // Handle pipelining and THUMB switching
     if (op0 != registers[15]) return 1;
@@ -180,7 +180,7 @@ FORCE_INLINE int Interpreter::strbOf(uint32_t opcode, uint32_t op2) // STRB Rd,[
     // When used as Rd, the program counter is read with +4
     uint32_t op0 = *registers[(opcode >> 12) & 0xF] + (((opcode & 0xF000) == 0xF000) << 2);
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
-    core->memory.write<uint8_t>(arm9, op1 + op2, op0);
+    core->memory.write<uint8_t>(id, op1 + op2, op0);
     return 1;
 }
 
@@ -189,7 +189,7 @@ FORCE_INLINE int Interpreter::ldrhOf(uint32_t opcode, uint32_t op2) // LDRH Rd,[
     // Half-word load, pre-adjust without writeback
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
-    *op0 = core->memory.read<uint16_t>(arm9, op1 += op2);
+    *op0 = core->memory.read<uint16_t>(id, op1 += op2);
 
     // Handle pipelining
     if (op0 != registers[15]) return 1;
@@ -203,7 +203,7 @@ FORCE_INLINE int Interpreter::strhOf(uint32_t opcode, uint32_t op2) // STRH Rd,[
     // When used as Rd, the program counter is read with +4
     uint32_t op0 = *registers[(opcode >> 12) & 0xF] + (((opcode & 0xF000) == 0xF000) << 2);
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
-    core->memory.write<uint16_t>(arm9, op1 + op2, op0);
+    core->memory.write<uint16_t>(id, op1 + op2, op0);
     return 1;
 }
 
@@ -212,7 +212,7 @@ FORCE_INLINE int Interpreter::ldrOf(uint32_t opcode, uint32_t op2) // LDR Rd,[Rn
     // Word load, pre-adjust without writeback
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
-    *op0 = core->memory.read<uint32_t>(arm9, op1 += op2);
+    *op0 = core->memory.read<uint32_t>(id, op1 += op2);
 
     // Rotate misaligned reads
     if (op1 & 0x3)
@@ -234,7 +234,7 @@ FORCE_INLINE int Interpreter::strOf(uint32_t opcode, uint32_t op2) // STR Rd,[Rn
     // When used as Rd, the program counter is read with +4
     uint32_t op0 = *registers[(opcode >> 12) & 0xF] + (((opcode & 0xF000) == 0xF000) << 2);
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
-    core->memory.write<uint32_t>(arm9, op1 + op2, op0);
+    core->memory.write<uint32_t>(id, op1 + op2, op0);
     return 1;
 }
 
@@ -244,8 +244,8 @@ FORCE_INLINE int Interpreter::ldrdOf(uint32_t opcode, uint32_t op2) // LDRD Rd,[
     uint8_t op0 = (opcode >> 12) & 0xF;
     if (op0 == 15) return 1;
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
-    *registers[op0] = core->memory.read<uint32_t>(arm9, op1 += op2);
-    *registers[op0 + 1] = core->memory.read<uint32_t>(arm9, op1 + 4);
+    *registers[op0] = core->memory.read<uint32_t>(id, op1 += op2);
+    *registers[op0 + 1] = core->memory.read<uint32_t>(id, op1 + 4);
     return 2;
 }
 
@@ -255,8 +255,8 @@ FORCE_INLINE int Interpreter::strdOf(uint32_t opcode, uint32_t op2) // STRD Rd,[
     uint8_t op0 = (opcode >> 12) & 0xF;
     if (op0 == 15) return 1;
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
-    core->memory.write<uint32_t>(arm9, op1 += op2, *registers[op0]);
-    core->memory.write<uint32_t>(arm9, op1 + 4, *registers[op0 + 1]);
+    core->memory.write<uint32_t>(id, op1 += op2, *registers[op0]);
+    core->memory.write<uint32_t>(id, op1 + 4, *registers[op0 + 1]);
     return 2;
 }
 
@@ -265,7 +265,7 @@ FORCE_INLINE int Interpreter::ldrsbPr(uint32_t opcode, uint32_t op2) // LDRSB Rd
     // Signed byte load, pre-adjust with writeback
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
-    *op0 = (int8_t)core->memory.read<uint8_t>(arm9, *op1 += op2);
+    *op0 = (int8_t)core->memory.read<uint8_t>(id, *op1 += op2);
 
     // Handle pipelining
     if (op0 != registers[15]) return 1;
@@ -279,7 +279,7 @@ FORCE_INLINE int Interpreter::ldrshPr(uint32_t opcode, uint32_t op2) // LDRSH Rd
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
     uint32_t address = *op1 += op2;
-    *op0 = (int16_t)core->memory.read<uint16_t>(arm9, address);
+    *op0 = (int16_t)core->memory.read<uint16_t>(id, address);
 
     // Handle pipelining
     if (op0 != registers[15]) return 1;
@@ -292,7 +292,7 @@ FORCE_INLINE int Interpreter::ldrbPr(uint32_t opcode, uint32_t op2) // LDRB Rd,[
     // Byte load, pre-adjust with writeback
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
-    *op0 = core->memory.read<uint8_t>(arm9, *op1 += op2);
+    *op0 = core->memory.read<uint8_t>(id, *op1 += op2);
 
     // Handle pipelining and THUMB switching
     if (op0 != registers[15]) return 1;
@@ -307,7 +307,7 @@ FORCE_INLINE int Interpreter::strbPr(uint32_t opcode, uint32_t op2) // STRB Rd,[
     // When used as Rd, the program counter is read with +4
     uint32_t op0 = *registers[(opcode >> 12) & 0xF] + (((opcode & 0xF000) == 0xF000) << 2);
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
-    core->memory.write<uint8_t>(arm9, *op1 += op2, op0);
+    core->memory.write<uint8_t>(id, *op1 += op2, op0);
     return 1;
 }
 
@@ -317,7 +317,7 @@ FORCE_INLINE int Interpreter::ldrhPr(uint32_t opcode, uint32_t op2) // LDRH Rd,[
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
     uint32_t address = *op1 += op2;
-    *op0 = core->memory.read<uint16_t>(arm9, address);
+    *op0 = core->memory.read<uint16_t>(id, address);
 
     // Handle pipelining
     if (op0 != registers[15]) return 1;
@@ -331,7 +331,7 @@ FORCE_INLINE int Interpreter::strhPr(uint32_t opcode, uint32_t op2) // STRH Rd,[
     // When used as Rd, the program counter is read with +4
     uint32_t op0 = *registers[(opcode >> 12) & 0xF] + (((opcode & 0xF000) == 0xF000) << 2);
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
-    core->memory.write<uint16_t>(arm9, *op1 += op2, op0);
+    core->memory.write<uint16_t>(id, *op1 += op2, op0);
     return 1;
 }
 
@@ -341,7 +341,7 @@ FORCE_INLINE int Interpreter::ldrPr(uint32_t opcode, uint32_t op2) // LDR Rd,[Rn
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
     uint32_t address = *op1 += op2;
-    *op0 = core->memory.read<uint32_t>(arm9, address);
+    *op0 = core->memory.read<uint32_t>(id, address);
 
     // Rotate misaligned reads
     if (address & 0x3)
@@ -363,7 +363,7 @@ FORCE_INLINE int Interpreter::strPr(uint32_t opcode, uint32_t op2) // STR Rd,[Rn
     // When used as Rd, the program counter is read with +4
     uint32_t op0 = *registers[(opcode >> 12) & 0xF] + (((opcode & 0xF000) == 0xF000) << 2);
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
-    core->memory.write<uint32_t>(arm9, *op1 += op2, op0);
+    core->memory.write<uint32_t>(id, *op1 += op2, op0);
     return 1;
 }
 
@@ -373,8 +373,8 @@ FORCE_INLINE int Interpreter::ldrdPr(uint32_t opcode, uint32_t op2) // LDRD Rd,[
     uint8_t op0 = (opcode >> 12) & 0xF;
     if (op0 == 15) return 1;
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
-    *registers[op0] = core->memory.read<uint32_t>(arm9, *op1 += op2);
-    *registers[op0 + 1] = core->memory.read<uint32_t>(arm9, *op1 + 4);
+    *registers[op0] = core->memory.read<uint32_t>(id, *op1 += op2);
+    *registers[op0 + 1] = core->memory.read<uint32_t>(id, *op1 + 4);
     return 2;
 }
 
@@ -384,8 +384,8 @@ FORCE_INLINE int Interpreter::strdPr(uint32_t opcode, uint32_t op2) // STRD Rd,[
     uint8_t op0 = (opcode >> 12) & 0xF;
     if (op0 == 15) return 1;
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
-    core->memory.write<uint32_t>(arm9, *op1 += op2, *registers[op0]);
-    core->memory.write<uint32_t>(arm9, *op1 + 4, *registers[op0 + 1]);
+    core->memory.write<uint32_t>(id, *op1 += op2, *registers[op0]);
+    core->memory.write<uint32_t>(id, *op1 + 4, *registers[op0 + 1]);
     return 2;
 }
 
@@ -395,7 +395,7 @@ FORCE_INLINE int Interpreter::ldrsbPt(uint32_t opcode, uint32_t op2) // LDRSB Rd
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
     uint32_t address = (*op1 += op2) - op2;
-    *op0 = (int8_t)core->memory.read<uint8_t>(arm9, address);
+    *op0 = (int8_t)core->memory.read<uint8_t>(id, address);
 
     // Handle pipelining
     if (op0 != registers[15]) return 1;
@@ -409,7 +409,7 @@ FORCE_INLINE int Interpreter::ldrshPt(uint32_t opcode, uint32_t op2) // LDRSH Rd
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
     uint32_t address = (*op1 += op2) - op2;
-    *op0 = (int16_t)core->memory.read<uint16_t>(arm9, address);
+    *op0 = (int16_t)core->memory.read<uint16_t>(id, address);
 
     // Handle pipelining
     if (op0 != registers[15]) return 1;
@@ -423,7 +423,7 @@ FORCE_INLINE int Interpreter::ldrbPt(uint32_t opcode, uint32_t op2) // LDRB Rd,[
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
     uint32_t address = (*op1 += op2) - op2;
-    *op0 = core->memory.read<uint8_t>(arm9, address);
+    *op0 = core->memory.read<uint8_t>(id, address);
 
     // Handle pipelining and THUMB switching
     if (op0 != registers[15]) return 1;
@@ -438,7 +438,7 @@ FORCE_INLINE int Interpreter::strbPt(uint32_t opcode, uint32_t op2) // STRB Rd,[
     // When used as Rd, the program counter is read with +4
     uint32_t op0 = *registers[(opcode >> 12) & 0xF] + (((opcode & 0xF000) == 0xF000) << 2);
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
-    core->memory.write<uint8_t>(arm9, *op1, op0);
+    core->memory.write<uint8_t>(id, *op1, op0);
     *op1 += op2;
     return 1;
 }
@@ -449,7 +449,7 @@ FORCE_INLINE int Interpreter::ldrhPt(uint32_t opcode, uint32_t op2) // LDRH Rd,[
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
     uint32_t address = (*op1 += op2) - op2;
-    *op0 = core->memory.read<uint16_t>(arm9, address);
+    *op0 = core->memory.read<uint16_t>(id, address);
 
     // Handle pipelining
     if (op0 != registers[15]) return 1;
@@ -463,7 +463,7 @@ FORCE_INLINE int Interpreter::strhPt(uint32_t opcode, uint32_t op2) // STRH Rd,[
     // When used as Rd, the program counter is read with +4
     uint32_t op0 = *registers[(opcode >> 12) & 0xF] + (((opcode & 0xF000) == 0xF000) << 2);
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
-    core->memory.write<uint16_t>(arm9, *op1, op0);
+    core->memory.write<uint16_t>(id, *op1, op0);
     *op1 += op2;
     return 1;
 }
@@ -474,7 +474,7 @@ FORCE_INLINE int Interpreter::ldrPt(uint32_t opcode, uint32_t op2) // LDR Rd,[Rn
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
     uint32_t address = (*op1 += op2) - op2;
-    *op0 = core->memory.read<uint32_t>(arm9, address);
+    *op0 = core->memory.read<uint32_t>(id, address);
 
     // Rotate misaligned reads
     if (address & 0x3)
@@ -496,7 +496,7 @@ FORCE_INLINE int Interpreter::strPt(uint32_t opcode, uint32_t op2) // STR Rd,[Rn
     // When used as Rd, the program counter is read with +4
     uint32_t op0 = *registers[(opcode >> 12) & 0xF] + (((opcode & 0xF000) == 0xF000) << 2);
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
-    core->memory.write<uint32_t>(arm9, *op1, op0);
+    core->memory.write<uint32_t>(id, *op1, op0);
     *op1 += op2;
     return 1;
 }
@@ -508,8 +508,8 @@ FORCE_INLINE int Interpreter::ldrdPt(uint32_t opcode, uint32_t op2) // LDRD Rd,[
     if (op0 == 15) return 1;
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
     uint32_t address = (*op1 += op2) - op2;
-    *registers[op0] = core->memory.read<uint32_t>(arm9, address);
-    *registers[op0 + 1] = core->memory.read<uint32_t>(arm9, address + 4);
+    *registers[op0] = core->memory.read<uint32_t>(id, address);
+    *registers[op0 + 1] = core->memory.read<uint32_t>(id, address + 4);
     return 2;
 }
 
@@ -519,8 +519,8 @@ FORCE_INLINE int Interpreter::strdPt(uint32_t opcode, uint32_t op2) // STRD Rd,[
     uint8_t op0 = (opcode >> 12) & 0xF;
     if (op0 == 15) return 1;
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
-    core->memory.write<uint32_t>(arm9, *op1, *registers[op0]);
-    core->memory.write<uint32_t>(arm9, *op1 + 4, *registers[op0 + 1]);
+    core->memory.write<uint32_t>(id, *op1, *registers[op0]);
+    core->memory.write<uint32_t>(id, *op1 + 4, *registers[op0 + 1]);
     *op1 += op2;
     return 2;
 }
@@ -531,8 +531,8 @@ int Interpreter::swpb(uint32_t opcode) // SWPB Rd,Rm,[Rn]
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[opcode & 0xF];
     uint32_t op2 = *registers[(opcode >> 16) & 0xF];
-    *op0 = core->memory.read<uint8_t>(arm9, op2);
-    core->memory.write<uint8_t>(arm9, op2, op1);
+    *op0 = core->memory.read<uint8_t>(id, op2);
+    core->memory.write<uint8_t>(id, op2, op1);
     return 2;
 }
 
@@ -542,8 +542,8 @@ int Interpreter::swp(uint32_t opcode) // SWP Rd,Rm,[Rn]
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[opcode & 0xF];
     uint32_t op2 = *registers[(opcode >> 16) & 0xF];
-    *op0 = core->memory.read<uint32_t>(arm9, op2);
-    core->memory.write<uint32_t>(arm9, op2, op1);
+    *op0 = core->memory.read<uint32_t>(id, op2);
+    core->memory.write<uint32_t>(id, op2, op1);
 
     // Rotate misaligned reads
     if (op2 & 0x3)
@@ -562,7 +562,7 @@ int Interpreter::ldmda(uint32_t opcode) // LDMDA Rn, <Rlist>
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        *registers[i] = core->memory.read<uint32_t>(arm9, op0 += 4);
+        *registers[i] = core->memory.read<uint32_t>(id, op0 += 4);
     }
 
     // Handle pipelining and THUMB switching
@@ -580,7 +580,7 @@ int Interpreter::stmda(uint32_t opcode) // STMDA Rn, <Rlist>
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        core->memory.write<uint32_t>(arm9, op0 += 4, *registers[i]);
+        core->memory.write<uint32_t>(id, op0 += 4, *registers[i]);
     }
     return m + (m < 2);
 }
@@ -593,7 +593,7 @@ int Interpreter::ldmia(uint32_t opcode) // LDMIA Rn, <Rlist>
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        *registers[i] = core->memory.read<uint32_t>(arm9, op0);
+        *registers[i] = core->memory.read<uint32_t>(id, op0);
         op0 += 4;
     }
 
@@ -612,7 +612,7 @@ int Interpreter::stmia(uint32_t opcode) // STMIA Rn, <Rlist>
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        core->memory.write<uint32_t>(arm9, op0, *registers[i]);
+        core->memory.write<uint32_t>(id, op0, *registers[i]);
         op0 += 4;
     }
     return m + (m < 2);
@@ -626,7 +626,7 @@ int Interpreter::ldmdb(uint32_t opcode) // LDMDB Rn, <Rlist>
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        *registers[i] = core->memory.read<uint32_t>(arm9, op0);
+        *registers[i] = core->memory.read<uint32_t>(id, op0);
         op0 += 4;
     }
 
@@ -645,7 +645,7 @@ int Interpreter::stmdb(uint32_t opcode) // STMDB Rn, <Rlist>
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        core->memory.write<uint32_t>(arm9, op0, *registers[i]);
+        core->memory.write<uint32_t>(id, op0, *registers[i]);
         op0 += 4;
     }
     return m + (m < 2);
@@ -659,7 +659,7 @@ int Interpreter::ldmib(uint32_t opcode) // LDMIB Rn, <Rlist>
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        *registers[i] = core->memory.read<uint32_t>(arm9, op0 += 4);
+        *registers[i] = core->memory.read<uint32_t>(id, op0 += 4);
     }
 
     // Handle pipelining and THUMB switching
@@ -677,7 +677,7 @@ int Interpreter::stmib(uint32_t opcode) // STMIB Rn, <Rlist>
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        core->memory.write<uint32_t>(arm9, op0 += 4, *registers[i]);
+        core->memory.write<uint32_t>(id, op0 += 4, *registers[i]);
     }
     return m + (m < 2);
 }
@@ -691,7 +691,7 @@ int Interpreter::ldmdaW(uint32_t opcode) // LDMDA Rn!, <Rlist>
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        *registers[i] = core->memory.read<uint32_t>(arm9, address += 4);
+        *registers[i] = core->memory.read<uint32_t>(id, address += 4);
     }
 
     // Load the writeback value if it's not last or is the only listed register
@@ -714,7 +714,7 @@ int Interpreter::stmdaW(uint32_t opcode) // STMDA Rn!, <Rlist>
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        core->memory.write<uint32_t>(arm9, address += 4, *registers[i]);
+        core->memory.write<uint32_t>(id, address += 4, *registers[i]);
     }
     *registers[op0] = address - (m << 2);
     return m + (m < 2);
@@ -729,7 +729,7 @@ int Interpreter::ldmiaW(uint32_t opcode) // LDMIA Rn!, <Rlist>
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        *registers[i] = core->memory.read<uint32_t>(arm9, address);
+        *registers[i] = core->memory.read<uint32_t>(id, address);
         address += 4;
     }
 
@@ -753,7 +753,7 @@ int Interpreter::stmiaW(uint32_t opcode) // STMIA Rn!, <Rlist>
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        core->memory.write<uint32_t>(arm9, address, *registers[i]);
+        core->memory.write<uint32_t>(id, address, *registers[i]);
         address += 4;
     }
     *registers[op0] = address;
@@ -769,7 +769,7 @@ int Interpreter::ldmdbW(uint32_t opcode) // LDMDB Rn!, <Rlist>
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        *registers[i] = core->memory.read<uint32_t>(arm9, address);
+        *registers[i] = core->memory.read<uint32_t>(id, address);
         address += 4;
     }
 
@@ -793,7 +793,7 @@ int Interpreter::stmdbW(uint32_t opcode) // STMDB Rn!, <Rlist>
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        core->memory.write<uint32_t>(arm9, address, *registers[i]);
+        core->memory.write<uint32_t>(id, address, *registers[i]);
         address += 4;
     }
     *registers[op0] = address - (m << 2);
@@ -809,7 +809,7 @@ int Interpreter::ldmibW(uint32_t opcode) // LDMIB Rn!, <Rlist>
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        *registers[i] = core->memory.read<uint32_t>(arm9, address += 4);
+        *registers[i] = core->memory.read<uint32_t>(id, address += 4);
     }
 
     // Load the writeback value if it's not last or is the only listed register
@@ -832,7 +832,7 @@ int Interpreter::stmibW(uint32_t opcode) // STMIB Rn!, <Rlist>
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        core->memory.write<uint32_t>(arm9, address += 4, *registers[i]);
+        core->memory.write<uint32_t>(id, address += 4, *registers[i]);
     }
     *registers[op0] = address;
     return m + (m < 2);
@@ -847,7 +847,7 @@ int Interpreter::ldmdaU(uint32_t opcode) // LDMDA Rn, <Rlist>^
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        *regs[i] = core->memory.read<uint32_t>(arm9, op0 += 4);
+        *regs[i] = core->memory.read<uint32_t>(id, op0 += 4);
     }
 
     // Handle pipelining and mode/THUMB switching
@@ -866,7 +866,7 @@ int Interpreter::stmdaU(uint32_t opcode) // STMDA Rn, <Rlist>^
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        core->memory.write<uint32_t>(arm9, op0 += 4, registersUsr[i]);
+        core->memory.write<uint32_t>(id, op0 += 4, registersUsr[i]);
     }
     return m + (m < 2);
 }
@@ -880,7 +880,7 @@ int Interpreter::ldmiaU(uint32_t opcode) // LDMIA Rn, <Rlist>^
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        *regs[i] = core->memory.read<uint32_t>(arm9, op0);
+        *regs[i] = core->memory.read<uint32_t>(id, op0);
         op0 += 4;
     }
 
@@ -900,7 +900,7 @@ int Interpreter::stmiaU(uint32_t opcode) // STMIA Rn, <Rlist>^
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        core->memory.write<uint32_t>(arm9, op0, registersUsr[i]);
+        core->memory.write<uint32_t>(id, op0, registersUsr[i]);
         op0 += 4;
     }
     return m + (m < 2);
@@ -915,7 +915,7 @@ int Interpreter::ldmdbU(uint32_t opcode) // LDMDB Rn, <Rlist>^
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        *regs[i] = core->memory.read<uint32_t>(arm9, op0);
+        *regs[i] = core->memory.read<uint32_t>(id, op0);
         op0 += 4;
     }
 
@@ -935,7 +935,7 @@ int Interpreter::stmdbU(uint32_t opcode) // STMDB Rn, <Rlist>^
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        core->memory.write<uint32_t>(arm9, op0, registersUsr[i]);
+        core->memory.write<uint32_t>(id, op0, registersUsr[i]);
         op0 += 4;
     }
     return m + (m < 2);
@@ -950,7 +950,7 @@ int Interpreter::ldmibU(uint32_t opcode) // LDMIB Rn, <Rlist>^
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        *regs[i] = core->memory.read<uint32_t>(arm9, op0 += 4);
+        *regs[i] = core->memory.read<uint32_t>(id, op0 += 4);
     }
 
     // Handle pipelining and mode/THUMB switching
@@ -969,7 +969,7 @@ int Interpreter::stmibU(uint32_t opcode) // STMIB Rn, <Rlist>^
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        core->memory.write<uint32_t>(arm9, op0 += 4, registersUsr[i]);
+        core->memory.write<uint32_t>(id, op0 += 4, registersUsr[i]);
     }
     return m + (m < 2);
 }
@@ -984,7 +984,7 @@ int Interpreter::ldmdaUW(uint32_t opcode) // LDMDA Rn!, <Rlist>^
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        *regs[i] = core->memory.read<uint32_t>(arm9, address += 4);
+        *regs[i] = core->memory.read<uint32_t>(id, address += 4);
     }
 
     // Load the writeback value if it's not last or is the only listed register
@@ -1008,7 +1008,7 @@ int Interpreter::stmdaUW(uint32_t opcode) // STMDA Rn!, <Rlist>^
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        core->memory.write<uint32_t>(arm9, address += 4, registersUsr[i]);
+        core->memory.write<uint32_t>(id, address += 4, registersUsr[i]);
     }
     *registers[op0] = address - (m << 2);
     return m + (m < 2);
@@ -1024,7 +1024,7 @@ int Interpreter::ldmiaUW(uint32_t opcode) // LDMIA Rn!, <Rlist>^
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        *regs[i] = core->memory.read<uint32_t>(arm9, address);
+        *regs[i] = core->memory.read<uint32_t>(id, address);
         address += 4;
     }
 
@@ -1049,7 +1049,7 @@ int Interpreter::stmiaUW(uint32_t opcode) // STMIA Rn!, <Rlist>^
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        core->memory.write<uint32_t>(arm9, address, registersUsr[i]);
+        core->memory.write<uint32_t>(id, address, registersUsr[i]);
         address += 4;
     }
     *registers[op0] = address;
@@ -1066,7 +1066,7 @@ int Interpreter::ldmdbUW(uint32_t opcode) // LDMDB Rn!, <Rlist>^
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        *regs[i] = core->memory.read<uint32_t>(arm9, address);
+        *regs[i] = core->memory.read<uint32_t>(id, address);
         address += 4;
     }
 
@@ -1091,7 +1091,7 @@ int Interpreter::stmdbUW(uint32_t opcode) // STMDB Rn!, <Rlist>^
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        core->memory.write<uint32_t>(arm9, address, registersUsr[i]);
+        core->memory.write<uint32_t>(id, address, registersUsr[i]);
         address += 4;
     }
     *registers[op0] = address - (m << 2);
@@ -1108,7 +1108,7 @@ int Interpreter::ldmibUW(uint32_t opcode) // LDMIB Rn!, <Rlist>^
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        *regs[i] = core->memory.read<uint32_t>(arm9, address += 4);
+        *regs[i] = core->memory.read<uint32_t>(id, address += 4);
     }
 
     // Load the writeback value if it's not last or is the only listed register
@@ -1132,7 +1132,7 @@ int Interpreter::stmibUW(uint32_t opcode) // STMIB Rn!, <Rlist>^
     for (int i = 0; i < 16; i++)
     {
         if (~opcode & BIT(i)) continue;
-        core->memory.write<uint32_t>(arm9, address += 4, registersUsr[i]);
+        core->memory.write<uint32_t>(id, address += 4, registersUsr[i]);
     }
     *registers[op0] = address;
     return m + (m < 2);
@@ -1233,7 +1233,7 @@ int Interpreter::mrc(uint32_t opcode) // MRC Pn,<cpopc>,Rd,Cn,Cm,<cp>
     uint8_t op3 = (opcode >> 16) & 0xF;
     uint8_t op4 = opcode & 0xF;
     uint8_t op5 = (opcode >> 5) & 0x7;
-    LOG_WARN("Unknown CP15 register read: C%d,C%d,%d\n", op3, op4, op5);
+    *op2 = cp15.read(op3, op4, op5);
     return 1;
 }
 
@@ -1244,7 +1244,7 @@ int Interpreter::mcr(uint32_t opcode) // MCR Pn,<cpopc>,Rd,Cn,Cm,<cp>
     uint8_t op3 = (opcode >> 16) & 0xF;
     uint8_t op4 = opcode & 0xF;
     uint8_t op5 = (opcode >> 5) & 0x7;
-    LOG_WARN("Unknown CP15 register write: C%d,C%d,%d\n", op3, op4, op5);
+    cp15.write(op3, op4, op5, op2);
     return 1;
 }
 
@@ -1254,7 +1254,7 @@ int Interpreter::ldrsbRegT(uint16_t opcode) // LDRSB Rd,[Rb,Ro]
     uint32_t *op0 = registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
     uint32_t op2 = *registers[(opcode >> 6) & 0x7];
-    *op0 = (int8_t)core->memory.read<uint8_t>(arm9, op1 + op2);
+    *op0 = (int8_t)core->memory.read<uint8_t>(id, op1 + op2);
     return 1;
 }
 
@@ -1264,7 +1264,7 @@ int Interpreter::ldrshRegT(uint16_t opcode) // LDRSH Rd,[Rb,Ro]
     uint32_t *op0 = registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
     uint32_t op2 = *registers[(opcode >> 6) & 0x7];
-    *op0 = (int16_t)core->memory.read<uint16_t>(arm9, op1 += op2);
+    *op0 = (int16_t)core->memory.read<uint16_t>(id, op1 += op2);
     return 1;
 }
 
@@ -1274,7 +1274,7 @@ int Interpreter::ldrbRegT(uint16_t opcode) // LDRB Rd,[Rb,Ro]
     uint32_t *op0 = registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
     uint32_t op2 = *registers[(opcode >> 6) & 0x7];
-    *op0 = core->memory.read<uint8_t>(arm9, op1 + op2);
+    *op0 = core->memory.read<uint8_t>(id, op1 + op2);
     return 1;
 }
 
@@ -1284,7 +1284,7 @@ int Interpreter::strbRegT(uint16_t opcode) // STRB Rd,[Rb,Ro]
     uint32_t op0 = *registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
     uint32_t op2 = *registers[(opcode >> 6) & 0x7];
-    core->memory.write<uint8_t>(arm9, op1 + op2, op0);
+    core->memory.write<uint8_t>(id, op1 + op2, op0);
     return 1;
 }
 
@@ -1294,7 +1294,7 @@ int Interpreter::ldrhRegT(uint16_t opcode) // LDRH Rd,[Rb,Ro]
     uint32_t *op0 = registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
     uint32_t op2 = *registers[(opcode >> 6) & 0x7];
-    *op0 = core->memory.read<uint16_t>(arm9, op1 += op2);
+    *op0 = core->memory.read<uint16_t>(id, op1 += op2);
     return 1;
 }
 
@@ -1304,7 +1304,7 @@ int Interpreter::strhRegT(uint16_t opcode) // STRH Rd,[Rb,Ro]
     uint32_t op0 = *registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
     uint32_t op2 = *registers[(opcode >> 6) & 0x7];
-    core->memory.write<uint16_t>(arm9, op1 + op2, op0);
+    core->memory.write<uint16_t>(id, op1 + op2, op0);
     return 1;
 }
 
@@ -1314,7 +1314,7 @@ int Interpreter::ldrRegT(uint16_t opcode) // LDR Rd,[Rb,Ro]
     uint32_t *op0 = registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
     uint32_t op2 = *registers[(opcode >> 6) & 0x7];
-    *op0 = core->memory.read<uint32_t>(arm9, op1 += op2);
+    *op0 = core->memory.read<uint32_t>(id, op1 += op2);
 
     // Rotate misaligned reads
     if (op1 & 0x3)
@@ -1331,7 +1331,7 @@ int Interpreter::strRegT(uint16_t opcode) // STR Rd,[Rb,Ro]
     uint32_t op0 = *registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
     uint32_t op2 = *registers[(opcode >> 6) & 0x7];
-    core->memory.write<uint32_t>(arm9, op1 + op2, op0);
+    core->memory.write<uint32_t>(id, op1 + op2, op0);
     return 1;
 }
 
@@ -1341,7 +1341,7 @@ int Interpreter::ldrbImm5T(uint16_t opcode) // LDRB Rd,[Rb,#i]
     uint32_t *op0 = registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
     uint32_t op2 = (opcode & 0x07C0) >> 6;
-    *op0 = core->memory.read<uint8_t>(arm9, op1 + op2);
+    *op0 = core->memory.read<uint8_t>(id, op1 + op2);
     return 1;
 }
 
@@ -1351,7 +1351,7 @@ int Interpreter::strbImm5T(uint16_t opcode) // STRB Rd,[Rb,#i]
     uint32_t op0 = *registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
     uint32_t op2 = (opcode & 0x07C0) >> 6;
-    core->memory.write<uint8_t>(arm9, op1 + op2, op0);
+    core->memory.write<uint8_t>(id, op1 + op2, op0);
     return 1;
 }
 
@@ -1361,7 +1361,7 @@ int Interpreter::ldrhImm5T(uint16_t opcode) // LDRH Rd,[Rb,#i]
     uint32_t *op0 = registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
     uint32_t op2 = (opcode >> 5) & 0x3E;
-    *op0 = core->memory.read<uint16_t>(arm9, op1 += op2);
+    *op0 = core->memory.read<uint16_t>(id, op1 += op2);
     return 1;
 }
 
@@ -1371,7 +1371,7 @@ int Interpreter::strhImm5T(uint16_t opcode) // STRH Rd,[Rb,#i]
     uint32_t op0 = *registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
     uint32_t op2 = (opcode >> 5) & 0x3E;
-    core->memory.write<uint16_t>(arm9, op1 + op2, op0);
+    core->memory.write<uint16_t>(id, op1 + op2, op0);
     return 1;
 }
 
@@ -1381,7 +1381,7 @@ int Interpreter::ldrImm5T(uint16_t opcode) // LDR Rd,[Rb,#i]
     uint32_t *op0 = registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
     uint32_t op2 = (opcode >> 4) & 0x7C;
-    *op0 = core->memory.read<uint32_t>(arm9, op1 += op2);
+    *op0 = core->memory.read<uint32_t>(id, op1 += op2);
 
     // Rotate misaligned reads
     if (op1 & 0x3)
@@ -1398,7 +1398,7 @@ int Interpreter::strImm5T(uint16_t opcode) // STR Rd,[Rb,#i]
     uint32_t op0 = *registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
     uint32_t op2 = (opcode >> 4) & 0x7C;
-    core->memory.write<uint32_t>(arm9, op1 + op2, op0);
+    core->memory.write<uint32_t>(id, op1 + op2, op0);
     return 1;
 }
 
@@ -1408,7 +1408,7 @@ int Interpreter::ldrPcT(uint16_t opcode) // LDR Rd,[PC,#i]
     uint32_t *op0 = registers[(opcode >> 8) & 0x7];
     uint32_t op1 = *registers[15] & ~0x3;
     uint32_t op2 = (opcode & 0xFF) << 2;
-    *op0 = core->memory.read<uint32_t>(arm9, op1 += op2);
+    *op0 = core->memory.read<uint32_t>(id, op1 += op2);
 
     // Rotate misaligned reads
     if (op1 & 0x3)
@@ -1425,7 +1425,7 @@ int Interpreter::ldrSpT(uint16_t opcode) // LDR Rd,[SP,#i]
     uint32_t *op0 = registers[(opcode >> 8) & 0x7];
     uint32_t op1 = *registers[13];
     uint32_t op2 = (opcode & 0xFF) << 2;
-    *op0 = core->memory.read<uint32_t>(arm9, op1 += op2);
+    *op0 = core->memory.read<uint32_t>(id, op1 += op2);
 
     // Rotate misaligned reads
     if (op1 & 0x3)
@@ -1442,7 +1442,7 @@ int Interpreter::strSpT(uint16_t opcode) // STR Rd,[SP,#i]
     uint32_t op0 = *registers[(opcode >> 8) & 0x7];
     uint32_t op1 = *registers[13];
     uint32_t op2 = (opcode & 0xFF) << 2;
-    core->memory.write<uint32_t>(arm9, op1 + op2, op0);
+    core->memory.write<uint32_t>(id, op1 + op2, op0);
     return 1;
 }
 
@@ -1455,7 +1455,7 @@ int Interpreter::ldmiaT(uint16_t opcode) // LDMIA Rb!,<Rlist>
     for (int i = 0; i < 8; i++)
     {
         if (~opcode & BIT(i)) continue;
-        *registers[i] = core->memory.read<uint32_t>(arm9, address);
+        *registers[i] = core->memory.read<uint32_t>(id, address);
         address += 4;
     }
     return m + (m < 2);
@@ -1470,7 +1470,7 @@ int Interpreter::stmiaT(uint16_t opcode) // STMIA Rb!,<Rlist>
     for (int i = 0; i < 8; i++)
     {
         if (~opcode & BIT(i)) continue;
-        core->memory.write<uint32_t>(arm9, address, *registers[i]);
+        core->memory.write<uint32_t>(id, address, *registers[i]);
         address += 4;
     }
     *registers[op0] = address;
@@ -1484,7 +1484,7 @@ int Interpreter::popT(uint16_t opcode) // POP <Rlist>
     for (int i = 0; i < 8; i++)
     {
         if (~opcode & BIT(i)) continue;
-        *registers[i] = core->memory.read<uint32_t>(arm9, *registers[13]);
+        *registers[i] = core->memory.read<uint32_t>(id, *registers[13]);
         *registers[13] += 4;
     }
     return m + (m < 2);
@@ -1498,7 +1498,7 @@ int Interpreter::pushT(uint16_t opcode) // PUSH <Rlist>
     for (int i = 0; i < 8; i++)
     {
         if (~opcode & BIT(i)) continue;
-        core->memory.write<uint32_t>(arm9, address, *registers[i]);
+        core->memory.write<uint32_t>(id, address, *registers[i]);
         address += 4;
     }
     return m + (m < 2);
@@ -1511,12 +1511,12 @@ int Interpreter::popPcT(uint16_t opcode) // POP <Rlist>,PC
     for (int i = 0; i < 8; i++)
     {
         if (~opcode & BIT(i)) continue;
-        *registers[i] = core->memory.read<uint32_t>(arm9, *registers[13]);
+        *registers[i] = core->memory.read<uint32_t>(id, *registers[13]);
         *registers[13] += 4;
     }
 
     // Load the program counter and handle pipelining
-    *registers[15] = core->memory.read<uint32_t>(arm9, *registers[13]);
+    *registers[15] = core->memory.read<uint32_t>(id, *registers[13]);
     *registers[13] += 4;
     cpsr &= ~((~(*registers[15]) & 0x1) << 5);
     flushPipeline();
@@ -1531,11 +1531,11 @@ int Interpreter::pushLrT(uint16_t opcode) // PUSH <Rlist>,LR
     for (int i = 0; i < 8; i++)
     {
         if (~opcode & BIT(i)) continue;
-        core->memory.write<uint32_t>(arm9, address, *registers[i]);
+        core->memory.write<uint32_t>(id, address, *registers[i]);
         address += 4;
     }
 
     // Store the link register
-    core->memory.write<uint32_t>(arm9, address, *registers[14]);
+    core->memory.write<uint32_t>(id, address, *registers[14]);
     return m + (m < 2);
 }
