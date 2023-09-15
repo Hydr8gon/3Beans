@@ -1,7 +1,7 @@
 NAME     := 3beans
 BUILD    := build
 SOURCES  := src src/desktop
-ARGS     := -O3 -flto -std=c++11
+ARGS     := -O3 -flto -std=c++11 -DLOG_LEVEL=3
 LIBS     := $(shell wx-config --libs std,gl) -lGL
 INCLUDES := $(shell wx-config --cxxflags std,gl)
 

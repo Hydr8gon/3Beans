@@ -17,10 +17,49 @@
     along with 3Beans. If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <algorithm>
 #include "core.h"
 
-Core::Core(): memory(this)
+Core::Core(): cpus { Interpreter(this, false), Interpreter(this, true) }, memory(this)
 {
-    // Try to load the boot ROMs
+    // Load the boot ROMs and initialize CPUs
     memory.loadBootRoms();
+    cpus[0].init();
+    cpus[1].init();
+
+    // Define the tasks that can be scheduled
+    tasks[RESET_CYCLES] = std::bind(&Core::resetCycles, this);
+    tasks[END_FRAME]    = std::bind(&Core::endFrame, this);
+    tasks[INTERRUPT_11] = std::bind(&Interpreter::interrupt, &cpus[0]);
+    tasks[INTERRUPT_9]  = std::bind(&Interpreter::interrupt, &cpus[1]);
+
+    // Schedule the initial tasks
+    schedule(RESET_CYCLES, 0x7FFFFFFF);
+    schedule(END_FRAME, 268111856 / 60);
+}
+
+void Core::resetCycles()
+{
+    // Reset the global cycle count periodically to prevent overflow
+    for (size_t i = 0; i < events.size(); i++)
+        events[i].cycles -= globalCycles;
+    cpus[0].resetCycles();
+    cpus[1].resetCycles();
+    globalCycles -= globalCycles;
+    schedule(RESET_CYCLES, 0x7FFFFFFF);
+}
+
+void Core::endFrame()
+{
+    // Break execution at the end of a frame
+    running.store(false);
+    schedule(END_FRAME, 268111856 / 60);
+}
+
+void Core::schedule(Task task, uint32_t cycles)
+{
+    // Add a task to the scheduler, sorted by least to most cycles until execution
+    Event event(&tasks[task], globalCycles + cycles);
+    auto it = std::upper_bound(events.cbegin(), events.cend(), event);
+    events.insert(it, event);
 }

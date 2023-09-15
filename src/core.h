@@ -19,12 +19,49 @@
 
 #pragma once
 
+#include <atomic>
+#include <functional>
+#include <vector>
+
+#include "defines.h"
+#include "interpreter.h"
 #include "memory.h"
+
+enum Task
+{
+    RESET_CYCLES,
+    END_FRAME,
+    INTERRUPT_11,
+    INTERRUPT_9,
+    MAX_TASKS
+};
+
+struct Event
+{
+    std::function<void()> *task;
+    uint32_t cycles;
+
+    Event(std::function<void()> *task, uint32_t cycles): task(task), cycles(cycles) {}
+    bool operator<(const Event &event) const { return cycles < event.cycles; }
+};
 
 class Core
 {
     public:
-        Core();
-
+        Interpreter cpus[2];
         Memory memory;
+
+        std::atomic<bool> running;
+        std::vector<Event> events;
+        uint32_t globalCycles = 0;
+
+        Core();
+        void runFrame() { Interpreter::runFrame(this); }
+        void schedule(Task task, uint32_t cycles);
+
+    private:
+        std::function<void()> tasks[MAX_TASKS];
+
+        void resetCycles();
+        void endFrame();
 };

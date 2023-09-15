@@ -17,37 +17,33 @@
     along with 3Beans. If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <thread>
-#include <wx/wx.h>
-#include "../core.h"
+#pragma once
 
-Core *core;
+#include <cstdio>
 
-void runCore()
-{
-    // Run the emulator
-    while (true)
-        core->runFrame();
-}
+// Simple bit macro
+#define BIT(i) (1 << (i))
 
-class b3App: public wxApp
-{
-    private:
-        bool OnInit();
-};
+// Macro to force inlining
+#define FORCE_INLINE inline __attribute__((always_inline))
 
-bool b3App::OnInit()
-{
-    // Start running the emulator on a separate thread
-    core = new Core();
-    std::thread *thread = new std::thread(runCore);
+// If enabled, print critical logs in red
+#if LOG_LEVEL > 0
+#define LOG_CRIT(...) printf("\x1b[31m" __VA_ARGS__)
+#else
+#define LOG_CRIT(...) (0)
+#endif
 
-    // Make a useless window because there's nothing else to show :)
-    SetAppName("3Beans");
-    wxFrame *frame = new wxFrame(nullptr, wxID_ANY, "3Beans");
-    frame->Show(true);
-    return true;
-}
+// If enabled, print warning logs in yellow
+#if LOG_LEVEL > 1
+#define LOG_WARN(...) printf("\x1b[33m" __VA_ARGS__)
+#else
+#define LOG_WARN(...) (0)
+#endif
 
-// Let wxWidgets handle the main function
-wxIMPLEMENT_APP(b3App);
+// If enabled, print info logs normally
+#if LOG_LEVEL > 2
+#define LOG_INFO(...) printf("\x1b[0m" __VA_ARGS__)
+#else
+#define LOG_INFO(...) (0)
+#endif
