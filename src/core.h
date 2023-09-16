@@ -27,6 +27,7 @@
 #include "defines.h"
 #include "interpreter.h"
 #include "memory.h"
+#include "pxi.h"
 
 enum Task
 {
@@ -52,6 +53,7 @@ class Core
     public:
         Interpreter cpus[MAX_CPUS];
         Memory memory;
+        Pxi pxi;
 
         std::atomic<bool> running;
         std::vector<Event> events;

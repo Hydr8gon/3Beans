@@ -20,7 +20,8 @@
 #include <algorithm>
 #include "core.h"
 
-Core::Core(): cpus { Interpreter(this, ARM11A), Interpreter(this, ARM11B), Interpreter(this, ARM9) }, memory(this)
+Core::Core(): cpus { Interpreter(this, ARM11A), Interpreter(this, ARM11B),
+    Interpreter(this, ARM9) }, memory(this), pxi(this)
 {
     // Load the boot ROMs and initialize CPUs
     memory.loadBootRoms();

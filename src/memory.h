@@ -42,4 +42,7 @@ class Memory
         uint8_t boot9[0x10000]   = {}; // 64KB ARM9 boot ROM
         uint8_t itcm[0x8000]     = {}; // 32KB ARM9 ITCM
         uint8_t dtcm[0x4000]     = {}; // 16KB ARM9 DTCM
+
+        template <typename T> T ioRead(CpuId id, uint32_t address);
+        template <typename T> void ioWrite(CpuId id, uint32_t address, T value);
 };

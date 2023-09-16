@@ -115,10 +115,10 @@ FORCE_INLINE int Interpreter::runOpcode()
 void Interpreter::sendInterrupt(int bit)
 {
     // Set the interrupt's request bit
-    irf |= BIT(bit);
+    irqIf |= BIT(bit);
 
     // Trigger an interrupt if the conditions are met and unhalt the CPU
-    if (ie & irf)
+    if (irqIe & irqIf)
     {
         if (~cpsr & BIT(7))
             core->schedule(Task(INTERRUPT_11A + id), (id == ARM9) + 1);
@@ -129,7 +129,7 @@ void Interpreter::sendInterrupt(int bit)
 void Interpreter::interrupt()
 {
     // Trigger an interrupt and unhalt the CPU if the conditions still hold
-    if ((ie & irf) && (~cpsr & BIT(7)))
+    if ((irqIe & irqIf) && (~cpsr & BIT(7)))
     {
         exception(0x18);
         halted = false;
@@ -249,7 +249,7 @@ void Interpreter::setCpsr(uint32_t value, bool save)
     cpsr = value;
 
     // Trigger an interrupt if the conditions are met
-    if ((ie & irf) && !(cpsr & BIT(7)))
+    if ((irqIe & irqIf) && !(cpsr & BIT(7)))
         core->schedule(Task(INTERRUPT_11A + id), (id == ARM9) + 1);
 }
 
@@ -277,19 +277,19 @@ int Interpreter::unkThumb(uint16_t opcode)
     return 1;
 }
 
-void Interpreter::writeIe(uint32_t mask, uint32_t value)
+void Interpreter::writeIrqIe(uint32_t mask, uint32_t value)
 {
     // Write to the IE register
     mask &= 0x3FFFFFFF;
-    ie = (ie & ~mask) | (value & mask);
+    irqIe = (irqIe & ~mask) | (value & mask);
 
     // Trigger an interrupt if the conditions are met
-    if ((ie & irf) && !(cpsr & BIT(7)))
+    if ((irqIe & irqIf) && !(cpsr & BIT(7)))
         core->schedule(Task(INTERRUPT_11A + id), (id == ARM9) + 1);
 }
 
-void Interpreter::writeIrf(uint32_t mask, uint32_t value)
+void Interpreter::writeIrqIf(uint32_t mask, uint32_t value)
 {
     // Clear bits in the IF register
-    irf &= ~(value & mask);
+    irqIf &= ~(value & mask);
 }

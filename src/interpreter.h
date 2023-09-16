@@ -38,31 +38,31 @@ class Interpreter
         void interrupt();
         void sendInterrupt(int bit);
 
-        uint32_t readIe()  { return ie;  }
-        uint32_t readIrf() { return irf; }
+        uint32_t readIrqIe() { return irqIe; }
+        uint32_t readIrqIf() { return irqIf; }
 
-        void writeIe(uint32_t mask, uint32_t value);
-        void writeIrf(uint32_t mask, uint32_t value);
+        void writeIrqIe(uint32_t mask, uint32_t value);
+        void writeIrqIf(uint32_t mask, uint32_t value);
 
     private:
         Core *core;
         CpuId id;
 
-        uint32_t *registers[32]   = {};
+        uint32_t *registers[32] = {};
         uint32_t registersUsr[16] = {};
-        uint32_t registersFiq[7]  = {};
-        uint32_t registersSvc[2]  = {};
-        uint32_t registersAbt[2]  = {};
-        uint32_t registersIrq[2]  = {};
-        uint32_t registersUnd[2]  = {};
+        uint32_t registersFiq[7] = {};
+        uint32_t registersSvc[2] = {};
+        uint32_t registersAbt[2] = {};
+        uint32_t registersIrq[2] = {};
+        uint32_t registersUnd[2] = {};
 
         uint32_t cpsr = 0, *spsr = nullptr;
         uint32_t spsrFiq = 0, spsrSvc = 0, spsrAbt = 0, spsrIrq = 0, spsrUnd = 0;
         uint32_t pipeline[2] = {};
         uint32_t cycles = 0;
 
-        uint32_t ie = 0;
-        uint32_t irf = 0;
+        uint32_t irqIe = 0;
+        uint32_t irqIf = 0;
 
         static int (Interpreter::*armInstrs[0x1000])(uint32_t);
         static int (Interpreter::*thumbInstrs[0x400])(uint16_t);

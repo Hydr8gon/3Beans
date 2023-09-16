@@ -26,9 +26,10 @@ uint32_t Cp15::read(uint8_t cn, uint8_t cm, uint8_t cp)
     {
         case 0x000000: return 0x41059461; // Main ID
         case 0x000001: return 0x0F0D2112; // Cache type
-        case 0x010000: return ctrlReg;    // Control
-        case 0x090100: return dtcmReg;    // DTCM base/size
-        case 0x090101: return itcmReg;    // ITCM size
+        case 0x000005: return id == ARM11B; // CPU ID
+        case 0x010000: return ctrlReg; // Control
+        case 0x090100: return dtcmReg; // DTCM base/size
+        case 0x090101: return itcmReg; // ITCM size
 
         default:
             LOG_WARN("Unknown ARM%d CP15 register read: C%d,C%d,%d\n", (id == ARM9) ? 9 : 11, cn, cm, cp);

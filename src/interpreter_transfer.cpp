@@ -1172,6 +1172,17 @@ int Interpreter::msrRs(uint32_t opcode) // MSR SPSR,Rm
 
 int Interpreter::msrIc(uint32_t opcode) // MSR CPSR,#i
 {
+    // Handle ARM11 hint opcodes
+    if (id != ARM9 && !(opcode & 0xF0000))
+    {
+        switch (opcode & 0xFF)
+        {
+            case 0x00: return 1; // NOP
+            case 0x03: return halted = true; // WFI
+            default:   return unkArm(opcode);
+        }
+    }
+
     // Rotate the immediate value
     uint32_t value = opcode & 0xFF;
     uint8_t shift = (opcode >> 7) & 0x1E;

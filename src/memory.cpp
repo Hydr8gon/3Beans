@@ -17,8 +17,19 @@
     along with 3Beans. If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <cstdio>
 #include "core.h"
+
+// Define a 32-bit register in an I/O switch statement
+#define DEF_IO32(addr, func)      \
+    case addr + 0: case addr + 1: \
+    case addr + 2: case addr + 3: \
+        base -= addr;             \
+        size = 4;                 \
+        func;                     \
+        goto next;
+
+// Define shared parameters for I/O register writes
+#define IO_PARAMS mask << (base << 3), data << (base << 3)
 
 bool Memory::loadBootRoms()
 {
@@ -75,6 +86,10 @@ template <typename T> T Memory::read(CpuId id, uint32_t address)
         return value;
     }
 
+    // Forward the read to I/O registers if within range
+    if (address >= 0x10000000 && address < 0x18000000)
+        return ioRead<T>(id, address);
+
     // Catch reads from unmapped memory
     LOG_WARN("Unknown ARM%d memory read: 0x%08X\n", (id == ARM9) ? 9 : 11, address);
     return 0;
@@ -114,6 +129,94 @@ template <typename T> void Memory::write(CpuId id, uint32_t address, T value)
         return;
     }
 
+    // Forward the write to I/O registers if within range
+    if (address >= 0x10000000 && address < 0x18000000)
+        return ioWrite<T>(id, address, value);
+
     // Catch writes to unmapped memory
     LOG_WARN("Unknown ARM%d memory write: 0x%08X\n", (id == ARM9) ? 9 : 11, address);
+}
+
+template <typename T> T Memory::ioRead(CpuId id, uint32_t address)
+{
+    T value = 0;
+    size_t i = 0;
+
+    // Read a value from one or more I/O registers
+    while (i < sizeof(T))
+    {
+        uint32_t base = address + i;
+        uint32_t size, data;
+
+        if (id != ARM9)
+        {
+            // Check registers that are exclusive to the ARM11
+            switch (base)
+            {
+                DEF_IO32(0x10163000, data = core->pxi.readPxiSync11()) // PXI_SYNC11
+                DEF_IO32(0x17E0010C, data = 0x3FF) // IRQ_ACK (stub)
+            }
+        }
+        else
+        {
+            // Check registers that are exclusive to the ARM9
+            switch (base)
+            {
+                DEF_IO32(0x10001000, data = core->cpus[ARM9].readIrqIe()) // IRQ_IE
+                DEF_IO32(0x10001004, data = core->cpus[ARM9].readIrqIf()) // IRQ_IF
+                DEF_IO32(0x10008000, data = core->pxi.readPxiSync9()) // PXI_SYNC9
+            }
+        }
+
+        // Catch reads from unmapped I/O registers
+        LOG_WARN("Unknown ARM%d I/O read: 0x%08X\n", (id == ARM9) ? 9 : 11, address);
+        return value;
+
+    next:
+        // Process the data and loop until a full value is formed
+        value |= (data >> (base << 3)) << (i << 3);
+        i += size - base;
+    }
+
+    return value;
+}
+
+template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value)
+{
+    size_t i = 0;
+
+    // Write a value to one or more I/O registers
+    while (i < sizeof(T))
+    {
+        uint32_t base = address + i, size;
+        uint32_t mask = (1ULL << ((sizeof(T) - i) << 3)) - 1;
+        uint32_t data = value >> (i << 3);
+
+        if (id != ARM9)
+        {
+            // Check registers that are exclusive to the ARM11
+            switch (base)
+            {
+                DEF_IO32(0x10163000, core->pxi.writePxiSync11(IO_PARAMS)) // PXI_SYNC11
+            }
+        }
+        else
+        {
+            // Check registers that are exclusive to the ARM9
+            switch (base)
+            {
+                DEF_IO32(0x10001000, core->cpus[ARM9].writeIrqIe(IO_PARAMS)) // IRQ_IE
+                DEF_IO32(0x10001004, core->cpus[ARM9].writeIrqIf(IO_PARAMS)) // IRQ_IF
+                DEF_IO32(0x10008000, core->pxi.writePxiSync9(IO_PARAMS)) // PXI_SYNC9
+            }
+        }
+
+        // Catch writes to unmapped I/O registers
+        LOG_WARN("Unknown ARM%d I/O write: 0x%08X\n", (id == ARM9) ? 9 : 11, address);
+        return;
+
+    next:
+        // Loop until the full value has been written
+        i += size - base;
+    }
 }
