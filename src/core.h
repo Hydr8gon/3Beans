@@ -28,6 +28,7 @@
 #include "interpreter.h"
 #include "memory.h"
 #include "pxi.h"
+#include "sd_mmc.h"
 
 enum Task
 {
@@ -54,6 +55,7 @@ class Core
         Interpreter cpus[MAX_CPUS];
         Memory memory;
         Pxi pxi;
+        SdMmc sdMmc;
 
         std::atomic<bool> running;
         std::vector<Event> events;

@@ -1416,3 +1416,42 @@ int Interpreter::mulDpT(uint16_t opcode) // MUL Rd,Rs
     cpsr = (cpsr & ~0xC0000000) | (*op0 & BIT(31)) | ((*op0 == 0) << 30);
     return 4;
 }
+
+int Interpreter::sxthT(uint16_t opcode)
+{
+    // Sign-extend half-word (THUMB)
+    if (id == ARM9) return 1; // ARM11-exclusive
+    uint32_t *op0 = registers[opcode & 0x7];
+    uint32_t op1 = *registers[(opcode >> 3) & 0x7];
+    *op0 = (int16_t)op1;
+    return 1;
+}
+
+int Interpreter::sxtbT(uint16_t opcode)
+{
+    // Sign-extend byte (THUMB)
+    if (id == ARM9) return 1; // ARM11-exclusive
+    uint32_t *op0 = registers[opcode & 0x7];
+    uint32_t op1 = *registers[(opcode >> 3) & 0x7];
+    *op0 = (int8_t)op1;
+    return 1;
+}
+
+int Interpreter::uxthT(uint16_t opcode)
+{
+    // Zero-extend half-word (THUMB)
+    if (id == ARM9) return 1; // ARM11-exclusive
+    uint32_t *op0 = registers[opcode & 0x7];
+    uint32_t op1 = *registers[(opcode >> 3) & 0x7];
+    *op0 = (uint16_t)op1;
+    return 1;
+}
+int Interpreter::uxtbT(uint16_t opcode)
+{
+    // Zero-extend byte (THUMB)
+    if (id == ARM9) return 1; // ARM11-exclusive
+    uint32_t *op0 = registers[opcode & 0x7];
+    uint32_t op1 = *registers[(opcode >> 3) & 0x7];
+    *op0 = (uint8_t)op1;
+    return 1;
+}

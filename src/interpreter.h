@@ -462,6 +462,10 @@ class Interpreter
         int mvnDpT(uint16_t opcode);
         int negDpT(uint16_t opcode);
         int mulDpT(uint16_t opcode);
+        int sxthT(uint16_t opcode);
+        int sxtbT(uint16_t opcode);
+        int uxthT(uint16_t opcode);
+        int uxtbT(uint16_t opcode);
 
         uint32_t ip(uint32_t opcode);
         uint32_t ipH(uint32_t opcode);

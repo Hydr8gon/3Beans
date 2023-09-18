@@ -1229,7 +1229,7 @@ int (Interpreter::*Interpreter::thumbInstrs[])(uint16_t) =
     &Interpreter::addSpT,    &Interpreter::addSpT,    &Interpreter::addSpT,    &Interpreter::addSpT,    // 0x2BC-0x2BF
     &Interpreter::addSpImmT, &Interpreter::addSpImmT, &Interpreter::addSpImmT, &Interpreter::addSpImmT, // 0x2C0-0x2C3
     &Interpreter::unkThumb,  &Interpreter::unkThumb,  &Interpreter::unkThumb,  &Interpreter::unkThumb,  // 0x2C4-0x2C7
-    &Interpreter::unkThumb,  &Interpreter::unkThumb,  &Interpreter::unkThumb,  &Interpreter::unkThumb,  // 0x2C8-0x2CB
+    &Interpreter::sxthT,     &Interpreter::sxtbT,     &Interpreter::uxthT,     &Interpreter::uxtbT,     // 0x2C8-0x2CB
     &Interpreter::unkThumb,  &Interpreter::unkThumb,  &Interpreter::unkThumb,  &Interpreter::unkThumb,  // 0x2CC-0x2CF
     &Interpreter::pushT,     &Interpreter::pushT,     &Interpreter::pushT,     &Interpreter::pushT,     // 0x2D0-0x2D3
     &Interpreter::pushLrT,   &Interpreter::pushLrT,   &Interpreter::pushLrT,   &Interpreter::pushLrT,   // 0x2D4-0x2D7

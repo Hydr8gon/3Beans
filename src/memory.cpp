@@ -19,6 +19,14 @@
 
 #include "core.h"
 
+// Define a 16-bit register in an I/O switch statement
+#define DEF_IO16(addr, func)      \
+    case addr + 0: case addr + 1: \
+        base -= addr;             \
+        size = 2;                 \
+        func;                     \
+        goto next;
+
 // Define a 32-bit register in an I/O switch statement
 #define DEF_IO32(addr, func)      \
     case addr + 0: case addr + 1: \
@@ -58,6 +66,8 @@ template <typename T> T Memory::read(CpuId id, uint32_t address)
         data = &fcram[address & 0x7FFFFFF]; // 128MB FCRAM
     else if (address >= 0x18000000 && address < 0x18600000)
         data = &vram[address & 0x7FFFFF]; // 6MB VRAM
+    else if (id == ARM9 && address >= 0x8000000 && address < 0x8100000)
+        data = &arm9Ram[address & 0xFFFFF]; // 1MB ARM9 internal RAM
     else if (address >= 0x1FF00000 && address < 0x1FF80000)
         data = &dspWram[address & 0x7FFFF]; // 512KB DSP code/data RAM
     else if (address >= 0x1FF80000 && address < 0x20000000)
@@ -106,6 +116,8 @@ template <typename T> void Memory::write(CpuId id, uint32_t address, T value)
         data = &fcram[address & 0x7FFFFFF]; // 128MB FCRAM
     else if (address >= 0x18000000 && address < 0x18600000)
         data = &vram[address & 0x7FFFFF]; // 6MB VRAM
+    else if (id == ARM9 && address >= 0x8000000 && address < 0x8100000)
+        data = &arm9Ram[address & 0xFFFFF]; // 1MB ARM9 internal RAM
     else if (address >= 0x1FF00000 && address < 0x1FF80000)
         data = &dspWram[address & 0x7FFFF]; // 512KB DSP code/data RAM
     else if (address >= 0x1FF80000 && address < 0x20000000)
@@ -164,7 +176,15 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address)
             {
                 DEF_IO32(0x10001000, data = core->cpus[ARM9].readIrqIe()) // IRQ_IE
                 DEF_IO32(0x10001004, data = core->cpus[ARM9].readIrqIf()) // IRQ_IF
+                DEF_IO16(0x10006000, data = core->sdMmc.readSdCmd()) // SD_CMD
+                DEF_IO32(0x1000600C, data = core->sdMmc.readSdResponse(0)) // SD_RESPONSE0
+                DEF_IO32(0x10006010, data = core->sdMmc.readSdResponse(1)) // SD_RESPONSE1
+                DEF_IO32(0x10006014, data = core->sdMmc.readSdResponse(2)) // SD_RESPONSE2
+                DEF_IO32(0x10006018, data = core->sdMmc.readSdResponse(3)) // SD_RESPONSE3
+                DEF_IO32(0x1000601C, data = core->sdMmc.readSdIrqStatus()) // SD_IRQ_STATUS
+                DEF_IO32(0x10006020, data = core->sdMmc.readSdIrqMask()) // SD_IRQ_MASK
                 DEF_IO32(0x10008000, data = core->pxi.readPxiSync9()) // PXI_SYNC9
+                DEF_IO32(0x10009000, data = 0x20) // AES_CNT (stub)
             }
         }
 
@@ -207,6 +227,9 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value)
             {
                 DEF_IO32(0x10001000, core->cpus[ARM9].writeIrqIe(IO_PARAMS)) // IRQ_IE
                 DEF_IO32(0x10001004, core->cpus[ARM9].writeIrqIf(IO_PARAMS)) // IRQ_IF
+                DEF_IO16(0x10006000, core->sdMmc.writeSdCmd(IO_PARAMS)) // SD_CMD
+                DEF_IO32(0x1000601C, core->sdMmc.writeSdIrqStatus(IO_PARAMS)) // SD_IRQ_STATUS
+                DEF_IO32(0x10006020, core->sdMmc.writeSdIrqMask(IO_PARAMS)) // SD_IRQ_MASK
                 DEF_IO32(0x10008000, core->pxi.writePxiSync9(IO_PARAMS)) // PXI_SYNC9
             }
         }

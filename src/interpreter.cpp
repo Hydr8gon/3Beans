@@ -279,7 +279,7 @@ int Interpreter::unkThumb(uint16_t opcode)
 
 void Interpreter::writeIrqIe(uint32_t mask, uint32_t value)
 {
-    // Write to the IE register
+    // Write to the IRQ_IE register
     mask &= 0x3FFFFFFF;
     irqIe = (irqIe & ~mask) | (value & mask);
 
@@ -290,6 +290,6 @@ void Interpreter::writeIrqIe(uint32_t mask, uint32_t value)
 
 void Interpreter::writeIrqIf(uint32_t mask, uint32_t value)
 {
-    // Clear bits in the IF register
+    // Clear bits in the IRQ_IF register
     irqIf &= ~(value & mask);
 }

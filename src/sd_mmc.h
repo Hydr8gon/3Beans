@@ -22,20 +22,33 @@
 #include <cstdint>
 class Core;
 
-class Pxi
+class SdMmc
 {
     public:
-        Pxi(Core *core): core(core) {}
+        SdMmc(Core *core): core(core) {}
 
-        uint32_t readPxiSync11() { return pxiSync11; }
-        uint32_t readPxiSync9() { return pxiSync9; }
+        uint16_t readSdCmd() { return sdCmd; }
+        uint32_t readSdResponse(int i) { return sdResponse[i]; }
+        uint32_t readSdIrqStatus() { return sdIrqStatus; }
+        uint32_t readSdIrqMask() { return sdIrqMask; }
 
-        void writePxiSync11(uint32_t mask, uint32_t value);
-        void writePxiSync9(uint32_t mask, uint32_t value);
+        void writeSdCmd(uint16_t mask, uint16_t value);
+        void writeSdIrqStatus(uint32_t mask, uint32_t value);
+        void writeSdIrqMask(uint32_t mask, uint32_t value);
 
     private:
         Core *core;
+        uint32_t cardStatus = 0;
 
-        uint32_t pxiSync11 = 0;
-        uint32_t pxiSync9 = 0;
+        uint16_t sdCmd = 0;
+        uint32_t sdResponse[4] = {};
+        uint32_t sdIrqStatus = 0;
+        uint32_t sdIrqMask = 0;
+
+        void sendInterrupt(int bit);
+        void runCommand();
+        void runAppCommand();
+
+        void appCmd();
+        void acmd41();
 };

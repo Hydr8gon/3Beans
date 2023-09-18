@@ -35,13 +35,14 @@ class Memory
         Core *core;
 
         uint8_t fcram[0x8000000] = {}; // 128MB FCRAM
-        uint8_t vram[0x600000]   = {}; // 6MB VRAM
+        uint8_t vram[0x600000] = {}; // 6MB VRAM
+        uint8_t arm9Ram[0x100000] = {}; // 1MB ARM9 internal RAM
         uint8_t dspWram[0x80000] = {}; // 512KB DSP code/data RAM
         uint8_t axiWram[0x80000] = {}; // 512KB AXI WRAM
-        uint8_t boot11[0x10000]  = {}; // 64KB ARM11 boot ROM
-        uint8_t boot9[0x10000]   = {}; // 64KB ARM9 boot ROM
-        uint8_t itcm[0x8000]     = {}; // 32KB ARM9 ITCM
-        uint8_t dtcm[0x4000]     = {}; // 16KB ARM9 DTCM
+        uint8_t boot11[0x10000] = {}; // 64KB ARM11 boot ROM
+        uint8_t boot9[0x10000] = {}; // 64KB ARM9 boot ROM
+        uint8_t itcm[0x8000] = {}; // 32KB ARM9 ITCM
+        uint8_t dtcm[0x4000] = {}; // 16KB ARM9 DTCM
 
         template <typename T> T ioRead(CpuId id, uint32_t address);
         template <typename T> void ioWrite(CpuId id, uint32_t address, T value);
