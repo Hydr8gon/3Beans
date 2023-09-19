@@ -28,21 +28,14 @@ class Interpreter
     public:
         Cp15 cp15;
         bool halted = false;
+        uint32_t cpsr = 0;
 
         Interpreter(Core *core, CpuId id);
         void init();
 
         void resetCycles();
         static void runFrame(Core *core);
-
-        void interrupt();
-        void sendInterrupt(int bit);
-
-        uint32_t readIrqIe() { return irqIe; }
-        uint32_t readIrqIf() { return irqIf; }
-
-        void writeIrqIe(uint32_t mask, uint32_t value);
-        void writeIrqIf(uint32_t mask, uint32_t value);
+        int exception(uint8_t vector);
 
     private:
         Core *core;
@@ -56,13 +49,15 @@ class Interpreter
         uint32_t registersIrq[2] = {};
         uint32_t registersUnd[2] = {};
 
-        uint32_t cpsr = 0, *spsr = nullptr;
-        uint32_t spsrFiq = 0, spsrSvc = 0, spsrAbt = 0, spsrIrq = 0, spsrUnd = 0;
+        uint32_t *spsr = nullptr;
+        uint32_t spsrFiq = 0;
+        uint32_t spsrSvc = 0;
+        uint32_t spsrAbt = 0;
+        uint32_t spsrIrq = 0;
+        uint32_t spsrUnd = 0;
+
         uint32_t pipeline[2] = {};
         uint32_t cycles = 0;
-
-        uint32_t irqIe = 0;
-        uint32_t irqIf = 0;
 
         static int (Interpreter::*armInstrs[0x1000])(uint32_t);
         static int (Interpreter::*thumbInstrs[0x400])(uint16_t);
@@ -71,7 +66,6 @@ class Interpreter
         static const uint8_t bitCount[0x100];
 
         int runOpcode();
-        int exception(uint8_t vector);
         void flushPipeline();
         void setCpsr(uint32_t value, bool save = false);
         int handleReserved(uint32_t opcode);

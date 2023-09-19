@@ -20,6 +20,7 @@
 #pragma once
 
 #include <cstdint>
+#include <queue>
 class Core;
 
 class Pxi
@@ -27,15 +28,19 @@ class Pxi
     public:
         Pxi(Core *core): core(core) {}
 
-        uint32_t readPxiSync11() { return pxiSync11; }
-        uint32_t readPxiSync9() { return pxiSync9; }
+        uint32_t readPxiSync(bool arm9) { return pxiSync[arm9]; }
+        uint16_t readPxiCnt(bool arm9) { return pxiCnt[arm9]; }
+        uint32_t readPxiRecv(bool arm9);
 
-        void writePxiSync11(uint32_t mask, uint32_t value);
-        void writePxiSync9(uint32_t mask, uint32_t value);
+        void writePxiSync(bool arm9, uint32_t mask, uint32_t value);
+        void writePxiCnt(bool arm9, uint16_t mask, uint16_t value);
+        void writePxiSend(bool arm9, uint32_t mask, uint32_t value);
 
     private:
         Core *core;
+        std::queue<uint32_t> fifos[2];
 
-        uint32_t pxiSync11 = 0;
-        uint32_t pxiSync9 = 0;
+        uint32_t pxiSync[2] = {};
+        uint16_t pxiCnt[2] = { 0x101, 0x101 };
+        uint32_t pxiRecv[2] = {};
 };

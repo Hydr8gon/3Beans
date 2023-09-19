@@ -112,30 +112,6 @@ FORCE_INLINE int Interpreter::runOpcode()
     }
 }
 
-void Interpreter::sendInterrupt(int bit)
-{
-    // Set the interrupt's request bit
-    irqIf |= BIT(bit);
-
-    // Trigger an interrupt if the conditions are met and unhalt the CPU
-    if (irqIe & irqIf)
-    {
-        if (~cpsr & BIT(7))
-            core->schedule(Task(INTERRUPT_11A + id), (id == ARM9) + 1);
-        halted = false;
-    }
-}
-
-void Interpreter::interrupt()
-{
-    // Trigger an interrupt and unhalt the CPU if the conditions still hold
-    if ((irqIe & irqIf) && (~cpsr & BIT(7)))
-    {
-        exception(0x18);
-        halted = false;
-    }
-}
-
 int Interpreter::exception(uint8_t vector)
 {
     // Switch the CPU mode, save the return address, and jump to the exception vector
@@ -244,13 +220,10 @@ void Interpreter::setCpsr(uint32_t value, bool save)
         }
     }
 
-    // Set the CPSR, saving the old value if requested
+    // Set the CPSR, save the old value, and check if an interrupt should occur
     if (save && spsr) *spsr = cpsr;
     cpsr = value;
-
-    // Trigger an interrupt if the conditions are met
-    if ((irqIe & irqIf) && !(cpsr & BIT(7)))
-        core->schedule(Task(INTERRUPT_11A + id), (id == ARM9) + 1);
+    core->interrupts.checkInterrupt(id == ARM9);
 }
 
 int Interpreter::handleReserved(uint32_t opcode)
@@ -275,21 +248,4 @@ int Interpreter::unkThumb(uint16_t opcode)
     // Handle an unknown THUMB opcode
     LOG_CRIT("Unknown ARM%d THUMB opcode: 0x%X\n", (id == ARM9) ? 9 : 11, opcode);
     return 1;
-}
-
-void Interpreter::writeIrqIe(uint32_t mask, uint32_t value)
-{
-    // Write to the IRQ_IE register
-    mask &= 0x3FFFFFFF;
-    irqIe = (irqIe & ~mask) | (value & mask);
-
-    // Trigger an interrupt if the conditions are met
-    if ((irqIe & irqIf) && !(cpsr & BIT(7)))
-        core->schedule(Task(INTERRUPT_11A + id), (id == ARM9) + 1);
-}
-
-void Interpreter::writeIrqIf(uint32_t mask, uint32_t value)
-{
-    // Clear bits in the IRQ_IF register
-    irqIf &= ~(value & mask);
 }

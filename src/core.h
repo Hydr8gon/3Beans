@@ -26,6 +26,7 @@
 #include "cp15.h"
 #include "defines.h"
 #include "interpreter.h"
+#include "interrupts.h"
 #include "memory.h"
 #include "pxi.h"
 #include "sd_mmc.h"
@@ -34,9 +35,6 @@ enum Task
 {
     RESET_CYCLES,
     END_FRAME,
-    INTERRUPT_11A,
-    INTERRUPT_11B,
-    INTERRUPT_9,
     MAX_TASKS
 };
 
@@ -53,6 +51,7 @@ class Core
 {
     public:
         Interpreter cpus[MAX_CPUS];
+        Interrupts interrupts;
         Memory memory;
         Pxi pxi;
         SdMmc sdMmc;

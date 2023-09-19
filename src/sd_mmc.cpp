@@ -26,7 +26,7 @@ void SdMmc::sendInterrupt(int bit)
 
     // Send an interrupt to the ARM9 if conditions are met
     if (sdIrqStatus & ~sdIrqMask)
-        core->cpus[ARM9].sendInterrupt(16);
+        core->interrupts.sendInterrupt(true, 16);
 }
 
 void SdMmc::runCommand()

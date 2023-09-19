@@ -21,7 +21,7 @@
 #include "core.h"
 
 Core::Core(): cpus { Interpreter(this, ARM11A), Interpreter(this, ARM11B),
-    Interpreter(this, ARM9) }, memory(this), pxi(this), sdMmc(this)
+    Interpreter(this, ARM9) }, interrupts(this), memory(this), pxi(this), sdMmc(this)
 {
     // Load the boot ROMs and initialize CPUs
     memory.loadBootRoms();
@@ -29,11 +29,8 @@ Core::Core(): cpus { Interpreter(this, ARM11A), Interpreter(this, ARM11B),
         cpus[i].init();
 
     // Define the tasks that can be scheduled
-    tasks[RESET_CYCLES]  = std::bind(&Core::resetCycles, this);
-    tasks[END_FRAME]     = std::bind(&Core::endFrame, this);
-    tasks[INTERRUPT_11A] = std::bind(&Interpreter::interrupt, &cpus[ARM11A]);
-    tasks[INTERRUPT_11B] = std::bind(&Interpreter::interrupt, &cpus[ARM11B]);
-    tasks[INTERRUPT_9]   = std::bind(&Interpreter::interrupt, &cpus[ARM9]);
+    tasks[RESET_CYCLES] = std::bind(&Core::resetCycles, this);
+    tasks[END_FRAME] = std::bind(&Core::endFrame, this);
 
     // Schedule the initial tasks
     schedule(RESET_CYCLES, 0x7FFFFFFF);
