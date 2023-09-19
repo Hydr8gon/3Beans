@@ -25,6 +25,7 @@
 
 #include "cp15.h"
 #include "defines.h"
+#include "gpu.h"
 #include "interpreter.h"
 #include "interrupts.h"
 #include "memory.h"
@@ -51,6 +52,7 @@ class Core
 {
     public:
         Interpreter cpus[MAX_CPUS];
+        Gpu gpu;
         Interrupts interrupts;
         Memory memory;
         Pxi pxi;

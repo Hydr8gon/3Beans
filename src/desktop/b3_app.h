@@ -17,7 +17,18 @@
     along with 3Beans. If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "b3_app.h"
+#pragma once
 
-// Let wxWidgets handle the main function
-wxIMPLEMENT_APP(b3App);
+#include "b3_frame.h"
+
+class b3App: public wxApp
+{
+    private:
+        b3Frame *frame;
+        wxTimer *timer;
+
+        bool OnInit();
+
+        void update(wxTimerEvent &event);
+        wxDECLARE_EVENT_TABLE();
+};

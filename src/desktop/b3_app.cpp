@@ -19,5 +19,29 @@
 
 #include "b3_app.h"
 
-// Let wxWidgets handle the main function
-wxIMPLEMENT_APP(b3App);
+enum AppEvent
+{
+    UPDATE = 1
+};
+
+wxBEGIN_EVENT_TABLE(b3App, wxApp)
+EVT_TIMER(UPDATE, b3App::update)
+wxEND_EVENT_TABLE()
+
+bool b3App::OnInit()
+{
+    // Create the program's frame
+    SetAppName("3Beans");
+    frame = new b3Frame();
+
+    // Set up the update timer
+    timer = new wxTimer(this, UPDATE);
+    timer->Start(6);
+    return true;
+}
+
+void b3App::update(wxTimerEvent &event)
+{
+    // Continuously refresh the frame
+    frame->Refresh();
+}

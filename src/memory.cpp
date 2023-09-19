@@ -168,6 +168,8 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address)
                 DEF_IO32(0x10163000, data = core->pxi.readPxiSync(false)) // PXI_SYNC11
                 DEF_IO32(0x10163004, data = core->pxi.readPxiCnt(false)) // PXI_CNT11
                 DEF_IO32(0x1016300C, data = core->pxi.readPxiRecv(false)) // PXI_RECV11
+                DEF_IO32(0x10400468, data = core->gpu.readPdcFramebufLt0(false)) // PDC0_FRAMEBUF_LT0
+                DEF_IO32(0x10400568, data = core->gpu.readPdcFramebufLt0(true)) // PDC1_FRAMEBUF_LT0
                 DEF_IO32(0x17E00100, data = core->interrupts.readMpIle(id)) // MP_ILE
                 DEF_IO32(0x17E0010C, data = core->interrupts.readMpAck(id)) // MP_ACK
                 DEF_IO32(0x17E01000, data = core->interrupts.readMpIge()) // MP_IGE
@@ -198,6 +200,7 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address)
             // Check registers that are exclusive to the ARM9
             switch (base)
             {
+                DEF_IO16(0x10000000, data = 0x101) // CFG9_SYSPROT (stub)
                 DEF_IO32(0x10001000, data = core->interrupts.readIrqIe()) // IRQ_IE
                 DEF_IO32(0x10001004, data = core->interrupts.readIrqIf()) // IRQ_IF
                 DEF_IO16(0x10006000, data = core->sdMmc.readSdCmd()) // SD_CMD
@@ -246,6 +249,8 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value)
                 DEF_IO32(0x10163000, core->pxi.writePxiSync(false, IO_PARAMS)) // PXI_SYNC11
                 DEF_IO32(0x10163004, core->pxi.writePxiCnt(false, IO_PARAMS)) // PXI_CNT11
                 DEF_IO32(0x10163008, core->pxi.writePxiSend(false, IO_PARAMS)) // PXI_SEND11
+                DEF_IO32(0x10400468, core->gpu.writePdcFramebufLt0(false, IO_PARAMS)) // PDC0_FRAMEBUF_LT0
+                DEF_IO32(0x10400568, core->gpu.writePdcFramebufLt0(true, IO_PARAMS)) // PDC1_FRAMEBUF_LT0
                 DEF_IO32(0x17E00100, core->interrupts.writeMpIle(id, IO_PARAMS)) // MP_ILE
                 DEF_IO32(0x17E00110, core->interrupts.writeMpEoi(id, IO_PARAMS)) // MP_EOI
                 DEF_IO32(0x17E01000, core->interrupts.writeMpIge(IO_PARAMS)) // MP_IGE

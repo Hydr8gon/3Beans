@@ -17,7 +17,24 @@
     along with 3Beans. If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "b3_app.h"
+#pragma once
 
-// Let wxWidgets handle the main function
-wxIMPLEMENT_APP(b3App);
+#include <wx/wx.h>
+#include "../core.h"
+
+#define MIN_SIZE wxSize(400, 480)
+class b3Canvas;
+
+class b3Frame: public wxFrame
+{
+    public:
+        Core *core = nullptr;
+        b3Frame();
+
+    private:
+        b3Canvas *canvas;
+        void runCore();
+
+        void close(wxCloseEvent &event);
+        wxDECLARE_EVENT_TABLE();
+};

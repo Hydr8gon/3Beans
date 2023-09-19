@@ -17,7 +17,30 @@
     along with 3Beans. If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "b3_app.h"
+#pragma once
 
-// Let wxWidgets handle the main function
-wxIMPLEMENT_APP(b3App);
+#include <atomic>
+#include <cstdint>
+#include <queue>
+#include <mutex>
+class Core;
+
+class Gpu
+{
+    public:
+        Gpu(Core *core): core(core) {}
+        uint32_t *getFrame();
+        void drawFrame();
+
+        uint32_t readPdcFramebufLt0(bool bot) { return pdcFramebufLt0[bot]; }
+        void writePdcFramebufLt0(bool bot, uint32_t mask, uint32_t value);
+
+    private:
+        Core *core;
+
+        std::queue<uint32_t*> buffers;
+        std::atomic<bool> ready;
+        std::mutex mutex;
+
+        uint32_t pdcFramebufLt0[2] = {};
+};
