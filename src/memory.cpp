@@ -19,6 +19,14 @@
 
 #include "core.h"
 
+// Define an 8-bit register in an I/O switch statement
+#define DEF_IO08(addr, func) \
+    case addr + 0:           \
+        base -= addr;        \
+        size = 1;            \
+        func;                \
+        goto next;
+
 // Define a 16-bit register in an I/O switch statement
 #define DEF_IO16(addr, func)      \
     case addr + 0: case addr + 1: \
@@ -38,8 +46,9 @@
 
 // Define shared parameters for I/O register writes
 #define IO_PARAMS mask << (base << 3), data << (base << 3)
+#define IO_PARAMS8 data << (base << 3)
 
-bool Memory::loadBootRoms()
+bool Memory::loadFiles()
 {
     // Try to load the ARM11 boot ROM
     FILE *file = fopen("boot11.bin", "rb");
@@ -51,6 +60,13 @@ bool Memory::loadBootRoms()
     file = fopen("boot9.bin", "rb");
     if (!file) return false;
     fread(boot9, sizeof(uint8_t), 0x10000, file);
+    fclose(file);
+
+    // Try to load OTP data from the NAND
+    file = fopen("nand.bin", "rb");
+    if (!file) return false;
+    fseek(file, 0xE00, SEEK_SET);
+    fread(otp, sizeof(uint32_t), 0x40, file);
     fclose(file);
     return true;
 }
@@ -203,6 +219,70 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address)
                 DEF_IO16(0x10000000, data = 0x101) // CFG9_SYSPROT (stub)
                 DEF_IO32(0x10001000, data = core->interrupts.readIrqIe()) // IRQ_IE
                 DEF_IO32(0x10001004, data = core->interrupts.readIrqIf()) // IRQ_IF
+                DEF_IO32(0x10012000, data = otp[0]) // OTP_ENCRYPTED0
+                DEF_IO32(0x10012004, data = otp[1]) // OTP_ENCRYPTED1
+                DEF_IO32(0x10012008, data = otp[2]) // OTP_ENCRYPTED2
+                DEF_IO32(0x1001200C, data = otp[3]) // OTP_ENCRYPTED3
+                DEF_IO32(0x10012010, data = otp[4]) // OTP_ENCRYPTED4
+                DEF_IO32(0x10012014, data = otp[5]) // OTP_ENCRYPTED5
+                DEF_IO32(0x10012018, data = otp[6]) // OTP_ENCRYPTED6
+                DEF_IO32(0x1001201C, data = otp[7]) // OTP_ENCRYPTED7
+                DEF_IO32(0x10012020, data = otp[8]) // OTP_ENCRYPTED8
+                DEF_IO32(0x10012024, data = otp[9]) // OTP_ENCRYPTED9
+                DEF_IO32(0x10012028, data = otp[10]) // OTP_ENCRYPTED10
+                DEF_IO32(0x1001202C, data = otp[11]) // OTP_ENCRYPTED11
+                DEF_IO32(0x10012030, data = otp[12]) // OTP_ENCRYPTED12
+                DEF_IO32(0x10012034, data = otp[13]) // OTP_ENCRYPTED13
+                DEF_IO32(0x10012038, data = otp[14]) // OTP_ENCRYPTED14
+                DEF_IO32(0x1001203C, data = otp[15]) // OTP_ENCRYPTED15
+                DEF_IO32(0x10012040, data = otp[16]) // OTP_ENCRYPTED16
+                DEF_IO32(0x10012044, data = otp[17]) // OTP_ENCRYPTED17
+                DEF_IO32(0x10012048, data = otp[18]) // OTP_ENCRYPTED18
+                DEF_IO32(0x1001204C, data = otp[19]) // OTP_ENCRYPTED19
+                DEF_IO32(0x10012050, data = otp[20]) // OTP_ENCRYPTED20
+                DEF_IO32(0x10012054, data = otp[21]) // OTP_ENCRYPTED21
+                DEF_IO32(0x10012058, data = otp[22]) // OTP_ENCRYPTED22
+                DEF_IO32(0x1001205C, data = otp[23]) // OTP_ENCRYPTED23
+                DEF_IO32(0x10012060, data = otp[24]) // OTP_ENCRYPTED24
+                DEF_IO32(0x10012064, data = otp[25]) // OTP_ENCRYPTED25
+                DEF_IO32(0x10012068, data = otp[26]) // OTP_ENCRYPTED26
+                DEF_IO32(0x1001206C, data = otp[27]) // OTP_ENCRYPTED27
+                DEF_IO32(0x10012070, data = otp[28]) // OTP_ENCRYPTED28
+                DEF_IO32(0x10012074, data = otp[29]) // OTP_ENCRYPTED29
+                DEF_IO32(0x10012078, data = otp[30]) // OTP_ENCRYPTED30
+                DEF_IO32(0x1001207C, data = otp[31]) // OTP_ENCRYPTED31
+                DEF_IO32(0x10012080, data = otp[32]) // OTP_ENCRYPTED32
+                DEF_IO32(0x10012084, data = otp[33]) // OTP_ENCRYPTED33
+                DEF_IO32(0x10012088, data = otp[34]) // OTP_ENCRYPTED34
+                DEF_IO32(0x1001208C, data = otp[35]) // OTP_ENCRYPTED35
+                DEF_IO32(0x10012090, data = otp[36]) // OTP_ENCRYPTED36
+                DEF_IO32(0x10012094, data = otp[37]) // OTP_ENCRYPTED37
+                DEF_IO32(0x10012098, data = otp[38]) // OTP_ENCRYPTED38
+                DEF_IO32(0x1001209C, data = otp[39]) // OTP_ENCRYPTED39
+                DEF_IO32(0x100120A0, data = otp[40]) // OTP_ENCRYPTED40
+                DEF_IO32(0x100120A4, data = otp[41]) // OTP_ENCRYPTED41
+                DEF_IO32(0x100120A8, data = otp[42]) // OTP_ENCRYPTED42
+                DEF_IO32(0x100120AC, data = otp[43]) // OTP_ENCRYPTED43
+                DEF_IO32(0x100120B0, data = otp[44]) // OTP_ENCRYPTED44
+                DEF_IO32(0x100120B4, data = otp[45]) // OTP_ENCRYPTED45
+                DEF_IO32(0x100120B8, data = otp[46]) // OTP_ENCRYPTED46
+                DEF_IO32(0x100120BC, data = otp[47]) // OTP_ENCRYPTED47
+                DEF_IO32(0x100120C0, data = otp[48]) // OTP_ENCRYPTED48
+                DEF_IO32(0x100120C4, data = otp[49]) // OTP_ENCRYPTED49
+                DEF_IO32(0x100120C8, data = otp[50]) // OTP_ENCRYPTED50
+                DEF_IO32(0x100120CC, data = otp[51]) // OTP_ENCRYPTED51
+                DEF_IO32(0x100120D0, data = otp[52]) // OTP_ENCRYPTED52
+                DEF_IO32(0x100120D4, data = otp[53]) // OTP_ENCRYPTED53
+                DEF_IO32(0x100120D8, data = otp[54]) // OTP_ENCRYPTED54
+                DEF_IO32(0x100120DC, data = otp[55]) // OTP_ENCRYPTED55
+                DEF_IO32(0x100120E0, data = otp[56]) // OTP_ENCRYPTED56
+                DEF_IO32(0x100120E4, data = otp[57]) // OTP_ENCRYPTED57
+                DEF_IO32(0x100120E8, data = otp[58]) // OTP_ENCRYPTED58
+                DEF_IO32(0x100120EC, data = otp[59]) // OTP_ENCRYPTED59
+                DEF_IO32(0x100120F0, data = otp[60]) // OTP_ENCRYPTED60
+                DEF_IO32(0x100120F4, data = otp[61]) // OTP_ENCRYPTED61
+                DEF_IO32(0x100120F8, data = otp[62]) // OTP_ENCRYPTED62
+                DEF_IO32(0x100120FC, data = otp[63]) // OTP_ENCRYPTED63
                 DEF_IO16(0x10006000, data = core->sdMmc.readSdCmd()) // SD_CMD
                 DEF_IO32(0x1000600C, data = core->sdMmc.readSdResponse(0)) // SD_RESPONSE0
                 DEF_IO32(0x10006010, data = core->sdMmc.readSdResponse(1)) // SD_RESPONSE1
@@ -213,7 +293,10 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address)
                 DEF_IO32(0x10008000, data = core->pxi.readPxiSync(true)) // PXI_SYNC9
                 DEF_IO32(0x10008004, data = core->pxi.readPxiCnt(true)) // PXI_CNT9
                 DEF_IO32(0x1000800C, data = core->pxi.readPxiRecv(true)) // PXI_RECV9
-                DEF_IO32(0x10009000, data = 0x20) // AES_CNT (stub)
+                DEF_IO32(0x10009000, data = core->aes.readAesCnt()) // AES_CNT
+                DEF_IO32(0x1000900C, data = core->aes.readAesRdfifo()) // AES_RDFIFO
+                DEF_IO08(0x10009010, data = core->aes.readAesKeysel()) // AES_KEYSEL
+                DEF_IO08(0x10009011, data = core->aes.readAesKeycnt()) // AES_KEYCNT
             }
         }
 
@@ -277,6 +360,16 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value)
                 DEF_IO32(0x10008000, core->pxi.writePxiSync(true, IO_PARAMS)) // PXI_SYNC9
                 DEF_IO32(0x10008004, core->pxi.writePxiCnt(true, IO_PARAMS)) // PXI_CNT9
                 DEF_IO32(0x10008008, core->pxi.writePxiSend(true, IO_PARAMS)) // PXI_SEND9
+                DEF_IO32(0x10009000, core->aes.writeAesCnt(IO_PARAMS)) // AES_CNT
+                DEF_IO16(0x10009006, core->aes.writeAesBlkcnt(IO_PARAMS)) // AES_BLKCNT
+                DEF_IO32(0x10009008, core->aes.writeAesWrfifo(IO_PARAMS)) // AES_WRFIFO
+                DEF_IO08(0x10009010, core->aes.writeAesKeysel(IO_PARAMS8)) // AES_KEYSEL
+                DEF_IO08(0x10009011, core->aes.writeAesKeycnt(IO_PARAMS8)) // AES_KEYCNT
+                DEF_IO32(0x10009020, core->aes.writeAesIv(0, IO_PARAMS)) // AES_IV0
+                DEF_IO32(0x10009024, core->aes.writeAesIv(1, IO_PARAMS)) // AES_IV1
+                DEF_IO32(0x10009028, core->aes.writeAesIv(2, IO_PARAMS)) // AES_IV2
+                DEF_IO32(0x1000902C, core->aes.writeAesIv(3, IO_PARAMS)) // AES_IV3
+                DEF_IO32(0x10009100, core->aes.writeAesKeyfifo(IO_PARAMS)) // AES_KEYFIFO
             }
         }
 

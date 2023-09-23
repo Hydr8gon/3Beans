@@ -32,6 +32,9 @@ enum CpuId
 // Simple bit macro
 #define BIT(i) (1 << (i))
 
+// Macro to swap two values
+#define SWAP(a, b) { auto c = a; a = b; b = c; }
+
 // Macro to force inlining
 #define FORCE_INLINE inline __attribute__((always_inline))
 

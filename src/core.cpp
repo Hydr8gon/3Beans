@@ -20,11 +20,11 @@
 #include <algorithm>
 #include "core.h"
 
-Core::Core(): cpus { Interpreter(this, ARM11A), Interpreter(this, ARM11B),
+Core::Core(): aes(this), cpus { Interpreter(this, ARM11A), Interpreter(this, ARM11B),
     Interpreter(this, ARM9) }, gpu(this), interrupts(this), memory(this), pxi(this), sdMmc(this)
 {
-    // Load the boot ROMs and initialize CPUs
-    memory.loadBootRoms();
+    // Initialize memory and the CPUs
+    memory.loadFiles();
     for (int i = 0; i < MAX_CPUS; i++)
         cpus[i].init();
 

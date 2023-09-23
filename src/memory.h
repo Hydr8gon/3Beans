@@ -26,13 +26,14 @@ class Memory
 {
     public:
         Memory(Core *core): core(core) {};
-        bool loadBootRoms();
+        bool loadFiles();
 
         template <typename T> T read(CpuId id, uint32_t address);
         template <typename T> void write(CpuId id, uint32_t address, T value);
 
     private:
         Core *core;
+        uint32_t otp[0x40] = {};
 
         uint8_t fcram[0x8000000] = {}; // 128MB FCRAM
         uint8_t vram[0x600000] = {}; // 6MB VRAM

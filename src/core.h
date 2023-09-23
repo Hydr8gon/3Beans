@@ -23,6 +23,7 @@
 #include <functional>
 #include <vector>
 
+#include "aes.h"
 #include "cp15.h"
 #include "defines.h"
 #include "gpu.h"
@@ -51,6 +52,7 @@ struct Event
 class Core
 {
     public:
+        Aes aes;
         Interpreter cpus[MAX_CPUS];
         Gpu gpu;
         Interrupts interrupts;

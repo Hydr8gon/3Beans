@@ -17,6 +17,7 @@
     along with 3Beans. If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <cstring>
 #include "core.h"
 
 uint32_t *Gpu::getFrame()
@@ -36,6 +37,7 @@ void Gpu::drawFrame()
     // Allow up to 2 framebuffers to be queued
     if (buffers.size() == 2) return;
     uint32_t *buffer = new uint32_t[400 * 480];
+    memset(&buffer[400 * 240], 0, 400 * 240 * sizeof(uint32_t));
 
     // Draw the top screen's framebuffer
     for (int y = 0; y < 240; y++)

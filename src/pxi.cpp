@@ -91,8 +91,7 @@ void Pxi::writePxiCnt(bool arm9, uint16_t mask, uint16_t value)
     if ((value & mask & BIT(3)) && !fifos[arm9].empty())
     {
         // Empty the FIFO
-        while (!fifos[arm9].empty())
-            fifos[arm9].pop();
+        fifos[arm9] = {};
         pxiRecv[!arm9] = 0;
 
         // Set the FIFO empty bits and clear the FIFO full bits
