@@ -35,6 +35,11 @@ enum CpuId
 // Macro to swap two values
 #define SWAP(a, b) { auto c = a; a = b; b = c; }
 
+// Macros to perform bit rotations
+#define ROL8(v, s) ((v << s) | (v >> (8 - s)))
+#define ROL32(v, s) ((v << s) | (v >> (32 - s)))
+#define ROR32(v, s) ((v >> s) | (v << (32 - s)))
+
 // Macro to force inlining
 #define FORCE_INLINE inline __attribute__((always_inline))
 

@@ -21,10 +21,6 @@
 #include <cstring>
 #include "core.h"
 
-#define ROL8(v, s) ((v << s) | (v >> (8 - s)))
-#define ROL32(v, s) ((v << s) | (v >> (32 - s)))
-#define ROR32(v, s) ((v >> s) | (v << (32 - s)))
-
 Aes::Aes(Core *core): core(core)
 {
     // Generate temporary pow and log tables
@@ -119,7 +115,10 @@ template <bool decrypt> void Aes::cryptBlock(uint32_t *src, uint32_t *dst)
 
 void Aes::initFifo()
 {
-    // Initialize encryption/decryption for the selected mode
+    // Reload the internal block counter
+    curBlock = aesBlkcnt;
+
+    // Initialize encryption/decryption based on the selected mode
     switch (uint8_t mode = (aesCnt >> 27) & 0x7)
     {
         case 4: case 5: // CBC decrypt/encrypt
@@ -219,7 +218,6 @@ void Aes::writeAesCnt(uint32_t mask, uint32_t value)
 
     // Start processing a new set of FIFO blocks if triggered
     if (!start) return;
-    curBlock = aesBlkcnt;
     initFifo();
     processFifo();
 }

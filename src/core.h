@@ -32,6 +32,7 @@
 #include "memory.h"
 #include "pxi.h"
 #include "sd_mmc.h"
+#include "sha.h"
 
 enum Task
 {
@@ -59,6 +60,7 @@ class Core
         Memory memory;
         Pxi pxi;
         SdMmc sdMmc;
+        Sha shas[2];
 
         std::atomic<bool> running;
         std::vector<Event> events;

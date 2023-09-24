@@ -20,8 +20,8 @@
 #include <algorithm>
 #include "core.h"
 
-Core::Core(): aes(this), cpus { Interpreter(this, ARM11A), Interpreter(this, ARM11B),
-    Interpreter(this, ARM9) }, gpu(this), interrupts(this), memory(this), pxi(this), sdMmc(this)
+Core::Core(): aes(this), cpus { Interpreter(this, ARM11A), Interpreter(this, ARM11B), Interpreter(this, ARM9) },
+    gpu(this), interrupts(this), memory(this), pxi(this), sdMmc(this), shas { Sha(this), Sha(this) }
 {
     // Initialize memory and the CPUs
     memory.loadFiles();

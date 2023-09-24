@@ -181,6 +181,16 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address)
             // Check registers that are exclusive to the ARM11
             switch (base)
             {
+                DEF_IO32(0x10101000, data = core->shas[0].readShaCnt()) // SHA_CNT11
+                DEF_IO32(0x10101004, data = core->shas[0].readShaBlkcnt()) // SHA_BLKCNT11
+                DEF_IO32(0x10101040, data = core->shas[0].readShaHash(0)) // SHA_HASH0_11
+                DEF_IO32(0x10101044, data = core->shas[0].readShaHash(1)) // SHA_HASH1_11
+                DEF_IO32(0x10101048, data = core->shas[0].readShaHash(2)) // SHA_HASH2_11
+                DEF_IO32(0x1010104C, data = core->shas[0].readShaHash(3)) // SHA_HASH3_11
+                DEF_IO32(0x10101050, data = core->shas[0].readShaHash(4)) // SHA_HASH4_11
+                DEF_IO32(0x10101054, data = core->shas[0].readShaHash(5)) // SHA_HASH5_11
+                DEF_IO32(0x10101058, data = core->shas[0].readShaHash(6)) // SHA_HASH6_11
+                DEF_IO32(0x1010105C, data = core->shas[0].readShaHash(7)) // SHA_HASH7_11
                 DEF_IO32(0x10163000, data = core->pxi.readPxiSync(false)) // PXI_SYNC11
                 DEF_IO32(0x10163004, data = core->pxi.readPxiCnt(false)) // PXI_CNT11
                 DEF_IO32(0x1016300C, data = core->pxi.readPxiRecv(false)) // PXI_RECV11
@@ -297,6 +307,16 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address)
                 DEF_IO32(0x1000900C, data = core->aes.readAesRdfifo()) // AES_RDFIFO
                 DEF_IO08(0x10009010, data = core->aes.readAesKeysel()) // AES_KEYSEL
                 DEF_IO08(0x10009011, data = core->aes.readAesKeycnt()) // AES_KEYCNT
+                DEF_IO32(0x1000A000, data = core->shas[1].readShaCnt()) // SHA_CNT9
+                DEF_IO32(0x1000A004, data = core->shas[1].readShaBlkcnt()) // SHA_BLKCNT9
+                DEF_IO32(0x1000A040, data = core->shas[1].readShaHash(0)) // SHA_HASH0_9
+                DEF_IO32(0x1000A044, data = core->shas[1].readShaHash(1)) // SHA_HASH1_9
+                DEF_IO32(0x1000A048, data = core->shas[1].readShaHash(2)) // SHA_HASH2_9
+                DEF_IO32(0x1000A04C, data = core->shas[1].readShaHash(3)) // SHA_HASH3_9
+                DEF_IO32(0x1000A050, data = core->shas[1].readShaHash(4)) // SHA_HASH4_9
+                DEF_IO32(0x1000A054, data = core->shas[1].readShaHash(5)) // SHA_HASH5_9
+                DEF_IO32(0x1000A058, data = core->shas[1].readShaHash(6)) // SHA_HASH6_9
+                DEF_IO32(0x1000A05C, data = core->shas[1].readShaHash(7)) // SHA_HASH7_9
             }
         }
 
@@ -329,6 +349,32 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value)
             // Check registers that are exclusive to the ARM11
             switch (base)
             {
+                DEF_IO32(0x10101000, core->shas[0].writeShaCnt(IO_PARAMS)) // SHA_CNT11
+                DEF_IO32(0x10101004, core->shas[0].writeShaBlkcnt(IO_PARAMS)) // SHA_BLKCNT11
+                DEF_IO32(0x10101040, core->shas[0].writeShaHash(0, IO_PARAMS)) // SHA_HASH0_11
+                DEF_IO32(0x10101044, core->shas[0].writeShaHash(1, IO_PARAMS)) // SHA_HASH1_11
+                DEF_IO32(0x10101048, core->shas[0].writeShaHash(2, IO_PARAMS)) // SHA_HASH2_11
+                DEF_IO32(0x1010104C, core->shas[0].writeShaHash(3, IO_PARAMS)) // SHA_HASH3_11
+                DEF_IO32(0x10101050, core->shas[0].writeShaHash(4, IO_PARAMS)) // SHA_HASH4_11
+                DEF_IO32(0x10101054, core->shas[0].writeShaHash(5, IO_PARAMS)) // SHA_HASH5_11
+                DEF_IO32(0x10101058, core->shas[0].writeShaHash(6, IO_PARAMS)) // SHA_HASH6_11
+                DEF_IO32(0x1010105C, core->shas[0].writeShaHash(7, IO_PARAMS)) // SHA_HASH7_11
+                DEF_IO32(0x10301000, core->shas[0].writeShaFifo(IO_PARAMS)) // SHA_FIFO11
+                DEF_IO32(0x10301004, core->shas[0].writeShaFifo(IO_PARAMS)) // SHA_FIFO11
+                DEF_IO32(0x10301008, core->shas[0].writeShaFifo(IO_PARAMS)) // SHA_FIFO11
+                DEF_IO32(0x1030100C, core->shas[0].writeShaFifo(IO_PARAMS)) // SHA_FIFO11
+                DEF_IO32(0x10301010, core->shas[0].writeShaFifo(IO_PARAMS)) // SHA_FIFO11
+                DEF_IO32(0x10301014, core->shas[0].writeShaFifo(IO_PARAMS)) // SHA_FIFO11
+                DEF_IO32(0x10301018, core->shas[0].writeShaFifo(IO_PARAMS)) // SHA_FIFO11
+                DEF_IO32(0x1030101C, core->shas[0].writeShaFifo(IO_PARAMS)) // SHA_FIFO11
+                DEF_IO32(0x10301020, core->shas[0].writeShaFifo(IO_PARAMS)) // SHA_FIFO11
+                DEF_IO32(0x10301024, core->shas[0].writeShaFifo(IO_PARAMS)) // SHA_FIFO11
+                DEF_IO32(0x10301028, core->shas[0].writeShaFifo(IO_PARAMS)) // SHA_FIFO11
+                DEF_IO32(0x1030102C, core->shas[0].writeShaFifo(IO_PARAMS)) // SHA_FIFO11
+                DEF_IO32(0x10301030, core->shas[0].writeShaFifo(IO_PARAMS)) // SHA_FIFO11
+                DEF_IO32(0x10301034, core->shas[0].writeShaFifo(IO_PARAMS)) // SHA_FIFO11
+                DEF_IO32(0x10301038, core->shas[0].writeShaFifo(IO_PARAMS)) // SHA_FIFO11
+                DEF_IO32(0x1030103C, core->shas[0].writeShaFifo(IO_PARAMS)) // SHA_FIFO11
                 DEF_IO32(0x10163000, core->pxi.writePxiSync(false, IO_PARAMS)) // PXI_SYNC11
                 DEF_IO32(0x10163004, core->pxi.writePxiCnt(false, IO_PARAMS)) // PXI_CNT11
                 DEF_IO32(0x10163008, core->pxi.writePxiSend(false, IO_PARAMS)) // PXI_SEND11
@@ -370,6 +416,32 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value)
                 DEF_IO32(0x10009028, core->aes.writeAesIv(2, IO_PARAMS)) // AES_IV2
                 DEF_IO32(0x1000902C, core->aes.writeAesIv(3, IO_PARAMS)) // AES_IV3
                 DEF_IO32(0x10009100, core->aes.writeAesKeyfifo(IO_PARAMS)) // AES_KEYFIFO
+                DEF_IO32(0x1000A000, core->shas[1].writeShaCnt(IO_PARAMS)) // SHA_CNT9
+                DEF_IO32(0x1000A004, core->shas[1].writeShaBlkcnt(IO_PARAMS)) // SHA_BLKCNT9
+                DEF_IO32(0x1000A040, core->shas[1].writeShaHash(0, IO_PARAMS)) // SHA_HASH0_9
+                DEF_IO32(0x1000A044, core->shas[1].writeShaHash(1, IO_PARAMS)) // SHA_HASH1_9
+                DEF_IO32(0x1000A048, core->shas[1].writeShaHash(2, IO_PARAMS)) // SHA_HASH2_9
+                DEF_IO32(0x1000A04C, core->shas[1].writeShaHash(3, IO_PARAMS)) // SHA_HASH3_9
+                DEF_IO32(0x1000A050, core->shas[1].writeShaHash(4, IO_PARAMS)) // SHA_HASH4_9
+                DEF_IO32(0x1000A054, core->shas[1].writeShaHash(5, IO_PARAMS)) // SHA_HASH5_9
+                DEF_IO32(0x1000A058, core->shas[1].writeShaHash(6, IO_PARAMS)) // SHA_HASH6_9
+                DEF_IO32(0x1000A05C, core->shas[1].writeShaHash(7, IO_PARAMS)) // SHA_HASH7_9
+                DEF_IO32(0x1000A080, core->shas[1].writeShaFifo(IO_PARAMS)) // SHA_FIFO9
+                DEF_IO32(0x1000A084, core->shas[1].writeShaFifo(IO_PARAMS)) // SHA_FIFO9
+                DEF_IO32(0x1000A088, core->shas[1].writeShaFifo(IO_PARAMS)) // SHA_FIFO9
+                DEF_IO32(0x1000A08C, core->shas[1].writeShaFifo(IO_PARAMS)) // SHA_FIFO9
+                DEF_IO32(0x1000A090, core->shas[1].writeShaFifo(IO_PARAMS)) // SHA_FIFO9
+                DEF_IO32(0x1000A094, core->shas[1].writeShaFifo(IO_PARAMS)) // SHA_FIFO9
+                DEF_IO32(0x1000A098, core->shas[1].writeShaFifo(IO_PARAMS)) // SHA_FIFO9
+                DEF_IO32(0x1000A09C, core->shas[1].writeShaFifo(IO_PARAMS)) // SHA_FIFO9
+                DEF_IO32(0x1000A0A0, core->shas[1].writeShaFifo(IO_PARAMS)) // SHA_FIFO9
+                DEF_IO32(0x1000A0A4, core->shas[1].writeShaFifo(IO_PARAMS)) // SHA_FIFO9
+                DEF_IO32(0x1000A0A8, core->shas[1].writeShaFifo(IO_PARAMS)) // SHA_FIFO9
+                DEF_IO32(0x1000A0AC, core->shas[1].writeShaFifo(IO_PARAMS)) // SHA_FIFO9
+                DEF_IO32(0x1000A0B0, core->shas[1].writeShaFifo(IO_PARAMS)) // SHA_FIFO9
+                DEF_IO32(0x1000A0B4, core->shas[1].writeShaFifo(IO_PARAMS)) // SHA_FIFO9
+                DEF_IO32(0x1000A0B8, core->shas[1].writeShaFifo(IO_PARAMS)) // SHA_FIFO9
+                DEF_IO32(0x1000A0BC, core->shas[1].writeShaFifo(IO_PARAMS)) // SHA_FIFO9
             }
         }
 
