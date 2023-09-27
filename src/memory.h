@@ -33,7 +33,6 @@ class Memory
 
     private:
         Core *core;
-        uint32_t otp[0x40] = {};
 
         uint8_t fcram[0x8000000] = {}; // 128MB FCRAM
         uint8_t vram[0x600000] = {}; // 6MB VRAM

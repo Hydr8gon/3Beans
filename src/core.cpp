@@ -21,16 +21,21 @@
 #include "core.h"
 
 Core::Core(): aes(this), cpus { Interpreter(this, ARM11A), Interpreter(this, ARM11B), Interpreter(this, ARM9) },
-    gpu(this), interrupts(this), memory(this), pxi(this), sdMmc(this), shas { Sha(this), Sha(this) }
+    gpu(this), interrupts(this), memory(this), pxi(this), sdMmc(this), shas { Sha(this), Sha(this) }, timers(this)
 {
     // Initialize memory and the CPUs
     memory.loadFiles();
+    sdMmc.loadFiles();
     for (int i = 0; i < MAX_CPUS; i++)
         cpus[i].init();
 
     // Define the tasks that can be scheduled
     tasks[RESET_CYCLES] = std::bind(&Core::resetCycles, this);
     tasks[END_FRAME] = std::bind(&Core::endFrame, this);
+    tasks[TIMER0_OVERFLOW] = std::bind(&Timers::overflow, timers, 0);
+    tasks[TIMER1_OVERFLOW] = std::bind(&Timers::overflow, timers, 1);
+    tasks[TIMER2_OVERFLOW] = std::bind(&Timers::overflow, timers, 2);
+    tasks[TIMER3_OVERFLOW] = std::bind(&Timers::overflow, timers, 3);
 
     // Schedule the initial tasks
     schedule(RESET_CYCLES, 0x7FFFFFFF);
@@ -44,6 +49,7 @@ void Core::resetCycles()
         events[i].cycles -= globalCycles;
     for (int i = 0; i < MAX_CPUS; i++)
         cpus[i].resetCycles();
+    timers.resetCycles();
     globalCycles -= globalCycles;
     schedule(RESET_CYCLES, 0x7FFFFFFF);
 }

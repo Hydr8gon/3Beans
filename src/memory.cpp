@@ -61,13 +61,6 @@ bool Memory::loadFiles()
     if (!file) return false;
     fread(boot9, sizeof(uint8_t), 0x10000, file);
     fclose(file);
-
-    // Try to load OTP data from the NAND
-    file = fopen("nand.bin", "rb");
-    if (!file) return false;
-    fseek(file, 0xE00, SEEK_SET);
-    fread(otp, sizeof(uint32_t), 0x40, file);
-    fclose(file);
     return true;
 }
 
@@ -117,7 +110,7 @@ template <typename T> T Memory::read(CpuId id, uint32_t address)
         return ioRead<T>(id, address);
 
     // Catch reads from unmapped memory
-    LOG_WARN("Unknown ARM%d memory read: 0x%08X\n", (id == ARM9) ? 9 : 11, address);
+    LOG_WARN("Unmapped ARM%d memory read: 0x%08X\n", (id == ARM9) ? 9 : 11, address);
     return 0;
 }
 
@@ -162,7 +155,7 @@ template <typename T> void Memory::write(CpuId id, uint32_t address, T value)
         return ioWrite<T>(id, address, value);
 
     // Catch writes to unmapped memory
-    LOG_WARN("Unknown ARM%d memory write: 0x%08X\n", (id == ARM9) ? 9 : 11, address);
+    LOG_WARN("Unmapped ARM%d memory write: 0x%08X\n", (id == ARM9) ? 9 : 11, address);
 }
 
 template <typename T> T Memory::ioRead(CpuId id, uint32_t address)
@@ -229,71 +222,80 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address)
                 DEF_IO16(0x10000000, data = 0x101) // CFG9_SYSPROT (stub)
                 DEF_IO32(0x10001000, data = core->interrupts.readIrqIe()) // IRQ_IE
                 DEF_IO32(0x10001004, data = core->interrupts.readIrqIf()) // IRQ_IF
-                DEF_IO32(0x10012000, data = otp[0]) // OTP_ENCRYPTED0
-                DEF_IO32(0x10012004, data = otp[1]) // OTP_ENCRYPTED1
-                DEF_IO32(0x10012008, data = otp[2]) // OTP_ENCRYPTED2
-                DEF_IO32(0x1001200C, data = otp[3]) // OTP_ENCRYPTED3
-                DEF_IO32(0x10012010, data = otp[4]) // OTP_ENCRYPTED4
-                DEF_IO32(0x10012014, data = otp[5]) // OTP_ENCRYPTED5
-                DEF_IO32(0x10012018, data = otp[6]) // OTP_ENCRYPTED6
-                DEF_IO32(0x1001201C, data = otp[7]) // OTP_ENCRYPTED7
-                DEF_IO32(0x10012020, data = otp[8]) // OTP_ENCRYPTED8
-                DEF_IO32(0x10012024, data = otp[9]) // OTP_ENCRYPTED9
-                DEF_IO32(0x10012028, data = otp[10]) // OTP_ENCRYPTED10
-                DEF_IO32(0x1001202C, data = otp[11]) // OTP_ENCRYPTED11
-                DEF_IO32(0x10012030, data = otp[12]) // OTP_ENCRYPTED12
-                DEF_IO32(0x10012034, data = otp[13]) // OTP_ENCRYPTED13
-                DEF_IO32(0x10012038, data = otp[14]) // OTP_ENCRYPTED14
-                DEF_IO32(0x1001203C, data = otp[15]) // OTP_ENCRYPTED15
-                DEF_IO32(0x10012040, data = otp[16]) // OTP_ENCRYPTED16
-                DEF_IO32(0x10012044, data = otp[17]) // OTP_ENCRYPTED17
-                DEF_IO32(0x10012048, data = otp[18]) // OTP_ENCRYPTED18
-                DEF_IO32(0x1001204C, data = otp[19]) // OTP_ENCRYPTED19
-                DEF_IO32(0x10012050, data = otp[20]) // OTP_ENCRYPTED20
-                DEF_IO32(0x10012054, data = otp[21]) // OTP_ENCRYPTED21
-                DEF_IO32(0x10012058, data = otp[22]) // OTP_ENCRYPTED22
-                DEF_IO32(0x1001205C, data = otp[23]) // OTP_ENCRYPTED23
-                DEF_IO32(0x10012060, data = otp[24]) // OTP_ENCRYPTED24
-                DEF_IO32(0x10012064, data = otp[25]) // OTP_ENCRYPTED25
-                DEF_IO32(0x10012068, data = otp[26]) // OTP_ENCRYPTED26
-                DEF_IO32(0x1001206C, data = otp[27]) // OTP_ENCRYPTED27
-                DEF_IO32(0x10012070, data = otp[28]) // OTP_ENCRYPTED28
-                DEF_IO32(0x10012074, data = otp[29]) // OTP_ENCRYPTED29
-                DEF_IO32(0x10012078, data = otp[30]) // OTP_ENCRYPTED30
-                DEF_IO32(0x1001207C, data = otp[31]) // OTP_ENCRYPTED31
-                DEF_IO32(0x10012080, data = otp[32]) // OTP_ENCRYPTED32
-                DEF_IO32(0x10012084, data = otp[33]) // OTP_ENCRYPTED33
-                DEF_IO32(0x10012088, data = otp[34]) // OTP_ENCRYPTED34
-                DEF_IO32(0x1001208C, data = otp[35]) // OTP_ENCRYPTED35
-                DEF_IO32(0x10012090, data = otp[36]) // OTP_ENCRYPTED36
-                DEF_IO32(0x10012094, data = otp[37]) // OTP_ENCRYPTED37
-                DEF_IO32(0x10012098, data = otp[38]) // OTP_ENCRYPTED38
-                DEF_IO32(0x1001209C, data = otp[39]) // OTP_ENCRYPTED39
-                DEF_IO32(0x100120A0, data = otp[40]) // OTP_ENCRYPTED40
-                DEF_IO32(0x100120A4, data = otp[41]) // OTP_ENCRYPTED41
-                DEF_IO32(0x100120A8, data = otp[42]) // OTP_ENCRYPTED42
-                DEF_IO32(0x100120AC, data = otp[43]) // OTP_ENCRYPTED43
-                DEF_IO32(0x100120B0, data = otp[44]) // OTP_ENCRYPTED44
-                DEF_IO32(0x100120B4, data = otp[45]) // OTP_ENCRYPTED45
-                DEF_IO32(0x100120B8, data = otp[46]) // OTP_ENCRYPTED46
-                DEF_IO32(0x100120BC, data = otp[47]) // OTP_ENCRYPTED47
-                DEF_IO32(0x100120C0, data = otp[48]) // OTP_ENCRYPTED48
-                DEF_IO32(0x100120C4, data = otp[49]) // OTP_ENCRYPTED49
-                DEF_IO32(0x100120C8, data = otp[50]) // OTP_ENCRYPTED50
-                DEF_IO32(0x100120CC, data = otp[51]) // OTP_ENCRYPTED51
-                DEF_IO32(0x100120D0, data = otp[52]) // OTP_ENCRYPTED52
-                DEF_IO32(0x100120D4, data = otp[53]) // OTP_ENCRYPTED53
-                DEF_IO32(0x100120D8, data = otp[54]) // OTP_ENCRYPTED54
-                DEF_IO32(0x100120DC, data = otp[55]) // OTP_ENCRYPTED55
-                DEF_IO32(0x100120E0, data = otp[56]) // OTP_ENCRYPTED56
-                DEF_IO32(0x100120E4, data = otp[57]) // OTP_ENCRYPTED57
-                DEF_IO32(0x100120E8, data = otp[58]) // OTP_ENCRYPTED58
-                DEF_IO32(0x100120EC, data = otp[59]) // OTP_ENCRYPTED59
-                DEF_IO32(0x100120F0, data = otp[60]) // OTP_ENCRYPTED60
-                DEF_IO32(0x100120F4, data = otp[61]) // OTP_ENCRYPTED61
-                DEF_IO32(0x100120F8, data = otp[62]) // OTP_ENCRYPTED62
-                DEF_IO32(0x100120FC, data = otp[63]) // OTP_ENCRYPTED63
+                DEF_IO16(0x10003000, data = core->timers.readTmCntL(0)) // TM0CNT_L
+                DEF_IO16(0x10003002, data = core->timers.readTmCntH(0)) // TM0CNT_H
+                DEF_IO16(0x10003004, data = core->timers.readTmCntL(1)) // TM1CNT_L
+                DEF_IO16(0x10003006, data = core->timers.readTmCntH(1)) // TM1CNT_H
+                DEF_IO16(0x10003008, data = core->timers.readTmCntL(2)) // TM2CNT_L
+                DEF_IO16(0x1000300A, data = core->timers.readTmCntH(2)) // TM2CNT_H
+                DEF_IO16(0x1000300C, data = core->timers.readTmCntL(3)) // TM3CNT_L
+                DEF_IO16(0x1000300E, data = core->timers.readTmCntH(3)) // TM3CNT_H
+                DEF_IO32(0x10012000, data = core->sdMmc.readOtpEncrypted(0)) // OTP_ENCRYPTED0
+                DEF_IO32(0x10012004, data = core->sdMmc.readOtpEncrypted(1)) // OTP_ENCRYPTED1
+                DEF_IO32(0x10012008, data = core->sdMmc.readOtpEncrypted(2)) // OTP_ENCRYPTED2
+                DEF_IO32(0x1001200C, data = core->sdMmc.readOtpEncrypted(3)) // OTP_ENCRYPTED3
+                DEF_IO32(0x10012010, data = core->sdMmc.readOtpEncrypted(4)) // OTP_ENCRYPTED4
+                DEF_IO32(0x10012014, data = core->sdMmc.readOtpEncrypted(5)) // OTP_ENCRYPTED5
+                DEF_IO32(0x10012018, data = core->sdMmc.readOtpEncrypted(6)) // OTP_ENCRYPTED6
+                DEF_IO32(0x1001201C, data = core->sdMmc.readOtpEncrypted(7)) // OTP_ENCRYPTED7
+                DEF_IO32(0x10012020, data = core->sdMmc.readOtpEncrypted(8)) // OTP_ENCRYPTED8
+                DEF_IO32(0x10012024, data = core->sdMmc.readOtpEncrypted(9)) // OTP_ENCRYPTED9
+                DEF_IO32(0x10012028, data = core->sdMmc.readOtpEncrypted(10)) // OTP_ENCRYPTED10
+                DEF_IO32(0x1001202C, data = core->sdMmc.readOtpEncrypted(11)) // OTP_ENCRYPTED11
+                DEF_IO32(0x10012030, data = core->sdMmc.readOtpEncrypted(12)) // OTP_ENCRYPTED12
+                DEF_IO32(0x10012034, data = core->sdMmc.readOtpEncrypted(13)) // OTP_ENCRYPTED13
+                DEF_IO32(0x10012038, data = core->sdMmc.readOtpEncrypted(14)) // OTP_ENCRYPTED14
+                DEF_IO32(0x1001203C, data = core->sdMmc.readOtpEncrypted(15)) // OTP_ENCRYPTED15
+                DEF_IO32(0x10012040, data = core->sdMmc.readOtpEncrypted(16)) // OTP_ENCRYPTED16
+                DEF_IO32(0x10012044, data = core->sdMmc.readOtpEncrypted(17)) // OTP_ENCRYPTED17
+                DEF_IO32(0x10012048, data = core->sdMmc.readOtpEncrypted(18)) // OTP_ENCRYPTED18
+                DEF_IO32(0x1001204C, data = core->sdMmc.readOtpEncrypted(19)) // OTP_ENCRYPTED19
+                DEF_IO32(0x10012050, data = core->sdMmc.readOtpEncrypted(20)) // OTP_ENCRYPTED20
+                DEF_IO32(0x10012054, data = core->sdMmc.readOtpEncrypted(21)) // OTP_ENCRYPTED21
+                DEF_IO32(0x10012058, data = core->sdMmc.readOtpEncrypted(22)) // OTP_ENCRYPTED22
+                DEF_IO32(0x1001205C, data = core->sdMmc.readOtpEncrypted(23)) // OTP_ENCRYPTED23
+                DEF_IO32(0x10012060, data = core->sdMmc.readOtpEncrypted(24)) // OTP_ENCRYPTED24
+                DEF_IO32(0x10012064, data = core->sdMmc.readOtpEncrypted(25)) // OTP_ENCRYPTED25
+                DEF_IO32(0x10012068, data = core->sdMmc.readOtpEncrypted(26)) // OTP_ENCRYPTED26
+                DEF_IO32(0x1001206C, data = core->sdMmc.readOtpEncrypted(27)) // OTP_ENCRYPTED27
+                DEF_IO32(0x10012070, data = core->sdMmc.readOtpEncrypted(28)) // OTP_ENCRYPTED28
+                DEF_IO32(0x10012074, data = core->sdMmc.readOtpEncrypted(29)) // OTP_ENCRYPTED29
+                DEF_IO32(0x10012078, data = core->sdMmc.readOtpEncrypted(30)) // OTP_ENCRYPTED30
+                DEF_IO32(0x1001207C, data = core->sdMmc.readOtpEncrypted(31)) // OTP_ENCRYPTED31
+                DEF_IO32(0x10012080, data = core->sdMmc.readOtpEncrypted(32)) // OTP_ENCRYPTED32
+                DEF_IO32(0x10012084, data = core->sdMmc.readOtpEncrypted(33)) // OTP_ENCRYPTED33
+                DEF_IO32(0x10012088, data = core->sdMmc.readOtpEncrypted(34)) // OTP_ENCRYPTED34
+                DEF_IO32(0x1001208C, data = core->sdMmc.readOtpEncrypted(35)) // OTP_ENCRYPTED35
+                DEF_IO32(0x10012090, data = core->sdMmc.readOtpEncrypted(36)) // OTP_ENCRYPTED36
+                DEF_IO32(0x10012094, data = core->sdMmc.readOtpEncrypted(37)) // OTP_ENCRYPTED37
+                DEF_IO32(0x10012098, data = core->sdMmc.readOtpEncrypted(38)) // OTP_ENCRYPTED38
+                DEF_IO32(0x1001209C, data = core->sdMmc.readOtpEncrypted(39)) // OTP_ENCRYPTED39
+                DEF_IO32(0x100120A0, data = core->sdMmc.readOtpEncrypted(40)) // OTP_ENCRYPTED40
+                DEF_IO32(0x100120A4, data = core->sdMmc.readOtpEncrypted(41)) // OTP_ENCRYPTED41
+                DEF_IO32(0x100120A8, data = core->sdMmc.readOtpEncrypted(42)) // OTP_ENCRYPTED42
+                DEF_IO32(0x100120AC, data = core->sdMmc.readOtpEncrypted(43)) // OTP_ENCRYPTED43
+                DEF_IO32(0x100120B0, data = core->sdMmc.readOtpEncrypted(44)) // OTP_ENCRYPTED44
+                DEF_IO32(0x100120B4, data = core->sdMmc.readOtpEncrypted(45)) // OTP_ENCRYPTED45
+                DEF_IO32(0x100120B8, data = core->sdMmc.readOtpEncrypted(46)) // OTP_ENCRYPTED46
+                DEF_IO32(0x100120BC, data = core->sdMmc.readOtpEncrypted(47)) // OTP_ENCRYPTED47
+                DEF_IO32(0x100120C0, data = core->sdMmc.readOtpEncrypted(48)) // OTP_ENCRYPTED48
+                DEF_IO32(0x100120C4, data = core->sdMmc.readOtpEncrypted(49)) // OTP_ENCRYPTED49
+                DEF_IO32(0x100120C8, data = core->sdMmc.readOtpEncrypted(50)) // OTP_ENCRYPTED50
+                DEF_IO32(0x100120CC, data = core->sdMmc.readOtpEncrypted(51)) // OTP_ENCRYPTED51
+                DEF_IO32(0x100120D0, data = core->sdMmc.readOtpEncrypted(52)) // OTP_ENCRYPTED52
+                DEF_IO32(0x100120D4, data = core->sdMmc.readOtpEncrypted(53)) // OTP_ENCRYPTED53
+                DEF_IO32(0x100120D8, data = core->sdMmc.readOtpEncrypted(54)) // OTP_ENCRYPTED54
+                DEF_IO32(0x100120DC, data = core->sdMmc.readOtpEncrypted(55)) // OTP_ENCRYPTED55
+                DEF_IO32(0x100120E0, data = core->sdMmc.readOtpEncrypted(56)) // OTP_ENCRYPTED56
+                DEF_IO32(0x100120E4, data = core->sdMmc.readOtpEncrypted(57)) // OTP_ENCRYPTED57
+                DEF_IO32(0x100120E8, data = core->sdMmc.readOtpEncrypted(58)) // OTP_ENCRYPTED58
+                DEF_IO32(0x100120EC, data = core->sdMmc.readOtpEncrypted(59)) // OTP_ENCRYPTED59
+                DEF_IO32(0x100120F0, data = core->sdMmc.readOtpEncrypted(60)) // OTP_ENCRYPTED60
+                DEF_IO32(0x100120F4, data = core->sdMmc.readOtpEncrypted(61)) // OTP_ENCRYPTED61
+                DEF_IO32(0x100120F8, data = core->sdMmc.readOtpEncrypted(62)) // OTP_ENCRYPTED62
+                DEF_IO32(0x100120FC, data = core->sdMmc.readOtpEncrypted(63)) // OTP_ENCRYPTED63
                 DEF_IO16(0x10006000, data = core->sdMmc.readSdCmd()) // SD_CMD
+                DEF_IO16(0x10006002, data = core->sdMmc.readSdPortSelect()) // SD_PORT_SELECT
                 DEF_IO32(0x1000600C, data = core->sdMmc.readSdResponse(0)) // SD_RESPONSE0
                 DEF_IO32(0x10006010, data = core->sdMmc.readSdResponse(1)) // SD_RESPONSE1
                 DEF_IO32(0x10006014, data = core->sdMmc.readSdResponse(2)) // SD_RESPONSE2
@@ -320,7 +322,7 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address)
             }
         }
 
-        // Catch reads from unmapped I/O registers
+        // Catch reads from unknown I/O registers
         LOG_WARN("Unknown ARM%d I/O read: 0x%08X\n", (id == ARM9) ? 9 : 11, address);
         return value;
 
@@ -400,7 +402,16 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value)
             {
                 DEF_IO32(0x10001000, core->interrupts.writeIrqIe(IO_PARAMS)) // IRQ_IE
                 DEF_IO32(0x10001004, core->interrupts.writeIrqIf(IO_PARAMS)) // IRQ_IF
+                DEF_IO16(0x10003000, core->timers.writeTmCntL(0, IO_PARAMS)) // TM0CNT_L
+                DEF_IO16(0x10003002, core->timers.writeTmCntH(0, IO_PARAMS)) // TM0CNT_H
+                DEF_IO16(0x10003004, core->timers.writeTmCntL(1, IO_PARAMS)) // TM1CNT_L
+                DEF_IO16(0x10003006, core->timers.writeTmCntH(1, IO_PARAMS)) // TM1CNT_H
+                DEF_IO16(0x10003008, core->timers.writeTmCntL(2, IO_PARAMS)) // TM2CNT_L
+                DEF_IO16(0x1000300A, core->timers.writeTmCntH(2, IO_PARAMS)) // TM2CNT_H
+                DEF_IO16(0x1000300C, core->timers.writeTmCntL(3, IO_PARAMS)) // TM3CNT_L
+                DEF_IO16(0x1000300E, core->timers.writeTmCntH(3, IO_PARAMS)) // TM3CNT_H
                 DEF_IO16(0x10006000, core->sdMmc.writeSdCmd(IO_PARAMS)) // SD_CMD
+                DEF_IO16(0x10006002, core->sdMmc.writeSdPortSelect(IO_PARAMS)) // SD_PORT_SELECT
                 DEF_IO32(0x1000601C, core->sdMmc.writeSdIrqStatus(IO_PARAMS)) // SD_IRQ_STATUS
                 DEF_IO32(0x10006020, core->sdMmc.writeSdIrqMask(IO_PARAMS)) // SD_IRQ_MASK
                 DEF_IO32(0x10008000, core->pxi.writePxiSync(true, IO_PARAMS)) // PXI_SYNC9
@@ -445,7 +456,7 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value)
             }
         }
 
-        // Catch writes to unmapped I/O registers
+        // Catch writes to unknown I/O registers
         LOG_WARN("Unknown ARM%d I/O write: 0x%08X\n", (id == ARM9) ? 9 : 11, address);
         return;
 

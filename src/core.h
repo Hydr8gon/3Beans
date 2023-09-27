@@ -33,11 +33,16 @@
 #include "pxi.h"
 #include "sd_mmc.h"
 #include "sha.h"
+#include "timers.h"
 
 enum Task
 {
     RESET_CYCLES,
     END_FRAME,
+    TIMER0_OVERFLOW,
+    TIMER1_OVERFLOW,
+    TIMER2_OVERFLOW,
+    TIMER3_OVERFLOW,
     MAX_TASKS
 };
 
@@ -61,6 +66,7 @@ class Core
         Pxi pxi;
         SdMmc sdMmc;
         Sha shas[2];
+        Timers timers;
 
         std::atomic<bool> running;
         std::vector<Event> events;

@@ -44,7 +44,7 @@ void Gpu::drawFrame()
     {
         for (int x = 0; x < 400; x++)
         {
-            uint32_t color = core->memory.read<uint32_t>(ARM11A, pdcFramebufLt0[false] + ((x + 1) * 240 - y) * 4);
+            uint32_t color = core->memory.read<uint32_t>(ARM11A, pdcFramebufLt0[0] + (x * 240 + 239 - y) * 4);
             uint8_t r = (color >> 24) & 0xFF;
             uint8_t g = (color >> 16) & 0xFF;
             uint8_t b = (color >> 8) & 0xFF;
@@ -57,7 +57,7 @@ void Gpu::drawFrame()
     {
         for (int x = 0; x < 320; x++)
         {
-            uint32_t color = core->memory.read<uint32_t>(ARM11A, pdcFramebufLt0[true] + ((x + 1) * 240 - y) * 4);
+            uint32_t color = core->memory.read<uint32_t>(ARM11A, pdcFramebufLt0[1] + (x * 240 + 239 - y) * 4);
             uint8_t r = (color >> 24) & 0xFF;
             uint8_t g = (color >> 16) & 0xFF;
             uint8_t b = (color >> 8) & 0xFF;
