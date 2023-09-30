@@ -32,10 +32,10 @@ Core::Core(): aes(this), cpus { Interpreter(this, ARM11A), Interpreter(this, ARM
     // Define the tasks that can be scheduled
     tasks[RESET_CYCLES] = std::bind(&Core::resetCycles, this);
     tasks[END_FRAME] = std::bind(&Core::endFrame, this);
-    tasks[TIMER0_OVERFLOW] = std::bind(&Timers::overflow, timers, 0);
-    tasks[TIMER1_OVERFLOW] = std::bind(&Timers::overflow, timers, 1);
-    tasks[TIMER2_OVERFLOW] = std::bind(&Timers::overflow, timers, 2);
-    tasks[TIMER3_OVERFLOW] = std::bind(&Timers::overflow, timers, 3);
+    tasks[TIMER0_OVERFLOW] = std::bind(&Timers::overflow, &timers, 0);
+    tasks[TIMER1_OVERFLOW] = std::bind(&Timers::overflow, &timers, 1);
+    tasks[TIMER2_OVERFLOW] = std::bind(&Timers::overflow, &timers, 2);
+    tasks[TIMER3_OVERFLOW] = std::bind(&Timers::overflow, &timers, 3);
 
     // Schedule the initial tasks
     schedule(RESET_CYCLES, 0x7FFFFFFF);

@@ -296,12 +296,19 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address)
                 DEF_IO32(0x100120FC, data = core->sdMmc.readOtpEncrypted(63)) // OTP_ENCRYPTED63
                 DEF_IO16(0x10006000, data = core->sdMmc.readSdCmd()) // SD_CMD
                 DEF_IO16(0x10006002, data = core->sdMmc.readSdPortSelect()) // SD_PORT_SELECT
+                DEF_IO32(0x10006004, data = core->sdMmc.readSdCmdParam()) // SD_CMD_PARAM
+                DEF_IO16(0x1000600A, data = core->sdMmc.readSdData16Blkcnt()) // SD_DATA16_BLKCNT
                 DEF_IO32(0x1000600C, data = core->sdMmc.readSdResponse(0)) // SD_RESPONSE0
                 DEF_IO32(0x10006010, data = core->sdMmc.readSdResponse(1)) // SD_RESPONSE1
                 DEF_IO32(0x10006014, data = core->sdMmc.readSdResponse(2)) // SD_RESPONSE2
                 DEF_IO32(0x10006018, data = core->sdMmc.readSdResponse(3)) // SD_RESPONSE3
                 DEF_IO32(0x1000601C, data = core->sdMmc.readSdIrqStatus()) // SD_IRQ_STATUS
                 DEF_IO32(0x10006020, data = core->sdMmc.readSdIrqMask()) // SD_IRQ_MASK
+                DEF_IO16(0x10006026, data = core->sdMmc.readSdData16Blklen()) // SD_DATA16_BLKLEN
+                DEF_IO16(0x10006030, data = core->sdMmc.readSdData16Fifo()) // SD_DATA16_FIFO
+                DEF_IO16(0x100060D8, data = core->sdMmc.readSdDataCtl()) // SD_DATA_CTL
+                DEF_IO16(0x10006100, data = core->sdMmc.readSdData32Irq()) // SD_DATA32_IRQ
+                DEF_IO32(0x1000610C, data = core->sdMmc.readSdData32Fifo()) // SD_DATA32_FIFO
                 DEF_IO32(0x10008000, data = core->pxi.readPxiSync(true)) // PXI_SYNC9
                 DEF_IO32(0x10008004, data = core->pxi.readPxiCnt(true)) // PXI_CNT9
                 DEF_IO32(0x1000800C, data = core->pxi.readPxiRecv(true)) // PXI_RECV9
@@ -412,8 +419,13 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value)
                 DEF_IO16(0x1000300E, core->timers.writeTmCntH(3, IO_PARAMS)) // TM3CNT_H
                 DEF_IO16(0x10006000, core->sdMmc.writeSdCmd(IO_PARAMS)) // SD_CMD
                 DEF_IO16(0x10006002, core->sdMmc.writeSdPortSelect(IO_PARAMS)) // SD_PORT_SELECT
+                DEF_IO32(0x10006004, core->sdMmc.writeSdCmdParam(IO_PARAMS)) // SD_CMD_PARAM
+                DEF_IO16(0x1000600A, core->sdMmc.writeSdData16Blkcnt(IO_PARAMS)) // SD_DATA16_BLKCNT
                 DEF_IO32(0x1000601C, core->sdMmc.writeSdIrqStatus(IO_PARAMS)) // SD_IRQ_STATUS
                 DEF_IO32(0x10006020, core->sdMmc.writeSdIrqMask(IO_PARAMS)) // SD_IRQ_MASK
+                DEF_IO16(0x10006026, core->sdMmc.writeSdData16Blklen(IO_PARAMS)) // SD_DATA16_BLKLEN
+                DEF_IO16(0x100060D8, core->sdMmc.writeSdDataCtl(IO_PARAMS)) // SD_DATA_CTL
+                DEF_IO16(0x10006100, core->sdMmc.writeSdData32Irq(IO_PARAMS)) // SD_DATA32_IRQ
                 DEF_IO32(0x10008000, core->pxi.writePxiSync(true, IO_PARAMS)) // PXI_SYNC9
                 DEF_IO32(0x10008004, core->pxi.writePxiCnt(true, IO_PARAMS)) // PXI_CNT9
                 DEF_IO32(0x10008008, core->pxi.writePxiSend(true, IO_PARAMS)) // PXI_SEND9

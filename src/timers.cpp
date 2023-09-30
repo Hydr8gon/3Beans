@@ -35,7 +35,7 @@ void Timers::overflow(int i)
     // Reload the timer and trigger an overflow interrupt if enabled
     timers[i] = tmCntL[i];
     if (tmCntH[i] & BIT(6))
-        core->interrupts.sendInterrupt(false, i + 8);
+        core->interrupts.sendInterrupt(true, i + 8);
 
     // Schedule the next timer overflow if not in count-up mode
     if (!countUp[i])
