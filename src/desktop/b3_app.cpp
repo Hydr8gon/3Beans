@@ -1,5 +1,5 @@
 /*
-    Copyright 2023 Hydr8gon
+    Copyright 2023-2024 Hydr8gon
 
     This file is part of 3Beans.
 
@@ -19,8 +19,7 @@
 
 #include "b3_app.h"
 
-enum AppEvent
-{
+enum AppEvent {
     UPDATE = 1
 };
 
@@ -28,8 +27,7 @@ wxBEGIN_EVENT_TABLE(b3App, wxApp)
 EVT_TIMER(UPDATE, b3App::update)
 wxEND_EVENT_TABLE()
 
-bool b3App::OnInit()
-{
+bool b3App::OnInit() {
     // Create the program's frame
     SetAppName("3Beans");
     frame = new b3Frame();
@@ -40,8 +38,7 @@ bool b3App::OnInit()
     return true;
 }
 
-void b3App::update(wxTimerEvent &event)
-{
+void b3App::update(wxTimerEvent &event) {
     // Continuously refresh the frame
     frame->Refresh();
 }

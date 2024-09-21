@@ -1,5 +1,5 @@
 /*
-    Copyright 2023 Hydr8gon
+    Copyright 2023-2024 Hydr8gon
 
     This file is part of 3Beans.
 
@@ -25,8 +25,7 @@ wxBEGIN_EVENT_TABLE(b3Frame, wxFrame)
 EVT_CLOSE(b3Frame::close)
 wxEND_EVENT_TABLE()
 
-b3Frame::b3Frame(): wxFrame(nullptr, wxID_ANY, "3Beans")
-{
+b3Frame::b3Frame(): wxFrame(nullptr, wxID_ANY, "3Beans") {
     // Set up and show the window
     SetClientSize(MIN_SIZE);
     SetMinClientSize(MIN_SIZE);
@@ -44,15 +43,13 @@ b3Frame::b3Frame(): wxFrame(nullptr, wxID_ANY, "3Beans")
     std::thread *thread = new std::thread(&b3Frame::runCore, this);
 }
 
-void b3Frame::runCore()
-{
+void b3Frame::runCore() {
     // Run the emulator
     while (core)
         core->runFrame();
 }
 
-void b3Frame::close(wxCloseEvent &event)
-{
+void b3Frame::close(wxCloseEvent &event) {
     // Tell the canvas to stop drawing
     canvas->finish();
     event.Skip(true);

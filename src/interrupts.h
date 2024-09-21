@@ -1,5 +1,5 @@
 /*
-    Copyright 2023 Hydr8gon
+    Copyright 2023-2024 Hydr8gon
 
     This file is part of 3Beans.
 
@@ -22,38 +22,37 @@
 #include <cstdint>
 class Core;
 
-class Interrupts
-{
-    public:
-        Interrupts(Core *core): core(core) {}
-        void sendInterrupt(bool arm9, int type);
-        void checkInterrupt(bool arm9) { sendInterrupt(arm9, -1); }
+class Interrupts {
+public:
+    Interrupts(Core *core): core(core) {}
+    void sendInterrupt(bool arm9, int type);
+    void checkInterrupt(bool arm9) { sendInterrupt(arm9, -1); }
 
-        uint32_t readMpIle(CpuId id) { return mpIle[id]; }
-        uint32_t readMpAck(CpuId id);
-        uint32_t readMpIge() { return mpIge; }
-        uint32_t readMpIe(int i) { return mpIe[i]; }
-        uint32_t readMpIp(CpuId id, int i) { return mpIp[id][i]; }
-        uint32_t readMpIa(CpuId id, int i) { return mpIa[id][i]; }
-        uint32_t readIrqIe() { return irqIe; }
-        uint32_t readIrqIf() { return irqIf; }
+    uint32_t readMpIle(CpuId id) { return mpIle[id]; }
+    uint32_t readMpAck(CpuId id);
+    uint32_t readMpIge() { return mpIge; }
+    uint32_t readMpIe(int i) { return mpIe[i]; }
+    uint32_t readMpIp(CpuId id, int i) { return mpIp[id][i]; }
+    uint32_t readMpIa(CpuId id, int i) { return mpIa[id][i]; }
+    uint32_t readIrqIe() { return irqIe; }
+    uint32_t readIrqIf() { return irqIf; }
 
-        void writeMpIle(CpuId id, uint32_t mask, uint32_t value);
-        void writeMpEoi(CpuId id, uint32_t mask, uint32_t value);
-        void writeMpIge(uint32_t mask, uint32_t value);
-        void writeMpIeSet(int i, uint32_t mask, uint32_t value);
-        void writeMpIeClear(int i, uint32_t mask, uint32_t value);
-        void writeIrqIe(uint32_t mask, uint32_t value);
-        void writeIrqIf(uint32_t mask, uint32_t value);
+    void writeMpIle(CpuId id, uint32_t mask, uint32_t value);
+    void writeMpEoi(CpuId id, uint32_t mask, uint32_t value);
+    void writeMpIge(uint32_t mask, uint32_t value);
+    void writeMpIeSet(int i, uint32_t mask, uint32_t value);
+    void writeMpIeClear(int i, uint32_t mask, uint32_t value);
+    void writeIrqIe(uint32_t mask, uint32_t value);
+    void writeIrqIf(uint32_t mask, uint32_t value);
 
-    private:
-        Core *core;
+private:
+    Core *core;
 
-        uint32_t mpIle[2] = {};
-        uint32_t mpIge = 0;
-        uint32_t mpIe[4] = { 0xFFFF };
-        uint32_t mpIp[2][4] = {};
-        uint32_t mpIa[2][4] = {};
-        uint32_t irqIe = 0;
-        uint32_t irqIf = 0;
+    uint32_t mpIle[2] = {};
+    uint32_t mpIge = 0;
+    uint32_t mpIe[4] = { 0xFFFF };
+    uint32_t mpIp[2][4] = {};
+    uint32_t mpIa[2][4] = {};
+    uint32_t irqIe = 0;
+    uint32_t irqIf = 0;
 };

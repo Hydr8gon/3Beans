@@ -1,5 +1,5 @@
 /*
-    Copyright 2023 Hydr8gon
+    Copyright 2023-2024 Hydr8gon
 
     This file is part of 3Beans.
 
@@ -22,30 +22,30 @@
 #include <chrono>
 #include <wx/wx.h>
 #include <wx/glcanvas.h>
+
 class b3Frame;
 
-class b3Canvas: public wxGLCanvas
-{
-    public:
-        b3Canvas(b3Frame *frame);
-        void finish();
+class b3Canvas: public wxGLCanvas {
+public:
+    b3Canvas(b3Frame *frame);
+    void finish();
 
-    private:
-        b3Frame *frame;
-        wxGLContext *context;
+private:
+    b3Frame *frame;
+    wxGLContext *context;
 
-        std::chrono::steady_clock::time_point lastRateTime;
-        int frameCount = 0;
-        int swapInterval = 0;
-        int refreshRate = 0;
-        bool finished = false;
+    std::chrono::steady_clock::time_point lastRateTime;
+    int frameCount = 0;
+    int swapInterval = 0;
+    int refreshRate = 0;
+    bool finished = false;
 
-        uint32_t width = 0;
-        uint32_t height = 0;
-        uint32_t x = 0;
-        uint32_t y = 0;
+    uint32_t width = 0;
+    uint32_t height = 0;
+    uint32_t x = 0;
+    uint32_t y = 0;
 
-        void draw(wxPaintEvent &event);
-        void resize(wxSizeEvent &event);
-        wxDECLARE_EVENT_TABLE();
+    void draw(wxPaintEvent &event);
+    void resize(wxSizeEvent &event);
+    wxDECLARE_EVENT_TABLE();
 };

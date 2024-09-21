@@ -1,5 +1,5 @@
 /*
-    Copyright 2023 Hydr8gon
+    Copyright 2023-2024 Hydr8gon
 
     This file is part of 3Beans.
 
@@ -21,8 +21,7 @@
 #include "core.h"
 
 Core::Core(): aes(this), cpus { Interpreter(this, ARM11A), Interpreter(this, ARM11B), Interpreter(this, ARM9) },
-    gpu(this), interrupts(this), memory(this), pxi(this), sdMmc(this), shas { Sha(this), Sha(this) }, timers(this)
-{
+    gpu(this), interrupts(this), memory(this), pxi(this), sdMmc(this), shas { Sha(this), Sha(this) }, timers(this) {
     // Initialize memory and the CPUs
     memory.loadFiles();
     sdMmc.loadFiles();
@@ -42,8 +41,7 @@ Core::Core(): aes(this), cpus { Interpreter(this, ARM11A), Interpreter(this, ARM
     schedule(END_FRAME, 268111856 / 60);
 }
 
-void Core::resetCycles()
-{
+void Core::resetCycles() {
     // Reset the global cycle count periodically to prevent overflow
     for (size_t i = 0; i < events.size(); i++)
         events[i].cycles -= globalCycles;
@@ -54,16 +52,14 @@ void Core::resetCycles()
     schedule(RESET_CYCLES, 0x7FFFFFFF);
 }
 
-void Core::endFrame()
-{
+void Core::endFrame() {
     // Break execution at the end of a frame
     gpu.drawFrame();
     running.store(false);
     schedule(END_FRAME, 268111856 / 60);
 }
 
-void Core::schedule(Task task, uint32_t cycles)
-{
+void Core::schedule(Task task, uint32_t cycles) {
     // Add a task to the scheduler, sorted by least to most cycles until execution
     Event event(&tasks[task], globalCycles + cycles);
     auto it = std::upper_bound(events.cbegin(), events.cend(), event);

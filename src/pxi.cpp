@@ -1,5 +1,5 @@
 /*
-    Copyright 2023 Hydr8gon
+    Copyright 2023-2024 Hydr8gon
 
     This file is part of 3Beans.
 
@@ -19,15 +19,13 @@
 
 #include "core.h"
 
-uint32_t Pxi::readPxiRecv(bool arm9)
-{
+uint32_t Pxi::readPxiRecv(bool arm9) {
     // Ensure the FIFO is enabled
     if (~pxiCnt[arm9] & BIT(15))
         return pxiRecv[arm9];
 
     // Report an error if the FIFO is empty
-    if (pxiCnt[arm9] & BIT(8))
-    {
+    if (pxiCnt[arm9] & BIT(8)) {
         pxiCnt[arm9] |= BIT(14);
         return pxiRecv[arm9];
     }
@@ -36,8 +34,7 @@ uint32_t Pxi::readPxiRecv(bool arm9)
     pxiRecv[arm9] = fifos[!arm9].front();
     fifos[!arm9].pop();
 
-    if (fifos[!arm9].empty())
-    {
+    if (fifos[!arm9].empty()) {
         // Set the empty bits if the FIFO is now empty
         pxiCnt[arm9] |= BIT(8);
         pxiCnt[!arm9] |= BIT(0);
@@ -46,8 +43,7 @@ uint32_t Pxi::readPxiRecv(bool arm9)
         if (pxiCnt[!arm9] & BIT(2))
             core->interrupts.sendInterrupt(arm9, arm9 ? 13 : 0x52);
     }
-    else if (fifos[!arm9].size() == 15)
-    {
+    else if (fifos[!arm9].size() == 15) {
         // Clear the full bits if the FIFO is no longer full
         pxiCnt[arm9] &= ~BIT(9);
         pxiCnt[!arm9] &= ~BIT(1);
@@ -61,16 +57,14 @@ void Pxi::writePxiSync(bool arm9, uint32_t mask, uint32_t value)
     if (mask & 0xFF00)
         pxiSync[!arm9] = (pxiSync[!arm9] & ~0xFF) | ((value >> 8) & 0xFF);
 
-    if (arm9)
-    {
+    if (arm9) {
         // Send interrupts to the ARM11 if requested and enabled
         if ((value & mask & BIT(29)) && (pxiSync[false] & BIT(31)))
             core->interrupts.sendInterrupt(false, 0x50);
         if ((value & mask & BIT(30)) && (pxiSync[false] & BIT(31)))
             core->interrupts.sendInterrupt(false, 0x51);
     }
-    else
-    {
+    else {
         // Send and interrupt to the ARM9 if requested and enabled
         if ((value & mask & BIT(30)) && (pxiSync[true] & BIT(31)))
             core->interrupts.sendInterrupt(true, 12);
@@ -81,15 +75,13 @@ void Pxi::writePxiSync(bool arm9, uint32_t mask, uint32_t value)
     pxiSync[arm9] = (pxiSync[arm9] & ~mask) | (value & mask);
 }
 
-void Pxi::writePxiCnt(bool arm9, uint16_t mask, uint16_t value)
-{
+void Pxi::writePxiCnt(bool arm9, uint16_t mask, uint16_t value) {
     // Check the interrupt conditions before writing to the register
     bool sendCond = (pxiCnt[arm9] & BIT(0)) && (pxiCnt[arm9] & BIT(2));
     bool recvCond = (~pxiCnt[arm9] & BIT(8)) && (pxiCnt[arm9] & BIT(10));
 
     // Clear this CPU's send FIFO if the clear bit is set
-    if ((value & mask & BIT(3)) && !fifos[arm9].empty())
-    {
+    if ((value & mask & BIT(3)) && !fifos[arm9].empty()) {
         // Empty the FIFO
         fifos[arm9] = {};
         pxiRecv[!arm9] = 0;
@@ -116,15 +108,13 @@ void Pxi::writePxiCnt(bool arm9, uint16_t mask, uint16_t value)
         core->interrupts.sendInterrupt(arm9, arm9 ? 14 : 0x53);
 }
 
-void Pxi::writePxiSend(bool arm9, uint32_t mask, uint32_t value)
-{
+void Pxi::writePxiSend(bool arm9, uint32_t mask, uint32_t value) {
     // Ensure the FIFO is enabled
     if (~pxiCnt[arm9] & BIT(15))
         return;
 
     // Report an error if the FIFO is full
-    if (pxiCnt[arm9] & BIT(1))
-    {
+    if (pxiCnt[arm9] & BIT(1)) {
         pxiCnt[arm9] |= BIT(14);
         return;
     }
@@ -132,8 +122,7 @@ void Pxi::writePxiSend(bool arm9, uint32_t mask, uint32_t value)
     // Send a value to the FIFO
     fifos[arm9].push(value & mask);
 
-    if (fifos[arm9].size() == 1)
-    {
+    if (fifos[arm9].size() == 1) {
         // Clear the empty bits if the FIFO is no longer empty
         pxiCnt[arm9] &= ~BIT(0);
         pxiCnt[!arm9] &= ~BIT(8);
@@ -142,8 +131,7 @@ void Pxi::writePxiSend(bool arm9, uint32_t mask, uint32_t value)
         if (pxiCnt[!arm9] & BIT(10))
             core->interrupts.sendInterrupt(arm9, arm9 ? 14 : 0x53);
     }
-    else if (fifos[arm9].size() == 16)
-    {
+    else if (fifos[arm9].size() == 16) {
         // Set the full bits if the FIFO is now full
         pxiCnt[arm9] |= BIT(1);
         pxiCnt[!arm9] |= BIT(9);

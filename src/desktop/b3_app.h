@@ -1,5 +1,5 @@
 /*
-    Copyright 2023 Hydr8gon
+    Copyright 2023-2024 Hydr8gon
 
     This file is part of 3Beans.
 
@@ -21,14 +21,13 @@
 
 #include "b3_frame.h"
 
-class b3App: public wxApp
-{
-    private:
-        b3Frame *frame;
-        wxTimer *timer;
+class b3App: public wxApp {
+private:
+    b3Frame *frame;
+    wxTimer *timer;
 
-        bool OnInit();
+    bool OnInit();
 
-        void update(wxTimerEvent &event);
-        wxDECLARE_EVENT_TABLE();
+    void update(wxTimerEvent &event);
+    wxDECLARE_EVENT_TABLE();
 };

@@ -1,5 +1,5 @@
 /*
-    Copyright 2023 Hydr8gon
+    Copyright 2023-2024 Hydr8gon
 
     This file is part of 3Beans.
 
@@ -35,8 +35,7 @@
 #include "sha.h"
 #include "timers.h"
 
-enum Task
-{
+enum Task {
     RESET_CYCLES,
     END_FRAME,
     TIMER0_OVERFLOW,
@@ -46,8 +45,7 @@ enum Task
     MAX_TASKS
 };
 
-struct Event
-{
+struct Event {
     std::function<void()> *task;
     uint32_t cycles;
 
@@ -55,30 +53,29 @@ struct Event
     bool operator<(const Event &event) const { return cycles < event.cycles; }
 };
 
-class Core
-{
-    public:
-        Aes aes;
-        Interpreter cpus[MAX_CPUS];
-        Gpu gpu;
-        Interrupts interrupts;
-        Memory memory;
-        Pxi pxi;
-        SdMmc sdMmc;
-        Sha shas[2];
-        Timers timers;
+class Core {
+public:
+    Aes aes;
+    Interpreter cpus[MAX_CPUS];
+    Gpu gpu;
+    Interrupts interrupts;
+    Memory memory;
+    Pxi pxi;
+    SdMmc sdMmc;
+    Sha shas[2];
+    Timers timers;
 
-        std::atomic<bool> running;
-        std::vector<Event> events;
-        uint32_t globalCycles = 0;
+    std::atomic<bool> running;
+    std::vector<Event> events;
+    uint32_t globalCycles = 0;
 
-        Core();
-        void runFrame() { Interpreter::runFrame(this); }
-        void schedule(Task task, uint32_t cycles);
+    Core();
+    void runFrame() { Interpreter::runFrame(this); }
+    void schedule(Task task, uint32_t cycles);
 
-    private:
-        std::function<void()> tasks[MAX_TASKS];
+private:
+    std::function<void()> tasks[MAX_TASKS];
 
-        void resetCycles();
-        void endFrame();
+    void resetCycles();
+    void endFrame();
 };

@@ -1,5 +1,5 @@
 /*
-    Copyright 2023 Hydr8gon
+    Copyright 2023-2024 Hydr8gon
 
     This file is part of 3Beans.
 
@@ -21,26 +21,26 @@
 
 #include <cstdint>
 #include "defines.h"
+
 class Core;
 
-class Cp15
-{
-    public:
-        uint32_t exceptAddr = 0;
-        bool dtcmRead = false, dtcmWrite = false;
-        bool itcmRead = false, itcmWrite = false;
-        uint32_t dtcmAddr = 0, dtcmSize = 0;
-        uint32_t itcmSize = 0;
+class Cp15 {
+public:
+    uint32_t exceptAddr = 0;
+    bool dtcmRead = false, dtcmWrite = false;
+    bool itcmRead = false, itcmWrite = false;
+    uint32_t dtcmAddr = 0, dtcmSize = 0;
+    uint32_t itcmSize = 0;
 
-        Cp15(Core *core, CpuId id): core(core), id(id) {}
-        uint32_t read(uint8_t cn, uint8_t cm, uint8_t cp);
-        void write(uint8_t cn, uint8_t cm, uint8_t cp, uint32_t value);
+    Cp15(Core *core, CpuId id): core(core), id(id) {}
+    uint32_t read(uint8_t cn, uint8_t cm, uint8_t cp);
+    void write(uint8_t cn, uint8_t cm, uint8_t cp, uint32_t value);
 
-    private:
-        Core *core;
-        CpuId id;
+private:
+    Core *core;
+    CpuId id;
 
-        uint32_t ctrlReg = 0x78;
-        uint32_t dtcmReg = 0;
-        uint32_t itcmReg = 0;
+    uint32_t ctrlReg = 0x78;
+    uint32_t dtcmReg = 0;
+    uint32_t itcmReg = 0;
 };

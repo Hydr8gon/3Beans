@@ -1,5 +1,5 @@
 /*
-    Copyright 2023 Hydr8gon
+    Copyright 2023-2024 Hydr8gon
 
     This file is part of 3Beans.
 
@@ -21,35 +21,35 @@
 
 #include <cstdint>
 #include <queue>
+
 class Core;
 
-class Sha
-{
-    public:
-        Sha(Core *core): core(core) {}
+class Sha {
+public:
+    Sha(Core *core): core(core) {}
 
-        uint32_t readShaCnt() { return shaCnt; }
-        uint32_t readShaBlkcnt() { return shaBlkcnt; }
-        uint32_t readShaHash(int i);
+    uint32_t readShaCnt() { return shaCnt; }
+    uint32_t readShaBlkcnt() { return shaBlkcnt; }
+    uint32_t readShaHash(int i);
 
-        void writeShaCnt(uint32_t mask, uint32_t value);
-        void writeShaBlkcnt(uint32_t mask, uint32_t value);
-        void writeShaHash(int i, uint32_t mask, uint32_t value);
-        void writeShaFifo(uint32_t mask, uint32_t value);
+    void writeShaCnt(uint32_t mask, uint32_t value);
+    void writeShaBlkcnt(uint32_t mask, uint32_t value);
+    void writeShaHash(int i, uint32_t mask, uint32_t value);
+    void writeShaFifo(uint32_t mask, uint32_t value);
 
-    private:
-        Core *core;
+private:
+    Core *core;
 
-        std::queue<uint32_t> fifo;
-        uint32_t fifoValue = 0;
-        uint32_t fifoMask = 0;
-        bool fifoRunning = false;
+    std::queue<uint32_t> fifo;
+    uint32_t fifoValue = 0;
+    uint32_t fifoMask = 0;
+    bool fifoRunning = false;
 
-        uint32_t shaCnt = 0;
-        uint32_t shaBlkcnt = 0;
-        uint32_t shaHash[8] = {};
+    uint32_t shaCnt = 0;
+    uint32_t shaBlkcnt = 0;
+    uint32_t shaHash[8] = {};
 
-        void hash2(uint32_t *src);
-        void initFifo();
-        void processFifo();
+    void hash2(uint32_t *src);
+    void initFifo();
+    void processFifo();
 };

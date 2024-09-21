@@ -1,5 +1,5 @@
 /*
-    Copyright 2023 Hydr8gon
+    Copyright 2023-2024 Hydr8gon
 
     This file is part of 3Beans.
 
@@ -21,26 +21,26 @@
 
 #include <cstdint>
 #include <queue>
+
 class Core;
 
-class Pxi
-{
-    public:
-        Pxi(Core *core): core(core) {}
+class Pxi {
+public:
+    Pxi(Core *core): core(core) {}
 
-        uint32_t readPxiSync(bool arm9) { return pxiSync[arm9]; }
-        uint16_t readPxiCnt(bool arm9) { return pxiCnt[arm9]; }
-        uint32_t readPxiRecv(bool arm9);
+    uint32_t readPxiSync(bool arm9) { return pxiSync[arm9]; }
+    uint16_t readPxiCnt(bool arm9) { return pxiCnt[arm9]; }
+    uint32_t readPxiRecv(bool arm9);
 
-        void writePxiSync(bool arm9, uint32_t mask, uint32_t value);
-        void writePxiCnt(bool arm9, uint16_t mask, uint16_t value);
-        void writePxiSend(bool arm9, uint32_t mask, uint32_t value);
+    void writePxiSync(bool arm9, uint32_t mask, uint32_t value);
+    void writePxiCnt(bool arm9, uint16_t mask, uint16_t value);
+    void writePxiSend(bool arm9, uint32_t mask, uint32_t value);
 
-    private:
-        Core *core;
-        std::queue<uint32_t> fifos[2];
+private:
+    Core *core;
+    std::queue<uint32_t> fifos[2];
 
-        uint32_t pxiSync[2] = {};
-        uint16_t pxiCnt[2] = { 0x101, 0x101 };
-        uint32_t pxiRecv[2] = {};
+    uint32_t pxiSync[2] = {};
+    uint16_t pxiCnt[2] = { 0x101, 0x101 };
+    uint32_t pxiRecv[2] = {};
 };

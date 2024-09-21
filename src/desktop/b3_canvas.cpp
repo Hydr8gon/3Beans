@@ -1,5 +1,5 @@
 /*
-    Copyright 2023 Hydr8gon
+    Copyright 2023-2024 Hydr8gon
 
     This file is part of 3Beans.
 
@@ -25,27 +25,24 @@ EVT_PAINT(b3Canvas::draw)
 EVT_SIZE(b3Canvas::resize)
 wxEND_EVENT_TABLE()
 
-b3Canvas::b3Canvas(b3Frame *frame): wxGLCanvas(frame, wxID_ANY, nullptr), frame(frame)
-{
+b3Canvas::b3Canvas(b3Frame *frame): wxGLCanvas(frame, wxID_ANY, nullptr), frame(frame) {
     // Prepare the GL context
     context = new wxGLContext(this);
 }
 
-void b3Canvas::finish()
-{
+void b3Canvas::finish() {
     // Tell the canvas to stop rendering
     finished = true;
 }
 
-void b3Canvas::draw(wxPaintEvent &event)
-{
+void b3Canvas::draw(wxPaintEvent &event) {
     // Set the GL context if still rendering
     if (finished) return;
     SetCurrent(*context);
-    static bool setup = false;
 
-    if (!setup)
-    {
+    // Run initial setup once
+    static bool setup = false;
+    if (!setup) {
         // Prepare a texture for the framebuffer
         GLuint texture;
         glEnable(GL_TEXTURE_2D);
@@ -66,10 +63,8 @@ void b3Canvas::draw(wxPaintEvent &event)
     glClear(GL_COLOR_BUFFER_BIT);
 
     // At the swap interval, get the framebuffer as a texture
-    if (++frameCount >= swapInterval && frame->core)
-    {
-        if (uint32_t *fb = frame->core->gpu.getFrame())
-        {
+    if (++frameCount >= swapInterval && frame->core) {
+        if (uint32_t *fb = frame->core->gpu.getFrame()) {
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 400, 480, 0, GL_RGBA, GL_UNSIGNED_BYTE, fb);
             frameCount = 0;
             delete fb;
@@ -92,8 +87,7 @@ void b3Canvas::draw(wxPaintEvent &event)
     // Speed is limited by drawing, so this tries to keep it at 60 Hz
     refreshRate++;
     std::chrono::duration<double> rateTime = std::chrono::steady_clock::now() - lastRateTime;
-    if (rateTime.count() >= 1.0f)
-    {
+    if (rateTime.count() >= 1.0f) {
         swapInterval = (refreshRate + 5) / 60; // Margin of 5
         refreshRate = 0;
         lastRateTime = std::chrono::steady_clock::now();
@@ -104,8 +98,7 @@ void b3Canvas::draw(wxPaintEvent &event)
     SwapBuffers();
 }
 
-void b3Canvas::resize(wxSizeEvent &event)
-{
+void b3Canvas::resize(wxSizeEvent &event) {
     // Update the canvas dimensions
     SetCurrent(*context);
     glMatrixMode(GL_PROJECTION);
@@ -115,15 +108,13 @@ void b3Canvas::resize(wxSizeEvent &event)
     glViewport(0, 0, size.x, size.y);
 
     // Set the layout to be centered and as large as possible
-    if (((float)size.x / size.y) > (400.0f / 480)) // Wide
-    {
+    if ((float(size.x) / size.y) > (400.0f / 480)) { // Wide
         width = 400 * size.y / 480;
         height = size.y;
         x = (size.x - width) / 2;
         y = 0;
     }
-    else // Tall
-    {
+    else { // Tall
         width = size.x;
         height = 480 * size.x / 400;
         x = 0;

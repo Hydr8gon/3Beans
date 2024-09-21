@@ -1,5 +1,5 @@
 /*
-    Copyright 2023 Hydr8gon
+    Copyright 2023-2024 Hydr8gon
 
     This file is part of 3Beans.
 
@@ -19,15 +19,13 @@
 
 #include "core.h"
 
-void Timers::resetCycles()
-{
+void Timers::resetCycles() {
     // Adjust timer end cycles for a global cycle reset
     for (int i = 0; i < 4; i++)
         endCycles[i] -= core->globalCycles;
 }
 
-void Timers::overflow(int i)
-{
+void Timers::overflow(int i) {
     // Ensure the timer is still meant to overflow at the current timestamp
     if (!(tmCntH[i] & BIT(7)) || (!countUp[i] && endCycles[i] != core->globalCycles))
         return;
@@ -38,8 +36,7 @@ void Timers::overflow(int i)
         core->interrupts.sendInterrupt(true, i + 8);
 
     // Schedule the next timer overflow if not in count-up mode
-    if (!countUp[i])
-    {
+    if (!countUp[i]) {
         uint32_t cycles = (0x10000 - timers[i]) << shifts[i];
         core->schedule(Task(TIMER0_OVERFLOW + i), cycles);
         endCycles[i] = core->globalCycles + cycles;
@@ -50,29 +47,25 @@ void Timers::overflow(int i)
         overflow(i + 1);
 }
 
-uint16_t Timers::readTmCntL(int i)
-{
+uint16_t Timers::readTmCntL(int i) {
     // Read the current timer value, updating it if it's running on the scheduler
     if ((tmCntH[i] & BIT(7)) && !countUp[i])
         timers[i] = 0x10000 - ((endCycles[i] - core->globalCycles) >> shifts[i]);
     return timers[i];
 }
 
-void Timers::writeTmCntL(int i, uint16_t mask, uint16_t value)
-{
+void Timers::writeTmCntL(int i, uint16_t mask, uint16_t value) {
     // Write to one of the TMCNT_L reload values
     tmCntL[i] = (tmCntL[i] & ~mask) | (value & mask);
 }
 
-void Timers::writeTmCntH(int i, uint16_t mask, uint16_t value)
-{
+void Timers::writeTmCntH(int i, uint16_t mask, uint16_t value) {
     // Ensure the timer value is updated
     bool dirty = false;
     readTmCntL(i);
 
     // Reload the timer if the enable bit changes from 0 to 1
-    if (!(tmCntH[i] & BIT(7)) && (value & mask & BIT(7)))
-    {
+    if (!(tmCntH[i] & BIT(7)) && (value & mask & BIT(7))) {
         timers[i] = tmCntL[i];
         dirty = true;
     }
@@ -84,15 +77,13 @@ void Timers::writeTmCntH(int i, uint16_t mask, uint16_t value)
 
     // Update the timer shift based on the prescaler, with the ARM9 frequency as a base (?)
     uint8_t shift = ((tmCntH[i] & 0x3) && !countUp[i]) ? (5 + ((tmCntH[i] & 0x3) << 1)) : 1;
-    if (shifts[i] != shift)
-    {
+    if (shifts[i] != shift) {
         shifts[i] = shift;
         dirty = true;
     }
 
     // Schedule a timer overflow if the timer changed and isn't in count-up mode
-    if (dirty && (tmCntH[i] & BIT(7)) && !countUp[i])
-    {
+    if (dirty && (tmCntH[i] & BIT(7)) && !countUp[i]) {
         uint32_t cycles = (0x10000 - timers[i]) << shifts[i];
         core->schedule(Task(TIMER0_OVERFLOW + i), cycles);
         endCycles[i] = core->globalCycles + cycles;

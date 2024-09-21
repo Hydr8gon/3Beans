@@ -1,5 +1,5 @@
 /*
-    Copyright 2023 Hydr8gon
+    Copyright 2023-2024 Hydr8gon
 
     This file is part of 3Beans.
 
@@ -21,35 +21,34 @@
 
 // Define an 8-bit register in an I/O switch statement
 #define DEF_IO08(addr, func) \
-    case addr + 0:           \
-        base -= addr;        \
-        size = 1;            \
-        func;                \
+    case addr + 0: \
+        base -= addr; \
+        size = 1; \
+        func; \
         goto next;
 
 // Define a 16-bit register in an I/O switch statement
-#define DEF_IO16(addr, func)      \
+#define DEF_IO16(addr, func) \
     case addr + 0: case addr + 1: \
-        base -= addr;             \
-        size = 2;                 \
-        func;                     \
+        base -= addr; \
+        size = 2; \
+        func; \
         goto next;
 
 // Define a 32-bit register in an I/O switch statement
-#define DEF_IO32(addr, func)      \
+#define DEF_IO32(addr, func) \
     case addr + 0: case addr + 1: \
     case addr + 2: case addr + 3: \
-        base -= addr;             \
-        size = 4;                 \
-        func;                     \
+        base -= addr; \
+        size = 4; \
+        func; \
         goto next;
 
 // Define shared parameters for I/O register writes
 #define IO_PARAMS mask << (base << 3), data << (base << 3)
 #define IO_PARAMS8 data << (base << 3)
 
-bool Memory::loadFiles()
-{
+bool Memory::loadFiles() {
     // Try to load the ARM11 boot ROM
     FILE *file = fopen("boot11.bin", "rb");
     if (!file) return false;
@@ -67,8 +66,7 @@ bool Memory::loadFiles()
 template uint8_t  Memory::read(CpuId id, uint32_t address);
 template uint16_t Memory::read(CpuId id, uint32_t address);
 template uint32_t Memory::read(CpuId id, uint32_t address);
-template <typename T> T Memory::read(CpuId id, uint32_t address)
-{
+template <typename T> T Memory::read(CpuId id, uint32_t address) {
     // Get a pointer to readable memory on the ARM11/ARM9 if it exists
     uint8_t *data = nullptr;
     if (address >= 0x20000000 && address < 0x28000000)
@@ -87,8 +85,7 @@ template <typename T> T Memory::read(CpuId id, uint32_t address)
         data = &boot9[address & 0xFFFF]; // 64KB ARM9 boot ROM
 
     // Get a pointer to readable TCM memory on the ARM9 if it exists
-    if (id == ARM9)
-    {
+    if (id == ARM9) {
         Cp15 &cp15 = core->cpus[ARM9].cp15;
         if (address < cp15.itcmSize && cp15.itcmRead)
             data = &itcm[address & 0x7FFF];
@@ -97,8 +94,7 @@ template <typename T> T Memory::read(CpuId id, uint32_t address)
     }
 
     // Form an LSB-first value from the data at the pointer
-    if (data)
-    {
+    if (data) {
         T value = 0;
         for (size_t i = 0; i < sizeof(T); i++)
             value |= data[i] << (i << 3);
@@ -117,8 +113,7 @@ template <typename T> T Memory::read(CpuId id, uint32_t address)
 template void Memory::write(CpuId id, uint32_t address, uint8_t  value);
 template void Memory::write(CpuId id, uint32_t address, uint16_t value);
 template void Memory::write(CpuId id, uint32_t address, uint32_t value);
-template <typename T> void Memory::write(CpuId id, uint32_t address, T value)
-{
+template <typename T> void Memory::write(CpuId id, uint32_t address, T value) {
     // Get a pointer to writable memory on the ARM11/ARM9 if it exists
     uint8_t *data = nullptr;
     if (address >= 0x20000000 && address < 0x28000000)
@@ -133,8 +128,7 @@ template <typename T> void Memory::write(CpuId id, uint32_t address, T value)
         data = &axiWram[address & 0x7FFFF]; // 512KB AXI WRAM
 
     // Get a pointer to writable TCM memory on the ARM9 if it exists
-    if (id == ARM9)
-    {
+    if (id == ARM9) {
         Cp15 &cp15 = core->cpus[ARM9].cp15;
         if (address < cp15.itcmSize && cp15.itcmWrite)
             data = &itcm[address & 0x7FFF];
@@ -143,8 +137,7 @@ template <typename T> void Memory::write(CpuId id, uint32_t address, T value)
     }
 
     // Write an LSB-first value to the data at the pointer
-    if (data)
-    {
+    if (data) {
         for (size_t i = 0; i < sizeof(T); i++)
             data[i] = value >> (i << 3);
         return;
@@ -158,22 +151,14 @@ template <typename T> void Memory::write(CpuId id, uint32_t address, T value)
     LOG_WARN("Unmapped ARM%d memory write: 0x%08X\n", (id == ARM9) ? 9 : 11, address);
 }
 
-template <typename T> T Memory::ioRead(CpuId id, uint32_t address)
-{
-    T value = 0;
-    size_t i = 0;
-
+template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
     // Read a value from one or more I/O registers
-    while (i < sizeof(T))
-    {
-        uint32_t base = address + i;
-        uint32_t size, data;
-
-        if (id != ARM9)
-        {
+    T value = 0;
+    for (uint32_t i = 0; i < sizeof(T);) {
+        uint32_t base = address + i, size, data;
+        if (id != ARM9) {
             // Check registers that are exclusive to the ARM11
-            switch (base)
-            {
+            switch (base) {
                 DEF_IO32(0x10101000, data = core->shas[0].readShaCnt()) // SHA_CNT11
                 DEF_IO32(0x10101004, data = core->shas[0].readShaBlkcnt()) // SHA_BLKCNT11
                 DEF_IO32(0x10101040, data = core->shas[0].readShaHash(0)) // SHA_HASH0_11
@@ -214,11 +199,9 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address)
                 DEF_IO32(0x17E0130C, data = core->interrupts.readMpIa(id, 3)) // MP_IA3
             }
         }
-        else
-        {
+        else {
             // Check registers that are exclusive to the ARM9
-            switch (base)
-            {
+            switch (base) {
                 DEF_IO16(0x10000000, data = 0x101) // CFG9_SYSPROT (stub)
                 DEF_IO32(0x10001000, data = core->interrupts.readIrqIe()) // IRQ_IE
                 DEF_IO32(0x10001004, data = core->interrupts.readIrqIf()) // IRQ_IF
@@ -338,26 +321,18 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address)
         value |= (data >> (base << 3)) << (i << 3);
         i += size - base;
     }
-
     return value;
 }
 
-template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value)
-{
-    size_t i = 0;
-
+template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) {
     // Write a value to one or more I/O registers
-    while (i < sizeof(T))
-    {
+    for (uint32_t i = 0; i < sizeof(T);) {
         uint32_t base = address + i, size;
         uint32_t mask = (1ULL << ((sizeof(T) - i) << 3)) - 1;
         uint32_t data = value >> (i << 3);
-
-        if (id != ARM9)
-        {
+        if (id != ARM9) {
             // Check registers that are exclusive to the ARM11
-            switch (base)
-            {
+            switch (base) {
                 DEF_IO32(0x10101000, core->shas[0].writeShaCnt(IO_PARAMS)) // SHA_CNT11
                 DEF_IO32(0x10101004, core->shas[0].writeShaBlkcnt(IO_PARAMS)) // SHA_BLKCNT11
                 DEF_IO32(0x10101040, core->shas[0].writeShaHash(0, IO_PARAMS)) // SHA_HASH0_11
@@ -402,11 +377,9 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value)
                 DEF_IO32(0x17E0118C, core->interrupts.writeMpIeClear(3, IO_PARAMS)) // MP_IE3_CLEAR
             }
         }
-        else
-        {
+        else {
             // Check registers that are exclusive to the ARM9
-            switch (base)
-            {
+            switch (base) {
                 DEF_IO32(0x10001000, core->interrupts.writeIrqIe(IO_PARAMS)) // IRQ_IE
                 DEF_IO32(0x10001004, core->interrupts.writeIrqIf(IO_PARAMS)) // IRQ_IF
                 DEF_IO16(0x10003000, core->timers.writeTmCntL(0, IO_PARAMS)) // TM0CNT_L

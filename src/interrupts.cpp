@@ -1,5 +1,5 @@
 /*
-    Copyright 2023 Hydr8gon
+    Copyright 2023-2024 Hydr8gon
 
     This file is part of 3Beans.
 
@@ -19,11 +19,9 @@
 
 #include "core.h"
 
-void Interrupts::sendInterrupt(bool arm9, int type)
-{
+void Interrupts::sendInterrupt(bool arm9, int type) {
     // Send an interrupt to the ARM9
-    if (arm9)
-    {
+    if (arm9) {
         // Set the interrupt's request bit
         if (type != -1)
             irqIf |= BIT(type);
@@ -37,10 +35,8 @@ void Interrupts::sendInterrupt(bool arm9, int type)
     }
 
     // Send an interrupt to the ARM11 cores
-    for (int id = 0; id < 2; id++)
-    {
-        if (mpIle[id] && mpIge)
-        {
+    for (int id = 0; id < 2; id++) {
+        if (mpIle[id] && mpIge) {
             // Set the interrupt's pending bit
             if (type != -1)
                 mpIp[id][type >> 5] |= BIT(type & 0x1F);
@@ -59,14 +55,11 @@ void Interrupts::sendInterrupt(bool arm9, int type)
     }
 }
 
-uint32_t Interrupts::readMpAck(CpuId id)
-{
+uint32_t Interrupts::readMpAck(CpuId id) {
     // Get the ID of the next pending interrupt and switch it to active
     uint32_t type = 0x3FF; // None
-    for (int i = 0; i < 4; i++)
-    {
-        for (int bit = 0; bit < 32; bit++)
-        {
+    for (int i = 0; i < 4; i++) {
+        for (int bit = 0; bit < 32; bit++) {
             if (!(mpIe[i] & mpIp[id][i] & BIT(bit))) continue;
             mpIp[id][i] &= ~BIT(bit);
             mpIa[id][i] |= BIT(bit);
@@ -78,51 +71,44 @@ finish:
     return type;
 }
 
-void Interrupts::writeMpIle(CpuId id, uint32_t mask, uint32_t value)
-{
+void Interrupts::writeMpIle(CpuId id, uint32_t mask, uint32_t value) {
     // Write to a core's MP_ILE local interrupt enable bit
     mask &= 0x1;
     mpIle[id] = (mpIle[id] & ~mask) | (value & mask);
 }
 
-void Interrupts::writeMpEoi(CpuId id, uint32_t mask, uint32_t value)
-{
+void Interrupts::writeMpEoi(CpuId id, uint32_t mask, uint32_t value) {
     // Clear the active bit for a given interrupt type
     uint8_t type = (value & mask & 0x7F);
     mpIa[id][type >> 5] &= ~BIT(type & 0x1F);
 }
 
-void Interrupts::writeMpIge(uint32_t mask, uint32_t value)
-{
+void Interrupts::writeMpIge(uint32_t mask, uint32_t value) {
     // Write to the MP_IGE global interrupt enable bit
     mask &= 0x1;
     mpIge = (mpIge & ~mask) | (value & mask);
 }
 
-void Interrupts::writeMpIeSet(int i, uint32_t mask, uint32_t value)
-{
+void Interrupts::writeMpIeSet(int i, uint32_t mask, uint32_t value) {
     // Set MP_IE interrupt enable bits and check if an interrupt should occur
     mpIe[i] |= (value & mask);
     checkInterrupt(false);
 }
 
-void Interrupts::writeMpIeClear(int i, uint32_t mask, uint32_t value)
-{
+void Interrupts::writeMpIeClear(int i, uint32_t mask, uint32_t value) {
     // Clear MP_IE interrupt enable bits
     if (!i) mask &= ~0xFFFF; // Always set
     mpIe[i] &= ~(value & mask);
 }
 
-void Interrupts::writeIrqIe(uint32_t mask, uint32_t value)
-{
+void Interrupts::writeIrqIe(uint32_t mask, uint32_t value) {
     // Write to the IRQ_IE register and check if an interrupt should occur
     mask &= 0x3FFFFFFF;
     irqIe = (irqIe & ~mask) | (value & mask);
     checkInterrupt(true);
 }
 
-void Interrupts::writeIrqIf(uint32_t mask, uint32_t value)
-{
+void Interrupts::writeIrqIf(uint32_t mask, uint32_t value) {
     // Clear bits in the IRQ_IF register
     irqIf &= ~(value & mask);
 }

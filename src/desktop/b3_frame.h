@@ -1,5 +1,5 @@
 /*
-    Copyright 2023 Hydr8gon
+    Copyright 2023-2024 Hydr8gon
 
     This file is part of 3Beans.
 
@@ -25,16 +25,15 @@
 #define MIN_SIZE wxSize(400, 480)
 class b3Canvas;
 
-class b3Frame: public wxFrame
-{
-    public:
-        Core *core = nullptr;
-        b3Frame();
+class b3Frame: public wxFrame {
+public:
+    Core *core = nullptr;
+    b3Frame();
 
-    private:
-        b3Canvas *canvas;
-        void runCore();
+private:
+    b3Canvas *canvas;
+    void runCore();
 
-        void close(wxCloseEvent &event);
-        wxDECLARE_EVENT_TABLE();
+    void close(wxCloseEvent &event);
+    wxDECLARE_EVENT_TABLE();
 };

@@ -1,5 +1,5 @@
 /*
-    Copyright 2023 Hydr8gon
+    Copyright 2023-2024 Hydr8gon
 
     This file is part of 3Beans.
 
@@ -21,8 +21,7 @@
 
 #include <cstdio>
 
-enum CpuId
-{
+enum CpuId {
     ARM11A,
     ARM11B,
     ARM9,
