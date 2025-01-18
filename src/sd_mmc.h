@@ -88,6 +88,7 @@ private:
     void runAppCommand();
 
     void setRelativeAddr();
+    void getStatus();
     void setBlocklen();
     void readSingleBlock();
     void readMultiBlock();

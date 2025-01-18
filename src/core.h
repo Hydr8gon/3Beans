@@ -31,6 +31,7 @@
 #include "interrupts.h"
 #include "memory.h"
 #include "pxi.h"
+#include "rsa.h"
 #include "sd_mmc.h"
 #include "sha.h"
 #include "timers.h"
@@ -61,6 +62,7 @@ public:
     Interrupts interrupts;
     Memory memory;
     Pxi pxi;
+    Rsa rsa;
     SdMmc sdMmc;
     Sha shas[2];
     Timers timers;

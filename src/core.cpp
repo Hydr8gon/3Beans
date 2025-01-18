@@ -20,8 +20,9 @@
 #include <algorithm>
 #include "core.h"
 
-Core::Core(): aes(this), cpus { Interpreter(this, ARM11A), Interpreter(this, ARM11B), Interpreter(this, ARM9) },
-    gpu(this), interrupts(this), memory(this), pxi(this), sdMmc(this), shas { Sha(this), Sha(this) }, timers(this) {
+Core::Core(): aes(this), cpus { Interpreter(this, ARM11A), Interpreter(this, ARM11B),
+        Interpreter(this, ARM9) }, gpu(this), interrupts(this), memory(this), pxi(this),
+        rsa(this), sdMmc(this), shas { Sha(this), Sha(this) }, timers(this) {
     // Initialize memory and the CPUs
     memory.loadFiles();
     sdMmc.loadFiles();
@@ -43,7 +44,7 @@ Core::Core(): aes(this), cpus { Interpreter(this, ARM11A), Interpreter(this, ARM
 
 void Core::resetCycles() {
     // Reset the global cycle count periodically to prevent overflow
-    for (size_t i = 0; i < events.size(); i++)
+    for (uint32_t i = 0; i < events.size(); i++)
         events[i].cycles -= globalCycles;
     for (int i = 0; i < MAX_CPUS; i++)
         cpus[i].resetCycles();

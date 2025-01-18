@@ -96,7 +96,7 @@ template <typename T> T Memory::read(CpuId id, uint32_t address) {
     // Form an LSB-first value from the data at the pointer
     if (data) {
         T value = 0;
-        for (size_t i = 0; i < sizeof(T); i++)
+        for (uint32_t i = 0; i < sizeof(T); i++)
             value |= data[i] << (i << 3);
         return value;
     }
@@ -138,7 +138,7 @@ template <typename T> void Memory::write(CpuId id, uint32_t address, T value) {
 
     // Write an LSB-first value to the data at the pointer
     if (data) {
-        for (size_t i = 0; i < sizeof(T); i++)
+        for (uint32_t i = 0; i < sizeof(T); i++)
             data[i] = value >> (i << 3);
         return;
     }
@@ -213,6 +213,143 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO16(0x1000300A, data = core->timers.readTmCntH(2)) // TM2CNT_H
                 DEF_IO16(0x1000300C, data = core->timers.readTmCntL(3)) // TM3CNT_L
                 DEF_IO16(0x1000300E, data = core->timers.readTmCntH(3)) // TM3CNT_H
+                DEF_IO32(0x1000B000, data = core->rsa.readRsaCnt()) // RSA_CNT
+                DEF_IO32(0x1000B100, data = core->rsa.readRsaSlotcnt(0)) // RSA_SLOTCNT0
+                DEF_IO32(0x1000B104, data = core->rsa.readRsaSlotsize(0)) // RSA_SLOTSIZE0
+                DEF_IO32(0x1000B110, data = core->rsa.readRsaSlotcnt(1)) // RSA_SLOTCNT1
+                DEF_IO32(0x1000B114, data = core->rsa.readRsaSlotsize(1)) // RSA_SLOTSIZE1
+                DEF_IO32(0x1000B120, data = core->rsa.readRsaSlotcnt(2)) // RSA_SLOTCNT2
+                DEF_IO32(0x1000B124, data = core->rsa.readRsaSlotsize(2)) // RSA_SLOTSIZE2
+                DEF_IO32(0x1000B130, data = core->rsa.readRsaSlotcnt(3)) // RSA_SLOTCNT3
+                DEF_IO32(0x1000B134, data = core->rsa.readRsaSlotsize(3)) // RSA_SLOTSIZE3
+                DEF_IO32(0x1000B400, data = core->rsa.readRsaMod(0)) // RSA_MOD0
+                DEF_IO32(0x1000B404, data = core->rsa.readRsaMod(1)) // RSA_MOD1
+                DEF_IO32(0x1000B408, data = core->rsa.readRsaMod(2)) // RSA_MOD2
+                DEF_IO32(0x1000B40C, data = core->rsa.readRsaMod(3)) // RSA_MOD3
+                DEF_IO32(0x1000B410, data = core->rsa.readRsaMod(4)) // RSA_MOD4
+                DEF_IO32(0x1000B414, data = core->rsa.readRsaMod(5)) // RSA_MOD5
+                DEF_IO32(0x1000B418, data = core->rsa.readRsaMod(6)) // RSA_MOD6
+                DEF_IO32(0x1000B41C, data = core->rsa.readRsaMod(7)) // RSA_MOD7
+                DEF_IO32(0x1000B420, data = core->rsa.readRsaMod(8)) // RSA_MOD8
+                DEF_IO32(0x1000B424, data = core->rsa.readRsaMod(9)) // RSA_MOD9
+                DEF_IO32(0x1000B428, data = core->rsa.readRsaMod(10)) // RSA_MOD10
+                DEF_IO32(0x1000B42C, data = core->rsa.readRsaMod(11)) // RSA_MOD11
+                DEF_IO32(0x1000B430, data = core->rsa.readRsaMod(12)) // RSA_MOD12
+                DEF_IO32(0x1000B434, data = core->rsa.readRsaMod(13)) // RSA_MOD13
+                DEF_IO32(0x1000B438, data = core->rsa.readRsaMod(14)) // RSA_MOD14
+                DEF_IO32(0x1000B43C, data = core->rsa.readRsaMod(15)) // RSA_MOD15
+                DEF_IO32(0x1000B440, data = core->rsa.readRsaMod(16)) // RSA_MOD16
+                DEF_IO32(0x1000B444, data = core->rsa.readRsaMod(17)) // RSA_MOD17
+                DEF_IO32(0x1000B448, data = core->rsa.readRsaMod(18)) // RSA_MOD18
+                DEF_IO32(0x1000B44C, data = core->rsa.readRsaMod(19)) // RSA_MOD19
+                DEF_IO32(0x1000B450, data = core->rsa.readRsaMod(20)) // RSA_MOD20
+                DEF_IO32(0x1000B454, data = core->rsa.readRsaMod(21)) // RSA_MOD21
+                DEF_IO32(0x1000B458, data = core->rsa.readRsaMod(22)) // RSA_MOD22
+                DEF_IO32(0x1000B45C, data = core->rsa.readRsaMod(23)) // RSA_MOD23
+                DEF_IO32(0x1000B460, data = core->rsa.readRsaMod(24)) // RSA_MOD24
+                DEF_IO32(0x1000B464, data = core->rsa.readRsaMod(25)) // RSA_MOD25
+                DEF_IO32(0x1000B468, data = core->rsa.readRsaMod(26)) // RSA_MOD26
+                DEF_IO32(0x1000B46C, data = core->rsa.readRsaMod(27)) // RSA_MOD27
+                DEF_IO32(0x1000B470, data = core->rsa.readRsaMod(28)) // RSA_MOD28
+                DEF_IO32(0x1000B474, data = core->rsa.readRsaMod(29)) // RSA_MOD29
+                DEF_IO32(0x1000B478, data = core->rsa.readRsaMod(30)) // RSA_MOD30
+                DEF_IO32(0x1000B47C, data = core->rsa.readRsaMod(31)) // RSA_MOD31
+                DEF_IO32(0x1000B480, data = core->rsa.readRsaMod(32)) // RSA_MOD32
+                DEF_IO32(0x1000B484, data = core->rsa.readRsaMod(33)) // RSA_MOD33
+                DEF_IO32(0x1000B488, data = core->rsa.readRsaMod(34)) // RSA_MOD34
+                DEF_IO32(0x1000B48C, data = core->rsa.readRsaMod(35)) // RSA_MOD35
+                DEF_IO32(0x1000B490, data = core->rsa.readRsaMod(36)) // RSA_MOD36
+                DEF_IO32(0x1000B494, data = core->rsa.readRsaMod(37)) // RSA_MOD37
+                DEF_IO32(0x1000B498, data = core->rsa.readRsaMod(38)) // RSA_MOD38
+                DEF_IO32(0x1000B49C, data = core->rsa.readRsaMod(39)) // RSA_MOD39
+                DEF_IO32(0x1000B4A0, data = core->rsa.readRsaMod(40)) // RSA_MOD40
+                DEF_IO32(0x1000B4A4, data = core->rsa.readRsaMod(41)) // RSA_MOD41
+                DEF_IO32(0x1000B4A8, data = core->rsa.readRsaMod(42)) // RSA_MOD42
+                DEF_IO32(0x1000B4AC, data = core->rsa.readRsaMod(43)) // RSA_MOD43
+                DEF_IO32(0x1000B4B0, data = core->rsa.readRsaMod(44)) // RSA_MOD44
+                DEF_IO32(0x1000B4B4, data = core->rsa.readRsaMod(45)) // RSA_MOD45
+                DEF_IO32(0x1000B4B8, data = core->rsa.readRsaMod(46)) // RSA_MOD46
+                DEF_IO32(0x1000B4BC, data = core->rsa.readRsaMod(47)) // RSA_MOD47
+                DEF_IO32(0x1000B4C0, data = core->rsa.readRsaMod(48)) // RSA_MOD48
+                DEF_IO32(0x1000B4C4, data = core->rsa.readRsaMod(49)) // RSA_MOD49
+                DEF_IO32(0x1000B4C8, data = core->rsa.readRsaMod(50)) // RSA_MOD50
+                DEF_IO32(0x1000B4CC, data = core->rsa.readRsaMod(51)) // RSA_MOD51
+                DEF_IO32(0x1000B4D0, data = core->rsa.readRsaMod(52)) // RSA_MOD52
+                DEF_IO32(0x1000B4D4, data = core->rsa.readRsaMod(53)) // RSA_MOD53
+                DEF_IO32(0x1000B4D8, data = core->rsa.readRsaMod(54)) // RSA_MOD54
+                DEF_IO32(0x1000B4DC, data = core->rsa.readRsaMod(55)) // RSA_MOD55
+                DEF_IO32(0x1000B4E0, data = core->rsa.readRsaMod(56)) // RSA_MOD56
+                DEF_IO32(0x1000B4E4, data = core->rsa.readRsaMod(57)) // RSA_MOD57
+                DEF_IO32(0x1000B4E8, data = core->rsa.readRsaMod(58)) // RSA_MOD58
+                DEF_IO32(0x1000B4EC, data = core->rsa.readRsaMod(59)) // RSA_MOD59
+                DEF_IO32(0x1000B4F0, data = core->rsa.readRsaMod(60)) // RSA_MOD60
+                DEF_IO32(0x1000B4F4, data = core->rsa.readRsaMod(61)) // RSA_MOD61
+                DEF_IO32(0x1000B4F8, data = core->rsa.readRsaMod(62)) // RSA_MOD62
+                DEF_IO32(0x1000B4FC, data = core->rsa.readRsaMod(63)) // RSA_MOD63
+                DEF_IO32(0x1000B800, data = core->rsa.readRsaData(0)) // RSA_DATA0
+                DEF_IO32(0x1000B804, data = core->rsa.readRsaData(1)) // RSA_DATA1
+                DEF_IO32(0x1000B808, data = core->rsa.readRsaData(2)) // RSA_DATA2
+                DEF_IO32(0x1000B80C, data = core->rsa.readRsaData(3)) // RSA_DATA3
+                DEF_IO32(0x1000B810, data = core->rsa.readRsaData(4)) // RSA_DATA4
+                DEF_IO32(0x1000B814, data = core->rsa.readRsaData(5)) // RSA_DATA5
+                DEF_IO32(0x1000B818, data = core->rsa.readRsaData(6)) // RSA_DATA6
+                DEF_IO32(0x1000B81C, data = core->rsa.readRsaData(7)) // RSA_DATA7
+                DEF_IO32(0x1000B820, data = core->rsa.readRsaData(8)) // RSA_DATA8
+                DEF_IO32(0x1000B824, data = core->rsa.readRsaData(9)) // RSA_DATA9
+                DEF_IO32(0x1000B828, data = core->rsa.readRsaData(10)) // RSA_DATA10
+                DEF_IO32(0x1000B82C, data = core->rsa.readRsaData(11)) // RSA_DATA11
+                DEF_IO32(0x1000B830, data = core->rsa.readRsaData(12)) // RSA_DATA12
+                DEF_IO32(0x1000B834, data = core->rsa.readRsaData(13)) // RSA_DATA13
+                DEF_IO32(0x1000B838, data = core->rsa.readRsaData(14)) // RSA_DATA14
+                DEF_IO32(0x1000B83C, data = core->rsa.readRsaData(15)) // RSA_DATA15
+                DEF_IO32(0x1000B840, data = core->rsa.readRsaData(16)) // RSA_DATA16
+                DEF_IO32(0x1000B844, data = core->rsa.readRsaData(17)) // RSA_DATA17
+                DEF_IO32(0x1000B848, data = core->rsa.readRsaData(18)) // RSA_DATA18
+                DEF_IO32(0x1000B84C, data = core->rsa.readRsaData(19)) // RSA_DATA19
+                DEF_IO32(0x1000B850, data = core->rsa.readRsaData(20)) // RSA_DATA20
+                DEF_IO32(0x1000B854, data = core->rsa.readRsaData(21)) // RSA_DATA21
+                DEF_IO32(0x1000B858, data = core->rsa.readRsaData(22)) // RSA_DATA22
+                DEF_IO32(0x1000B85C, data = core->rsa.readRsaData(23)) // RSA_DATA23
+                DEF_IO32(0x1000B860, data = core->rsa.readRsaData(24)) // RSA_DATA24
+                DEF_IO32(0x1000B864, data = core->rsa.readRsaData(25)) // RSA_DATA25
+                DEF_IO32(0x1000B868, data = core->rsa.readRsaData(26)) // RSA_DATA26
+                DEF_IO32(0x1000B86C, data = core->rsa.readRsaData(27)) // RSA_DATA27
+                DEF_IO32(0x1000B870, data = core->rsa.readRsaData(28)) // RSA_DATA28
+                DEF_IO32(0x1000B874, data = core->rsa.readRsaData(29)) // RSA_DATA29
+                DEF_IO32(0x1000B878, data = core->rsa.readRsaData(30)) // RSA_DATA30
+                DEF_IO32(0x1000B87C, data = core->rsa.readRsaData(31)) // RSA_DATA31
+                DEF_IO32(0x1000B880, data = core->rsa.readRsaData(32)) // RSA_DATA32
+                DEF_IO32(0x1000B884, data = core->rsa.readRsaData(33)) // RSA_DATA33
+                DEF_IO32(0x1000B888, data = core->rsa.readRsaData(34)) // RSA_DATA34
+                DEF_IO32(0x1000B88C, data = core->rsa.readRsaData(35)) // RSA_DATA35
+                DEF_IO32(0x1000B890, data = core->rsa.readRsaData(36)) // RSA_DATA36
+                DEF_IO32(0x1000B894, data = core->rsa.readRsaData(37)) // RSA_DATA37
+                DEF_IO32(0x1000B898, data = core->rsa.readRsaData(38)) // RSA_DATA38
+                DEF_IO32(0x1000B89C, data = core->rsa.readRsaData(39)) // RSA_DATA39
+                DEF_IO32(0x1000B8A0, data = core->rsa.readRsaData(40)) // RSA_DATA40
+                DEF_IO32(0x1000B8A4, data = core->rsa.readRsaData(41)) // RSA_DATA41
+                DEF_IO32(0x1000B8A8, data = core->rsa.readRsaData(42)) // RSA_DATA42
+                DEF_IO32(0x1000B8AC, data = core->rsa.readRsaData(43)) // RSA_DATA43
+                DEF_IO32(0x1000B8B0, data = core->rsa.readRsaData(44)) // RSA_DATA44
+                DEF_IO32(0x1000B8B4, data = core->rsa.readRsaData(45)) // RSA_DATA45
+                DEF_IO32(0x1000B8B8, data = core->rsa.readRsaData(46)) // RSA_DATA46
+                DEF_IO32(0x1000B8BC, data = core->rsa.readRsaData(47)) // RSA_DATA47
+                DEF_IO32(0x1000B8C0, data = core->rsa.readRsaData(48)) // RSA_DATA48
+                DEF_IO32(0x1000B8C4, data = core->rsa.readRsaData(49)) // RSA_DATA49
+                DEF_IO32(0x1000B8C8, data = core->rsa.readRsaData(50)) // RSA_DATA50
+                DEF_IO32(0x1000B8CC, data = core->rsa.readRsaData(51)) // RSA_DATA51
+                DEF_IO32(0x1000B8D0, data = core->rsa.readRsaData(52)) // RSA_DATA52
+                DEF_IO32(0x1000B8D4, data = core->rsa.readRsaData(53)) // RSA_DATA53
+                DEF_IO32(0x1000B8D8, data = core->rsa.readRsaData(54)) // RSA_DATA54
+                DEF_IO32(0x1000B8DC, data = core->rsa.readRsaData(55)) // RSA_DATA55
+                DEF_IO32(0x1000B8E0, data = core->rsa.readRsaData(56)) // RSA_DATA56
+                DEF_IO32(0x1000B8E4, data = core->rsa.readRsaData(57)) // RSA_DATA57
+                DEF_IO32(0x1000B8E8, data = core->rsa.readRsaData(58)) // RSA_DATA58
+                DEF_IO32(0x1000B8EC, data = core->rsa.readRsaData(59)) // RSA_DATA59
+                DEF_IO32(0x1000B8F0, data = core->rsa.readRsaData(60)) // RSA_DATA60
+                DEF_IO32(0x1000B8F4, data = core->rsa.readRsaData(61)) // RSA_DATA61
+                DEF_IO32(0x1000B8F8, data = core->rsa.readRsaData(62)) // RSA_DATA62
+                DEF_IO32(0x1000B8FC, data = core->rsa.readRsaData(63)) // RSA_DATA63
                 DEF_IO32(0x10012000, data = core->sdMmc.readOtpEncrypted(0)) // OTP_ENCRYPTED0
                 DEF_IO32(0x10012004, data = core->sdMmc.readOtpEncrypted(1)) // OTP_ENCRYPTED1
                 DEF_IO32(0x10012008, data = core->sdMmc.readOtpEncrypted(2)) // OTP_ENCRYPTED2
@@ -438,6 +575,203 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x1000A0B4, core->shas[1].writeShaFifo(IO_PARAMS)) // SHA_FIFO9
                 DEF_IO32(0x1000A0B8, core->shas[1].writeShaFifo(IO_PARAMS)) // SHA_FIFO9
                 DEF_IO32(0x1000A0BC, core->shas[1].writeShaFifo(IO_PARAMS)) // SHA_FIFO9
+                DEF_IO32(0x1000B000, core->rsa.writeRsaCnt(IO_PARAMS)) // RSA_CNT
+                DEF_IO32(0x1000B100, core->rsa.writeRsaSlotcnt(0, IO_PARAMS)) // RSA_SLOTCNT0
+                DEF_IO32(0x1000B110, core->rsa.writeRsaSlotcnt(1, IO_PARAMS)) // RSA_SLOTCNT1
+                DEF_IO32(0x1000B120, core->rsa.writeRsaSlotcnt(2, IO_PARAMS)) // RSA_SLOTCNT2
+                DEF_IO32(0x1000B130, core->rsa.writeRsaSlotcnt(3, IO_PARAMS)) // RSA_SLOTCNT3
+                DEF_IO32(0x1000B200, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B204, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B208, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B20C, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B210, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B214, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B218, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B21C, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B220, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B224, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B228, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B22C, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B230, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B234, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B238, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B23C, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B240, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B244, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B248, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B24C, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B250, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B254, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B258, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B25C, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B260, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B264, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B268, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B26C, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B270, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B274, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B278, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B27C, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B280, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B284, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B288, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B28C, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B290, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B294, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B298, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B29C, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B2A0, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B2A4, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B2A8, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B2AC, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B2B0, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B2B4, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B2B8, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B2BC, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B2C0, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B2C4, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B2C8, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B2CC, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B2D0, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B2D4, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B2D8, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B2DC, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B2E0, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B2E4, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B2E8, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B2EC, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B2F0, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B2F4, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B2F8, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B2FC, core->rsa.writeRsaExpfifo(IO_PARAMS)) // RSA_EXPFIFO
+                DEF_IO32(0x1000B400, core->rsa.writeRsaMod(0, IO_PARAMS)) // RSA_MOD0
+                DEF_IO32(0x1000B404, core->rsa.writeRsaMod(1, IO_PARAMS)) // RSA_MOD1
+                DEF_IO32(0x1000B408, core->rsa.writeRsaMod(2, IO_PARAMS)) // RSA_MOD2
+                DEF_IO32(0x1000B40C, core->rsa.writeRsaMod(3, IO_PARAMS)) // RSA_MOD3
+                DEF_IO32(0x1000B410, core->rsa.writeRsaMod(4, IO_PARAMS)) // RSA_MOD4
+                DEF_IO32(0x1000B414, core->rsa.writeRsaMod(5, IO_PARAMS)) // RSA_MOD5
+                DEF_IO32(0x1000B418, core->rsa.writeRsaMod(6, IO_PARAMS)) // RSA_MOD6
+                DEF_IO32(0x1000B41C, core->rsa.writeRsaMod(7, IO_PARAMS)) // RSA_MOD7
+                DEF_IO32(0x1000B420, core->rsa.writeRsaMod(8, IO_PARAMS)) // RSA_MOD8
+                DEF_IO32(0x1000B424, core->rsa.writeRsaMod(9, IO_PARAMS)) // RSA_MOD9
+                DEF_IO32(0x1000B428, core->rsa.writeRsaMod(10, IO_PARAMS)) // RSA_MOD10
+                DEF_IO32(0x1000B42C, core->rsa.writeRsaMod(11, IO_PARAMS)) // RSA_MOD11
+                DEF_IO32(0x1000B430, core->rsa.writeRsaMod(12, IO_PARAMS)) // RSA_MOD12
+                DEF_IO32(0x1000B434, core->rsa.writeRsaMod(13, IO_PARAMS)) // RSA_MOD13
+                DEF_IO32(0x1000B438, core->rsa.writeRsaMod(14, IO_PARAMS)) // RSA_MOD14
+                DEF_IO32(0x1000B43C, core->rsa.writeRsaMod(15, IO_PARAMS)) // RSA_MOD15
+                DEF_IO32(0x1000B440, core->rsa.writeRsaMod(16, IO_PARAMS)) // RSA_MOD16
+                DEF_IO32(0x1000B444, core->rsa.writeRsaMod(17, IO_PARAMS)) // RSA_MOD17
+                DEF_IO32(0x1000B448, core->rsa.writeRsaMod(18, IO_PARAMS)) // RSA_MOD18
+                DEF_IO32(0x1000B44C, core->rsa.writeRsaMod(19, IO_PARAMS)) // RSA_MOD19
+                DEF_IO32(0x1000B450, core->rsa.writeRsaMod(20, IO_PARAMS)) // RSA_MOD20
+                DEF_IO32(0x1000B454, core->rsa.writeRsaMod(21, IO_PARAMS)) // RSA_MOD21
+                DEF_IO32(0x1000B458, core->rsa.writeRsaMod(22, IO_PARAMS)) // RSA_MOD22
+                DEF_IO32(0x1000B45C, core->rsa.writeRsaMod(23, IO_PARAMS)) // RSA_MOD23
+                DEF_IO32(0x1000B460, core->rsa.writeRsaMod(24, IO_PARAMS)) // RSA_MOD24
+                DEF_IO32(0x1000B464, core->rsa.writeRsaMod(25, IO_PARAMS)) // RSA_MOD25
+                DEF_IO32(0x1000B468, core->rsa.writeRsaMod(26, IO_PARAMS)) // RSA_MOD26
+                DEF_IO32(0x1000B46C, core->rsa.writeRsaMod(27, IO_PARAMS)) // RSA_MOD27
+                DEF_IO32(0x1000B470, core->rsa.writeRsaMod(28, IO_PARAMS)) // RSA_MOD28
+                DEF_IO32(0x1000B474, core->rsa.writeRsaMod(29, IO_PARAMS)) // RSA_MOD29
+                DEF_IO32(0x1000B478, core->rsa.writeRsaMod(30, IO_PARAMS)) // RSA_MOD30
+                DEF_IO32(0x1000B47C, core->rsa.writeRsaMod(31, IO_PARAMS)) // RSA_MOD31
+                DEF_IO32(0x1000B480, core->rsa.writeRsaMod(32, IO_PARAMS)) // RSA_MOD32
+                DEF_IO32(0x1000B484, core->rsa.writeRsaMod(33, IO_PARAMS)) // RSA_MOD33
+                DEF_IO32(0x1000B488, core->rsa.writeRsaMod(34, IO_PARAMS)) // RSA_MOD34
+                DEF_IO32(0x1000B48C, core->rsa.writeRsaMod(35, IO_PARAMS)) // RSA_MOD35
+                DEF_IO32(0x1000B490, core->rsa.writeRsaMod(36, IO_PARAMS)) // RSA_MOD36
+                DEF_IO32(0x1000B494, core->rsa.writeRsaMod(37, IO_PARAMS)) // RSA_MOD37
+                DEF_IO32(0x1000B498, core->rsa.writeRsaMod(38, IO_PARAMS)) // RSA_MOD38
+                DEF_IO32(0x1000B49C, core->rsa.writeRsaMod(39, IO_PARAMS)) // RSA_MOD39
+                DEF_IO32(0x1000B4A0, core->rsa.writeRsaMod(40, IO_PARAMS)) // RSA_MOD40
+                DEF_IO32(0x1000B4A4, core->rsa.writeRsaMod(41, IO_PARAMS)) // RSA_MOD41
+                DEF_IO32(0x1000B4A8, core->rsa.writeRsaMod(42, IO_PARAMS)) // RSA_MOD42
+                DEF_IO32(0x1000B4AC, core->rsa.writeRsaMod(43, IO_PARAMS)) // RSA_MOD43
+                DEF_IO32(0x1000B4B0, core->rsa.writeRsaMod(44, IO_PARAMS)) // RSA_MOD44
+                DEF_IO32(0x1000B4B4, core->rsa.writeRsaMod(45, IO_PARAMS)) // RSA_MOD45
+                DEF_IO32(0x1000B4B8, core->rsa.writeRsaMod(46, IO_PARAMS)) // RSA_MOD46
+                DEF_IO32(0x1000B4BC, core->rsa.writeRsaMod(47, IO_PARAMS)) // RSA_MOD47
+                DEF_IO32(0x1000B4C0, core->rsa.writeRsaMod(48, IO_PARAMS)) // RSA_MOD48
+                DEF_IO32(0x1000B4C4, core->rsa.writeRsaMod(49, IO_PARAMS)) // RSA_MOD49
+                DEF_IO32(0x1000B4C8, core->rsa.writeRsaMod(50, IO_PARAMS)) // RSA_MOD50
+                DEF_IO32(0x1000B4CC, core->rsa.writeRsaMod(51, IO_PARAMS)) // RSA_MOD51
+                DEF_IO32(0x1000B4D0, core->rsa.writeRsaMod(52, IO_PARAMS)) // RSA_MOD52
+                DEF_IO32(0x1000B4D4, core->rsa.writeRsaMod(53, IO_PARAMS)) // RSA_MOD53
+                DEF_IO32(0x1000B4D8, core->rsa.writeRsaMod(54, IO_PARAMS)) // RSA_MOD54
+                DEF_IO32(0x1000B4DC, core->rsa.writeRsaMod(55, IO_PARAMS)) // RSA_MOD55
+                DEF_IO32(0x1000B4E0, core->rsa.writeRsaMod(56, IO_PARAMS)) // RSA_MOD56
+                DEF_IO32(0x1000B4E4, core->rsa.writeRsaMod(57, IO_PARAMS)) // RSA_MOD57
+                DEF_IO32(0x1000B4E8, core->rsa.writeRsaMod(58, IO_PARAMS)) // RSA_MOD58
+                DEF_IO32(0x1000B4EC, core->rsa.writeRsaMod(59, IO_PARAMS)) // RSA_MOD59
+                DEF_IO32(0x1000B4F0, core->rsa.writeRsaMod(60, IO_PARAMS)) // RSA_MOD60
+                DEF_IO32(0x1000B4F4, core->rsa.writeRsaMod(61, IO_PARAMS)) // RSA_MOD61
+                DEF_IO32(0x1000B4F8, core->rsa.writeRsaMod(62, IO_PARAMS)) // RSA_MOD62
+                DEF_IO32(0x1000B4FC, core->rsa.writeRsaMod(63, IO_PARAMS)) // RSA_MOD63
+                DEF_IO32(0x1000B800, core->rsa.writeRsaData(0, IO_PARAMS)) // RSA_DATA0
+                DEF_IO32(0x1000B804, core->rsa.writeRsaData(1, IO_PARAMS)) // RSA_DATA1
+                DEF_IO32(0x1000B808, core->rsa.writeRsaData(2, IO_PARAMS)) // RSA_DATA2
+                DEF_IO32(0x1000B80C, core->rsa.writeRsaData(3, IO_PARAMS)) // RSA_DATA3
+                DEF_IO32(0x1000B810, core->rsa.writeRsaData(4, IO_PARAMS)) // RSA_DATA4
+                DEF_IO32(0x1000B814, core->rsa.writeRsaData(5, IO_PARAMS)) // RSA_DATA5
+                DEF_IO32(0x1000B818, core->rsa.writeRsaData(6, IO_PARAMS)) // RSA_DATA6
+                DEF_IO32(0x1000B81C, core->rsa.writeRsaData(7, IO_PARAMS)) // RSA_DATA7
+                DEF_IO32(0x1000B820, core->rsa.writeRsaData(8, IO_PARAMS)) // RSA_DATA8
+                DEF_IO32(0x1000B824, core->rsa.writeRsaData(9, IO_PARAMS)) // RSA_DATA9
+                DEF_IO32(0x1000B828, core->rsa.writeRsaData(10, IO_PARAMS)) // RSA_DATA10
+                DEF_IO32(0x1000B82C, core->rsa.writeRsaData(11, IO_PARAMS)) // RSA_DATA11
+                DEF_IO32(0x1000B830, core->rsa.writeRsaData(12, IO_PARAMS)) // RSA_DATA12
+                DEF_IO32(0x1000B834, core->rsa.writeRsaData(13, IO_PARAMS)) // RSA_DATA13
+                DEF_IO32(0x1000B838, core->rsa.writeRsaData(14, IO_PARAMS)) // RSA_DATA14
+                DEF_IO32(0x1000B83C, core->rsa.writeRsaData(15, IO_PARAMS)) // RSA_DATA15
+                DEF_IO32(0x1000B840, core->rsa.writeRsaData(16, IO_PARAMS)) // RSA_DATA16
+                DEF_IO32(0x1000B844, core->rsa.writeRsaData(17, IO_PARAMS)) // RSA_DATA17
+                DEF_IO32(0x1000B848, core->rsa.writeRsaData(18, IO_PARAMS)) // RSA_DATA18
+                DEF_IO32(0x1000B84C, core->rsa.writeRsaData(19, IO_PARAMS)) // RSA_DATA19
+                DEF_IO32(0x1000B850, core->rsa.writeRsaData(20, IO_PARAMS)) // RSA_DATA20
+                DEF_IO32(0x1000B854, core->rsa.writeRsaData(21, IO_PARAMS)) // RSA_DATA21
+                DEF_IO32(0x1000B858, core->rsa.writeRsaData(22, IO_PARAMS)) // RSA_DATA22
+                DEF_IO32(0x1000B85C, core->rsa.writeRsaData(23, IO_PARAMS)) // RSA_DATA23
+                DEF_IO32(0x1000B860, core->rsa.writeRsaData(24, IO_PARAMS)) // RSA_DATA24
+                DEF_IO32(0x1000B864, core->rsa.writeRsaData(25, IO_PARAMS)) // RSA_DATA25
+                DEF_IO32(0x1000B868, core->rsa.writeRsaData(26, IO_PARAMS)) // RSA_DATA26
+                DEF_IO32(0x1000B86C, core->rsa.writeRsaData(27, IO_PARAMS)) // RSA_DATA27
+                DEF_IO32(0x1000B870, core->rsa.writeRsaData(28, IO_PARAMS)) // RSA_DATA28
+                DEF_IO32(0x1000B874, core->rsa.writeRsaData(29, IO_PARAMS)) // RSA_DATA29
+                DEF_IO32(0x1000B878, core->rsa.writeRsaData(30, IO_PARAMS)) // RSA_DATA30
+                DEF_IO32(0x1000B87C, core->rsa.writeRsaData(31, IO_PARAMS)) // RSA_DATA31
+                DEF_IO32(0x1000B880, core->rsa.writeRsaData(32, IO_PARAMS)) // RSA_DATA32
+                DEF_IO32(0x1000B884, core->rsa.writeRsaData(33, IO_PARAMS)) // RSA_DATA33
+                DEF_IO32(0x1000B888, core->rsa.writeRsaData(34, IO_PARAMS)) // RSA_DATA34
+                DEF_IO32(0x1000B88C, core->rsa.writeRsaData(35, IO_PARAMS)) // RSA_DATA35
+                DEF_IO32(0x1000B890, core->rsa.writeRsaData(36, IO_PARAMS)) // RSA_DATA36
+                DEF_IO32(0x1000B894, core->rsa.writeRsaData(37, IO_PARAMS)) // RSA_DATA37
+                DEF_IO32(0x1000B898, core->rsa.writeRsaData(38, IO_PARAMS)) // RSA_DATA38
+                DEF_IO32(0x1000B89C, core->rsa.writeRsaData(39, IO_PARAMS)) // RSA_DATA39
+                DEF_IO32(0x1000B8A0, core->rsa.writeRsaData(40, IO_PARAMS)) // RSA_DATA40
+                DEF_IO32(0x1000B8A4, core->rsa.writeRsaData(41, IO_PARAMS)) // RSA_DATA41
+                DEF_IO32(0x1000B8A8, core->rsa.writeRsaData(42, IO_PARAMS)) // RSA_DATA42
+                DEF_IO32(0x1000B8AC, core->rsa.writeRsaData(43, IO_PARAMS)) // RSA_DATA43
+                DEF_IO32(0x1000B8B0, core->rsa.writeRsaData(44, IO_PARAMS)) // RSA_DATA44
+                DEF_IO32(0x1000B8B4, core->rsa.writeRsaData(45, IO_PARAMS)) // RSA_DATA45
+                DEF_IO32(0x1000B8B8, core->rsa.writeRsaData(46, IO_PARAMS)) // RSA_DATA46
+                DEF_IO32(0x1000B8BC, core->rsa.writeRsaData(47, IO_PARAMS)) // RSA_DATA47
+                DEF_IO32(0x1000B8C0, core->rsa.writeRsaData(48, IO_PARAMS)) // RSA_DATA48
+                DEF_IO32(0x1000B8C4, core->rsa.writeRsaData(49, IO_PARAMS)) // RSA_DATA49
+                DEF_IO32(0x1000B8C8, core->rsa.writeRsaData(50, IO_PARAMS)) // RSA_DATA50
+                DEF_IO32(0x1000B8CC, core->rsa.writeRsaData(51, IO_PARAMS)) // RSA_DATA51
+                DEF_IO32(0x1000B8D0, core->rsa.writeRsaData(52, IO_PARAMS)) // RSA_DATA52
+                DEF_IO32(0x1000B8D4, core->rsa.writeRsaData(53, IO_PARAMS)) // RSA_DATA53
+                DEF_IO32(0x1000B8D8, core->rsa.writeRsaData(54, IO_PARAMS)) // RSA_DATA54
+                DEF_IO32(0x1000B8DC, core->rsa.writeRsaData(55, IO_PARAMS)) // RSA_DATA55
+                DEF_IO32(0x1000B8E0, core->rsa.writeRsaData(56, IO_PARAMS)) // RSA_DATA56
+                DEF_IO32(0x1000B8E4, core->rsa.writeRsaData(57, IO_PARAMS)) // RSA_DATA57
+                DEF_IO32(0x1000B8E8, core->rsa.writeRsaData(58, IO_PARAMS)) // RSA_DATA58
+                DEF_IO32(0x1000B8EC, core->rsa.writeRsaData(59, IO_PARAMS)) // RSA_DATA59
+                DEF_IO32(0x1000B8F0, core->rsa.writeRsaData(60, IO_PARAMS)) // RSA_DATA60
+                DEF_IO32(0x1000B8F4, core->rsa.writeRsaData(61, IO_PARAMS)) // RSA_DATA61
+                DEF_IO32(0x1000B8F8, core->rsa.writeRsaData(62, IO_PARAMS)) // RSA_DATA62
+                DEF_IO32(0x1000B8FC, core->rsa.writeRsaData(63, IO_PARAMS)) // RSA_DATA63
             }
         }
 
