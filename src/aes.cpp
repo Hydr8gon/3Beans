@@ -56,6 +56,42 @@ uint32_t Aes::scatter32(uint32_t *t, uint32_t a, uint32_t b, uint32_t c, uint32_
     return t[(d >> 24) & 0xFF] ^ ROR32(t[(c >> 16) & 0xFF], 8) ^ ROR32(t[(b >> 8) & 0xFF], 16) ^ ROR32(t[a & 0xFF], 24);
 }
 
+void Aes::rolKey(uint32_t *key, uint8_t rol) {
+    // Rotate a key left by entire words
+    while (rol >= 32) {
+        uint32_t temp = key[3];
+        key[3] = key[2];
+        key[2] = key[1];
+        key[1] = key[0];
+        key[0] = temp;
+        rol -= 32;
+    }
+
+    // Rotate a key left by less than a word
+    if (!rol) return;
+    uint32_t temp = key[3];
+    key[3] = (key[3] << rol) | (key[2] >> (32 - rol));
+    key[2] = (key[2] << rol) | (key[1] >> (32 - rol));
+    key[1] = (key[1] << rol) | (key[0] >> (32 - rol));
+    key[0] = (key[0] << rol) | (temp >> (32 - rol));
+}
+
+void Aes::xorKey(uint32_t *dst, uint32_t *src) {
+    // Bitwise exclusive or one key with another
+    for (int i = 0; i < 4; i++)
+        dst[i] ^= src[i];
+}
+
+void Aes::addKey(uint32_t *dst, uint32_t *src) {
+    // Add one key to another
+    bool over = false;
+    for (int i = 0; i < 4; i++) {
+        uint32_t res = dst[i] + src[i] + over;
+        over = (res < dst[i] || (res == dst[i] && over));
+        dst[i] = res;
+    }
+}
+
 void Aes::initKey(bool decrypt) {
     // Initialize the ring key values
     for (int i = 0, x = 1; i < 44; i += 4) {
@@ -109,6 +145,11 @@ void Aes::initFifo() {
 
     // Initialize encryption/decryption based on the selected mode
     switch (uint8_t mode = (aesCnt >> 27) & 0x7) {
+    case 2: case 3: // CTR
+        initKey(false);
+        memcpy(ctr, aesIv, sizeof(ctr));
+        return;
+
     case 4: case 5: // CBC decrypt/encrypt
         initKey(mode == 4);
         memcpy(cbc, aesIv, sizeof(cbc));
@@ -132,6 +173,15 @@ void Aes::processFifo() {
 
         // Handle the block based on the selected mode
         switch ((aesCnt >> 27) & 0x7) { // Mode
+        case 2: case 3: // CTR
+            cryptBlock<false>(ctr, dst);
+            for (int i = 0, c = 1; i < 4; i++) {
+                ctr[i] += c;
+                c = (ctr[i] == 0);
+                dst[i] ^= src[i];
+            }
+            break;
+
         case 4: // CBC decrypt
             cryptBlock<true>(src, dst);
             for (int i = 0; i < 4; i++)
@@ -147,7 +197,7 @@ void Aes::processFifo() {
             break;
 
         default: // Unimplemented
-            memcpy(src, dst, sizeof(src));
+            memcpy(dst, src, sizeof(dst));
             break;
         }
 
@@ -166,13 +216,42 @@ void Aes::processFifo() {
     aesCnt = (aesCnt & ~0x3FF) | (readFifo.size() << 5) | writeFifo.size();
 }
 
-void Aes::flushKeyFifo() {
+void Aes::flushKeyFifo(bool keyX) {
     // Flush FIFO values to the selected key based on endian settings
     uint32_t *key = keys[aesKeycnt & 0x3F];
-    if (key < keys[4]) keyFifo = {}; // DSi keys
-    for (int i = 0; !keyFifo.empty(); i++) {
-        key[(aesCnt & BIT(25)) ? (3 - i) : i] = keyFifo.front();
-        keyFifo.pop();
+    std::queue<uint32_t> &fifo = keyX ? keyXFifo : keyFifo;
+    if (key < keys[4]) fifo = {}; // DSi keys
+    for (int i = 0; !fifo.empty(); i++) {
+        key[(aesCnt & BIT(25)) ? (3 - i) : i] = fifo.front();
+        fifo.pop();
+    }
+}
+
+void Aes::flushKeyYFifo() {
+    // Flush FIFO values to key Y based on endian settings
+    if (keyYFifo.empty()) return;
+    for (int i = 0; !keyYFifo.empty(); i++) {
+        keyY[(aesCnt & BIT(25)) ? (3 - i) : i] = keyYFifo.front();
+        keyYFifo.pop();
+    }
+
+    // Get the selected key containing key X
+    uint32_t *key = keys[aesKeycnt & 0x3F];
+    if (key < keys[4]) return; // DSi keys
+
+    // Generate a key using key X and key Y based on the current mode
+    if (aesKeycnt & BIT(6)) { // DSi
+        uint32_t seed[4] = { 0x1A4F3E79, 0x2A680F5F, 0x29590258, 0xFFFEFB4E };
+        xorKey(key, keyY);
+        addKey(key, seed);
+        rolKey(key, 42);
+    }
+    else { // 3DS
+        uint32_t seed[4] = { 0x5D52768A, 0x024591DC, 0xC5FE0408, 0x1FF9E9AA };
+        rolKey(key, 2);
+        xorKey(key, keyY);
+        addKey(key, seed);
+        rolKey(key, 87);
     }
 }
 
@@ -220,9 +299,12 @@ void Aes::writeAesKeysel(uint8_t value) {
 }
 
 void Aes::writeAesKeycnt(uint8_t value) {
-    // Write to the AES_KEYCNT register, flushing the key FIFO if requested
-    if (value & BIT(7)) flushKeyFifo();
+    // Write to the AES_KEYCNT register and flush the key FIFOs if requested
     aesKeycnt = (aesKeycnt & ~0x7F) | (value & 0x7F);
+    if (~value & BIT(7)) return;
+    flushKeyFifo(false);
+    flushKeyFifo(true);
+    flushKeyYFifo();
 }
 
 void Aes::writeAesIv(int i, uint32_t mask, uint32_t value) {
@@ -232,7 +314,19 @@ void Aes::writeAesIv(int i, uint32_t mask, uint32_t value) {
 }
 
 void Aes::writeAesKeyfifo(uint32_t mask, uint32_t value) {
-    // Push a value to the key FIFO based on endian settings, flushing when it's full
+    // Push a value to the key FIFO based on endian settings and flush when full
     keyFifo.push((aesCnt & BIT(23)) ? bswap_32(value & mask) : (value & mask));
-    if (keyFifo.size() == 4) flushKeyFifo();
+    if (keyFifo.size() == 4) flushKeyFifo(false);
+}
+
+void Aes::writeAesKeyxfifo(uint32_t mask, uint32_t value) {
+    // Push a value to the key X FIFO based on endian settings and flush when full
+    keyXFifo.push((aesCnt & BIT(23)) ? bswap_32(value & mask) : (value & mask));
+    if (keyXFifo.size() == 4) flushKeyFifo(true);
+}
+
+void Aes::writeAesKeyyfifo(uint32_t mask, uint32_t value) {
+    // Push a value to the key Y FIFO based on endian settings and flush when full
+    keyYFifo.push((aesCnt & BIT(23)) ? bswap_32(value & mask) : (value & mask));
+    if (keyYFifo.size() == 4) flushKeyYFifo();
 }

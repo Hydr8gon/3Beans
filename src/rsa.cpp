@@ -132,14 +132,14 @@ void Rsa::mulMod(uint32_t *dst, uint32_t *src, uint8_t i, int8_t inc, uint8_t si
             msw = (val >> 32);
         }
         uint32_t res = temp[j + size] - msw - under;
-        under = (res > temp[j + size]);
+        under = (res > temp[j + size] || (res == temp[j + size] && under));
         temp[j + size] = res;
 
         // Add the modulo back to the segment until there's no underflow
         while (under) {
             for (int k = 0; k < size; k++) {
                 res = temp[j + k] + mod[i + k * inc] + !under;
-                under = (res >= temp[j + k]);
+                under = !(res < temp[j + k] || (res == temp[j + k] && !under));
                 temp[j + k] = res;
             }
             temp[j + size] += !under;

@@ -40,6 +40,8 @@ public:
     void writeAesKeycnt(uint8_t value);
     void writeAesIv(int i, uint32_t mask, uint32_t value);
     void writeAesKeyfifo(uint32_t mask, uint32_t value);
+    void writeAesKeyxfifo(uint32_t mask, uint32_t value);
+    void writeAesKeyyfifo(uint32_t mask, uint32_t value);
 
 private:
     Core *core;
@@ -50,6 +52,8 @@ private:
 
     uint32_t keys[0x40][4] = {};
     uint32_t rKey[44] = {};
+    uint32_t keyY[4] = {};
+    uint32_t ctr[4] = {};
     uint32_t cbc[4] = {};
     uint16_t curBlock = 0;
     uint8_t curKey = 0;
@@ -57,6 +61,8 @@ private:
     std::queue<uint32_t> writeFifo;
     std::queue<uint32_t> readFifo;
     std::queue<uint32_t> keyFifo;
+    std::queue<uint32_t> keyXFifo;
+    std::queue<uint32_t> keyYFifo;
 
     uint32_t aesCnt = 0;
     uint16_t aesBlkcnt = 0;
@@ -68,10 +74,15 @@ private:
     static uint32_t scatter8(uint8_t *t, uint32_t a, uint32_t b, uint32_t c, uint32_t d);
     static uint32_t scatter32(uint32_t *t, uint32_t a, uint32_t b, uint32_t c, uint32_t d);
 
+    static void rolKey(uint32_t *key, uint8_t rol);
+    static void xorKey(uint32_t *dst, uint32_t *src);
+    static void addKey(uint32_t *dst, uint32_t *src);
+
     void initKey(bool decrypt);
     template <bool decrypt> void cryptBlock(uint32_t *src, uint32_t *dst);
 
     void initFifo();
     void processFifo();
-    void flushKeyFifo();
+    void flushKeyFifo(bool keyX);
+    void flushKeyYFifo();
 };

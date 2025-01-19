@@ -549,6 +549,8 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x10009028, core->aes.writeAesIv(2, IO_PARAMS)) // AES_IV2
                 DEF_IO32(0x1000902C, core->aes.writeAesIv(3, IO_PARAMS)) // AES_IV3
                 DEF_IO32(0x10009100, core->aes.writeAesKeyfifo(IO_PARAMS)) // AES_KEYFIFO
+                DEF_IO32(0x10009104, core->aes.writeAesKeyxfifo(IO_PARAMS)) // AES_KEYXFIFO
+                DEF_IO32(0x10009108, core->aes.writeAesKeyyfifo(IO_PARAMS)) // AES_KEYYFIFO
                 DEF_IO32(0x1000A000, core->shas[1].writeShaCnt(IO_PARAMS)) // SHA_CNT9
                 DEF_IO32(0x1000A004, core->shas[1].writeShaBlkcnt(IO_PARAMS)) // SHA_BLKCNT9
                 DEF_IO32(0x1000A040, core->shas[1].writeShaHash(0, IO_PARAMS)) // SHA_HASH0_9
