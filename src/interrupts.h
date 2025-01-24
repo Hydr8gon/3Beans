@@ -27,6 +27,7 @@ public:
     Interrupts(Core *core): core(core) {}
     void sendInterrupt(bool arm9, int type);
     void checkInterrupt(bool arm9) { sendInterrupt(arm9, -1); }
+    void interrupt(CpuId id);
 
     uint32_t readMpIle(CpuId id) { return mpIle[id]; }
     uint32_t readMpAck(CpuId id);

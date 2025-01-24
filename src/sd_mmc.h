@@ -66,6 +66,7 @@ private:
     std::queue<uint16_t> readFifo16;
     std::queue<uint32_t> readFifo32;
 
+    uint32_t mmcCid[0x4] = {};
     uint32_t otpEncrypted[0x40] = {};
     uint16_t sdCmd = 0;
     uint16_t sdPortSelect = 0;
@@ -88,6 +89,7 @@ private:
     void runAppCommand();
 
     void setRelativeAddr();
+    void getCid();
     void getStatus();
     void setBlocklen();
     void readSingleBlock();

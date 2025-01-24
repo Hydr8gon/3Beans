@@ -31,6 +31,7 @@ public:
     uint32_t readShaCnt() { return shaCnt; }
     uint32_t readShaBlkcnt() { return shaBlkcnt; }
     uint32_t readShaHash(int i);
+    uint32_t readShaFifo();
 
     void writeShaCnt(uint32_t mask, uint32_t value);
     void writeShaBlkcnt(uint32_t mask, uint32_t value);
@@ -40,7 +41,8 @@ public:
 private:
     Core *core;
 
-    std::queue<uint32_t> fifo;
+    std::queue<uint32_t> inFifo;
+    std::queue<uint32_t> outFifo;
     uint32_t fifoValue = 0;
     uint32_t fifoMask = 0;
     bool fifoRunning = false;
@@ -51,5 +53,6 @@ private:
 
     void hash2(uint32_t *src);
     void initFifo();
+    void pushFifo();
     void processFifo();
 };

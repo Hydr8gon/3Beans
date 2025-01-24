@@ -93,6 +93,18 @@ void Sha::initFifo() {
     }
 }
 
+void Sha::pushFifo() {
+    // Forward data to the output FIFO and mark it as non-empty if enabled
+    if ((shaCnt & BIT(8)) && outFifo.size() < 16) {
+        outFifo.push(fifoValue);
+        shaCnt |= BIT(9);
+    }
+
+    // Push data to the input FIFO and reset the current value
+    inFifo.push(fifoValue);
+    fifoValue = fifoMask = 0;
+}
+
 void Sha::processFifo() {
     // Add a footer to the final block, ensuring data is a multiple of 16 words
     if (shaCnt & (fifoRunning << 1)) {
@@ -102,31 +114,30 @@ void Sha::processFifo() {
             uint32_t b = 0x80, s = 0;
             while (!(fifoMask & (b << s))) s += 8;
             fifoValue |= (b << (s -= 8));
-            shaBlkcnt -= ((16 - fifo.size()) << 2) - (3 - (s >> 3));
-            fifo.push(fifoValue);
-            fifoValue = fifoMask = 0;
+            shaBlkcnt -= ((16 - inFifo.size()) << 2) - (3 - (s >> 3));
+            pushFifo();
         }
         else {
             // Push a new word containing the end bit
-            shaBlkcnt -= (16 - fifo.size()) << 2;
-            fifo.push(0x80000000);
+            shaBlkcnt -= (16 - inFifo.size()) << 2;
+            inFifo.push(0x80000000);
         }
 
         // Append padding and 64-bit length, adjusting if a new block is required
-        while ((fifo.size() & 0xF) != 14) fifo.push(0);
+        while ((inFifo.size() & 0xF) != 14) inFifo.push(0);
         uint64_t len = uint64_t(shaBlkcnt + 64) << 3;
-        fifo.push(len >> 32);
-        fifo.push(len >> 0);
-        if (fifo.size() > 16) shaBlkcnt -= 64;
+        inFifo.push(len >> 32);
+        inFifo.push(len >> 0);
+        if (inFifo.size() > 16) shaBlkcnt -= 64;
     }
 
     // Process FIFO blocks when active and available
-    while (fifoRunning && fifo.size() >= 16) {
+    while (fifoRunning && inFifo.size() >= 16) {
         // Receive an input block from the FIFO
         uint32_t src[64];
         for (int i = 0; i < 16; i++) {
-            src[i] = fifo.front();
-            fifo.pop();
+            src[i] = inFifo.front();
+            inFifo.pop();
         }
 
         // Hash the block and update input length
@@ -141,6 +152,15 @@ void Sha::processFifo() {
     fifoRunning = false;
 }
 
+uint32_t Sha::readShaFifo() {
+    // Read a big endian value from the FIFO and update its empty bit
+    if (outFifo.empty()) return 0;
+    uint32_t value = bswap_32(outFifo.front());
+    outFifo.pop();
+    if (outFifo.empty()) shaCnt &= ~BIT(9);
+    return value;
+}
+
 uint32_t Sha::readShaHash(int i) {
     // Read from a part of the SHA_HASH value based on endian settings
     return (shaCnt & BIT(3)) ? bswap_32(shaHash[i]) : shaHash[i];
@@ -148,6 +168,7 @@ uint32_t Sha::readShaHash(int i) {
 
 void Sha::writeShaCnt(uint32_t mask, uint32_t value) {
     // Write to the SHA_CNT register
+    // TODO: implement the reset bit and DMA interrupts
     bool start = (value & mask & ~shaCnt & BIT(0));
     mask &= 0x53E;
     shaCnt = (shaCnt & ~mask) | (value & mask);
@@ -170,10 +191,9 @@ void Sha::writeShaHash(int i, uint32_t mask, uint32_t value) {
 
 void Sha::writeShaFifo(uint32_t mask, uint32_t value) {
     // Write a big endian value to the FIFO, pushing it once a full word is received
-    if (fifo.size() == 16) return;
+    if (inFifo.size() == 16) return;
     fifoValue |= bswap_32(value & mask);
     if ((fifoMask |= bswap_32(mask)) != -1) return;
-    fifo.push(fifoValue);
-    fifoValue = fifoMask = 0;
+    pushFifo();
     processFifo();
 }

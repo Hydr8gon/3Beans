@@ -25,9 +25,11 @@ SdMmc::~SdMmc() {
 }
 
 bool SdMmc::loadFiles() {
-    // Try to load encrypted OTP data from the NAND
+    // Try to load CID and OTP data from a GM9 NAND dump
     nand = fopen("nand.bin", "rb");
     if (!nand) return false;
+    fseek(nand, 0xC00, SEEK_SET);
+    fread(mmcCid, sizeof(uint32_t), 0x4, nand);
     fseek(nand, 0xE00, SEEK_SET);
     fread(otpEncrypted, sizeof(uint32_t), 0x40, nand);
     return true;
@@ -106,7 +108,9 @@ void SdMmc::runCommand() {
 
     // Execute a normal SD/MMC command
     switch (uint8_t cmd = sdCmd & 0x3F) {
-        case 03: return setRelativeAddr(); // SET_RELATIVE_ADDR
+        case 2: return getCid(); // ALL_GET_CID (stub)
+        case 3: return setRelativeAddr(); // SET_RELATIVE_ADDR
+        case 10: return getCid(); // GET_CID
         case 13: return getStatus(); // GET_STATUS
         case 16: return setBlocklen(); // SET_BLOCKLEN
         case 17: return readSingleBlock(); // READ_SINGLE_BLOCK
@@ -147,6 +151,12 @@ void SdMmc::setRelativeAddr() {
     // Stub CMD3 to get through the ARM9 boot ROM
     LOG_WARN("Stubbed SD/MMC command: CMD3\n");
     pushResponse(0x80000000);
+}
+
+void SdMmc::getCid() {
+    // Get the card ID value as a response
+    for (int i = 0; i < 4; i++)
+        pushResponse(mmcCid[3 - i]);
 }
 
 void SdMmc::getStatus() {

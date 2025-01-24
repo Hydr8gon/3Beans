@@ -26,11 +26,9 @@ void Interrupts::sendInterrupt(bool arm9, int type) {
         if (type != -1)
             irqIf |= BIT(type);
 
-        // Trigger an interrupt if conditions are met and unhalt the CPU
-        if (!(irqIe & irqIf)) return;
-        if (~core->cpus[ARM9].cpsr & BIT(7))
-            core->cpus[ARM9].exception(0x18);
-        core->cpus[ARM9].halted = false;
+        // Schedule an interrupt if any requested interrupts are enabled
+        if (irqIe & irqIf)
+            core->schedule(ARM9_INTERRUPT, 2);
         return;
     }
 
@@ -41,18 +39,21 @@ void Interrupts::sendInterrupt(bool arm9, int type) {
             if (type != -1)
                 mpIp[id][type >> 5] |= BIT(type & 0x1F);
 
-            // Check if any pending interrupts are enabled
-            for (int i = 0; i < 4; i++)
-                if (mpIe[i] & mpIp[id][i]) goto trigger;
-            continue;
-
-        trigger:
-            // Trigger an interrupt if conditions are met and unhalt the CPU
-            if (~core->cpus[id].cpsr & BIT(7))
-                core->cpus[id].exception(0x18);
-            core->cpus[id].halted = false;
+            // Schedule an interrupt if any pending interrupts are enabled
+            for (int i = 0; i < 4; i++) {
+                if (!(mpIe[i] & mpIp[id][i])) continue;
+                core->schedule(Task(ARM11A_INTERRUPT + id), 1);
+                break;
+            }
         }
     }
+}
+
+void Interrupts::interrupt(CpuId id) {
+    // Trigger an interrupt on a CPU if enabled and unhalt it
+    if (~core->cpus[id].cpsr & BIT(7))
+        core->cpus[id].exception(0x18);
+    core->cpus[id].halted = false;
 }
 
 uint32_t Interrupts::readMpAck(CpuId id) {

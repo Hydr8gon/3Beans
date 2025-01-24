@@ -33,7 +33,10 @@ public:
     void drawFrame();
 
     uint32_t readPdcFramebufLt0(bool bot) { return pdcFramebufLt0[bot]; }
+    uint32_t readPdcInterruptType(bool bot) { return pdcInterruptType[bot]; }
+
     void writePdcFramebufLt0(bool bot, uint32_t mask, uint32_t value);
+    void writePdcInterruptType(bool bot, uint32_t mask, uint32_t value);
 
 private:
     Core *core;
@@ -43,4 +46,5 @@ private:
     std::mutex mutex;
 
     uint32_t pdcFramebufLt0[2] = {};
+    uint32_t pdcInterruptType[2] = {};
 };

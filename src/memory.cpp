@@ -172,8 +172,26 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x10163000, data = core->pxi.readPxiSync(false)) // PXI_SYNC11
                 DEF_IO32(0x10163004, data = core->pxi.readPxiCnt(false)) // PXI_CNT11
                 DEF_IO32(0x1016300C, data = core->pxi.readPxiRecv(false)) // PXI_RECV11
+                DEF_IO32(0x10301000, data = core->shas[0].readShaFifo()) // SHA_FIFO11
+                DEF_IO32(0x10301004, data = core->shas[0].readShaFifo()) // SHA_FIFO11
+                DEF_IO32(0x10301008, data = core->shas[0].readShaFifo()) // SHA_FIFO11
+                DEF_IO32(0x1030100C, data = core->shas[0].readShaFifo()) // SHA_FIFO11
+                DEF_IO32(0x10301010, data = core->shas[0].readShaFifo()) // SHA_FIFO11
+                DEF_IO32(0x10301014, data = core->shas[0].readShaFifo()) // SHA_FIFO11
+                DEF_IO32(0x10301018, data = core->shas[0].readShaFifo()) // SHA_FIFO11
+                DEF_IO32(0x1030101C, data = core->shas[0].readShaFifo()) // SHA_FIFO11
+                DEF_IO32(0x10301020, data = core->shas[0].readShaFifo()) // SHA_FIFO11
+                DEF_IO32(0x10301024, data = core->shas[0].readShaFifo()) // SHA_FIFO11
+                DEF_IO32(0x10301028, data = core->shas[0].readShaFifo()) // SHA_FIFO11
+                DEF_IO32(0x1030102C, data = core->shas[0].readShaFifo()) // SHA_FIFO11
+                DEF_IO32(0x10301030, data = core->shas[0].readShaFifo()) // SHA_FIFO11
+                DEF_IO32(0x10301034, data = core->shas[0].readShaFifo()) // SHA_FIFO11
+                DEF_IO32(0x10301038, data = core->shas[0].readShaFifo()) // SHA_FIFO11
+                DEF_IO32(0x1030103C, data = core->shas[0].readShaFifo()) // SHA_FIFO11
                 DEF_IO32(0x10400468, data = core->gpu.readPdcFramebufLt0(false)) // PDC0_FRAMEBUF_LT0
+                DEF_IO32(0x10400474, data = core->gpu.readPdcInterruptType(false)) // PDC0_INTERRUPT_TYPE
                 DEF_IO32(0x10400568, data = core->gpu.readPdcFramebufLt0(true)) // PDC1_FRAMEBUF_LT0
+                DEF_IO32(0x10400574, data = core->gpu.readPdcInterruptType(true)) // PDC0_INTERRUPT_TYPE
                 DEF_IO32(0x17E00100, data = core->interrupts.readMpIle(id)) // MP_ILE
                 DEF_IO32(0x17E0010C, data = core->interrupts.readMpAck(id)) // MP_ACK
                 DEF_IO32(0x17E01000, data = core->interrupts.readMpIge()) // MP_IGE
@@ -446,6 +464,22 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x1000A054, data = core->shas[1].readShaHash(5)) // SHA_HASH5_9
                 DEF_IO32(0x1000A058, data = core->shas[1].readShaHash(6)) // SHA_HASH6_9
                 DEF_IO32(0x1000A05C, data = core->shas[1].readShaHash(7)) // SHA_HASH7_9
+                DEF_IO32(0x1000A080, data = core->shas[1].readShaFifo()) // SHA_FIFO9
+                DEF_IO32(0x1000A084, data = core->shas[1].readShaFifo()) // SHA_FIFO9
+                DEF_IO32(0x1000A088, data = core->shas[1].readShaFifo()) // SHA_FIFO9
+                DEF_IO32(0x1000A08C, data = core->shas[1].readShaFifo()) // SHA_FIFO9
+                DEF_IO32(0x1000A090, data = core->shas[1].readShaFifo()) // SHA_FIFO9
+                DEF_IO32(0x1000A094, data = core->shas[1].readShaFifo()) // SHA_FIFO9
+                DEF_IO32(0x1000A098, data = core->shas[1].readShaFifo()) // SHA_FIFO9
+                DEF_IO32(0x1000A09C, data = core->shas[1].readShaFifo()) // SHA_FIFO9
+                DEF_IO32(0x1000A0A0, data = core->shas[1].readShaFifo()) // SHA_FIFO9
+                DEF_IO32(0x1000A0A4, data = core->shas[1].readShaFifo()) // SHA_FIFO9
+                DEF_IO32(0x1000A0A8, data = core->shas[1].readShaFifo()) // SHA_FIFO9
+                DEF_IO32(0x1000A0AC, data = core->shas[1].readShaFifo()) // SHA_FIFO9
+                DEF_IO32(0x1000A0B0, data = core->shas[1].readShaFifo()) // SHA_FIFO9
+                DEF_IO32(0x1000A0B4, data = core->shas[1].readShaFifo()) // SHA_FIFO9
+                DEF_IO32(0x1000A0B8, data = core->shas[1].readShaFifo()) // SHA_FIFO9
+                DEF_IO32(0x1000A0BC, data = core->shas[1].readShaFifo()) // SHA_FIFO9
             }
         }
 
@@ -480,6 +514,9 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x10101054, core->shas[0].writeShaHash(5, IO_PARAMS)) // SHA_HASH5_11
                 DEF_IO32(0x10101058, core->shas[0].writeShaHash(6, IO_PARAMS)) // SHA_HASH6_11
                 DEF_IO32(0x1010105C, core->shas[0].writeShaHash(7, IO_PARAMS)) // SHA_HASH7_11
+                DEF_IO32(0x10163000, core->pxi.writePxiSync(false, IO_PARAMS)) // PXI_SYNC11
+                DEF_IO32(0x10163004, core->pxi.writePxiCnt(false, IO_PARAMS)) // PXI_CNT11
+                DEF_IO32(0x10163008, core->pxi.writePxiSend(false, IO_PARAMS)) // PXI_SEND11
                 DEF_IO32(0x10301000, core->shas[0].writeShaFifo(IO_PARAMS)) // SHA_FIFO11
                 DEF_IO32(0x10301004, core->shas[0].writeShaFifo(IO_PARAMS)) // SHA_FIFO11
                 DEF_IO32(0x10301008, core->shas[0].writeShaFifo(IO_PARAMS)) // SHA_FIFO11
@@ -496,11 +533,10 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x10301034, core->shas[0].writeShaFifo(IO_PARAMS)) // SHA_FIFO11
                 DEF_IO32(0x10301038, core->shas[0].writeShaFifo(IO_PARAMS)) // SHA_FIFO11
                 DEF_IO32(0x1030103C, core->shas[0].writeShaFifo(IO_PARAMS)) // SHA_FIFO11
-                DEF_IO32(0x10163000, core->pxi.writePxiSync(false, IO_PARAMS)) // PXI_SYNC11
-                DEF_IO32(0x10163004, core->pxi.writePxiCnt(false, IO_PARAMS)) // PXI_CNT11
-                DEF_IO32(0x10163008, core->pxi.writePxiSend(false, IO_PARAMS)) // PXI_SEND11
                 DEF_IO32(0x10400468, core->gpu.writePdcFramebufLt0(false, IO_PARAMS)) // PDC0_FRAMEBUF_LT0
+                DEF_IO32(0x10400474, core->gpu.writePdcInterruptType(false, IO_PARAMS)) // PDC0_INTERRUPT_TYPE
                 DEF_IO32(0x10400568, core->gpu.writePdcFramebufLt0(true, IO_PARAMS)) // PDC1_FRAMEBUF_LT0
+                DEF_IO32(0x10400574, core->gpu.writePdcInterruptType(true, IO_PARAMS)) // PDC1_INTERRUPT_TYPE
                 DEF_IO32(0x17E00100, core->interrupts.writeMpIle(id, IO_PARAMS)) // MP_ILE
                 DEF_IO32(0x17E00110, core->interrupts.writeMpEoi(id, IO_PARAMS)) // MP_EOI
                 DEF_IO32(0x17E01000, core->interrupts.writeMpIge(IO_PARAMS)) // MP_IGE

@@ -32,6 +32,9 @@ Core::Core(): aes(this), cpus { Interpreter(this, ARM11A), Interpreter(this, ARM
     // Define the tasks that can be scheduled
     tasks[RESET_CYCLES] = std::bind(&Core::resetCycles, this);
     tasks[END_FRAME] = std::bind(&Core::endFrame, this);
+    tasks[ARM11A_INTERRUPT] = std::bind(&Interrupts::interrupt, &interrupts, ARM11A);
+    tasks[ARM11B_INTERRUPT] = std::bind(&Interrupts::interrupt, &interrupts, ARM11B);
+    tasks[ARM9_INTERRUPT] = std::bind(&Interrupts::interrupt, &interrupts, ARM9);
     tasks[TIMER0_OVERFLOW] = std::bind(&Timers::overflow, &timers, 0);
     tasks[TIMER1_OVERFLOW] = std::bind(&Timers::overflow, &timers, 1);
     tasks[TIMER2_OVERFLOW] = std::bind(&Timers::overflow, &timers, 2);
