@@ -26,9 +26,9 @@
 #include "aes.h"
 #include "cp15.h"
 #include "defines.h"
-#include "gpu.h"
+#include "pdc.h"
 #include "i2c.h"
-#include "interpreter.h"
+#include "arm_interp.h"
 #include "interrupts.h"
 #include "memory.h"
 #include "pxi.h"
@@ -61,11 +61,11 @@ struct Event {
 class Core {
 public:
     Aes aes;
-    Interpreter cpus[MAX_CPUS];
-    Gpu gpu;
+    ArmInterp arms[MAX_CPUS];
     I2c i2c;
     Interrupts interrupts;
     Memory memory;
+    Pdc pdc;
     Pxi pxi;
     Rsa rsa;
     SdMmc sdMmc;
@@ -77,7 +77,7 @@ public:
     uint32_t globalCycles = 0;
 
     Core();
-    void runFrame() { Interpreter::runFrame(this); }
+    void runFrame() { ArmInterp::runFrame(this); }
     void schedule(Task task, uint32_t cycles);
 
 private:

@@ -20,7 +20,7 @@
 #include <cstring>
 #include "core.h"
 
-uint32_t *Gpu::getFrame() {
+uint32_t *Pdc::getFrame() {
     // Get the next frame in the queue when one is ready
     if (!ready.load()) return nullptr;
     mutex.lock();
@@ -31,7 +31,7 @@ uint32_t *Gpu::getFrame() {
     return fb;
 }
 
-void Gpu::drawFrame() {
+void Pdc::drawFrame() {
     // Allow up to 2 framebuffers to be queued
     if (buffers.size() == 2) return;
     uint32_t *buffer = new uint32_t[400 * 480];
@@ -70,12 +70,12 @@ void Gpu::drawFrame() {
     mutex.unlock();
 }
 
-void Gpu::writePdcFramebufLt0(bool bot, uint32_t mask, uint32_t value) {
+void Pdc::writeFramebufLt0(bool bot, uint32_t mask, uint32_t value) {
     // Write to a screen's PDC_FRAMEBUF_LT0 register
     pdcFramebufLt0[bot] = (pdcFramebufLt0[bot] & ~mask) | (value & mask);
 }
 
-void Gpu::writePdcInterruptType(bool bot, uint32_t mask, uint32_t value) {
+void Pdc::writeInterruptType(bool bot, uint32_t mask, uint32_t value) {
     // Write to a screen's PDC_INTERRUPT_TYPE register
     // TODO: actually implement PDC interrupts
     pdcInterruptType[bot] = (pdcInterruptType[bot] & ~mask) | (value & mask);

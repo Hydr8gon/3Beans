@@ -152,18 +152,18 @@ void Rsa::mulMod(uint32_t *dst, uint32_t *src, uint8_t i, int8_t inc, uint8_t si
         dst[i + j * inc] = temp[j];
 }
 
-uint32_t Rsa::readRsaMod(int i) {
+uint32_t Rsa::readMod(int i) {
     // Read from part of the selected RSA_MOD value based on endian settings
     uint32_t value = rsaMods[(rsaCnt >> 4) & 0x3][i];
     return (rsaCnt & BIT(8)) ? bswap_32(value) : value;
 }
 
-uint32_t Rsa::readRsaData(int i) {
+uint32_t Rsa::readData(int i) {
     // Read from part of the RSA_DATA value based on endian settings
     return (rsaCnt & BIT(8)) ? bswap_32(rsaData[i]) : rsaData[i];
 }
 
-void Rsa::writeRsaCnt(uint32_t mask, uint32_t value) {
+void Rsa::writeCnt(uint32_t mask, uint32_t value) {
     // Write to the RSA_CNT register and process data if triggered
     mask &= 0x333;
     bool start = (value & mask & ~rsaCnt & BIT(0));
@@ -171,7 +171,7 @@ void Rsa::writeRsaCnt(uint32_t mask, uint32_t value) {
     if (start) calculate();
 }
 
-void Rsa::writeRsaSlotcnt(int i, uint32_t mask, uint32_t value) {
+void Rsa::writeSlotcnt(int i, uint32_t mask, uint32_t value) {
     // Write to one of the RSA_SLOTCNT registers and clear its FIFO if triggered
     // TODO: handle the access disable bits
     if (value & mask & BIT(0)) expFifos[i].clear();
@@ -179,20 +179,20 @@ void Rsa::writeRsaSlotcnt(int i, uint32_t mask, uint32_t value) {
     rsaSlotcnt[i] = (rsaSlotcnt[i] & ~mask) | (value & mask);
 }
 
-void Rsa::writeRsaMod(int i, uint32_t mask, uint32_t value) {
+void Rsa::writeMod(int i, uint32_t mask, uint32_t value) {
     // Write to part of the selected RSA_MOD value based on endian settings
     uint32_t *mod = rsaMods[(rsaCnt >> 4) & 0x3];
     mod[i] = (rsaCnt & BIT(8)) ? (mod[i] & ~bswap_32(mask)) |
         bswap_32(value & mask) : (mod[i] & ~mask) | (value & mask);
 }
 
-void Rsa::writeRsaData(int i, uint32_t mask, uint32_t value) {
+void Rsa::writeData(int i, uint32_t mask, uint32_t value) {
     // Write to part of the RSA_DATA value based on endian settings
     rsaData[i] = (rsaCnt & BIT(8)) ? (rsaData[i] & ~bswap_32(mask)) |
         bswap_32(value & mask) : (rsaData[i] & ~mask) | (value & mask);
 }
 
-void Rsa::writeRsaExpfifo(uint32_t mask, uint32_t value) {
+void Rsa::writeExpfifo(uint32_t mask, uint32_t value) {
     // Check if the selected exponent FIFO has room
     uint8_t i = (rsaCnt >> 4) & 0x3;
     if (expFifos[i].size() >= 0x40) return;

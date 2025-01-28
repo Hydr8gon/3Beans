@@ -28,13 +28,13 @@ class Pxi {
 public:
     Pxi(Core *core): core(core) {}
 
-    uint32_t readPxiSync(bool arm9) { return pxiSync[arm9]; }
-    uint16_t readPxiCnt(bool arm9) { return pxiCnt[arm9]; }
-    uint32_t readPxiRecv(bool arm9);
+    uint32_t readSync(bool arm9) { return pxiSync[arm9]; }
+    uint16_t readCnt(bool arm9) { return pxiCnt[arm9]; }
+    uint32_t readRecv(bool arm9);
 
-    void writePxiSync(bool arm9, uint32_t mask, uint32_t value);
-    void writePxiCnt(bool arm9, uint16_t mask, uint16_t value);
-    void writePxiSend(bool arm9, uint32_t mask, uint32_t value);
+    void writeSync(bool arm9, uint32_t mask, uint32_t value);
+    void writeCnt(bool arm9, uint16_t mask, uint16_t value);
+    void writeSend(bool arm9, uint32_t mask, uint32_t value);
 
 private:
     Core *core;

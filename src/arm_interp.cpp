@@ -17,31 +17,31 @@
     along with 3Beans. If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "interpreter.h"
+#include "arm_interp.h"
 #include "core.h"
 
-Interpreter::Interpreter(Core *core, CpuId id): core(core), id(id), cp15(core, id) {
+ArmInterp::ArmInterp(Core *core, CpuId id): core(core), id(id), cp15(core, id) {
     // Initialize the registers for user mode
     for (int i = 0; i < 32; i++)
         registers[i] = &registersUsr[i & 0xF];
 }
 
-void Interpreter::init() {
+void ArmInterp::init() {
     // Prepare to execute the boot ROM
     setCpsr(0xD3); // Supervisor, interrupts off
     registersUsr[15] = (id == ARM9) ? 0xFFFF0000 : 0x10000;
     flushPipeline();
 }
 
-void Interpreter::resetCycles() {
+void ArmInterp::resetCycles() {
     // Adjust CPU cycles for a global cycle reset
     cycles -= std::min(core->globalCycles, cycles);
 }
 
-void Interpreter::runFrame(Core *core) {
-    Interpreter &arm11a = core->cpus[ARM11A];
-    Interpreter &arm11b = core->cpus[ARM11B];
-    Interpreter &arm9 = core->cpus[ARM9];
+void ArmInterp::runFrame(Core *core) {
+    ArmInterp &arm11a = core->arms[ARM11A];
+    ArmInterp &arm11b = core->arms[ARM11B];
+    ArmInterp &arm9 = core->arms[ARM9];
 
     // Run a frame of CPU instructions and events
     while (core->running.exchange(true)) {
@@ -75,7 +75,7 @@ void Interpreter::runFrame(Core *core) {
     }
 }
 
-FORCE_INLINE int Interpreter::runOpcode() {
+FORCE_INLINE int ArmInterp::runOpcode() {
     // Push the next opcode through the pipeline
     uint32_t opcode = pipeline[0];
     pipeline[0] = pipeline[1];
@@ -101,7 +101,7 @@ FORCE_INLINE int Interpreter::runOpcode() {
     }
 }
 
-int Interpreter::exception(uint8_t vector) {
+int ArmInterp::exception(uint8_t vector) {
     // Switch the CPU mode, save the return address, and jump to the exception vector
     static const uint8_t modes[] = { 0x13, 0x1B, 0x13, 0x17, 0x17, 0x13, 0x12, 0x11 };
     setCpsr((cpsr & ~0x3F) | BIT(7) | modes[vector >> 2], true); // ARM, interrupts off, new mode
@@ -111,7 +111,7 @@ int Interpreter::exception(uint8_t vector) {
     return 3;
 }
 
-void Interpreter::flushPipeline() {
+void ArmInterp::flushPipeline() {
     // Adjust the program counter and refill the pipeline after a jump
     if (cpsr & BIT(5)) { // THUMB mode
         *registers[15] = (*registers[15] & ~0x1) + 2;
@@ -125,7 +125,7 @@ void Interpreter::flushPipeline() {
     }
 }
 
-void Interpreter::setCpsr(uint32_t value, bool save) {
+void ArmInterp::setCpsr(uint32_t value, bool save) {
     // Swap banked registers if the CPU mode changed
     if ((value & 0x1F) != (cpsr & 0x1F)) {
         switch (value & 0x1F) {
@@ -208,7 +208,7 @@ void Interpreter::setCpsr(uint32_t value, bool save) {
     core->interrupts.checkInterrupt(id == ARM9);
 }
 
-int Interpreter::handleReserved(uint32_t opcode) {
+int ArmInterp::handleReserved(uint32_t opcode) {
     // The ARM9-exclusive BLX instruction uses the reserved condition code, so let it run
     if ((opcode & 0xE000000) == 0xA000000)
         return blx(opcode); // BLX label
@@ -217,13 +217,13 @@ int Interpreter::handleReserved(uint32_t opcode) {
     return unkArm(opcode);
 }
 
-int Interpreter::unkArm(uint32_t opcode) {
+int ArmInterp::unkArm(uint32_t opcode) {
     // Handle an unknown ARM opcode
     LOG_CRIT("Unknown ARM%d ARM opcode: 0x%X\n", (id == ARM9) ? 9 : 11, opcode);
     return 1;
 }
 
-int Interpreter::unkThumb(uint16_t opcode) {
+int ArmInterp::unkThumb(uint16_t opcode) {
     // Handle an unknown THUMB opcode
     LOG_CRIT("Unknown ARM%d THUMB opcode: 0x%X\n", (id == ARM9) ? 9 : 11, opcode);
     return 1;

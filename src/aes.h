@@ -28,20 +28,20 @@ class Aes {
 public:
     Aes(Core *core);
 
-    uint32_t readAesCnt() { return aesCnt; }
-    uint32_t readAesRdfifo();
-    uint8_t readAesKeysel() { return aesKeysel; }
-    uint8_t readAesKeycnt() { return aesKeycnt; }
+    uint32_t readCnt() { return aesCnt; }
+    uint32_t readRdfifo();
+    uint8_t readKeysel() { return aesKeysel; }
+    uint8_t readKeycnt() { return aesKeycnt; }
 
-    void writeAesCnt(uint32_t mask, uint32_t value);
-    void writeAesBlkcnt(uint16_t mask, uint16_t value);
-    void writeAesWrfifo(uint32_t mask, uint32_t value);
-    void writeAesKeysel(uint8_t value);
-    void writeAesKeycnt(uint8_t value);
-    void writeAesIv(int i, uint32_t mask, uint32_t value);
-    void writeAesKeyfifo(uint32_t mask, uint32_t value);
-    void writeAesKeyxfifo(uint32_t mask, uint32_t value);
-    void writeAesKeyyfifo(uint32_t mask, uint32_t value);
+    void writeCnt(uint32_t mask, uint32_t value);
+    void writeBlkcnt(uint16_t mask, uint16_t value);
+    void writeWrfifo(uint32_t mask, uint32_t value);
+    void writeKeysel(uint8_t value);
+    void writeKeycnt(uint8_t value);
+    void writeIv(int i, uint32_t mask, uint32_t value);
+    void writeKeyfifo(uint32_t mask, uint32_t value);
+    void writeKeyxfifo(uint32_t mask, uint32_t value);
+    void writeKeyyfifo(uint32_t mask, uint32_t value);
 
 private:
     Core *core;

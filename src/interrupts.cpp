@@ -51,9 +51,9 @@ void Interrupts::sendInterrupt(bool arm9, int type) {
 
 void Interrupts::interrupt(CpuId id) {
     // Trigger an interrupt on a CPU if enabled and unhalt it
-    if (~core->cpus[id].cpsr & BIT(7))
-        core->cpus[id].exception(0x18);
-    core->cpus[id].halted = false;
+    if (~core->arms[id].cpsr & BIT(7))
+        core->arms[id].exception(0x18);
+    core->arms[id].halted = false;
 }
 
 uint32_t Interrupts::readMpAck(CpuId id) {

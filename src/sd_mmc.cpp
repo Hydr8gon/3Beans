@@ -32,16 +32,11 @@ void SdMmc::loadFiles() {
         fseek(nand, 0xC00, SEEK_SET);
         fread(mmcCid, sizeof(uint32_t), 0x4, nand);
         fseek(nand, 0xE00, SEEK_SET);
-        fread(otpEncrypted, sizeof(uint32_t), 0x40, nand);
+        core->memory.loadOtp(nand);
     }
 
     // Try to open an SD image
     sd = fopen("sd.img", "rb");
-}
-
-void SdMmc::disableOtp() {
-    // Wipe OTP data so it can't be accessed anymore
-    memset(otpEncrypted, 0, sizeof(otpEncrypted));
 }
 
 void SdMmc::sendInterrupt(int bit) {
@@ -224,7 +219,7 @@ void SdMmc::getScr() {
     pushResponse(cardStatus);
 }
 
-uint16_t SdMmc::readSdData16Fifo() {
+uint16_t SdMmc::readData16Fifo() {
     // Pop a value from the 16-bit read FIFO
     if (readFifo16.empty()) return sdData16Fifo;
     sdData16Fifo = readFifo16.front();
@@ -237,7 +232,7 @@ uint16_t SdMmc::readSdData16Fifo() {
     return sdData16Fifo;
 }
 
-uint32_t SdMmc::readSdData32Fifo() {
+uint32_t SdMmc::readData32Fifo() {
     // Pop a value from the 32-bit read FIFO
     if (readFifo32.empty()) return sdData32Fifo;
     sdData32Fifo = readFifo32.front();
@@ -250,7 +245,7 @@ uint32_t SdMmc::readSdData32Fifo() {
     return sdData32Fifo;
 }
 
-void SdMmc::writeSdCmd(uint16_t mask, uint16_t value) {
+void SdMmc::writeCmd(uint16_t mask, uint16_t value) {
     // Write to the SD_CMD register
     sdCmd = (sdCmd & ~mask) | (value & mask);
 
@@ -272,46 +267,46 @@ void SdMmc::writeSdCmd(uint16_t mask, uint16_t value) {
     }
 }
 
-void SdMmc::writeSdPortSelect(uint16_t mask, uint16_t value) {
+void SdMmc::writePortSelect(uint16_t mask, uint16_t value) {
     // Write to the SD_PORT_SELECT register
     mask &= 0xF;
     sdPortSelect = (sdPortSelect & ~mask) | (value & mask);
 }
 
-void SdMmc::writeSdCmdParam(uint32_t mask, uint32_t value) {
+void SdMmc::writeCmdParam(uint32_t mask, uint32_t value) {
     // Write to the SD_CMD_PARAM parameter
     sdCmdParam = (sdCmdParam & ~mask) | (value & mask);
 }
 
-void SdMmc::writeSdData16Blkcnt(uint16_t mask, uint16_t value) {
+void SdMmc::writeData16Blkcnt(uint16_t mask, uint16_t value) {
     // Write to the SD_DATA16_BLKCNT block count
     sdData16Blkcnt = (sdData16Blkcnt & ~mask) | (value & mask);
 }
 
-void SdMmc::writeSdIrqStatus(uint32_t mask, uint32_t value) {
+void SdMmc::writeIrqStatus(uint32_t mask, uint32_t value) {
     // Acknowledge bits in the SD_IRQ_STATUS register
     sdIrqStatus = (sdIrqStatus & ~mask) | (sdIrqStatus & value & mask);
 }
 
-void SdMmc::writeSdIrqMask(uint32_t mask, uint32_t value) {
+void SdMmc::writeIrqMask(uint32_t mask, uint32_t value) {
     // Write to the SD_IRQ_MASK register
     mask &= 0x8B7F031D;
     sdIrqMask = (sdIrqMask & ~mask) | (value & mask);
 }
 
-void SdMmc::writeSdData16Blklen(uint16_t mask, uint16_t value) {
+void SdMmc::writeData16Blklen(uint16_t mask, uint16_t value) {
     // Write to the SD_DATA16_BLKLEN block length, clipping past 0x200
     mask &= 0x3FF;
     sdData16Blklen = std::min(0x200, (sdData16Blklen & ~mask) | (value & mask));
 }
 
-void SdMmc::writeSdDataCtl(uint16_t mask, uint16_t value) {
+void SdMmc::writeDataCtl(uint16_t mask, uint16_t value) {
     // Write to the SD_DATA_CTL register
     mask &= 0x22;
     sdDataCtl = (sdDataCtl & ~mask) | (value & mask);
 }
 
-void SdMmc::writeSdData32Irq(uint16_t mask, uint16_t value) {
+void SdMmc::writeData32Irq(uint16_t mask, uint16_t value) {
     // Write to the SD_DATA32_IRQ register
     mask &= 0x1802;
     sdData32Irq = (sdData32Irq & ~mask) | (value & mask);

@@ -152,7 +152,7 @@ void Sha::processFifo() {
     fifoRunning = false;
 }
 
-uint32_t Sha::readShaFifo() {
+uint32_t Sha::readFifo() {
     // Read a big endian value from the FIFO and update its empty bit
     if (outFifo.empty()) return 0;
     uint32_t value = bswap_32(outFifo.front());
@@ -161,12 +161,12 @@ uint32_t Sha::readShaFifo() {
     return value;
 }
 
-uint32_t Sha::readShaHash(int i) {
+uint32_t Sha::readHash(int i) {
     // Read from a part of the SHA_HASH value based on endian settings
     return (shaCnt & BIT(3)) ? bswap_32(shaHash[i]) : shaHash[i];
 }
 
-void Sha::writeShaCnt(uint32_t mask, uint32_t value) {
+void Sha::writeCnt(uint32_t mask, uint32_t value) {
     // Write to the SHA_CNT register
     // TODO: implement the reset bit and DMA interrupts
     bool start = (value & mask & ~shaCnt & BIT(0));
@@ -178,18 +178,18 @@ void Sha::writeShaCnt(uint32_t mask, uint32_t value) {
     processFifo();
 }
 
-void Sha::writeShaBlkcnt(uint32_t mask, uint32_t value) {
+void Sha::writeBlkcnt(uint32_t mask, uint32_t value) {
     // Write to the SHA_BLKCNT input length
     shaBlkcnt = (shaBlkcnt & ~mask) | (value & mask);
 }
 
-void Sha::writeShaHash(int i, uint32_t mask, uint32_t value) {
+void Sha::writeHash(int i, uint32_t mask, uint32_t value) {
     // Write to part of the SHA_HASH value based on endian settings
     shaHash[i] = (shaCnt & BIT(3)) ? (shaHash[i] & ~bswap_32(mask)) |
         bswap_32(value & mask) : (shaHash[i] & ~mask) | (value & mask);
 }
 
-void Sha::writeShaFifo(uint32_t mask, uint32_t value) {
+void Sha::writeFifo(uint32_t mask, uint32_t value) {
     // Write a big endian value to the FIFO, pushing it once a full word is received
     if (inFifo.size() == 16) return;
     fifoValue |= bswap_32(value & mask);

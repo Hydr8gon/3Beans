@@ -64,7 +64,7 @@ void b3Canvas::draw(wxPaintEvent &event) {
 
     // At the swap interval, get the framebuffer as a texture
     if (++frameCount >= swapInterval && frame->core) {
-        if (uint32_t *fb = frame->core->gpu.getFrame()) {
+        if (uint32_t *fb = frame->core->pdc.getFrame()) {
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 400, 480, 0, GL_RGBA, GL_UNSIGNED_BYTE, fb);
             frameCount = 0;
             delete fb;

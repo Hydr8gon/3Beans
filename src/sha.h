@@ -28,15 +28,15 @@ class Sha {
 public:
     Sha(Core *core): core(core) {}
 
-    uint32_t readShaCnt() { return shaCnt; }
-    uint32_t readShaBlkcnt() { return shaBlkcnt; }
-    uint32_t readShaHash(int i);
-    uint32_t readShaFifo();
+    uint32_t readCnt() { return shaCnt; }
+    uint32_t readBlkcnt() { return shaBlkcnt; }
+    uint32_t readHash(int i);
+    uint32_t readFifo();
 
-    void writeShaCnt(uint32_t mask, uint32_t value);
-    void writeShaBlkcnt(uint32_t mask, uint32_t value);
-    void writeShaHash(int i, uint32_t mask, uint32_t value);
-    void writeShaFifo(uint32_t mask, uint32_t value);
+    void writeCnt(uint32_t mask, uint32_t value);
+    void writeBlkcnt(uint32_t mask, uint32_t value);
+    void writeHash(int i, uint32_t mask, uint32_t value);
+    void writeFifo(uint32_t mask, uint32_t value);
 
 private:
     Core *core;

@@ -26,17 +26,17 @@
 
 class Core;
 
-class Gpu {
+class Pdc {
 public:
-    Gpu(Core *core): core(core) {}
+    Pdc(Core *core): core(core) {}
     uint32_t *getFrame();
     void drawFrame();
 
-    uint32_t readPdcFramebufLt0(bool bot) { return pdcFramebufLt0[bot]; }
-    uint32_t readPdcInterruptType(bool bot) { return pdcInterruptType[bot]; }
+    uint32_t readFramebufLt0(bool bot) { return pdcFramebufLt0[bot]; }
+    uint32_t readInterruptType(bool bot) { return pdcInterruptType[bot]; }
 
-    void writePdcFramebufLt0(bool bot, uint32_t mask, uint32_t value);
-    void writePdcInterruptType(bool bot, uint32_t mask, uint32_t value);
+    void writeFramebufLt0(bool bot, uint32_t mask, uint32_t value);
+    void writeInterruptType(bool bot, uint32_t mask, uint32_t value);
 
 private:
     Core *core;

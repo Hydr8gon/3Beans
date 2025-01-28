@@ -28,17 +28,17 @@ class Rsa {
 public:
     Rsa(Core *core): core(core) {}
 
-    uint32_t readRsaCnt() { return rsaCnt; }
-    uint32_t readRsaSlotcnt(int i) { return rsaSlotcnt[i]; }
-    uint32_t readRsaSlotsize(int i) { return expFifos[i].size(); }
-    uint32_t readRsaMod(int i);
-    uint32_t readRsaData(int i);
+    uint32_t readCnt() { return rsaCnt; }
+    uint32_t readSlotcnt(int i) { return rsaSlotcnt[i]; }
+    uint32_t readSlotsize(int i) { return expFifos[i].size(); }
+    uint32_t readMod(int i);
+    uint32_t readData(int i);
 
-    void writeRsaCnt(uint32_t mask, uint32_t value);
-    void writeRsaSlotcnt(int i, uint32_t mask, uint32_t value);
-    void writeRsaMod(int i, uint32_t mask, uint32_t value);
-    void writeRsaData(int i, uint32_t mask, uint32_t value);
-    void writeRsaExpfifo(uint32_t mask, uint32_t value);
+    void writeCnt(uint32_t mask, uint32_t value);
+    void writeSlotcnt(int i, uint32_t mask, uint32_t value);
+    void writeMod(int i, uint32_t mask, uint32_t value);
+    void writeData(int i, uint32_t mask, uint32_t value);
+    void writeExpfifo(uint32_t mask, uint32_t value);
 
 private:
     Core *core;

@@ -24,13 +24,13 @@
 
 class Core;
 
-class Interpreter {
+class ArmInterp {
 public:
     Cp15 cp15;
     bool halted = false;
     uint32_t cpsr = 0;
 
-    Interpreter(Core *core, CpuId id);
+    ArmInterp(Core *core, CpuId id);
     void init();
 
     void resetCycles();
@@ -59,8 +59,8 @@ private:
     uint32_t pipeline[2] = {};
     uint32_t cycles = 0;
 
-    static int (Interpreter::*armInstrs[0x1000])(uint32_t);
-    static int (Interpreter::*thumbInstrs[0x400])(uint16_t);
+    static int (ArmInterp::*armInstrs[0x1000])(uint32_t);
+    static int (ArmInterp::*thumbInstrs[0x400])(uint16_t);
 
     static const uint8_t condition[0x100];
     static const uint8_t bitCount[0x100];

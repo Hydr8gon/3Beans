@@ -28,33 +28,30 @@ class SdMmc {
 public:
     SdMmc(Core *core): core(core) {}
     ~SdMmc();
-
     void loadFiles();
-    void disableOtp();
 
-    uint32_t readOtpEncrypted(int i) { return otpEncrypted[i]; }
-    uint16_t readSdCmd() { return sdCmd; }
-    uint16_t readSdPortSelect() { return sdPortSelect; }
-    uint32_t readSdCmdParam() { return sdCmdParam; }
-    uint16_t readSdData16Blkcnt() { return sdData16Blkcnt; }
-    uint32_t readSdResponse(int i) { return sdResponse[i]; }
-    uint32_t readSdIrqStatus() { return sdIrqStatus; }
-    uint32_t readSdIrqMask() { return sdIrqMask; }
-    uint16_t readSdData16Blklen() { return sdData16Blklen; }
-    uint16_t readSdData16Fifo();
-    uint16_t readSdDataCtl() { return sdDataCtl; }
-    uint16_t readSdData32Irq() { return sdData32Irq; }
-    uint32_t readSdData32Fifo();
+    uint16_t readCmd() { return sdCmd; }
+    uint16_t readPortSelect() { return sdPortSelect; }
+    uint32_t readCmdParam() { return sdCmdParam; }
+    uint16_t readData16Blkcnt() { return sdData16Blkcnt; }
+    uint32_t readResponse(int i) { return sdResponse[i]; }
+    uint32_t readIrqStatus() { return sdIrqStatus; }
+    uint32_t readIrqMask() { return sdIrqMask; }
+    uint16_t readData16Blklen() { return sdData16Blklen; }
+    uint16_t readData16Fifo();
+    uint16_t readDataCtl() { return sdDataCtl; }
+    uint16_t readData32Irq() { return sdData32Irq; }
+    uint32_t readData32Fifo();
 
-    void writeSdCmd(uint16_t mask, uint16_t value);
-    void writeSdPortSelect(uint16_t mask, uint16_t value);
-    void writeSdCmdParam(uint32_t mask, uint32_t value);
-    void writeSdData16Blkcnt(uint16_t mask, uint16_t value);
-    void writeSdIrqStatus(uint32_t mask, uint32_t value);
-    void writeSdIrqMask(uint32_t mask, uint32_t value);
-    void writeSdData16Blklen(uint16_t mask, uint16_t value);
-    void writeSdDataCtl(uint16_t mask, uint16_t value);
-    void writeSdData32Irq(uint16_t mask, uint16_t value);
+    void writeCmd(uint16_t mask, uint16_t value);
+    void writePortSelect(uint16_t mask, uint16_t value);
+    void writeCmdParam(uint32_t mask, uint32_t value);
+    void writeData16Blkcnt(uint16_t mask, uint16_t value);
+    void writeIrqStatus(uint32_t mask, uint32_t value);
+    void writeIrqMask(uint32_t mask, uint32_t value);
+    void writeData16Blklen(uint16_t mask, uint16_t value);
+    void writeDataCtl(uint16_t mask, uint16_t value);
+    void writeData32Irq(uint16_t mask, uint16_t value);
 
 private:
     Core *core;
@@ -70,7 +67,6 @@ private:
     std::queue<uint32_t> readFifo32;
 
     uint32_t mmcCid[0x4] = {};
-    uint32_t otpEncrypted[0x40] = {};
     uint16_t sdCmd = 0;
     uint16_t sdPortSelect = 0;
     uint32_t sdCmdParam = 0;

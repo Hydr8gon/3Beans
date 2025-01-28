@@ -267,7 +267,7 @@ void Aes::flushKeyYFifo() {
     }
 }
 
-uint32_t Aes::readAesRdfifo() {
+uint32_t Aes::readRdfifo() {
     // Pop a value from the read FIFO based on endian settings
     if (readFifo.empty()) return aesRdfifo;
     aesRdfifo = (aesCnt & BIT(23)) ? bswap_32(readFifo.front()) : readFifo.front();
@@ -276,7 +276,7 @@ uint32_t Aes::readAesRdfifo() {
     return aesRdfifo;
 }
 
-void Aes::writeAesCnt(uint32_t mask, uint32_t value) {
+void Aes::writeCnt(uint32_t mask, uint32_t value) {
     // Handle write-only bits that trigger events
     if (value & mask & BIT(10)) writeFifo = {}; // Empty write FIFO (?)
     if (value & mask & BIT(11)) readFifo = {}; // Empty read FIFO (?)
@@ -293,24 +293,24 @@ void Aes::writeAesCnt(uint32_t mask, uint32_t value) {
     processFifo();
 }
 
-void Aes::writeAesBlkcnt(uint16_t mask, uint16_t value) {
+void Aes::writeBlkcnt(uint16_t mask, uint16_t value) {
     // Write to the AES_BLKCNT transfer length
     aesBlkcnt = (aesBlkcnt & ~mask) | (value & mask);
 }
 
-void Aes::writeAesWrfifo(uint32_t mask, uint32_t value) {
+void Aes::writeWrfifo(uint32_t mask, uint32_t value) {
     // Push a value to the write FIFO based on endian settings
     if (writeFifo.size() == 16) return;
     writeFifo.push((aesCnt & BIT(23)) ? bswap_32(value & mask) : (value & mask));
     processFifo();
 }
 
-void Aes::writeAesKeysel(uint8_t value) {
+void Aes::writeKeysel(uint8_t value) {
     // Write to the AES_KEYSEL pending key slot
     aesKeysel = (aesKeysel & ~0x3F) | (value & 0x3F);
 }
 
-void Aes::writeAesKeycnt(uint8_t value) {
+void Aes::writeKeycnt(uint8_t value) {
     // Write to the AES_KEYCNT register and flush the key FIFOs if requested
     aesKeycnt = (aesKeycnt & ~0x7F) | (value & 0x7F);
     if (~value & BIT(7)) return;
@@ -319,25 +319,25 @@ void Aes::writeAesKeycnt(uint8_t value) {
     flushKeyYFifo();
 }
 
-void Aes::writeAesIv(int i, uint32_t mask, uint32_t value) {
+void Aes::writeIv(int i, uint32_t mask, uint32_t value) {
     // Write to part of the AES_IV value based on endian settings
     aesIv[i] = (aesCnt & BIT(23)) ? (aesIv[i] & ~bswap_32(mask)) |
         bswap_32(value & mask) : (aesIv[i] & ~mask) | (value & mask);
 }
 
-void Aes::writeAesKeyfifo(uint32_t mask, uint32_t value) {
+void Aes::writeKeyfifo(uint32_t mask, uint32_t value) {
     // Push a value to the key FIFO based on endian settings and flush when full
     keyFifo.push((aesCnt & BIT(23)) ? bswap_32(value & mask) : (value & mask));
     if (keyFifo.size() == 4) flushKeyFifo(false);
 }
 
-void Aes::writeAesKeyxfifo(uint32_t mask, uint32_t value) {
+void Aes::writeKeyxfifo(uint32_t mask, uint32_t value) {
     // Push a value to the key X FIFO based on endian settings and flush when full
     keyXFifo.push((aesCnt & BIT(23)) ? bswap_32(value & mask) : (value & mask));
     if (keyXFifo.size() == 4) flushKeyFifo(true);
 }
 
-void Aes::writeAesKeyyfifo(uint32_t mask, uint32_t value) {
+void Aes::writeKeyyfifo(uint32_t mask, uint32_t value) {
     // Push a value to the key Y FIFO based on endian settings and flush when full
     keyYFifo.push((aesCnt & BIT(23)) ? bswap_32(value & mask) : (value & mask));
     if (keyYFifo.size() == 4) flushKeyYFifo();

@@ -20,14 +20,14 @@
 #include <algorithm>
 #include "core.h"
 
-Core::Core(): aes(this), cpus { Interpreter(this, ARM11A), Interpreter(this, ARM11B),
-        Interpreter(this, ARM9) }, gpu(this), i2c(this), interrupts(this), memory(this),
+Core::Core(): aes(this), arms { ArmInterp(this, ARM11A), ArmInterp(this, ARM11B),
+        ArmInterp(this, ARM9) }, i2c(this), interrupts(this), memory(this), pdc(this),
         pxi(this), rsa(this), sdMmc(this), shas { Sha(this), Sha(this) }, timers(this) {
     // Initialize memory and the CPUs
     memory.loadFiles();
     sdMmc.loadFiles();
     for (int i = 0; i < MAX_CPUS; i++)
-        cpus[i].init();
+        arms[i].init();
 
     // Define the tasks that can be scheduled
     tasks[RESET_CYCLES] = std::bind(&Core::resetCycles, this);
@@ -50,7 +50,7 @@ void Core::resetCycles() {
     for (uint32_t i = 0; i < events.size(); i++)
         events[i].cycles -= globalCycles;
     for (int i = 0; i < MAX_CPUS; i++)
-        cpus[i].resetCycles();
+        arms[i].resetCycles();
     timers.resetCycles();
     globalCycles -= globalCycles;
     schedule(RESET_CYCLES, 0x7FFFFFFF);
@@ -58,7 +58,7 @@ void Core::resetCycles() {
 
 void Core::endFrame() {
     // Break execution at the end of a frame
-    gpu.drawFrame();
+    pdc.drawFrame();
     running.store(false);
     schedule(END_FRAME, 268111856 / 60);
 }

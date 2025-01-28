@@ -27,11 +27,11 @@ class I2c {
 public:
     I2c(Core *core): core(core) {}
 
-    uint8_t readI2cBusData(int i) { return i2cBusData[i]; }
-    uint8_t readI2cBusCnt(int i) { return i2cBusCnt[i]; }
+    uint8_t readBusData(int i) { return i2cBusData[i]; }
+    uint8_t readBusCnt(int i) { return i2cBusCnt[i]; }
 
-    void writeI2cBusData(int i, uint8_t value);
-    void writeI2cBusCnt(int i, uint8_t value);
+    void writeBusData(int i, uint8_t value);
+    void writeBusCnt(int i, uint8_t value);
 
 private:
     Core *core;

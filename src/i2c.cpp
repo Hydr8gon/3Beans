@@ -19,12 +19,12 @@
 
 #include "core.h"
 
-void I2c::writeI2cBusData(int i, uint8_t value) {
+void I2c::writeBusData(int i, uint8_t value) {
     // Write to one of the I2C_BUS_DATA registers
     i2cBusData[i] = value;
 }
 
-void I2c::writeI2cBusCnt(int i, uint8_t value) {
+void I2c::writeBusCnt(int i, uint8_t value) {
     // Write to one of the I2C_BUS_CNT registers and check some bits
     i2cBusCnt[i] = value & 0x7F;
     if (~value & BIT(7)) return; // Enable

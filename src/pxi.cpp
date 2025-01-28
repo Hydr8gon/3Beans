@@ -19,7 +19,7 @@
 
 #include "core.h"
 
-uint32_t Pxi::readPxiRecv(bool arm9) {
+uint32_t Pxi::readRecv(bool arm9) {
     // Ensure the FIFO is enabled
     if (~pxiCnt[arm9] & BIT(15))
         return pxiRecv[arm9];
@@ -51,7 +51,7 @@ uint32_t Pxi::readPxiRecv(bool arm9) {
     return pxiRecv[arm9];
 }
 
-void Pxi::writePxiSync(bool arm9, uint32_t mask, uint32_t value)
+void Pxi::writeSync(bool arm9, uint32_t mask, uint32_t value)
 {
     // Send 8 bits to the other CPU if data is written
     if (mask & 0xFF00)
@@ -75,7 +75,7 @@ void Pxi::writePxiSync(bool arm9, uint32_t mask, uint32_t value)
     pxiSync[arm9] = (pxiSync[arm9] & ~mask) | (value & mask);
 }
 
-void Pxi::writePxiCnt(bool arm9, uint16_t mask, uint16_t value) {
+void Pxi::writeCnt(bool arm9, uint16_t mask, uint16_t value) {
     // Check the interrupt conditions before writing to the register
     bool sendCond = (pxiCnt[arm9] & BIT(0)) && (pxiCnt[arm9] & BIT(2));
     bool recvCond = (~pxiCnt[arm9] & BIT(8)) && (pxiCnt[arm9] & BIT(10));
@@ -108,7 +108,7 @@ void Pxi::writePxiCnt(bool arm9, uint16_t mask, uint16_t value) {
         core->interrupts.sendInterrupt(arm9, arm9 ? 14 : 0x53);
 }
 
-void Pxi::writePxiSend(bool arm9, uint32_t mask, uint32_t value) {
+void Pxi::writeSend(bool arm9, uint32_t mask, uint32_t value) {
     // Ensure the FIFO is enabled
     if (~pxiCnt[arm9] & BIT(15))
         return;

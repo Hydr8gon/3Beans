@@ -59,7 +59,7 @@ void Cp15::write(uint8_t cn, uint8_t cm, uint8_t cp, uint32_t value) {
         return;
 
     case 0x070004: case 0x070802: // Wait for interrupt
-        core->cpus[id].halted = true;
+        core->arms[id].halted = true;
         return;
 
     case 0x090101: // ITCM size

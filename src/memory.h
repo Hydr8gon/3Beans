@@ -26,6 +26,7 @@ class Memory {
 public:
     Memory(Core *core): core(core) {};
     bool loadFiles();
+    void loadOtp(FILE *file);
 
     template <typename T> T read(CpuId id, uint32_t address);
     template <typename T> void write(CpuId id, uint32_t address, T value);
@@ -45,12 +46,14 @@ private:
 
     uint8_t cfg9Sysprot9 = 0;
     uint8_t cfg9Sysprot11 = 0;
+    uint32_t otpEncrypted[0x40] = {};
 
     template <typename T> T ioRead(CpuId id, uint32_t address);
     template <typename T> void ioWrite(CpuId id, uint32_t address, T value);
 
     uint8_t readCfg9Sysprot9() { return cfg9Sysprot9; }
     uint8_t readCfg9Sysprot11() { return cfg9Sysprot11; }
+    uint32_t readOtpEncrypted(int i) { return otpEncrypted[i]; }
 
     void writeCfg9Sysprot9(uint8_t value);
     void writeCfg9Sysprot11(uint8_t value);
