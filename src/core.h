@@ -27,6 +27,7 @@
 #include "cp15.h"
 #include "defines.h"
 #include "gpu.h"
+#include "i2c.h"
 #include "interpreter.h"
 #include "interrupts.h"
 #include "memory.h"
@@ -62,6 +63,7 @@ public:
     Aes aes;
     Interpreter cpus[MAX_CPUS];
     Gpu gpu;
+    I2c i2c;
     Interrupts interrupts;
     Memory memory;
     Pxi pxi;

@@ -17,22 +17,31 @@
     along with 3Beans. If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <cstring>
 #include "core.h"
 
 SdMmc::~SdMmc() {
-    // Close the NAND file
+    // Close the NAND and SD files
     if (nand) fclose(nand);
+    if (sd) fclose(sd);
 }
 
-bool SdMmc::loadFiles() {
-    // Try to load CID and OTP data from a GM9 NAND dump
-    nand = fopen("nand.bin", "rb");
-    if (!nand) return false;
-    fseek(nand, 0xC00, SEEK_SET);
-    fread(mmcCid, sizeof(uint32_t), 0x4, nand);
-    fseek(nand, 0xE00, SEEK_SET);
-    fread(otpEncrypted, sizeof(uint32_t), 0x40, nand);
-    return true;
+void SdMmc::loadFiles() {
+    // Try to open a GM9 NAND dump and load CID and OTP data
+    if ((nand = fopen("nand.bin", "rb"))) {
+        fseek(nand, 0xC00, SEEK_SET);
+        fread(mmcCid, sizeof(uint32_t), 0x4, nand);
+        fseek(nand, 0xE00, SEEK_SET);
+        fread(otpEncrypted, sizeof(uint32_t), 0x40, nand);
+    }
+
+    // Try to open an SD image
+    sd = fopen("sd.img", "rb");
+}
+
+void SdMmc::disableOtp() {
+    // Wipe OTP data so it can't be accessed anymore
+    memset(otpEncrypted, 0, sizeof(otpEncrypted));
 }
 
 void SdMmc::sendInterrupt(int bit) {
@@ -52,14 +61,11 @@ void SdMmc::pushFifo(uint32_t value) {
         if ((readFifo32.size() << 2) < sdData16Blklen)
             return;
 
-        // Trigger a 32-bit FIFO full interrupt if enabled
+        // Trigger a 32-bit FIFO full interrupt if enabled and finish a block
         sdData32Irq |= BIT(8);
         if (sdData32Irq & BIT(11))
             core->interrupts.sendInterrupt(true, 16);
-
-        // Trigger a data end interrupt after the last block
-        if (--curBlock == 0)
-            sendInterrupt(2);
+        curBlock--;
         return;
     }
 
@@ -69,10 +75,9 @@ void SdMmc::pushFifo(uint32_t value) {
     if ((readFifo16.size() << 1) < sdData16Blklen)
         return;
 
-    // Trigger a 16-bit FIFO full interrupt, plus data end after the last block
+    // Trigger a 16-bit FIFO full interrupt and finish a block
     sendInterrupt(24);
-    if (--curBlock == 0)
-        sendInterrupt(2);
+    curBlock--;
 }
 
 void SdMmc::pushResponse(uint32_t value) {
@@ -84,18 +89,22 @@ void SdMmc::pushResponse(uint32_t value) {
 }
 
 void SdMmc::readBlock() {
-    // Read a block of data and adjust the address
-    if (!nand) return;
+    // Read a block of data from the SD or MMC if present
     uint32_t data[0x200];
-    fseek(nand, curAddress, SEEK_SET);
-    fread(data, sizeof(uint32_t), blockLen, nand);
-    LOG_INFO("Read MMC block from 0x%08X with size 0x%X\n", curAddress, blockLen << 2);
-    curAddress += (blockLen << 2);
+    if (FILE *src = (sdPortSelect & BIT(0)) ? nand : sd) {
+        fseek(src, curAddress, SEEK_SET);
+        fread(data, sizeof(uint32_t), blockLen, src);
+    }
+    else {
+        memset(data, 0, sizeof(data));
+    }
 
     // Push data to the read FIFO and change state based on blocks left
-    for (int i = 0; i < blockLen; i++)
-        pushFifo(data[i]);
+    LOG_INFO("Read %s block from 0x%08X with size 0x%X\n",
+        (sdPortSelect & BIT(0)) ? "MMC" : "SD", curAddress, blockLen << 2);
+    for (int i = 0; i < blockLen; i++) pushFifo(data[i]);
     cardStatus = (cardStatus & ~0x1E00) | ((curBlock ? 0x5 : 0x4) << 9);
+    curAddress += (blockLen << 2);
 }
 
 void SdMmc::runCommand() {
@@ -109,7 +118,6 @@ void SdMmc::runCommand() {
     // Execute a normal SD/MMC command
     switch (uint8_t cmd = sdCmd & 0x3F) {
         case 2: return getCid(); // ALL_GET_CID (stub)
-        case 3: return setRelativeAddr(); // SET_RELATIVE_ADDR
         case 10: return getCid(); // GET_CID
         case 13: return getStatus(); // GET_STATUS
         case 16: return setBlocklen(); // SET_BLOCKLEN
@@ -117,7 +125,15 @@ void SdMmc::runCommand() {
         case 18: return readMultiBlock(); // READ_MULTIPLE_BLOCK
         case 55: return appCmd(); // APP_CMD
 
+    case 1: // SEND_OP_COND
+    case 3: // SET_RELATIVE_ADDR
+        // Stub commands that want response bit 31 to be set
+        LOG_WARN("Stubbed SD/MMC command: CMD%d\n", cmd);
+        pushResponse(0x80000000);
+        return;
+
     default:
+        // Assume response type 1 for unknown commands
         LOG_WARN("Unknown SD/MMC command: CMD%d\n", cmd);
         pushResponse(cardStatus);
         return;
@@ -137,20 +153,20 @@ void SdMmc::runAppCommand() {
     // Execute an app SD/MMC command
     switch (uint8_t cmd = sdCmd & 0x3F) {
         case 13: return sdStatus(); // SD_STATUS
-        case 41: return sendOpCond(); // SEND_OP_COND
         case 51: return getScr(); // GET_SCR
 
+    case 41: // SD_SEND_OP_COND
+        // Stub commands that want response bit 31 to be set
+        LOG_WARN("Stubbed SD/MMC command: ACMD%d\n", cmd);
+        pushResponse(0x80000000);
+        return;
+
     default:
+        // Assume response type 1 for unknown commands
         LOG_WARN("Unknown SD/MMC command: ACMD%d\n", cmd);
         pushResponse(cardStatus);
         return;
     }
-}
-
-void SdMmc::setRelativeAddr() {
-    // Stub CMD3 to get through the ARM9 boot ROM
-    LOG_WARN("Stubbed SD/MMC command: CMD3\n");
-    pushResponse(0x80000000);
 }
 
 void SdMmc::getCid() {
@@ -200,12 +216,6 @@ void SdMmc::sdStatus() {
     pushResponse(cardStatus);
 }
 
-void SdMmc::sendOpCond() {
-    // Stub ACMD41 to get through the ARM9 boot ROM
-    LOG_WARN("Stubbed SD/MMC command: ACMD41\n");
-    pushResponse(0x80000000);
-}
-
 void SdMmc::getScr() {
     // Pretend to read the 64-bit SD configuration register
     curBlock = 1;
@@ -220,10 +230,10 @@ uint16_t SdMmc::readSdData16Fifo() {
     sdData16Fifo = readFifo16.front();
     readFifo16.pop();
 
-    // Clear the FIFO full bit and trigger another multi-block read if necessary
+    // Clear the FIFO full bit and read another block or end with an interrupt if empty
     sdIrqStatus &= ~BIT(24);
-    if (readFifo16.empty() && (cardStatus & 0x1E00) == (0x5 << 9))
-        readBlock();
+    if (readFifo16.empty())
+        (cardStatus & 0x1E00) == (0x5 << 9) ? readBlock() : sendInterrupt(2);
     return sdData16Fifo;
 }
 
@@ -233,10 +243,10 @@ uint32_t SdMmc::readSdData32Fifo() {
     sdData32Fifo = readFifo32.front();
     readFifo32.pop();
 
-    // Clear the FIFO full bit and trigger another multi-block read if necessary
+    // Clear the FIFO full bit and read another block or end with an interrupt if empty
     sdData32Irq &= ~BIT(8);
-    if (readFifo32.empty() && (cardStatus & 0x1E00) == (0x5 << 9))
-        readBlock();
+    if (readFifo32.empty())
+        (cardStatus & 0x1E00) == (0x5 << 9) ? readBlock() : sendInterrupt(2);
     return sdData32Fifo;
 }
 
@@ -246,12 +256,6 @@ void SdMmc::writeSdCmd(uint16_t mask, uint16_t value) {
 
     // Send a response end interrupt to indicate command completion
     sendInterrupt(0);
-
-    // Ignore commands sent to the SD card for now
-    if (~sdPortSelect & BIT(0)) {
-        LOG_WARN("Unhandled SD/MMC command with SD card selected\n");
-        return;
-    }
 
     // Auto response type is assumed, so warn when that isn't the case
     if (uint8_t resp = (sdCmd >> 8) & 0x7)

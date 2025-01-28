@@ -88,7 +88,7 @@ void Sha::initFifo() {
 
     default: // SHA1
         memcpy(shaHash, hashes[2], sizeof(shaHash));
-        LOG_WARN("SHA FIFO started with unimplemented mode: SHA1\n");
+        LOG_CRIT("SHA FIFO started with unimplemented mode: SHA1\n");
         return;
     }
 }

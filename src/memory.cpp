@@ -17,6 +17,7 @@
     along with 3Beans. If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <cstring>
 #include "core.h"
 
 // Define an 8-bit register in an I/O switch statement
@@ -156,22 +157,33 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
     T value = 0;
     for (uint32_t i = 0; i < sizeof(T);) {
         uint32_t base = address + i, size, data;
-        if (id != ARM9) {
-            // Check registers that are exclusive to the ARM11
+
+        // Check registers that are shared between CPUs
+        switch (base) {
+            DEF_IO32(0x10101000, data = core->shas[0].readShaCnt()) // SHA_CNT11
+            DEF_IO32(0x10101004, data = core->shas[0].readShaBlkcnt()) // SHA_BLKCNT11
+            DEF_IO32(0x10101040, data = core->shas[0].readShaHash(0)) // SHA_HASH0_11
+            DEF_IO32(0x10101044, data = core->shas[0].readShaHash(1)) // SHA_HASH1_11
+            DEF_IO32(0x10101048, data = core->shas[0].readShaHash(2)) // SHA_HASH2_11
+            DEF_IO32(0x1010104C, data = core->shas[0].readShaHash(3)) // SHA_HASH3_11
+            DEF_IO32(0x10101050, data = core->shas[0].readShaHash(4)) // SHA_HASH4_11
+            DEF_IO32(0x10101054, data = core->shas[0].readShaHash(5)) // SHA_HASH5_11
+            DEF_IO32(0x10101058, data = core->shas[0].readShaHash(6)) // SHA_HASH6_11
+            DEF_IO32(0x1010105C, data = core->shas[0].readShaHash(7)) // SHA_HASH7_11
+            DEF_IO08(0x10144000, data = core->i2c.readI2cBusData(1)) // I2C_BUS1_DATA
+            DEF_IO08(0x10144001, data = core->i2c.readI2cBusCnt(1)) // I2C_BUS1_CNT
+            DEF_IO08(0x10148000, data = core->i2c.readI2cBusData(2)) // I2C_BUS2_DATA
+            DEF_IO08(0x10148001, data = core->i2c.readI2cBusCnt(2)) // I2C_BUS2_CNT
+            DEF_IO08(0x10161000, data = core->i2c.readI2cBusData(0)) // I2C_BUS0_DATA
+            DEF_IO08(0x10161001, data = core->i2c.readI2cBusCnt(0)) // I2C_BUS0_CNT
+            DEF_IO32(0x10163000, data = core->pxi.readPxiSync(false)) // PXI_SYNC11
+            DEF_IO32(0x10163004, data = core->pxi.readPxiCnt(false)) // PXI_CNT11
+            DEF_IO32(0x1016300C, data = core->pxi.readPxiRecv(false)) // PXI_RECV11
+        }
+
+        // Check registers that are exclusive to one CPU
+        if (id != ARM9) { // ARM11
             switch (base) {
-                DEF_IO32(0x10101000, data = core->shas[0].readShaCnt()) // SHA_CNT11
-                DEF_IO32(0x10101004, data = core->shas[0].readShaBlkcnt()) // SHA_BLKCNT11
-                DEF_IO32(0x10101040, data = core->shas[0].readShaHash(0)) // SHA_HASH0_11
-                DEF_IO32(0x10101044, data = core->shas[0].readShaHash(1)) // SHA_HASH1_11
-                DEF_IO32(0x10101048, data = core->shas[0].readShaHash(2)) // SHA_HASH2_11
-                DEF_IO32(0x1010104C, data = core->shas[0].readShaHash(3)) // SHA_HASH3_11
-                DEF_IO32(0x10101050, data = core->shas[0].readShaHash(4)) // SHA_HASH4_11
-                DEF_IO32(0x10101054, data = core->shas[0].readShaHash(5)) // SHA_HASH5_11
-                DEF_IO32(0x10101058, data = core->shas[0].readShaHash(6)) // SHA_HASH6_11
-                DEF_IO32(0x1010105C, data = core->shas[0].readShaHash(7)) // SHA_HASH7_11
-                DEF_IO32(0x10163000, data = core->pxi.readPxiSync(false)) // PXI_SYNC11
-                DEF_IO32(0x10163004, data = core->pxi.readPxiCnt(false)) // PXI_CNT11
-                DEF_IO32(0x1016300C, data = core->pxi.readPxiRecv(false)) // PXI_RECV11
                 DEF_IO32(0x10301000, data = core->shas[0].readShaFifo()) // SHA_FIFO11
                 DEF_IO32(0x10301004, data = core->shas[0].readShaFifo()) // SHA_FIFO11
                 DEF_IO32(0x10301008, data = core->shas[0].readShaFifo()) // SHA_FIFO11
@@ -217,10 +229,10 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x17E0130C, data = core->interrupts.readMpIa(id, 3)) // MP_IA3
             }
         }
-        else {
-            // Check registers that are exclusive to the ARM9
+        else { // ARM9
             switch (base) {
-                DEF_IO16(0x10000000, data = 0x101) // CFG9_SYSPROT (stub)
+                DEF_IO08(0x10000000, data = readCfg9Sysprot9()) // CFG9_SYSPROT9
+                DEF_IO08(0x10000001, data = readCfg9Sysprot11()) // CFG9_SYSPROT11
                 DEF_IO32(0x10001000, data = core->interrupts.readIrqIe()) // IRQ_IE
                 DEF_IO32(0x10001004, data = core->interrupts.readIrqIf()) // IRQ_IF
                 DEF_IO16(0x10003000, data = core->timers.readTmCntL(0)) // TM0CNT_L
@@ -231,6 +243,54 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO16(0x1000300A, data = core->timers.readTmCntH(2)) // TM2CNT_H
                 DEF_IO16(0x1000300C, data = core->timers.readTmCntL(3)) // TM3CNT_L
                 DEF_IO16(0x1000300E, data = core->timers.readTmCntH(3)) // TM3CNT_H
+                DEF_IO16(0x10006000, data = core->sdMmc.readSdCmd()) // SD_CMD
+                DEF_IO16(0x10006002, data = core->sdMmc.readSdPortSelect()) // SD_PORT_SELECT
+                DEF_IO32(0x10006004, data = core->sdMmc.readSdCmdParam()) // SD_CMD_PARAM
+                DEF_IO16(0x1000600A, data = core->sdMmc.readSdData16Blkcnt()) // SD_DATA16_BLKCNT
+                DEF_IO32(0x1000600C, data = core->sdMmc.readSdResponse(0)) // SD_RESPONSE0
+                DEF_IO32(0x10006010, data = core->sdMmc.readSdResponse(1)) // SD_RESPONSE1
+                DEF_IO32(0x10006014, data = core->sdMmc.readSdResponse(2)) // SD_RESPONSE2
+                DEF_IO32(0x10006018, data = core->sdMmc.readSdResponse(3)) // SD_RESPONSE3
+                DEF_IO32(0x1000601C, data = core->sdMmc.readSdIrqStatus()) // SD_IRQ_STATUS
+                DEF_IO32(0x10006020, data = core->sdMmc.readSdIrqMask()) // SD_IRQ_MASK
+                DEF_IO16(0x10006026, data = core->sdMmc.readSdData16Blklen()) // SD_DATA16_BLKLEN
+                DEF_IO16(0x10006030, data = core->sdMmc.readSdData16Fifo()) // SD_DATA16_FIFO
+                DEF_IO16(0x100060D8, data = core->sdMmc.readSdDataCtl()) // SD_DATA_CTL
+                DEF_IO16(0x10006100, data = core->sdMmc.readSdData32Irq()) // SD_DATA32_IRQ
+                DEF_IO32(0x1000610C, data = core->sdMmc.readSdData32Fifo()) // SD_DATA32_FIFO
+                DEF_IO32(0x10008000, data = core->pxi.readPxiSync(true)) // PXI_SYNC9
+                DEF_IO32(0x10008004, data = core->pxi.readPxiCnt(true)) // PXI_CNT9
+                DEF_IO32(0x1000800C, data = core->pxi.readPxiRecv(true)) // PXI_RECV9
+                DEF_IO32(0x10009000, data = core->aes.readAesCnt()) // AES_CNT
+                DEF_IO32(0x1000900C, data = core->aes.readAesRdfifo()) // AES_RDFIFO
+                DEF_IO08(0x10009010, data = core->aes.readAesKeysel()) // AES_KEYSEL
+                DEF_IO08(0x10009011, data = core->aes.readAesKeycnt()) // AES_KEYCNT
+                DEF_IO32(0x1000A000, data = core->shas[1].readShaCnt()) // SHA_CNT9
+                DEF_IO32(0x1000A004, data = core->shas[1].readShaBlkcnt()) // SHA_BLKCNT9
+                DEF_IO32(0x1000A040, data = core->shas[1].readShaHash(0)) // SHA_HASH0_9
+                DEF_IO32(0x1000A044, data = core->shas[1].readShaHash(1)) // SHA_HASH1_9
+                DEF_IO32(0x1000A048, data = core->shas[1].readShaHash(2)) // SHA_HASH2_9
+                DEF_IO32(0x1000A04C, data = core->shas[1].readShaHash(3)) // SHA_HASH3_9
+                DEF_IO32(0x1000A050, data = core->shas[1].readShaHash(4)) // SHA_HASH4_9
+                DEF_IO32(0x1000A054, data = core->shas[1].readShaHash(5)) // SHA_HASH5_9
+                DEF_IO32(0x1000A058, data = core->shas[1].readShaHash(6)) // SHA_HASH6_9
+                DEF_IO32(0x1000A05C, data = core->shas[1].readShaHash(7)) // SHA_HASH7_9
+                DEF_IO32(0x1000A080, data = core->shas[1].readShaFifo()) // SHA_FIFO9
+                DEF_IO32(0x1000A084, data = core->shas[1].readShaFifo()) // SHA_FIFO9
+                DEF_IO32(0x1000A088, data = core->shas[1].readShaFifo()) // SHA_FIFO9
+                DEF_IO32(0x1000A08C, data = core->shas[1].readShaFifo()) // SHA_FIFO9
+                DEF_IO32(0x1000A090, data = core->shas[1].readShaFifo()) // SHA_FIFO9
+                DEF_IO32(0x1000A094, data = core->shas[1].readShaFifo()) // SHA_FIFO9
+                DEF_IO32(0x1000A098, data = core->shas[1].readShaFifo()) // SHA_FIFO9
+                DEF_IO32(0x1000A09C, data = core->shas[1].readShaFifo()) // SHA_FIFO9
+                DEF_IO32(0x1000A0A0, data = core->shas[1].readShaFifo()) // SHA_FIFO9
+                DEF_IO32(0x1000A0A4, data = core->shas[1].readShaFifo()) // SHA_FIFO9
+                DEF_IO32(0x1000A0A8, data = core->shas[1].readShaFifo()) // SHA_FIFO9
+                DEF_IO32(0x1000A0AC, data = core->shas[1].readShaFifo()) // SHA_FIFO9
+                DEF_IO32(0x1000A0B0, data = core->shas[1].readShaFifo()) // SHA_FIFO9
+                DEF_IO32(0x1000A0B4, data = core->shas[1].readShaFifo()) // SHA_FIFO9
+                DEF_IO32(0x1000A0B8, data = core->shas[1].readShaFifo()) // SHA_FIFO9
+                DEF_IO32(0x1000A0BC, data = core->shas[1].readShaFifo()) // SHA_FIFO9
                 DEF_IO32(0x1000B000, data = core->rsa.readRsaCnt()) // RSA_CNT
                 DEF_IO32(0x1000B100, data = core->rsa.readRsaSlotcnt(0)) // RSA_SLOTCNT0
                 DEF_IO32(0x1000B104, data = core->rsa.readRsaSlotsize(0)) // RSA_SLOTSIZE0
@@ -432,54 +492,6 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x100120F4, data = core->sdMmc.readOtpEncrypted(61)) // OTP_ENCRYPTED61
                 DEF_IO32(0x100120F8, data = core->sdMmc.readOtpEncrypted(62)) // OTP_ENCRYPTED62
                 DEF_IO32(0x100120FC, data = core->sdMmc.readOtpEncrypted(63)) // OTP_ENCRYPTED63
-                DEF_IO16(0x10006000, data = core->sdMmc.readSdCmd()) // SD_CMD
-                DEF_IO16(0x10006002, data = core->sdMmc.readSdPortSelect()) // SD_PORT_SELECT
-                DEF_IO32(0x10006004, data = core->sdMmc.readSdCmdParam()) // SD_CMD_PARAM
-                DEF_IO16(0x1000600A, data = core->sdMmc.readSdData16Blkcnt()) // SD_DATA16_BLKCNT
-                DEF_IO32(0x1000600C, data = core->sdMmc.readSdResponse(0)) // SD_RESPONSE0
-                DEF_IO32(0x10006010, data = core->sdMmc.readSdResponse(1)) // SD_RESPONSE1
-                DEF_IO32(0x10006014, data = core->sdMmc.readSdResponse(2)) // SD_RESPONSE2
-                DEF_IO32(0x10006018, data = core->sdMmc.readSdResponse(3)) // SD_RESPONSE3
-                DEF_IO32(0x1000601C, data = core->sdMmc.readSdIrqStatus()) // SD_IRQ_STATUS
-                DEF_IO32(0x10006020, data = core->sdMmc.readSdIrqMask()) // SD_IRQ_MASK
-                DEF_IO16(0x10006026, data = core->sdMmc.readSdData16Blklen()) // SD_DATA16_BLKLEN
-                DEF_IO16(0x10006030, data = core->sdMmc.readSdData16Fifo()) // SD_DATA16_FIFO
-                DEF_IO16(0x100060D8, data = core->sdMmc.readSdDataCtl()) // SD_DATA_CTL
-                DEF_IO16(0x10006100, data = core->sdMmc.readSdData32Irq()) // SD_DATA32_IRQ
-                DEF_IO32(0x1000610C, data = core->sdMmc.readSdData32Fifo()) // SD_DATA32_FIFO
-                DEF_IO32(0x10008000, data = core->pxi.readPxiSync(true)) // PXI_SYNC9
-                DEF_IO32(0x10008004, data = core->pxi.readPxiCnt(true)) // PXI_CNT9
-                DEF_IO32(0x1000800C, data = core->pxi.readPxiRecv(true)) // PXI_RECV9
-                DEF_IO32(0x10009000, data = core->aes.readAesCnt()) // AES_CNT
-                DEF_IO32(0x1000900C, data = core->aes.readAesRdfifo()) // AES_RDFIFO
-                DEF_IO08(0x10009010, data = core->aes.readAesKeysel()) // AES_KEYSEL
-                DEF_IO08(0x10009011, data = core->aes.readAesKeycnt()) // AES_KEYCNT
-                DEF_IO32(0x1000A000, data = core->shas[1].readShaCnt()) // SHA_CNT9
-                DEF_IO32(0x1000A004, data = core->shas[1].readShaBlkcnt()) // SHA_BLKCNT9
-                DEF_IO32(0x1000A040, data = core->shas[1].readShaHash(0)) // SHA_HASH0_9
-                DEF_IO32(0x1000A044, data = core->shas[1].readShaHash(1)) // SHA_HASH1_9
-                DEF_IO32(0x1000A048, data = core->shas[1].readShaHash(2)) // SHA_HASH2_9
-                DEF_IO32(0x1000A04C, data = core->shas[1].readShaHash(3)) // SHA_HASH3_9
-                DEF_IO32(0x1000A050, data = core->shas[1].readShaHash(4)) // SHA_HASH4_9
-                DEF_IO32(0x1000A054, data = core->shas[1].readShaHash(5)) // SHA_HASH5_9
-                DEF_IO32(0x1000A058, data = core->shas[1].readShaHash(6)) // SHA_HASH6_9
-                DEF_IO32(0x1000A05C, data = core->shas[1].readShaHash(7)) // SHA_HASH7_9
-                DEF_IO32(0x1000A080, data = core->shas[1].readShaFifo()) // SHA_FIFO9
-                DEF_IO32(0x1000A084, data = core->shas[1].readShaFifo()) // SHA_FIFO9
-                DEF_IO32(0x1000A088, data = core->shas[1].readShaFifo()) // SHA_FIFO9
-                DEF_IO32(0x1000A08C, data = core->shas[1].readShaFifo()) // SHA_FIFO9
-                DEF_IO32(0x1000A090, data = core->shas[1].readShaFifo()) // SHA_FIFO9
-                DEF_IO32(0x1000A094, data = core->shas[1].readShaFifo()) // SHA_FIFO9
-                DEF_IO32(0x1000A098, data = core->shas[1].readShaFifo()) // SHA_FIFO9
-                DEF_IO32(0x1000A09C, data = core->shas[1].readShaFifo()) // SHA_FIFO9
-                DEF_IO32(0x1000A0A0, data = core->shas[1].readShaFifo()) // SHA_FIFO9
-                DEF_IO32(0x1000A0A4, data = core->shas[1].readShaFifo()) // SHA_FIFO9
-                DEF_IO32(0x1000A0A8, data = core->shas[1].readShaFifo()) // SHA_FIFO9
-                DEF_IO32(0x1000A0AC, data = core->shas[1].readShaFifo()) // SHA_FIFO9
-                DEF_IO32(0x1000A0B0, data = core->shas[1].readShaFifo()) // SHA_FIFO9
-                DEF_IO32(0x1000A0B4, data = core->shas[1].readShaFifo()) // SHA_FIFO9
-                DEF_IO32(0x1000A0B8, data = core->shas[1].readShaFifo()) // SHA_FIFO9
-                DEF_IO32(0x1000A0BC, data = core->shas[1].readShaFifo()) // SHA_FIFO9
             }
         }
 
@@ -501,22 +513,33 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
         uint32_t base = address + i, size;
         uint32_t mask = (1ULL << ((sizeof(T) - i) << 3)) - 1;
         uint32_t data = value >> (i << 3);
-        if (id != ARM9) {
-            // Check registers that are exclusive to the ARM11
+
+        // Check registers that are shared between CPUs
+        switch (base) {
+            DEF_IO32(0x10101000, core->shas[0].writeShaCnt(IO_PARAMS)) // SHA_CNT11
+            DEF_IO32(0x10101004, core->shas[0].writeShaBlkcnt(IO_PARAMS)) // SHA_BLKCNT11
+            DEF_IO32(0x10101040, core->shas[0].writeShaHash(0, IO_PARAMS)) // SHA_HASH0_11
+            DEF_IO32(0x10101044, core->shas[0].writeShaHash(1, IO_PARAMS)) // SHA_HASH1_11
+            DEF_IO32(0x10101048, core->shas[0].writeShaHash(2, IO_PARAMS)) // SHA_HASH2_11
+            DEF_IO32(0x1010104C, core->shas[0].writeShaHash(3, IO_PARAMS)) // SHA_HASH3_11
+            DEF_IO32(0x10101050, core->shas[0].writeShaHash(4, IO_PARAMS)) // SHA_HASH4_11
+            DEF_IO32(0x10101054, core->shas[0].writeShaHash(5, IO_PARAMS)) // SHA_HASH5_11
+            DEF_IO32(0x10101058, core->shas[0].writeShaHash(6, IO_PARAMS)) // SHA_HASH6_11
+            DEF_IO32(0x1010105C, core->shas[0].writeShaHash(7, IO_PARAMS)) // SHA_HASH7_11
+            DEF_IO08(0x10144000, core->i2c.writeI2cBusData(1, IO_PARAMS8)) // I2C_BUS1_DATA
+            DEF_IO08(0x10144001, core->i2c.writeI2cBusCnt(1, IO_PARAMS8)) // I2C_BUS1_CNT
+            DEF_IO08(0x10148000, core->i2c.writeI2cBusData(2, IO_PARAMS8)) // I2C_BUS2_DATA
+            DEF_IO08(0x10148001, core->i2c.writeI2cBusCnt(2, IO_PARAMS8)) // I2C_BUS2_CNT
+            DEF_IO08(0x10161000, core->i2c.writeI2cBusData(0, IO_PARAMS8)) // I2C_BUS0_DATA
+            DEF_IO08(0x10161001, core->i2c.writeI2cBusCnt(0, IO_PARAMS8)) // I2C_BUS0_CNT
+            DEF_IO32(0x10163000, core->pxi.writePxiSync(false, IO_PARAMS)) // PXI_SYNC11
+            DEF_IO32(0x10163004, core->pxi.writePxiCnt(false, IO_PARAMS)) // PXI_CNT11
+            DEF_IO32(0x10163008, core->pxi.writePxiSend(false, IO_PARAMS)) // PXI_SEND11
+        }
+
+        // Check registers that are exclusive to one CPU
+        if (id != ARM9) { // ARM11
             switch (base) {
-                DEF_IO32(0x10101000, core->shas[0].writeShaCnt(IO_PARAMS)) // SHA_CNT11
-                DEF_IO32(0x10101004, core->shas[0].writeShaBlkcnt(IO_PARAMS)) // SHA_BLKCNT11
-                DEF_IO32(0x10101040, core->shas[0].writeShaHash(0, IO_PARAMS)) // SHA_HASH0_11
-                DEF_IO32(0x10101044, core->shas[0].writeShaHash(1, IO_PARAMS)) // SHA_HASH1_11
-                DEF_IO32(0x10101048, core->shas[0].writeShaHash(2, IO_PARAMS)) // SHA_HASH2_11
-                DEF_IO32(0x1010104C, core->shas[0].writeShaHash(3, IO_PARAMS)) // SHA_HASH3_11
-                DEF_IO32(0x10101050, core->shas[0].writeShaHash(4, IO_PARAMS)) // SHA_HASH4_11
-                DEF_IO32(0x10101054, core->shas[0].writeShaHash(5, IO_PARAMS)) // SHA_HASH5_11
-                DEF_IO32(0x10101058, core->shas[0].writeShaHash(6, IO_PARAMS)) // SHA_HASH6_11
-                DEF_IO32(0x1010105C, core->shas[0].writeShaHash(7, IO_PARAMS)) // SHA_HASH7_11
-                DEF_IO32(0x10163000, core->pxi.writePxiSync(false, IO_PARAMS)) // PXI_SYNC11
-                DEF_IO32(0x10163004, core->pxi.writePxiCnt(false, IO_PARAMS)) // PXI_CNT11
-                DEF_IO32(0x10163008, core->pxi.writePxiSend(false, IO_PARAMS)) // PXI_SEND11
                 DEF_IO32(0x10301000, core->shas[0].writeShaFifo(IO_PARAMS)) // SHA_FIFO11
                 DEF_IO32(0x10301004, core->shas[0].writeShaFifo(IO_PARAMS)) // SHA_FIFO11
                 DEF_IO32(0x10301008, core->shas[0].writeShaFifo(IO_PARAMS)) // SHA_FIFO11
@@ -550,9 +573,10 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x17E0118C, core->interrupts.writeMpIeClear(3, IO_PARAMS)) // MP_IE3_CLEAR
             }
         }
-        else {
-            // Check registers that are exclusive to the ARM9
+        else { // ARM9
             switch (base) {
+                DEF_IO08(0x10000000, writeCfg9Sysprot9(IO_PARAMS8)) // CFG9_SYSPROT9
+                DEF_IO08(0x10000001, writeCfg9Sysprot11(IO_PARAMS8)) // CFG9_SYSPROT11
                 DEF_IO32(0x10001000, core->interrupts.writeIrqIe(IO_PARAMS)) // IRQ_IE
                 DEF_IO32(0x10001004, core->interrupts.writeIrqIf(IO_PARAMS)) // IRQ_IF
                 DEF_IO16(0x10003000, core->timers.writeTmCntL(0, IO_PARAMS)) // TM0CNT_L
@@ -821,4 +845,17 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
         // Loop until the full value has been written
         i += size - base;
     }
+}
+
+void Memory::writeCfg9Sysprot9(uint8_t value) {
+    // Set bits in the CFG9_SYSPROT9 register and disable sensitive data
+    cfg9Sysprot9 |= (value & 0x3);
+    if (value & BIT(0)) memset(&boot9[0x8000], 0, 0x8000);
+    if (value & BIT(1)) core->sdMmc.disableOtp();
+}
+
+void Memory::writeCfg9Sysprot11(uint8_t value) {
+    // Set bits in the CFG9_SYSPROT11 register and disable sensitive data
+    cfg9Sysprot11 |= (value & 0x1);
+    if (value & BIT(0)) memset(&boot11[0x8000], 0, 0x8000);
 }

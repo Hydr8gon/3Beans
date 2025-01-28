@@ -28,7 +28,9 @@ class SdMmc {
 public:
     SdMmc(Core *core): core(core) {}
     ~SdMmc();
-    bool loadFiles();
+
+    void loadFiles();
+    void disableOtp();
 
     uint32_t readOtpEncrypted(int i) { return otpEncrypted[i]; }
     uint16_t readSdCmd() { return sdCmd; }
@@ -57,6 +59,7 @@ public:
 private:
     Core *core;
     FILE *nand = nullptr;
+    FILE *sd = nullptr;
 
     uint32_t cardStatus = 0;
     uint32_t blockLen = 0;
@@ -88,7 +91,6 @@ private:
     void runCommand();
     void runAppCommand();
 
-    void setRelativeAddr();
     void getCid();
     void getStatus();
     void setBlocklen();
@@ -96,6 +98,5 @@ private:
     void readMultiBlock();
     void appCmd();
     void sdStatus();
-    void sendOpCond();
     void getScr();
 };

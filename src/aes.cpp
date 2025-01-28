@@ -155,8 +155,12 @@ void Aes::initFifo() {
         memcpy(cbc, aesIv, sizeof(cbc));
         return;
 
+    case 6: case 7: // ECB decrypt/encrypt
+        initKey(mode == 6);
+        return;
+
     default: // Unimplemented
-        LOG_WARN("AES FIFO started with unimplemented mode: %d\n", mode);
+        LOG_CRIT("AES FIFO started with unimplemented mode: %d\n", mode);
         return;
     }
 }
@@ -194,6 +198,14 @@ void Aes::processFifo() {
                 src[i] ^= cbc[i];
             cryptBlock<false>(src, dst);
             memcpy(cbc, dst, sizeof(cbc));
+            break;
+
+        case 6: // ECB decrypt
+            cryptBlock<true>(src, dst);
+            break;
+
+        case 7: // ECB encrypt
+            cryptBlock<false>(src, dst);
             break;
 
         default: // Unimplemented

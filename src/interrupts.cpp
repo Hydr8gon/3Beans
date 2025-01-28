@@ -58,18 +58,15 @@ void Interrupts::interrupt(CpuId id) {
 
 uint32_t Interrupts::readMpAck(CpuId id) {
     // Get the ID of the next pending interrupt and switch it to active
-    uint32_t type = 0x3FF; // None
     for (int i = 0; i < 4; i++) {
         for (int bit = 0; bit < 32; bit++) {
             if (!(mpIe[i] & mpIp[id][i] & BIT(bit))) continue;
             mpIp[id][i] &= ~BIT(bit);
             mpIa[id][i] |= BIT(bit);
-            type = (i << 5) + bit;
-            goto finish;
+            return (i << 5) + bit;
         }
     }
-finish:
-    return type;
+    return 0x3FF; // None
 }
 
 void Interrupts::writeMpIle(CpuId id, uint32_t mask, uint32_t value) {

@@ -43,6 +43,15 @@ private:
     uint8_t itcm[0x8000] = {}; // 32KB ARM9 ITCM
     uint8_t dtcm[0x4000] = {}; // 16KB ARM9 DTCM
 
+    uint8_t cfg9Sysprot9 = 0;
+    uint8_t cfg9Sysprot11 = 0;
+
     template <typename T> T ioRead(CpuId id, uint32_t address);
     template <typename T> void ioWrite(CpuId id, uint32_t address, T value);
+
+    uint8_t readCfg9Sysprot9() { return cfg9Sysprot9; }
+    uint8_t readCfg9Sysprot11() { return cfg9Sysprot11; }
+
+    void writeCfg9Sysprot9(uint8_t value);
+    void writeCfg9Sysprot11(uint8_t value);
 };
