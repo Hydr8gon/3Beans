@@ -33,9 +33,11 @@ public:
     void drawFrame();
 
     uint32_t readFramebufLt0(bool bot) { return pdcFramebufLt0[bot]; }
+    uint32_t readFramebufFormat(bool bot) { return pdcFramebufFormat[bot]; }
     uint32_t readInterruptType(bool bot) { return pdcInterruptType[bot]; }
 
     void writeFramebufLt0(bool bot, uint32_t mask, uint32_t value);
+    void writeFramebufFormat(bool bot, uint32_t mask, uint32_t value);
     void writeInterruptType(bool bot, uint32_t mask, uint32_t value);
 
 private:
@@ -46,5 +48,8 @@ private:
     std::mutex mutex;
 
     uint32_t pdcFramebufLt0[2] = {};
+    uint32_t pdcFramebufFormat[2] = {};
     uint32_t pdcInterruptType[2] = {};
+
+    void drawScreen(bool bot, uint32_t *buffer);
 };

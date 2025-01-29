@@ -181,9 +181,9 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
             DEF_IO08(0x10148001, data = core->i2c.readBusCnt(2)) // I2C_BUS2_CNT
             DEF_IO08(0x10161000, data = core->i2c.readBusData(0)) // I2C_BUS0_DATA
             DEF_IO08(0x10161001, data = core->i2c.readBusCnt(0)) // I2C_BUS0_CNT
-            DEF_IO32(0x10163000, data = core->pxi.readSync(false)) // PXI_SYNC11
-            DEF_IO32(0x10163004, data = core->pxi.readCnt(false)) // PXI_CNT11
-            DEF_IO32(0x1016300C, data = core->pxi.readRecv(false)) // PXI_RECV11
+            DEF_IO32(0x10163000, data = core->pxi.readSync(0)) // PXI_SYNC11
+            DEF_IO32(0x10163004, data = core->pxi.readCnt(0)) // PXI_CNT11
+            DEF_IO32(0x1016300C, data = core->pxi.readRecv(0)) // PXI_RECV11
         }
 
         // Check registers that are exclusive to one CPU
@@ -205,12 +205,23 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x10301034, data = core->shas[0].readFifo()) // SHA_FIFO11
                 DEF_IO32(0x10301038, data = core->shas[0].readFifo()) // SHA_FIFO11
                 DEF_IO32(0x1030103C, data = core->shas[0].readFifo()) // SHA_FIFO11
-                DEF_IO32(0x10400468, data = core->pdc.readFramebufLt0(false)) // PDC0_FRAMEBUF_LT0
-                DEF_IO32(0x10400474, data = core->pdc.readInterruptType(false)) // PDC0_INTERRUPT_TYPE
-                DEF_IO32(0x10400568, data = core->pdc.readFramebufLt0(true)) // PDC1_FRAMEBUF_LT0
-                DEF_IO32(0x10400574, data = core->pdc.readInterruptType(true)) // PDC0_INTERRUPT_TYPE
+                DEF_IO32(0x10400010, data = core->gpu.readMemfillDstAddr(0)) // GPU_MEMFILL_DST_ADDR0
+                DEF_IO32(0x10400014, data = core->gpu.readMemfillDstEnd(0)) // GPU_MEMFILL_DST_END0
+                DEF_IO32(0x10400018, data = core->gpu.readMemfillData(0)) // GPU_MEMFILL_DATA0
+                DEF_IO32(0x1040001C, data = core->gpu.readMemfillCnt(0)) // GPU_MEMFILL_CNT0
+                DEF_IO32(0x10400020, data = core->gpu.readMemfillDstAddr(1)) // GPU_MEMFILL_DST_ADDR1
+                DEF_IO32(0x10400024, data = core->gpu.readMemfillDstEnd(1)) // GPU_MEMFILL_DST_END1
+                DEF_IO32(0x10400028, data = core->gpu.readMemfillData(1)) // GPU_MEMFILL_DATA1
+                DEF_IO32(0x1040002C, data = core->gpu.readMemfillCnt(1)) // GPU_MEMFILL_CNT1
+                DEF_IO32(0x10400468, data = core->pdc.readFramebufLt0(0)) // PDC0_FRAMEBUF_LT0
+                DEF_IO32(0x10400470, data = core->pdc.readFramebufFormat(0)) // PDC0_FRAMEBUF_FORMAT
+                DEF_IO32(0x10400474, data = core->pdc.readInterruptType(0)) // PDC0_INTERRUPT_TYPE
+                DEF_IO32(0x10400568, data = core->pdc.readFramebufLt0(1)) // PDC1_FRAMEBUF_LT0
+                DEF_IO32(0x10400570, data = core->pdc.readFramebufFormat(1)) // PDC1_FRAMEBUF_FORMAT
+                DEF_IO32(0x10400574, data = core->pdc.readInterruptType(1)) // PDC1_INTERRUPT_TYPE
                 DEF_IO32(0x17E00100, data = core->interrupts.readMpIle(id)) // MP_ILE
                 DEF_IO32(0x17E0010C, data = core->interrupts.readMpAck(id)) // MP_ACK
+                DEF_IO32(0x17E00118, data = core->interrupts.readMpPending(id)) // MP_PENDING
                 DEF_IO32(0x17E01000, data = core->interrupts.readMpIge()) // MP_IGE
                 DEF_IO32(0x17E01100, data = core->interrupts.readMpIe(0)) // MP_IE0
                 DEF_IO32(0x17E01104, data = core->interrupts.readMpIe(1)) // MP_IE1
@@ -263,9 +274,9 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO16(0x100060D8, data = core->sdMmc.readDataCtl()) // SD_DATA_CTL
                 DEF_IO16(0x10006100, data = core->sdMmc.readData32Irq()) // SD_DATA32_IRQ
                 DEF_IO32(0x1000610C, data = core->sdMmc.readData32Fifo()) // SD_DATA32_FIFO
-                DEF_IO32(0x10008000, data = core->pxi.readSync(true)) // PXI_SYNC9
-                DEF_IO32(0x10008004, data = core->pxi.readCnt(true)) // PXI_CNT9
-                DEF_IO32(0x1000800C, data = core->pxi.readRecv(true)) // PXI_RECV9
+                DEF_IO32(0x10008000, data = core->pxi.readSync(1)) // PXI_SYNC9
+                DEF_IO32(0x10008004, data = core->pxi.readCnt(1)) // PXI_CNT9
+                DEF_IO32(0x1000800C, data = core->pxi.readRecv(1)) // PXI_RECV9
                 DEF_IO32(0x10009000, data = core->aes.readCnt()) // AES_CNT
                 DEF_IO32(0x1000900C, data = core->aes.readRdfifo()) // AES_RDFIFO
                 DEF_IO08(0x10009010, data = core->aes.readKeysel()) // AES_KEYSEL
@@ -537,9 +548,9 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
             DEF_IO08(0x10148001, core->i2c.writeBusCnt(2, IO_PARAMS8)) // I2C_BUS2_CNT
             DEF_IO08(0x10161000, core->i2c.writeBusData(0, IO_PARAMS8)) // I2C_BUS0_DATA
             DEF_IO08(0x10161001, core->i2c.writeBusCnt(0, IO_PARAMS8)) // I2C_BUS0_CNT
-            DEF_IO32(0x10163000, core->pxi.writeSync(false, IO_PARAMS)) // PXI_SYNC11
-            DEF_IO32(0x10163004, core->pxi.writeCnt(false, IO_PARAMS)) // PXI_CNT11
-            DEF_IO32(0x10163008, core->pxi.writeSend(false, IO_PARAMS)) // PXI_SEND11
+            DEF_IO32(0x10163000, core->pxi.writeSync(0, IO_PARAMS)) // PXI_SYNC11
+            DEF_IO32(0x10163004, core->pxi.writeCnt(0, IO_PARAMS)) // PXI_CNT11
+            DEF_IO32(0x10163008, core->pxi.writeSend(0, IO_PARAMS)) // PXI_SEND11
         }
 
         // Check registers that are exclusive to one CPU
@@ -561,10 +572,20 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x10301034, core->shas[0].writeFifo(IO_PARAMS)) // SHA_FIFO11
                 DEF_IO32(0x10301038, core->shas[0].writeFifo(IO_PARAMS)) // SHA_FIFO11
                 DEF_IO32(0x1030103C, core->shas[0].writeFifo(IO_PARAMS)) // SHA_FIFO11
-                DEF_IO32(0x10400468, core->pdc.writeFramebufLt0(false, IO_PARAMS)) // PDC0_FRAMEBUF_LT0
-                DEF_IO32(0x10400474, core->pdc.writeInterruptType(false, IO_PARAMS)) // PDC0_INTERRUPT_TYPE
-                DEF_IO32(0x10400568, core->pdc.writeFramebufLt0(true, IO_PARAMS)) // PDC1_FRAMEBUF_LT0
-                DEF_IO32(0x10400574, core->pdc.writeInterruptType(true, IO_PARAMS)) // PDC1_INTERRUPT_TYPE
+                DEF_IO32(0x10400010, core->gpu.writeMemfillDstAddr(0, IO_PARAMS)) // GPU_MEMFILL_DST_ADDR0
+                DEF_IO32(0x10400014, core->gpu.writeMemfillDstEnd(0, IO_PARAMS)) // GPU_MEMFILL_DST_END0
+                DEF_IO32(0x10400018, core->gpu.writeMemfillData(0, IO_PARAMS)) // GPU_MEMFILL_DATA0
+                DEF_IO32(0x1040001C, core->gpu.writeMemfillCnt(0, IO_PARAMS)) // GPU_MEMFILL_CNT0
+                DEF_IO32(0x10400020, core->gpu.writeMemfillDstAddr(1, IO_PARAMS)) // GPU_MEMFILL_DST_ADDR1
+                DEF_IO32(0x10400024, core->gpu.writeMemfillDstEnd(1, IO_PARAMS)) // GPU_MEMFILL_DST_END1
+                DEF_IO32(0x10400028, core->gpu.writeMemfillData(1, IO_PARAMS)) // GPU_MEMFILL_DATA1
+                DEF_IO32(0x1040002C, core->gpu.writeMemfillCnt(1, IO_PARAMS)) // GPU_MEMFILL_CNT1
+                DEF_IO32(0x10400468, core->pdc.writeFramebufLt0(0, IO_PARAMS)) // PDC0_FRAMEBUF_LT0
+                DEF_IO32(0x10400470, core->pdc.writeFramebufFormat(0, IO_PARAMS)) // PDC0_FRAMEBUF_FORMAT
+                DEF_IO32(0x10400474, core->pdc.writeInterruptType(0, IO_PARAMS)) // PDC0_INTERRUPT_TYPE
+                DEF_IO32(0x10400568, core->pdc.writeFramebufLt0(1, IO_PARAMS)) // PDC1_FRAMEBUF_LT0
+                DEF_IO32(0x10400570, core->pdc.writeFramebufFormat(1, IO_PARAMS)) // PDC1_FRAMEBUF_FORMAT
+                DEF_IO32(0x10400574, core->pdc.writeInterruptType(1, IO_PARAMS)) // PDC1_INTERRUPT_TYPE
                 DEF_IO32(0x17E00100, core->interrupts.writeMpIle(id, IO_PARAMS)) // MP_ILE
                 DEF_IO32(0x17E00110, core->interrupts.writeMpEoi(id, IO_PARAMS)) // MP_EOI
                 DEF_IO32(0x17E01000, core->interrupts.writeMpIge(IO_PARAMS)) // MP_IGE
@@ -601,9 +622,9 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO16(0x10006026, core->sdMmc.writeData16Blklen(IO_PARAMS)) // SD_DATA16_BLKLEN
                 DEF_IO16(0x100060D8, core->sdMmc.writeDataCtl(IO_PARAMS)) // SD_DATA_CTL
                 DEF_IO16(0x10006100, core->sdMmc.writeData32Irq(IO_PARAMS)) // SD_DATA32_IRQ
-                DEF_IO32(0x10008000, core->pxi.writeSync(true, IO_PARAMS)) // PXI_SYNC9
-                DEF_IO32(0x10008004, core->pxi.writeCnt(true, IO_PARAMS)) // PXI_CNT9
-                DEF_IO32(0x10008008, core->pxi.writeSend(true, IO_PARAMS)) // PXI_SEND9
+                DEF_IO32(0x10008000, core->pxi.writeSync(1, IO_PARAMS)) // PXI_SYNC9
+                DEF_IO32(0x10008004, core->pxi.writeCnt(1, IO_PARAMS)) // PXI_CNT9
+                DEF_IO32(0x10008008, core->pxi.writeSend(1, IO_PARAMS)) // PXI_SEND9
                 DEF_IO32(0x10009000, core->aes.writeCnt(IO_PARAMS)) // AES_CNT
                 DEF_IO16(0x10009006, core->aes.writeBlkcnt(IO_PARAMS)) // AES_BLKCNT
                 DEF_IO32(0x10009008, core->aes.writeWrfifo(IO_PARAMS)) // AES_WRFIFO

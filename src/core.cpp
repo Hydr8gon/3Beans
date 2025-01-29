@@ -21,7 +21,7 @@
 #include "core.h"
 
 Core::Core(): aes(this), arms { ArmInterp(this, ARM11A), ArmInterp(this, ARM11B),
-        ArmInterp(this, ARM9) }, i2c(this), interrupts(this), memory(this), pdc(this),
+        ArmInterp(this, ARM9) }, gpu(this), i2c(this), interrupts(this), memory(this), pdc(this),
         pxi(this), rsa(this), sdMmc(this), shas { Sha(this), Sha(this) }, timers(this) {
     // Initialize memory and the CPUs
     memory.loadFiles();

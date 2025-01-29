@@ -31,6 +31,7 @@ public:
 
     uint32_t readMpIle(CpuId id) { return mpIle[id]; }
     uint32_t readMpAck(CpuId id);
+    uint32_t readMpPending(CpuId id);
     uint32_t readMpIge() { return mpIge; }
     uint32_t readMpIe(int i) { return mpIe[i]; }
     uint32_t readMpIp(CpuId id, int i) { return mpIp[id][i]; }

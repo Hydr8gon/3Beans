@@ -31,37 +31,50 @@ uint32_t *Pdc::getFrame() {
     return fb;
 }
 
-void Pdc::drawFrame() {
-    // Allow up to 2 framebuffers to be queued
-    if (buffers.size() == 2) return;
-    uint32_t *buffer = new uint32_t[400 * 480];
-    memset(buffer, 0, 400 * 480 * sizeof(uint32_t));
-
-    // Draw the top screen's framebuffer if enabled
-    if (pdcInterruptType[0] & BIT(0)) {
+void Pdc::drawScreen(bool bot, uint32_t *buffer) {
+    // Draw a screen's framebuffer in the selected format if enabled
+    if (~pdcInterruptType[bot] & BIT(0)) return;
+    int width = (bot ? 320 : 400);
+    switch (uint8_t fmt = pdcFramebufFormat[bot] & 0x7) {
+    case 0: // RGBA8
         for (int y = 0; y < 240; y++) {
-            for (int x = 0; x < 400; x++) {
-                uint32_t color = core->memory.read<uint32_t>(ARM11A, pdcFramebufLt0[0] + (x * 240 + 239 - y) * 4);
+            for (int x = 0; x < width; x++) {
+                uint32_t color = core->memory.read<uint32_t>(ARM11A, pdcFramebufLt0[bot] + (x * 240 + 239 - y) * 4);
                 uint8_t r = (color >> 24) & 0xFF;
                 uint8_t g = (color >> 16) & 0xFF;
                 uint8_t b = (color >> 8) & 0xFF;
                 buffer[y * 400 + x] = (0xFF << 24) | (b << 16) | (g << 8) | r;
             }
         }
-    }
+        return;
 
-    // Draw the bottom screen's framebuffer if enabled
-    if (pdcInterruptType[1] & BIT(0)) {
+    case 1: // RGB8
         for (int y = 0; y < 240; y++) {
-            for (int x = 0; x < 320; x++) {
-                uint32_t color = core->memory.read<uint32_t>(ARM11A, pdcFramebufLt0[1] + (x * 240 + 239 - y) * 4);
-                uint8_t r = (color >> 24) & 0xFF;
-                uint8_t g = (color >> 16) & 0xFF;
-                uint8_t b = (color >> 8) & 0xFF;
-                buffer[(y + 240) * 400 + (x + 40)] = (0xFF << 24) | (b << 16) | (g << 8) | r;
+            for (int x = 0; x < width; x++) {
+                uint32_t address = pdcFramebufLt0[bot] + (x * 240 + 239 - y) * 3;
+                uint8_t r = core->memory.read<uint8_t>(ARM11A, address + 2);
+                uint8_t g = core->memory.read<uint8_t>(ARM11A, address + 1);
+                uint8_t b = core->memory.read<uint8_t>(ARM11A, address + 0);
+                buffer[y * 400 + x] = (0xFF << 24) | (b << 16) | (g << 8) | r;
             }
         }
+        return;
+
+    default:
+        LOG_CRIT("Unimplemented framebuffer format: %d\n", fmt);
+        return;
     }
+}
+
+void Pdc::drawFrame() {
+    // Allow up to 2 framebuffers to be queued
+    if (buffers.size() == 2) return;
+    uint32_t *buffer = new uint32_t[400 * 480];
+    memset(buffer, 0, 400 * 480 * sizeof(uint32_t));
+
+    // Draw the top and bottom screens
+    drawScreen(false, &buffer[0]);
+    drawScreen(true, &buffer[240 * 400 + 40]);
 
     // Add the frame to the queue
     mutex.lock();
@@ -73,6 +86,12 @@ void Pdc::drawFrame() {
 void Pdc::writeFramebufLt0(bool bot, uint32_t mask, uint32_t value) {
     // Write to a screen's PDC_FRAMEBUF_LT0 register
     pdcFramebufLt0[bot] = (pdcFramebufLt0[bot] & ~mask) | (value & mask);
+}
+
+void Pdc::writeFramebufFormat(bool bot, uint32_t mask, uint32_t value) {
+    // Write to a screen's PDC_FRAMEBUF_FORMAT register
+    // TODO: handle zoom bits and maybe others?
+    pdcFramebufFormat[bot] = (pdcFramebufFormat[bot] & ~mask) | (value & mask);
 }
 
 void Pdc::writeInterruptType(bool bot, uint32_t mask, uint32_t value) {

@@ -24,13 +24,14 @@
 #include <vector>
 
 #include "aes.h"
+#include "arm_interp.h"
 #include "cp15.h"
 #include "defines.h"
-#include "pdc.h"
+#include "gpu.h"
 #include "i2c.h"
-#include "arm_interp.h"
 #include "interrupts.h"
 #include "memory.h"
+#include "pdc.h"
 #include "pxi.h"
 #include "rsa.h"
 #include "sd_mmc.h"
@@ -62,6 +63,7 @@ class Core {
 public:
     Aes aes;
     ArmInterp arms[MAX_CPUS];
+    Gpu gpu;
     I2c i2c;
     Interrupts interrupts;
     Memory memory;

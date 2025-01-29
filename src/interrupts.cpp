@@ -69,6 +69,15 @@ uint32_t Interrupts::readMpAck(CpuId id) {
     return 0x3FF; // None
 }
 
+uint32_t Interrupts::readMpPending(CpuId id) {
+    // Get the ID of the next pending interrupt but don't do anything
+    for (int i = 0; i < 4; i++)
+        for (int bit = 0; bit < 32; bit++)
+            if (mpIe[i] & mpIp[id][i] & BIT(bit))
+                return (i << 5) + bit;
+    return 0x3FF; // None
+}
+
 void Interrupts::writeMpIle(CpuId id, uint32_t mask, uint32_t value) {
     // Write to a core's MP_ILE local interrupt enable bit
     mask &= 0x1;
