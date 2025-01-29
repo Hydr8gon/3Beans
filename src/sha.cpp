@@ -1,5 +1,5 @@
 /*
-    Copyright 2023-2024 Hydr8gon
+    Copyright 2023-2025 Hydr8gon
 
     This file is part of 3Beans.
 
@@ -46,7 +46,7 @@ void Sha::hash2(uint32_t *src) {
     uint32_t hash[8];
     memcpy(hash, shaHash, sizeof(hash));
 
-    // Hash the input
+    // Hash the input based on pseudocode from https://en.wikipedia.org/wiki/SHA-2
     for (int i = 0; i < 64; i++) {
         // Calculate values for updating the hash
         uint32_t r0 = ROR32(hash[4], 6) ^ ROR32(hash[4], 11) ^ ROR32(hash[4], 25);
