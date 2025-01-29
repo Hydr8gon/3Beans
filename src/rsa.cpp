@@ -17,9 +17,7 @@
     along with 3Beans. If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <byteswap.h>
 #include <cstring>
-
 #include "core.h"
 
 void Rsa::calculate() {
@@ -155,12 +153,12 @@ void Rsa::mulMod(uint32_t *dst, uint32_t *src, uint8_t i, int8_t inc, uint8_t si
 uint32_t Rsa::readMod(int i) {
     // Read from part of the selected RSA_MOD value based on endian settings
     uint32_t value = rsaMods[(rsaCnt >> 4) & 0x3][i];
-    return (rsaCnt & BIT(8)) ? bswap_32(value) : value;
+    return (rsaCnt & BIT(8)) ? BSWAP32(value) : value;
 }
 
 uint32_t Rsa::readData(int i) {
     // Read from part of the RSA_DATA value based on endian settings
-    return (rsaCnt & BIT(8)) ? bswap_32(rsaData[i]) : rsaData[i];
+    return (rsaCnt & BIT(8)) ? BSWAP32(rsaData[i]) : rsaData[i];
 }
 
 void Rsa::writeCnt(uint32_t mask, uint32_t value) {
@@ -182,14 +180,14 @@ void Rsa::writeSlotcnt(int i, uint32_t mask, uint32_t value) {
 void Rsa::writeMod(int i, uint32_t mask, uint32_t value) {
     // Write to part of the selected RSA_MOD value based on endian settings
     uint32_t *mod = rsaMods[(rsaCnt >> 4) & 0x3];
-    mod[i] = (rsaCnt & BIT(8)) ? (mod[i] & ~bswap_32(mask)) |
-        bswap_32(value & mask) : (mod[i] & ~mask) | (value & mask);
+    mod[i] = (rsaCnt & BIT(8)) ? (mod[i] & ~BSWAP32(mask)) |
+        BSWAP32(value & mask) : (mod[i] & ~mask) | (value & mask);
 }
 
 void Rsa::writeData(int i, uint32_t mask, uint32_t value) {
     // Write to part of the RSA_DATA value based on endian settings
-    rsaData[i] = (rsaCnt & BIT(8)) ? (rsaData[i] & ~bswap_32(mask)) |
-        bswap_32(value & mask) : (rsaData[i] & ~mask) | (value & mask);
+    rsaData[i] = (rsaCnt & BIT(8)) ? (rsaData[i] & ~BSWAP32(mask)) |
+        BSWAP32(value & mask) : (rsaData[i] & ~mask) | (value & mask);
 }
 
 void Rsa::writeExpfifo(uint32_t mask, uint32_t value) {
@@ -198,6 +196,6 @@ void Rsa::writeExpfifo(uint32_t mask, uint32_t value) {
     if (expFifos[i].size() >= 0x40) return;
 
     // Push a value to the FIFO based on endian settings and update the valid bit
-    expFifos[i].push_front((rsaCnt & BIT(8)) ? bswap_32(value & mask) : (value & mask));
+    expFifos[i].push_front((rsaCnt & BIT(8)) ? BSWAP32(value & mask) : (value & mask));
     rsaSlotcnt[i] = (rsaSlotcnt[i] & ~BIT(0)) | (expFifos[i].size() >= 4 && !(expFifos[i].size() & 0x1));
 }

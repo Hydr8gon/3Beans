@@ -20,6 +20,11 @@
 #include "b3_canvas.h"
 #include "b3_app.h"
 
+#ifdef _WIN32
+#include <GL/gl.h>
+#include <GL/glext.h>
+#endif
+
 wxBEGIN_EVENT_TABLE(b3Canvas, wxGLCanvas)
 EVT_PAINT(b3Canvas::draw)
 EVT_SIZE(b3Canvas::resize)

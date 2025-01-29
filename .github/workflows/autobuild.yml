@@ -1,0 +1,70 @@
+name: Automatic Builds
+
+on:
+  push:
+    branches:
+    - main
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Install MSYS2
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        update: true
+    - name: Install build tools, wxWidgets, and PortAudio
+      run: pacman -S mingw-w64-x86_64-{gcc,pkg-config,wxWidgets,portaudio,jbigkit} make --noconfirm
+      shell: msys2 {0}
+    - name: Compile
+      run: |
+        make -j$(nproc)
+        strip 3beans.exe
+      shell: msys2 {0}
+      working-directory: ${{ github.workspace }}
+    - name: Upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: 3beans-windows
+        path: 3beans.exe
+
+  build-mac:
+    runs-on: macos-latest
+    steps:
+    - name: Install wxWidgets and PortAudio
+      run: brew install wxmac portaudio
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Compile
+      run: |
+        make -j$(sysctl -n hw.logicalcpu)
+        ./mac-bundle.sh --dmg
+    - name: Upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: 3beans-mac
+        path: 3Beans.dmg
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install Flatpak and SDK
+      run: |
+        sudo apt update
+        sudo apt install flatpak flatpak-builder -y
+        sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+        sudo flatpak install flathub org.freedesktop.Platform//21.08 org.freedesktop.Sdk//21.08 -y
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Compile
+      run: |
+        git config --global protocol.file.allow always
+        make flatpak
+    - name: Upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: 3beans-linux
+        path: 3beans.flatpak

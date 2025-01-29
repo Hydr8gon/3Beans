@@ -17,9 +17,7 @@
     along with 3Beans. If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <byteswap.h>
 #include <cstring>
-
 #include "core.h"
 
 Aes::Aes(Core *core): core(core) {
@@ -270,7 +268,7 @@ void Aes::flushKeyYFifo() {
 uint32_t Aes::readRdfifo() {
     // Pop a value from the read FIFO based on endian settings
     if (readFifo.empty()) return aesRdfifo;
-    aesRdfifo = (aesCnt & BIT(23)) ? bswap_32(readFifo.front()) : readFifo.front();
+    aesRdfifo = (aesCnt & BIT(23)) ? BSWAP32(readFifo.front()) : readFifo.front();
     readFifo.pop();
     processFifo();
     return aesRdfifo;
@@ -301,7 +299,7 @@ void Aes::writeBlkcnt(uint16_t mask, uint16_t value) {
 void Aes::writeWrfifo(uint32_t mask, uint32_t value) {
     // Push a value to the write FIFO based on endian settings
     if (writeFifo.size() == 16) return;
-    writeFifo.push((aesCnt & BIT(23)) ? bswap_32(value & mask) : (value & mask));
+    writeFifo.push((aesCnt & BIT(23)) ? BSWAP32(value & mask) : (value & mask));
     processFifo();
 }
 
@@ -321,24 +319,24 @@ void Aes::writeKeycnt(uint8_t value) {
 
 void Aes::writeIv(int i, uint32_t mask, uint32_t value) {
     // Write to part of the AES_IV value based on endian settings
-    aesIv[i] = (aesCnt & BIT(23)) ? (aesIv[i] & ~bswap_32(mask)) |
-        bswap_32(value & mask) : (aesIv[i] & ~mask) | (value & mask);
+    aesIv[i] = (aesCnt & BIT(23)) ? (aesIv[i] & ~BSWAP32(mask)) |
+        BSWAP32(value & mask) : (aesIv[i] & ~mask) | (value & mask);
 }
 
 void Aes::writeKeyfifo(uint32_t mask, uint32_t value) {
     // Push a value to the key FIFO based on endian settings and flush when full
-    keyFifo.push((aesCnt & BIT(23)) ? bswap_32(value & mask) : (value & mask));
+    keyFifo.push((aesCnt & BIT(23)) ? BSWAP32(value & mask) : (value & mask));
     if (keyFifo.size() == 4) flushKeyFifo(false);
 }
 
 void Aes::writeKeyxfifo(uint32_t mask, uint32_t value) {
     // Push a value to the key X FIFO based on endian settings and flush when full
-    keyXFifo.push((aesCnt & BIT(23)) ? bswap_32(value & mask) : (value & mask));
+    keyXFifo.push((aesCnt & BIT(23)) ? BSWAP32(value & mask) : (value & mask));
     if (keyXFifo.size() == 4) flushKeyFifo(true);
 }
 
 void Aes::writeKeyyfifo(uint32_t mask, uint32_t value) {
     // Push a value to the key Y FIFO based on endian settings and flush when full
-    keyYFifo.push((aesCnt & BIT(23)) ? bswap_32(value & mask) : (value & mask));
+    keyYFifo.push((aesCnt & BIT(23)) ? BSWAP32(value & mask) : (value & mask));
     if (keyYFifo.size() == 4) flushKeyYFifo();
 }

@@ -17,9 +17,7 @@
     along with 3Beans. If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <byteswap.h>
 #include <cstring>
-
 #include "core.h"
 
 void Sha::hash2(uint32_t *src) {
@@ -155,7 +153,7 @@ void Sha::processFifo() {
 uint32_t Sha::readFifo() {
     // Read a big endian value from the FIFO and update its empty bit
     if (outFifo.empty()) return 0;
-    uint32_t value = bswap_32(outFifo.front());
+    uint32_t value = BSWAP32(outFifo.front());
     outFifo.pop();
     if (outFifo.empty()) shaCnt &= ~BIT(9);
     return value;
@@ -163,7 +161,7 @@ uint32_t Sha::readFifo() {
 
 uint32_t Sha::readHash(int i) {
     // Read from a part of the SHA_HASH value based on endian settings
-    return (shaCnt & BIT(3)) ? bswap_32(shaHash[i]) : shaHash[i];
+    return (shaCnt & BIT(3)) ? BSWAP32(shaHash[i]) : shaHash[i];
 }
 
 void Sha::writeCnt(uint32_t mask, uint32_t value) {
@@ -185,15 +183,15 @@ void Sha::writeBlkcnt(uint32_t mask, uint32_t value) {
 
 void Sha::writeHash(int i, uint32_t mask, uint32_t value) {
     // Write to part of the SHA_HASH value based on endian settings
-    shaHash[i] = (shaCnt & BIT(3)) ? (shaHash[i] & ~bswap_32(mask)) |
-        bswap_32(value & mask) : (shaHash[i] & ~mask) | (value & mask);
+    shaHash[i] = (shaCnt & BIT(3)) ? (shaHash[i] & ~BSWAP32(mask)) |
+        BSWAP32(value & mask) : (shaHash[i] & ~mask) | (value & mask);
 }
 
 void Sha::writeFifo(uint32_t mask, uint32_t value) {
     // Write a big endian value to the FIFO, pushing it once a full word is received
     if (inFifo.size() == 16) return;
-    fifoValue |= bswap_32(value & mask);
-    if ((fifoMask |= bswap_32(mask)) != -1) return;
+    fifoValue |= BSWAP32(value & mask);
+    if ((fifoMask |= BSWAP32(mask)) != -1) return;
     pushFifo();
     processFifo();
 }

@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=3Beans
+Comment=An LLE 3DS emulator (maybe)
+GenericName=Nintendo 3DS Emulator
+Icon=com.hydra.threebeans
+Exec=3beans %U
+StartupNotify=true
+Terminal=false
+MimeType=application/x-nintendo-3ds-rom
+Categories=Game;Emulator
+Keywords=emulator;nintendo;3ds
