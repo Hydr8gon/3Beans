@@ -177,6 +177,7 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
             DEF_IO32(0x1010105C, data = core->shas[0].readHash(7)) // SHA_HASH7_11
             DEF_IO08(0x10144000, data = core->i2c.readBusData(1)) // I2C_BUS1_DATA
             DEF_IO08(0x10144001, data = core->i2c.readBusCnt(1)) // I2C_BUS1_CNT
+            DEF_IO16(0x10146000, data = core->input.readHidPad()) // HID_PAD
             DEF_IO08(0x10148000, data = core->i2c.readBusData(2)) // I2C_BUS2_DATA
             DEF_IO08(0x10148001, data = core->i2c.readBusCnt(2)) // I2C_BUS2_CNT
             DEF_IO08(0x10161000, data = core->i2c.readBusData(0)) // I2C_BUS0_DATA
@@ -512,7 +513,7 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
         }
 
         // Catch reads from unknown I/O registers
-        LOG_WARN("Unknown ARM%d I/O read: 0x%08X\n", (id == ARM9) ? 9 : 11, address);
+        LOG_WARN("Unknown ARM%d I/O read: 0x%08X\n", (id == ARM9) ? 9 : 11, base);
         return value;
 
     next:
@@ -864,7 +865,7 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
         }
 
         // Catch writes to unknown I/O registers
-        LOG_WARN("Unknown ARM%d I/O write: 0x%08X\n", (id == ARM9) ? 9 : 11, address);
+        LOG_WARN("Unknown ARM%d I/O write: 0x%08X\n", (id == ARM9) ? 9 : 11, base);
         return;
 
     next:

@@ -17,33 +17,16 @@
     along with 3Beans. If not, see <https://www.gnu.org/licenses/>.
 */
 
-#pragma once
+#include "core.h"
 
-#include <cstdint>
+void Input::pressKey(int key) {
+    // Clear key bits to indicate presses
+    if (key < 12)
+        hidPad &= ~BIT(key);
+}
 
-class Core;
-
-class Timers {
-public:
-    Timers(Core *core): core(core) {}
-
-    void resetCycles();
-    void overflow(int i);
-
-    uint16_t readTmCntL(int i);
-    uint16_t readTmCntH(int i) { return tmCntH[i]; }
-
-    void writeTmCntL(int i, uint16_t mask, uint16_t value);
-    void writeTmCntH(int i, uint16_t mask, uint16_t value);
-
-private:
-    Core *core;
-
-    uint32_t endCycles[4] = {};
-    uint16_t timers[4] = {};
-    uint8_t shifts[4] = { 1, 1, 1, 1 };
-    bool countUp[4] = {};
-
-    uint16_t tmCntL[4] = {};
-    uint16_t tmCntH[4] = {};
-};
+void Input::releaseKey(int key) {
+    // Set key bits to indicate releases
+    if (key < 12)
+        hidPad |= BIT(key);
+}

@@ -28,11 +28,14 @@
 wxBEGIN_EVENT_TABLE(b3Canvas, wxGLCanvas)
 EVT_PAINT(b3Canvas::draw)
 EVT_SIZE(b3Canvas::resize)
+EVT_KEY_DOWN(b3Canvas::pressKey)
+EVT_KEY_UP(b3Canvas::releaseKey)
 wxEND_EVENT_TABLE()
 
 b3Canvas::b3Canvas(b3Frame *frame): wxGLCanvas(frame, wxID_ANY, nullptr), frame(frame) {
-    // Prepare the GL context
+    // Prepare the GL context and set focus for key presses
     context = new wxGLContext(this);
+    SetFocus();
 }
 
 void b3Canvas::finish() {
@@ -125,4 +128,20 @@ void b3Canvas::resize(wxSizeEvent &event) {
         x = 0;
         y = (size.y - height) / 2;
     }
+}
+
+void b3Canvas::pressKey(wxKeyEvent &event) {
+    // Trigger a key press if a mapped key was pressed
+    if (!frame->core) return;
+    for (int i = 0; i < MAX_KEYS; i++)
+        if (event.GetKeyCode() == b3App::keyBinds[i])
+            frame->core->input.pressKey(i);
+}
+
+void b3Canvas::releaseKey(wxKeyEvent &event) {
+    // Trigger a key release if a mapped key was released
+    if (!frame->core) return;
+    for (int i = 0; i < MAX_KEYS; i++)
+        if (event.GetKeyCode() == b3App::keyBinds[i])
+            frame->core->input.releaseKey(i);
 }

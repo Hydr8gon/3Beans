@@ -20,6 +20,7 @@
 #pragma once
 
 #include <cstdint>
+
 class Core;
 
 class Interrupts {

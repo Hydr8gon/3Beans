@@ -27,6 +27,8 @@ wxBEGIN_EVENT_TABLE(b3App, wxApp)
 EVT_TIMER(UPDATE, b3App::update)
 wxEND_EVENT_TABLE()
 
+int b3App::keyBinds[] = { 'L', 'K', 'G', 'H', 'D', 'A', 'W', 'S', 'P', 'Q', 'O', 'I' };
+
 bool b3App::OnInit() {
     // Create the program's frame
     SetAppName("3Beans");

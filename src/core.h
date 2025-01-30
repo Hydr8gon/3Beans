@@ -29,6 +29,7 @@
 #include "defines.h"
 #include "gpu.h"
 #include "i2c.h"
+#include "input.h"
 #include "interrupts.h"
 #include "memory.h"
 #include "pdc.h"
@@ -65,6 +66,7 @@ public:
     ArmInterp arms[MAX_CPUS];
     Gpu gpu;
     I2c i2c;
+    Input input;
     Interrupts interrupts;
     Memory memory;
     Pdc pdc;

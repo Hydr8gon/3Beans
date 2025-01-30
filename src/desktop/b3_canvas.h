@@ -47,5 +47,7 @@ private:
 
     void draw(wxPaintEvent &event);
     void resize(wxSizeEvent &event);
+    void pressKey(wxKeyEvent &event);
+    void releaseKey(wxKeyEvent &event);
     wxDECLARE_EVENT_TABLE();
 };

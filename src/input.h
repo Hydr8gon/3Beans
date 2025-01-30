@@ -23,27 +23,16 @@
 
 class Core;
 
-class Timers {
+class Input {
 public:
-    Timers(Core *core): core(core) {}
+    Input(Core *core): core(core) {}
 
-    void resetCycles();
-    void overflow(int i);
+    void pressKey(int key);
+    void releaseKey(int key);
 
-    uint16_t readTmCntL(int i);
-    uint16_t readTmCntH(int i) { return tmCntH[i]; }
-
-    void writeTmCntL(int i, uint16_t mask, uint16_t value);
-    void writeTmCntH(int i, uint16_t mask, uint16_t value);
+    uint16_t readHidPad() { return hidPad; }
 
 private:
     Core *core;
-
-    uint32_t endCycles[4] = {};
-    uint16_t timers[4] = {};
-    uint8_t shifts[4] = { 1, 1, 1, 1 };
-    bool countUp[4] = {};
-
-    uint16_t tmCntL[4] = {};
-    uint16_t tmCntH[4] = {};
+    uint16_t hidPad = 0xFFF;
 };

@@ -21,7 +21,12 @@
 
 #include "b3_frame.h"
 
+#define MAX_KEYS 12
+
 class b3App: public wxApp {
+public:
+    static int keyBinds[MAX_KEYS];
+
 private:
     b3Frame *frame;
     wxTimer *timer;
