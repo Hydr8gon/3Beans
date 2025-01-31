@@ -72,6 +72,95 @@ int ArmInterp::swi(uint32_t opcode) { // SWI #i
     return exception(0x08);
 }
 
+int ArmInterp::cps(uint32_t opcode) { // CPS[IE/ID] AIF,#mode
+    // Optionally enable or disable interrupt flags
+    if (opcode & BIT(19)) {
+        if (opcode & BIT(18)) // ID
+            cpsr |= (opcode & 0xE0);
+        else // IE
+            cpsr &= ~(opcode & 0xE0);
+    }
+
+    // Optionally change the CPU mode
+    if (opcode & BIT(17))
+        setCpsr((cpsr & ~0x1F) | (opcode & 0x1F));
+    return 1;
+}
+
+int ArmInterp::srs(uint32_t opcode) { // SRS[DA/IA/DB/IB] sp!,#mode
+    // Get the stack pointer for the specified CPU mode
+    uint32_t *op0;
+    switch (opcode & 0x1F) {
+        case 0x11: op0 = &registersFiq[5]; break; // FIQ
+        case 0x12: op0 = &registersIrq[0]; break; // IRQ
+        case 0x13: op0 = &registersSvc[0]; break; // Supervisor
+        case 0x17: op0 = &registersAbt[0]; break; // Abort
+        case 0x1B: op0 = &registersUnd[0]; break; // Undefined
+        default: op0 = &registersUsr[13]; break; // User/System
+    }
+
+    // Store return state based on the addressing mode
+    switch ((opcode >> 23) & 0x3) {
+    case 0x0: // DA
+        core->memory.write<uint32_t>(id, *op0 - 4, *registers[14]);
+        core->memory.write<uint32_t>(id, *op0 - 0, spsr ? *spsr : 0);
+        if (opcode & BIT(21)) *op0 -= 8; // Writeback
+        return 1;
+
+    case 0x1: // IA
+        core->memory.write<uint32_t>(id, *op0 + 0, *registers[14]);
+        core->memory.write<uint32_t>(id, *op0 + 4, spsr ? *spsr : 0);
+        if (opcode & BIT(21)) *op0 += 8; // Writeback
+        return 1;
+
+    case 0x2: // DB
+        core->memory.write<uint32_t>(id, *op0 - 8, *registers[14]);
+        core->memory.write<uint32_t>(id, *op0 - 4, spsr ? *spsr : 0);
+        if (opcode & BIT(21)) *op0 -= 8; // Writeback
+        return 1;
+
+    case 0x3: // IB
+        core->memory.write<uint32_t>(id, *op0 + 4, *registers[14]);
+        core->memory.write<uint32_t>(id, *op0 + 8, spsr ? *spsr : 0);
+        if (opcode & BIT(21)) *op0 += 8; // Writeback
+        return 1;
+    }
+}
+
+int ArmInterp::rfe(uint32_t opcode) { // RFE[DA/IA/DB/IB] Rn!
+    // Return from exception based on the addressing mode
+    uint32_t *op0 = registers[(opcode >> 16) & 0xF];
+    switch ((opcode >> 23) & 0x3) {
+    case 0x0: // DA
+        *registers[15] = core->memory.read<uint32_t>(id, *op0 - 4);
+        setCpsr(core->memory.read<uint32_t>(id, *op0 - 0));
+        if (opcode & BIT(21)) *op0 -= 8; // Writeback
+        break;
+
+    case 0x1: // IA
+        *registers[15] = core->memory.read<uint32_t>(id, *op0 + 0);
+        setCpsr(core->memory.read<uint32_t>(id, *op0 + 4));
+        if (opcode & BIT(21)) *op0 += 8; // Writeback
+        break;
+
+    case 0x2: // DB
+        *registers[15] = core->memory.read<uint32_t>(id, *op0 - 8);
+        setCpsr(core->memory.read<uint32_t>(id, *op0 - 4));
+        if (opcode & BIT(21)) *op0 -= 8; // Writeback
+        break;
+
+    case 0x3: // IB
+        *registers[15] = core->memory.read<uint32_t>(id, *op0 + 4);
+        setCpsr(core->memory.read<uint32_t>(id, *op0 + 8));
+        if (opcode & BIT(21)) *op0 += 8; // Writeback
+        break;
+    }
+
+    // Handle pipelining
+    flushPipeline();
+    return 1;
+}
+
 int ArmInterp::bxRegT(uint16_t opcode) { // BX Rs
     // Branch to address and switch to ARM mode if bit 0 is cleared (THUMB)
     uint32_t op0 = *registers[(opcode >> 3) & 0xF];

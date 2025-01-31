@@ -485,32 +485,6 @@ FORCE_INLINE int ArmInterp::strdPt(uint32_t opcode, uint32_t op2) { // STRD Rd,[
     return 2;
 }
 
-int ArmInterp::swpb(uint32_t opcode) { // SWPB Rd,Rm,[Rn]
-    // Swap byte
-    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
-    uint32_t op1 = *registers[opcode & 0xF];
-    uint32_t op2 = *registers[(opcode >> 16) & 0xF];
-    *op0 = core->memory.read<uint8_t>(id, op2);
-    core->memory.write<uint8_t>(id, op2, op1);
-    return 2;
-}
-
-int ArmInterp::swp(uint32_t opcode) { // SWP Rd,Rm,[Rn]
-    // Swap word
-    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
-    uint32_t op1 = *registers[opcode & 0xF];
-    uint32_t op2 = *registers[(opcode >> 16) & 0xF];
-    *op0 = core->memory.read<uint32_t>(id, op2);
-    core->memory.write<uint32_t>(id, op2, op1);
-
-    // Rotate misaligned reads
-    if (op2 & 0x3) {
-        uint8_t shift = (op2 & 0x3) << 3;
-        *op0 = (*op0 << (32 - shift)) | (*op0 >> shift);
-    }
-    return 2;
-}
-
 int ArmInterp::ldmda(uint32_t opcode) { // LDMDA Rn, <Rlist>
     // Block load, post-decrement without writeback
     uint8_t m = bitCount[opcode & 0xFF] + bitCount[(opcode >> 8) & 0xFF];
@@ -1133,6 +1107,76 @@ int ArmInterp::mcr(uint32_t opcode) { // MCR Pn,<cpopc>,Rd,Cn,Cm,<cp>
     uint8_t op4 = opcode & 0xF;
     uint8_t op5 = (opcode >> 5) & 0x7;
     cp15.write(op3, op4, op5, op2);
+    return 1;
+}
+
+int ArmInterp::swpb(uint32_t opcode) { // SWPB Rd,Rm,[Rn]
+    // Swap byte
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    uint32_t op1 = *registers[opcode & 0xF];
+    uint32_t op2 = *registers[(opcode >> 16) & 0xF];
+    *op0 = core->memory.read<uint8_t>(id, op2);
+    core->memory.write<uint8_t>(id, op2, op1);
+    return 2;
+}
+
+int ArmInterp::swp(uint32_t opcode) { // SWP Rd,Rm,[Rn]
+    // Swap word
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    uint32_t op1 = *registers[opcode & 0xF];
+    uint32_t op2 = *registers[(opcode >> 16) & 0xF];
+    *op0 = core->memory.read<uint32_t>(id, op2);
+    core->memory.write<uint32_t>(id, op2, op1);
+
+    // Rotate misaligned reads
+    if (op2 & 0x3) {
+        uint8_t shift = (op2 & 0x3) << 3;
+        *op0 = (*op0 << (32 - shift)) | (*op0 >> shift);
+    }
+    return 2;
+}
+
+int ArmInterp::ldrex(uint32_t opcode) { // LDREX Rd,[Rn]
+    // Load word exclusively
+    if (id == ARM9) return 1; // ARM11-exclusive
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    uint32_t op1 = *registers[(opcode >> 16) & 0xF];
+    *op0 = core->memory.read<uint32_t>(id, excAddress = op1);
+    exclusive = true;
+
+    // Rotate misaligned reads
+    if (op1 & 0x3) {
+        uint8_t shift = (op1 & 0x3) << 3;
+        *op0 = (*op0 << (32 - shift)) | (*op0 >> shift);
+    }
+
+    // Handle pipelining and THUMB switching
+    if (op0 != registers[15]) return 1;
+    cpsr |= (*op0 & 0x1) << 5;
+    flushPipeline();
+    return 5;
+}
+
+int ArmInterp::strex(uint32_t opcode) { // STREX Rd,Rm,[Rn]
+    // Store word exclusively
+    // TODO: handle non-shared memory properly
+    if (id == ARM9) return 1; // ARM11-exclusive
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    uint32_t op1 = *registers[(opcode >> 0) & 0xF];
+    uint32_t op2 = *registers[(opcode >> 16) & 0xF];
+    if ((*op0 = !exclusive || excAddress != op2)) return 1;
+    core->memory.write(id, op2, op1);
+
+    // Update exclusive states on both cores
+    if (core->arms[!id].exclusive && core->arms[!id].excAddress == op2)
+        core->arms[!id].exclusive = false;
+    exclusive = false;
+    return 1;
+}
+
+int ArmInterp::clrex(uint32_t opcode) { // CLREX
+    // Clear exclusive state
+    exclusive = false;
     return 1;
 }
 

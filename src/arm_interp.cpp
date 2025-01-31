@@ -209,11 +209,17 @@ void ArmInterp::setCpsr(uint32_t value, bool save) {
 }
 
 int ArmInterp::handleReserved(uint32_t opcode) {
-    // The ARM9-exclusive BLX instruction uses the reserved condition code, so let it run
+    // Check for special opcodes that use the reserved condition code
     if ((opcode & 0xE000000) == 0xA000000)
         return blx(opcode); // BLX label
-
-    // Treat anything else as an unknown opcode
+    else if ((opcode & 0xFF1FE00) == 0x1000000 && id != ARM9)
+        return cps(opcode); // CPS[IE/ID] AIF,#mode
+    else if ((opcode & 0xE5FFFE0) == 0x84D0500 && id != ARM9)
+        return srs(opcode); // SRS[DA/IA/DB/IB] sp!,#mode
+    else if ((opcode & 0xE50FFFF) == 0x8100A00 && id != ARM9)
+        return rfe(opcode); // RFE[DA/IA/DB/IB] Rn!
+    else if (opcode == 0xF57FF01F)
+        return clrex(opcode); // CLREX
     return unkArm(opcode);
 }
 

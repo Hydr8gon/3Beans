@@ -119,11 +119,11 @@ int (ArmInterp::*ArmInterp::armInstrs[])(uint32_t) = {
     &ArmInterp::cmnAri, &ArmInterp::ldrsbPrim, &ArmInterp::cmnRri, &ArmInterp::ldrshPrim, // 0x17C-0x17F
     &ArmInterp::orrLli, &ArmInterp::orrLlr, &ArmInterp::orrLri, &ArmInterp::orrLrr, // 0x180-0x183
     &ArmInterp::orrAri, &ArmInterp::orrArr, &ArmInterp::orrRri, &ArmInterp::orrRrr, // 0x184-0x187
-    &ArmInterp::orrLli, &ArmInterp::unkArm, &ArmInterp::orrLri, &ArmInterp::strhOfrp, // 0x188-0x18B
+    &ArmInterp::orrLli, &ArmInterp::strex, &ArmInterp::orrLri, &ArmInterp::strhOfrp, // 0x188-0x18B
     &ArmInterp::orrAri, &ArmInterp::ldrdOfrp, &ArmInterp::orrRri, &ArmInterp::strdOfrp, // 0x18C-0x18F
     &ArmInterp::orrsLli, &ArmInterp::orrsLlr, &ArmInterp::orrsLri, &ArmInterp::orrsLrr, // 0x190-0x193
     &ArmInterp::orrsAri, &ArmInterp::orrsArr, &ArmInterp::orrsRri, &ArmInterp::orrsRrr, // 0x194-0x197
-    &ArmInterp::orrsLli, &ArmInterp::unkArm, &ArmInterp::orrsLri, &ArmInterp::ldrhOfrp, // 0x198-0x19B
+    &ArmInterp::orrsLli, &ArmInterp::ldrex, &ArmInterp::orrsLri, &ArmInterp::ldrhOfrp, // 0x198-0x19B
     &ArmInterp::orrsAri, &ArmInterp::ldrsbOfrp, &ArmInterp::orrsRri, &ArmInterp::ldrshOfrp, // 0x19C-0x19F
     &ArmInterp::movLli, &ArmInterp::movLlr, &ArmInterp::movLri, &ArmInterp::movLrr, // 0x1A0-0x1A3
     &ArmInterp::movAri, &ArmInterp::movArr, &ArmInterp::movRri, &ArmInterp::movRrr, // 0x1A4-0x1A7

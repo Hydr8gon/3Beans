@@ -58,6 +58,8 @@ private:
 
     uint32_t pipeline[2] = {};
     uint32_t cycles = 0;
+    uint32_t excAddress = 0;
+    bool exclusive = false;
 
     static int (ArmInterp::*armInstrs[0x1000])(uint32_t);
     static int (ArmInterp::*thumbInstrs[0x400])(uint16_t);
@@ -699,8 +701,6 @@ private:
     int strdPtrp(uint32_t opcode);
     int strdPtip(uint32_t opcode);
 
-    int swpb(uint32_t opcode);
-    int swp(uint32_t opcode);
     int ldmda(uint32_t opcode);
     int stmda(uint32_t opcode);
     int ldmia(uint32_t opcode);
@@ -733,6 +733,7 @@ private:
     int stmdbUW(uint32_t opcode);
     int ldmibUW(uint32_t opcode);
     int stmibUW(uint32_t opcode);
+
     int msrRc(uint32_t opcode);
     int msrRs(uint32_t opcode);
     int msrIc(uint32_t opcode);
@@ -741,6 +742,11 @@ private:
     int mrsRs(uint32_t opcode);
     int mrc(uint32_t opcode);
     int mcr(uint32_t opcode);
+    int swpb(uint32_t opcode);
+    int swp(uint32_t opcode);
+    int ldrex(uint32_t opcode);
+    int strex(uint32_t opcode);
+    int clrex(uint32_t opcode);
 
     int ldrsbRegT(uint16_t opcode);
     int ldrshRegT(uint16_t opcode);
@@ -772,6 +778,9 @@ private:
     int bl(uint32_t opcode);
     int blx(uint32_t opcode);
     int swi(uint32_t opcode);
+    int cps(uint32_t opcode);
+    int srs(uint32_t opcode);
+    int rfe(uint32_t opcode);
 
     int bxRegT(uint16_t opcode);
     int blxRegT(uint16_t opcode);
