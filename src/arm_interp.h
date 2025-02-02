@@ -419,11 +419,18 @@ private:
     int smlalbt(uint32_t opcode);
     int smlaltb(uint32_t opcode);
     int smlaltt(uint32_t opcode);
+
     int qadd(uint32_t opcode);
     int qsub(uint32_t opcode);
     int qdadd(uint32_t opcode);
     int qdsub(uint32_t opcode);
     int clz(uint32_t opcode);
+    int sxtab16(uint32_t opcode);
+    int sxtab(uint32_t opcode);
+    int sxtah(uint32_t opcode);
+    int uxtab16(uint32_t opcode);
+    int uxtab(uint32_t opcode);
+    int uxtah(uint32_t opcode);
 
     int addRegT(uint16_t opcode);
     int subRegT(uint16_t opcode);
@@ -458,10 +465,10 @@ private:
     int mvnDpT(uint16_t opcode);
     int negDpT(uint16_t opcode);
     int mulDpT(uint16_t opcode);
-    int sxthT(uint16_t opcode);
     int sxtbT(uint16_t opcode);
-    int uxthT(uint16_t opcode);
+    int sxthT(uint16_t opcode);
     int uxtbT(uint16_t opcode);
+    int uxthT(uint16_t opcode);
 
     uint32_t ip(uint32_t opcode);
     uint32_t ipH(uint32_t opcode);

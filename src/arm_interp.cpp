@@ -218,7 +218,7 @@ int ArmInterp::handleReserved(uint32_t opcode) {
         return srs(opcode); // SRS[DA/IA/DB/IB] sp!,#mode
     else if ((opcode & 0xE50FFFF) == 0x8100A00 && id != ARM9)
         return rfe(opcode); // RFE[DA/IA/DB/IB] Rn!
-    else if (opcode == 0xF57FF01F)
+    else if (opcode == 0xF57FF01F && id != ARM9)
         return clrex(opcode); // CLREX
     return unkArm(opcode);
 }

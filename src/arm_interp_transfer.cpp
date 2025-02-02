@@ -1162,7 +1162,7 @@ int ArmInterp::strex(uint32_t opcode) { // STREX Rd,Rm,[Rn]
     // TODO: handle non-shared memory properly
     if (id == ARM9) return 1; // ARM11-exclusive
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
-    uint32_t op1 = *registers[(opcode >> 0) & 0xF];
+    uint32_t op1 = *registers[opcode & 0xF];
     uint32_t op2 = *registers[(opcode >> 16) & 0xF];
     if ((*op0 = !exclusive || excAddress != op2)) return 1;
     core->memory.write(id, op2, op1);

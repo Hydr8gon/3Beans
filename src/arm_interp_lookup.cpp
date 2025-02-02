@@ -438,7 +438,7 @@ int (ArmInterp::*ArmInterp::armInstrs[])(uint32_t) = {
     &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, // 0x678-0x67B
     &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, // 0x67C-0x67F
     &ArmInterp::strPtrpll, &ArmInterp::unkArm, &ArmInterp::strPtrplr, &ArmInterp::unkArm, // 0x680-0x683
-    &ArmInterp::strPtrpar, &ArmInterp::unkArm, &ArmInterp::strPtrprr, &ArmInterp::unkArm, // 0x684-0x687
+    &ArmInterp::strPtrpar, &ArmInterp::unkArm, &ArmInterp::strPtrprr, &ArmInterp::sxtab16, // 0x684-0x687
     &ArmInterp::strPtrpll, &ArmInterp::unkArm, &ArmInterp::strPtrplr, &ArmInterp::unkArm, // 0x688-0x68B
     &ArmInterp::strPtrpar, &ArmInterp::unkArm, &ArmInterp::strPtrprr, &ArmInterp::unkArm, // 0x68C-0x68F
     &ArmInterp::ldrPtrpll, &ArmInterp::unkArm, &ArmInterp::ldrPtrplr, &ArmInterp::unkArm, // 0x690-0x693
@@ -446,15 +446,15 @@ int (ArmInterp::*ArmInterp::armInstrs[])(uint32_t) = {
     &ArmInterp::ldrPtrpll, &ArmInterp::unkArm, &ArmInterp::ldrPtrplr, &ArmInterp::unkArm, // 0x698-0x69B
     &ArmInterp::ldrPtrpar, &ArmInterp::unkArm, &ArmInterp::ldrPtrprr, &ArmInterp::unkArm, // 0x69C-0x69F
     &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, // 0x6A0-0x6A3
-    &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, // 0x6A4-0x6A7
+    &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::sxtab, // 0x6A4-0x6A7
     &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, // 0x6A8-0x6AB
     &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, // 0x6AC-0x6AF
     &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, // 0x6B0-0x6B3
-    &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, // 0x6B4-0x6B7
+    &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::sxtah, // 0x6B4-0x6B7
     &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, // 0x6B8-0x6BB
     &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, // 0x6BC-0x6BF
     &ArmInterp::strbPtrpll, &ArmInterp::unkArm, &ArmInterp::strbPtrplr, &ArmInterp::unkArm, // 0x6C0-0x6C3
-    &ArmInterp::strbPtrpar, &ArmInterp::unkArm, &ArmInterp::strbPtrprr, &ArmInterp::unkArm, // 0x6C4-0x6C7
+    &ArmInterp::strbPtrpar, &ArmInterp::unkArm, &ArmInterp::strbPtrprr, &ArmInterp::uxtab16, // 0x6C4-0x6C7
     &ArmInterp::strbPtrpll, &ArmInterp::unkArm, &ArmInterp::strbPtrplr, &ArmInterp::unkArm, // 0x6C8-0x6CB
     &ArmInterp::strbPtrpar, &ArmInterp::unkArm, &ArmInterp::strbPtrprr, &ArmInterp::unkArm, // 0x6CC-0x6CF
     &ArmInterp::ldrbPtrpll, &ArmInterp::unkArm, &ArmInterp::ldrbPtrplr, &ArmInterp::unkArm, // 0x6D0-0x6D3
@@ -462,11 +462,11 @@ int (ArmInterp::*ArmInterp::armInstrs[])(uint32_t) = {
     &ArmInterp::ldrbPtrpll, &ArmInterp::unkArm, &ArmInterp::ldrbPtrplr, &ArmInterp::unkArm, // 0x6D8-0x6DB
     &ArmInterp::ldrbPtrpar, &ArmInterp::unkArm, &ArmInterp::ldrbPtrprr, &ArmInterp::unkArm, // 0x6DC-0x6DF
     &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, // 0x6E0-0x6E3
-    &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, // 0x6E4-0x6E7
+    &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::uxtab, // 0x6E4-0x6E7
     &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, // 0x6E8-0x6EB
     &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, // 0x6EC-0x6EF
     &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, // 0x6F0-0x6F3
-    &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, // 0x6F4-0x6F7
+    &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::uxtah, // 0x6F4-0x6F7
     &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, // 0x6F8-0x6FB
     &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, // 0x6FC-0x6FF
     &ArmInterp::strOfrmll, &ArmInterp::unkArm, &ArmInterp::strOfrmlr, &ArmInterp::unkArm, // 0x700-0x703

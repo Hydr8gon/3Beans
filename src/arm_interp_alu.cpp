@@ -963,6 +963,76 @@ int ArmInterp::clz(uint32_t opcode) { // CLZ Rd,Rm
     return 1;
 }
 
+int ArmInterp::sxtab16(uint32_t opcode) { // SXTAB Rd,Rm,ROR #imm
+    // Sign-extend two bytes with rotation and optional addition
+    if (id == ARM9) return 1; // ARM11-exclusive
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    uint32_t op1 = *registers[opcode & 0xF];
+    uint32_t op2 = (~opcode & 0xF0000) ? *registers[(opcode >> 16) & 0xF] : 0;
+    uint8_t shift = (opcode >> 7) & 0x18;
+    uint16_t res1 = int8_t(op1 >> (shift + 0)) + op2;
+    uint16_t res2 = int8_t(op1 >> (shift + 16)) + op2;
+    *op0 = (res2 << 16) | res1;
+    return 1;
+}
+
+int ArmInterp::sxtab(uint32_t opcode) { // SXTAB Rd,Rn,Rm,ROR #imm
+    // Sign-extend byte with rotation and optional addition
+    if (id == ARM9) return 1; // ARM11-exclusive
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    uint32_t op1 = *registers[opcode & 0xF];
+    uint32_t op2 = (~opcode & 0xF0000) ? *registers[(opcode >> 16) & 0xF] : 0;
+    uint8_t shift = (opcode >> 7) & 0x18;
+    *op0 = int8_t(op1 >> shift) + op2;
+    return 1;
+}
+
+int ArmInterp::sxtah(uint32_t opcode) { // SXTAH Rd,Rn,Rm,ROR #imm
+    // Sign-extend half-word with rotation and optional addition
+    if (id == ARM9) return 1; // ARM11-exclusive
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    uint32_t op1 = *registers[opcode & 0xF];
+    uint32_t op2 = (~opcode & 0xF0000) ? *registers[(opcode >> 16) & 0xF] : 0;
+    uint8_t shift = (opcode >> 7) & 0x18;
+    *op0 = int16_t((op1 >> shift) | (op1 << (32 - shift))) + op2;
+    return 1;
+}
+
+int ArmInterp::uxtab16(uint32_t opcode) { // UXTAB Rd,Rn,Rm,ROR #imm
+    // Zero-extend two bytes with rotation and optional addition
+    if (id == ARM9) return 1; // ARM11-exclusive
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    uint32_t op1 = *registers[opcode & 0xF];
+    uint32_t op2 = (~opcode & 0xF0000) ? *registers[(opcode >> 16) & 0xF] : 0;
+    uint8_t shift = (opcode >> 7) & 0x18;
+    uint16_t res1 = uint8_t(op1 >> (shift + 0)) + op2;
+    uint16_t res2 = uint8_t(op1 >> (shift + 16)) + op2;
+    *op0 = (res2 << 16) | res1;
+    return 1;
+}
+
+int ArmInterp::uxtab(uint32_t opcode) { // UXTAB Rd,Rn,Rm,ROR #imm
+    // Zero-extend byte with rotation and optional addition
+    if (id == ARM9) return 1; // ARM11-exclusive
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    uint32_t op1 = *registers[opcode & 0xF];
+    uint32_t op2 = (~opcode & 0xF0000) ? *registers[(opcode >> 16) & 0xF] : 0;
+    uint8_t shift = (opcode >> 7) & 0x18;
+    *op0 = uint8_t(op1 >> shift) + op2;
+    return 1;
+}
+
+int ArmInterp::uxtah(uint32_t opcode) { // UXTAH Rd,Rn,Rm,ROR #imm
+    // Zero-extend half-word with rotation and optional addition
+    if (id == ARM9) return 1; // ARM11-exclusive
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    uint32_t op1 = *registers[opcode & 0xF];
+    uint32_t op2 = (~opcode & 0xF0000) ? *registers[(opcode >> 16) & 0xF] : 0;
+    uint8_t shift = (opcode >> 7) & 0x18;
+    *op0 = uint16_t((op1 >> shift) | (op1 << (32 - shift))) + op2;
+    return 1;
+}
+
 int ArmInterp::addRegT(uint16_t opcode) { // ADD Rd,Rs,Rn
     // Addition and set flags (THUMB)
     uint32_t *op0 = registers[opcode & 0x7];
@@ -1302,30 +1372,21 @@ int ArmInterp::mulDpT(uint16_t opcode) { // MUL Rd,Rs
     return 4;
 }
 
-int ArmInterp::sxthT(uint16_t opcode) {
-    // Sign-extend half-word (THUMB)
-    if (id == ARM9) return 1; // ARM11-exclusive
-    uint32_t *op0 = registers[opcode & 0x7];
-    uint32_t op1 = *registers[(opcode >> 3) & 0x7];
-    *op0 = (int16_t)op1;
-    return 1;
-}
-
 int ArmInterp::sxtbT(uint16_t opcode) {
     // Sign-extend byte (THUMB)
     if (id == ARM9) return 1; // ARM11-exclusive
     uint32_t *op0 = registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
-    *op0 = (int8_t)op1;
+    *op0 = int8_t(op1);
     return 1;
 }
 
-int ArmInterp::uxthT(uint16_t opcode) {
-    // Zero-extend half-word (THUMB)
+int ArmInterp::sxthT(uint16_t opcode) {
+    // Sign-extend half-word (THUMB)
     if (id == ARM9) return 1; // ARM11-exclusive
     uint32_t *op0 = registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
-    *op0 = (uint16_t)op1;
+    *op0 = int16_t(op1);
     return 1;
 }
 
@@ -1334,6 +1395,15 @@ int ArmInterp::uxtbT(uint16_t opcode) {
     if (id == ARM9) return 1; // ARM11-exclusive
     uint32_t *op0 = registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
-    *op0 = (uint8_t)op1;
+    *op0 = uint8_t(op1);
+    return 1;
+}
+
+int ArmInterp::uxthT(uint16_t opcode) {
+    // Zero-extend half-word (THUMB)
+    if (id == ARM9) return 1; // ARM11-exclusive
+    uint32_t *op0 = registers[opcode & 0x7];
+    uint32_t op1 = *registers[(opcode >> 3) & 0x7];
+    *op0 = uint16_t(op1);
     return 1;
 }

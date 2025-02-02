@@ -60,6 +60,18 @@ void Pdc::drawScreen(bool bot, uint32_t *buffer) {
         }
         return;
 
+    case 2: // RGB565
+        for (int y = 0; y < 240; y++) {
+            for (int x = 0; x < width; x++) {
+                uint16_t color = core->memory.read<uint16_t>(ARM11A, pdcFramebufLt0[bot] + (x * 240 + 239 - y) * 2);
+                uint8_t r = ((color >> 11) & 0x1F) * 255 / 31;
+                uint8_t g = ((color >> 5) & 0x3F) * 255 / 63;
+                uint8_t b = ((color >> 0) & 0x1F) * 255 / 31;
+                buffer[y * 400 + x] = (0xFF << 24) | (b << 16) | (g << 8) | r;
+            }
+        }
+        return;
+
     default:
         LOG_CRIT("Unimplemented framebuffer format: %d\n", fmt);
         return;
