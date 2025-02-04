@@ -93,6 +93,13 @@ void Pdc::drawFrame() {
     buffers.push(buffer);
     ready.store(true);
     mutex.unlock();
+
+    // Trigger PDC interrupts at V-blank if not disabled
+    // TODO: handle timings for different modes properly
+    if (((pdcInterruptType[0] >> 8) & 0x7) != 7)
+        core->interrupts.sendInterrupt(false, 0x2A);
+    if (((pdcInterruptType[1] >> 8) & 0x7) != 7)
+        core->interrupts.sendInterrupt(false, 0x2B);
 }
 
 void Pdc::writeFramebufLt0(bool bot, uint32_t mask, uint32_t value) {
@@ -108,6 +115,5 @@ void Pdc::writeFramebufFormat(bool bot, uint32_t mask, uint32_t value) {
 
 void Pdc::writeInterruptType(bool bot, uint32_t mask, uint32_t value) {
     // Write to a screen's PDC_INTERRUPT_TYPE register
-    // TODO: actually implement PDC interrupts
     pdcInterruptType[bot] = (pdcInterruptType[bot] & ~mask) | (value & mask);
 }

@@ -20,13 +20,12 @@
 #pragma once
 
 #include <cstdint>
-#include "cp15.h"
+#include "defines.h"
 
 class Core;
 
 class ArmInterp {
 public:
-    Cp15 cp15;
     bool halted = false;
     uint32_t cpsr = 0;
 

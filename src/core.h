@@ -64,6 +64,7 @@ class Core {
 public:
     Aes aes;
     ArmInterp arms[MAX_CPUS];
+    Cp15 cp15;
     Gpu gpu;
     I2c i2c;
     Input input;

@@ -42,8 +42,6 @@ private:
     uint8_t axiWram[0x80000] = {}; // 512KB AXI WRAM
     uint8_t boot11[0x10000] = {}; // 64KB ARM11 boot ROM
     uint8_t boot9[0x10000] = {}; // 64KB ARM9 boot ROM
-    uint8_t itcm[0x8000] = {}; // 32KB ARM9 ITCM
-    uint8_t dtcm[0x4000] = {}; // 16KB ARM9 DTCM
 
     uint8_t cfg9Sysprot9 = 0;
     uint8_t cfg9Sysprot11 = 0;

@@ -20,7 +20,7 @@
 #include "arm_interp.h"
 #include "core.h"
 
-ArmInterp::ArmInterp(Core *core, CpuId id): core(core), id(id), cp15(core, id) {
+ArmInterp::ArmInterp(Core *core, CpuId id): core(core), id(id) {
     // Initialize the registers for user mode
     for (int i = 0; i < 32; i++)
         registers[i] = &registersUsr[i & 0xF];
@@ -83,14 +83,14 @@ FORCE_INLINE int ArmInterp::runOpcode() {
     // Execute an instruction
     if (cpsr & BIT(5)) { // THUMB mode
         // Fill the pipeline, incrementing the program counter
-        pipeline[1] = core->memory.read<uint16_t>(id, *registers[15] += 2);
+        pipeline[1] = core->cp15.read<uint16_t>(id, *registers[15] += 2);
 
         // Execute a THUMB instruction
         return (this->*thumbInstrs[(opcode >> 6) & 0x3FF])(opcode);
     }
     else { // ARM mode
         // Fill the pipeline, incrementing the program counter
-        pipeline[1] = core->memory.read<uint32_t>(id, *registers[15] += 4);
+        pipeline[1] = core->cp15.read<uint32_t>(id, *registers[15] += 4);
 
         // Execute an ARM instruction based on its condition
         switch (condition[((opcode >> 24) & 0xF0) | (cpsr >> 28)]) {
@@ -106,7 +106,7 @@ int ArmInterp::exception(uint8_t vector) {
     static const uint8_t modes[] = { 0x13, 0x1B, 0x13, 0x17, 0x17, 0x13, 0x12, 0x11 };
     setCpsr((cpsr & ~0x3F) | BIT(7) | modes[vector >> 2], true); // ARM, interrupts off, new mode
     *registers[14] = *registers[15] + ((*spsr & BIT(5)) >> 4);
-    *registers[15] = cp15.exceptAddr + vector;
+    *registers[15] = core->cp15.exceptAddrs[id] + vector;
     flushPipeline();
     return 3;
 }
@@ -115,13 +115,13 @@ void ArmInterp::flushPipeline() {
     // Adjust the program counter and refill the pipeline after a jump
     if (cpsr & BIT(5)) { // THUMB mode
         *registers[15] = (*registers[15] & ~0x1) + 2;
-        pipeline[0] = core->memory.read<uint16_t>(id, *registers[15] - 2);
-        pipeline[1] = core->memory.read<uint16_t>(id, *registers[15]);
+        pipeline[0] = core->cp15.read<uint16_t>(id, *registers[15] - 2);
+        pipeline[1] = core->cp15.read<uint16_t>(id, *registers[15]);
     }
     else { // ARM mode
         *registers[15] = (*registers[15] & ~0x3) + 4;
-        pipeline[0] = core->memory.read<uint32_t>(id, *registers[15] - 4);
-        pipeline[1] = core->memory.read<uint32_t>(id, *registers[15]);
+        pipeline[0] = core->cp15.read<uint32_t>(id, *registers[15] - 4);
+        pipeline[1] = core->cp15.read<uint32_t>(id, *registers[15]);
     }
 }
 
