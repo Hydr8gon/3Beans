@@ -75,8 +75,8 @@ void Timers::writeTmCntH(int i, uint16_t mask, uint16_t value) {
     tmCntH[i] = (tmCntH[i] & ~mask) | (value & mask);
     countUp[i] = (i > 0 && (tmCntH[i] & BIT(2)));
 
-    // Update the timer shift based on the prescaler, with the ARM9 frequency as a base (?)
-    uint8_t shift = ((tmCntH[i] & 0x3) && !countUp[i]) ? (5 + ((tmCntH[i] & 0x3) << 1)) : 1;
+    // Update the timer shift based on its prescaler, with half the ARM9 frequency as a base
+    uint8_t shift = ((tmCntH[i] & 0x3) && !countUp[i]) ? (6 + ((tmCntH[i] & 0x3) << 1)) : 2;
     if (shifts[i] != shift) {
         shifts[i] = shift;
         dirty = true;

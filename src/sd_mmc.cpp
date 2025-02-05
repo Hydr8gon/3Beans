@@ -53,7 +53,7 @@ void SdMmc::pushFifo(uint32_t value) {
     if (sdDataCtl & BIT(1)) {
         // Push a value to the 32-bit read FIFO and check if full
         readFifo32.push(value);
-        if ((readFifo32.size() << 2) < sdData16Blklen)
+        if ((readFifo32.size() << 2) < sdData32Blklen)
             return;
 
         // Trigger a 32-bit FIFO full interrupt if enabled and finish a block
@@ -310,4 +310,10 @@ void SdMmc::writeData32Irq(uint16_t mask, uint16_t value) {
     // Write to the SD_DATA32_IRQ register
     mask &= 0x1802;
     sdData32Irq = (sdData32Irq & ~mask) | (value & mask);
+}
+
+void SdMmc::writeData32Blklen(uint16_t mask, uint16_t value) {
+    // Write to the SD_DATA32_BLKLEN block length
+    mask &= 0x3FF;
+    sdData32Blklen = (sdData32Blklen & ~mask) | (value & mask);
 }

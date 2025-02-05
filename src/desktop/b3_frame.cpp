@@ -26,6 +26,10 @@ EVT_CLOSE(b3Frame::close)
 wxEND_EVENT_TABLE()
 
 b3Frame::b3Frame(): wxFrame(nullptr, wxID_ANY, "3Beans") {
+    // Start running the emulator on a separate thread
+    core = new Core();
+    std::thread *thread = new std::thread(&b3Frame::runCore, this);
+
     // Set up and show the window
     SetClientSize(MIN_SIZE);
     SetMinClientSize(MIN_SIZE);
@@ -37,10 +41,12 @@ b3Frame::b3Frame(): wxFrame(nullptr, wxID_ANY, "3Beans") {
     wxBoxSizer *sizer = new wxBoxSizer(wxHORIZONTAL);
     sizer->Add(canvas, 1, wxEXPAND);
     SetSizer(sizer);
+}
 
-    // Start running the emulator on a separate thread
-    core = new Core();
-    std::thread *thread = new std::thread(&b3Frame::runCore, this);
+void b3Frame::Refresh() {
+    // Override the refresh function to also update the FPS counter
+    wxFrame::Refresh();
+    SetLabel(wxString::Format("3Beans - %d FPS", core->fps));
 }
 
 void b3Frame::runCore() {

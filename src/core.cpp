@@ -57,9 +57,20 @@ void Core::resetCycles() {
 }
 
 void Core::endFrame() {
-    // Break execution at the end of a frame
-    pdc.drawFrame();
+    // Break execution at the end of a frame and count it
     running.store(false);
+    fpsCount++;
+
+    // Update FPS and reset the counter every second
+    std::chrono::duration<double> fpsTime = std::chrono::steady_clock::now() - lastFpsTime;
+    if (fpsTime.count() >= 1.0f) {
+        fps = fpsCount;
+        fpsCount = 0;
+        lastFpsTime = std::chrono::steady_clock::now();
+    }
+
+    // Draw a frame and schedule the next one
+    pdc.drawFrame();
     schedule(END_FRAME, 268111856 / 60);
 }
 

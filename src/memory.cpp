@@ -256,6 +256,7 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO16(0x10006030, data = core->sdMmc.readData16Fifo()) // SD_DATA16_FIFO
                 DEF_IO16(0x100060D8, data = core->sdMmc.readDataCtl()) // SD_DATA_CTL
                 DEF_IO16(0x10006100, data = core->sdMmc.readData32Irq()) // SD_DATA32_IRQ
+                DEF_IO16(0x10006104, data = core->sdMmc.readData32Blklen()) // SD_DATA32_BLKLEN
                 DEF_IO32(0x1000610C, data = core->sdMmc.readData32Fifo()) // SD_DATA32_FIFO
                 DEF_IO32(0x10008000, data = core->pxi.readSync(1)) // PXI_SYNC9
                 DEF_IO32(0x10008004, data = core->pxi.readCnt(1)) // PXI_CNT9
@@ -605,6 +606,7 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO16(0x10006026, core->sdMmc.writeData16Blklen(IO_PARAMS)) // SD_DATA16_BLKLEN
                 DEF_IO16(0x100060D8, core->sdMmc.writeDataCtl(IO_PARAMS)) // SD_DATA_CTL
                 DEF_IO16(0x10006100, core->sdMmc.writeData32Irq(IO_PARAMS)) // SD_DATA32_IRQ
+                DEF_IO16(0x10006104, core->sdMmc.writeData32Blklen(IO_PARAMS)) // SD_DATA32_BLKLEN
                 DEF_IO32(0x10008000, core->pxi.writeSync(1, IO_PARAMS)) // PXI_SYNC9
                 DEF_IO32(0x10008004, core->pxi.writeCnt(1, IO_PARAMS)) // PXI_CNT9
                 DEF_IO32(0x10008008, core->pxi.writeSend(1, IO_PARAMS)) // PXI_SEND9

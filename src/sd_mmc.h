@@ -41,6 +41,7 @@ public:
     uint16_t readData16Fifo();
     uint16_t readDataCtl() { return sdDataCtl; }
     uint16_t readData32Irq() { return sdData32Irq; }
+    uint16_t readData32Blklen() { return sdData32Blklen; }
     uint32_t readData32Fifo();
 
     void writeCmd(uint16_t mask, uint16_t value);
@@ -52,6 +53,7 @@ public:
     void writeData16Blklen(uint16_t mask, uint16_t value);
     void writeDataCtl(uint16_t mask, uint16_t value);
     void writeData32Irq(uint16_t mask, uint16_t value);
+    void writeData32Blklen(uint16_t mask, uint16_t value);
 
 private:
     Core *core;
@@ -78,6 +80,7 @@ private:
     uint16_t sdData16Fifo = 0;
     uint32_t sdDataCtl = 0x1010;
     uint16_t sdData32Irq = 0;
+    uint32_t sdData32Blklen = 0;
     uint32_t sdData32Fifo = 0;
 
     void sendInterrupt(int bit);

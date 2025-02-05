@@ -20,6 +20,7 @@
 #pragma once
 
 #include <atomic>
+#include <chrono>
 #include <functional>
 #include <vector>
 
@@ -62,6 +63,8 @@ struct Event {
 
 class Core {
 public:
+    int fps = 0;
+
     Aes aes;
     ArmInterp arms[MAX_CPUS];
     Cp15 cp15;
@@ -87,6 +90,8 @@ public:
 
 private:
     std::function<void()> tasks[MAX_TASKS];
+    std::chrono::steady_clock::time_point lastFpsTime;
+    int fpsCount = 0;
 
     void resetCycles();
     void endFrame();

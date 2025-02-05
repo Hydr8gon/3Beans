@@ -28,7 +28,9 @@ class b3Canvas;
 class b3Frame: public wxFrame {
 public:
     Core *core = nullptr;
+
     b3Frame();
+    void Refresh();
 
 private:
     b3Canvas *canvas;
