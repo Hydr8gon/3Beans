@@ -51,7 +51,9 @@ private:
     uint32_t shaBlkcnt = 0;
     uint32_t shaHash[8] = {};
 
+    void hash1(uint32_t *src);
     void hash2(uint32_t *src);
+
     void initFifo();
     void pushFifo();
     void processFifo();

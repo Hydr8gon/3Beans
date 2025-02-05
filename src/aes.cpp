@@ -228,7 +228,7 @@ void Aes::processFifo() {
 
 void Aes::flushKeyFifo(bool keyX) {
     // Flush FIFO values to the selected key based on endian settings
-    uint32_t *key = keys[aesKeycnt & 0x3F];
+    uint32_t *key = (keyX ? keysX : keys)[aesKeycnt & 0x3F];
     std::queue<uint32_t> &fifo = keyX ? keyXFifo : keyFifo;
     if (key < keys[4]) fifo = {}; // DSi keys
     for (int i = 0; !fifo.empty(); i++) {
@@ -239,29 +239,32 @@ void Aes::flushKeyFifo(bool keyX) {
 
 void Aes::flushKeyYFifo() {
     // Flush FIFO values to key Y based on endian settings
-    if (keyYFifo.empty()) return;
+    uint32_t *keyY = keysY[aesKeycnt & 0x3F];
+    if (keyY < keysY[4]) keyYFifo = {}; // DSi keys
     for (int i = 0; !keyYFifo.empty(); i++) {
         keyY[(aesCnt & BIT(25)) ? (3 - i) : i] = keyYFifo.front();
         keyYFifo.pop();
     }
 
-    // Get the selected key containing key X
-    uint32_t *key = keys[aesKeycnt & 0x3F];
-    if (key < keys[4]) return; // DSi keys
+    // Generate a normal key after updating key Y
+    generateKey(aesKeycnt & 0x3F);
+}
 
+void Aes::generateKey(int i) {
     // Generate a key using key X and key Y based on the current mode
-    if (aesKeycnt & BIT(6)) { // DSi
+    memcpy(keys[i], keysX[i], sizeof(keys[0]));
+    if ((aesKeycnt & BIT(6)) || i < 4) { // DSi
         uint32_t seed[4] = { 0x1A4F3E79, 0x2A680F5F, 0x29590258, 0xFFFEFB4E };
-        xorKey(key, keyY);
-        addKey(key, seed);
-        rolKey(key, 42);
+        xorKey(keys[i], keysY[i]);
+        addKey(keys[i], seed);
+        rolKey(keys[i], 42);
     }
     else { // 3DS
         uint32_t seed[4] = { 0x5D52768A, 0x024591DC, 0xC5FE0408, 0x1FF9E9AA };
-        rolKey(key, 2);
-        xorKey(key, keyY);
-        addKey(key, seed);
-        rolKey(key, 87);
+        rolKey(keys[i], 2);
+        xorKey(keys[i], keysY[i]);
+        addKey(keys[i], seed);
+        rolKey(keys[i], 87);
     }
 }
 
@@ -321,6 +324,28 @@ void Aes::writeIv(int i, uint32_t mask, uint32_t value) {
     // Write to part of the AES_IV value based on endian settings
     aesIv[i] = (aesCnt & BIT(23)) ? (aesIv[i] & ~BSWAP32(mask)) |
         BSWAP32(value & mask) : (aesIv[i] & ~mask) | (value & mask);
+}
+
+void Aes::writeKey(int i, int j, uint32_t mask, uint32_t value) {
+    // Write to part of one of the DSi key slots based on endian settings
+    keys[i][j] = (aesCnt & BIT(23)) ? (keys[i][j] & ~BSWAP32(mask)) |
+        BSWAP32(value & mask) : (keys[i][j] & ~mask) | (value & mask);
+}
+
+void Aes::writeKeyx(int i, int j, uint32_t mask, uint32_t value) {
+    // Write to part of one of the DSi key X slots based on endian settings
+    keysX[i][j] = (aesCnt & BIT(23)) ? (keys[i][j] & ~BSWAP32(mask)) |
+        BSWAP32(value & mask) : (keys[i][j] & ~mask) | (value & mask);
+}
+
+void Aes::writeKeyy(int i, int j, uint32_t mask, uint32_t value) {
+    // Write to part of one of the DSi key Y slots based on endian settings
+    keysY[i][j] = (aesCnt & BIT(23)) ? (keys[i][j] & ~BSWAP32(mask)) |
+        BSWAP32(value & mask) : (keys[i][j] & ~mask) | (value & mask);
+
+    // Generate a normal key when the last word is written to
+    if (j == 3)
+        generateKey(i);
 }
 
 void Aes::writeKeyfifo(uint32_t mask, uint32_t value) {

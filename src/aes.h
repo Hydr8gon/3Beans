@@ -39,6 +39,9 @@ public:
     void writeKeysel(uint8_t value);
     void writeKeycnt(uint8_t value);
     void writeIv(int i, uint32_t mask, uint32_t value);
+    void writeKey(int i, int j, uint32_t mask, uint32_t value);
+    void writeKeyx(int i, int j, uint32_t mask, uint32_t value);
+    void writeKeyy(int i, int j, uint32_t mask, uint32_t value);
     void writeKeyfifo(uint32_t mask, uint32_t value);
     void writeKeyxfifo(uint32_t mask, uint32_t value);
     void writeKeyyfifo(uint32_t mask, uint32_t value);
@@ -51,8 +54,9 @@ private:
     uint32_t rTable[0x100];
 
     uint32_t keys[0x40][4] = {};
+    uint32_t keysX[0x40][4] = {};
+    uint32_t keysY[0x40][4] = {};
     uint32_t rKey[44] = {};
-    uint32_t keyY[4] = {};
     uint32_t ctr[4] = {};
     uint32_t cbc[4] = {};
     uint16_t curBlock = 0;
@@ -85,4 +89,5 @@ private:
     void processFifo();
     void flushKeyFifo(bool keyX);
     void flushKeyYFifo();
+    void generateKey(int i);
 };

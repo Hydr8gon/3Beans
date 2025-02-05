@@ -20,6 +20,39 @@
 #include <cstring>
 #include "core.h"
 
+void Sha::hash1(uint32_t *src) {
+    // Generate the rest of the input based on existing values
+    for (int i = 16; i < 80; i++) {
+        src[i] = src[i - 3] ^ src[i - 8] ^ src[i - 14] ^ src[i - 16];
+        src[i] = ROR32(src[i], 31);
+    }
+
+    // Use the current hash as a base
+    uint32_t hash[8];
+    memcpy(hash, shaHash, sizeof(hash));
+
+    // Hash the input based on SHA1 pseudocode from GBATEK
+    for (int i = 0; i < 80; i++) {
+        // Calculate a value for updating the hash
+        uint32_t val;
+        if (i < 20) val = 0x5A827999 + hash[4] + (hash[3] ^ (hash[1] & (hash[2] ^ hash[3])));
+        else if (i < 40) val = 0x6ED9EBA1 + hash[4] + (hash[1] ^ hash[2] ^ hash[3]);
+        else if (i < 60) val = 0x8F1BBCDC + hash[4] + ((hash[1] & hash[2]) | (hash[3] & (hash[1] | hash[2])));
+        else val = 0xCA62C1D6 + hash[4] + (hash[1] ^ hash[2] ^ hash[3]);
+
+        // Update the hash
+        hash[4] = hash[3];
+        hash[3] = hash[2];
+        hash[2] = ROR32(hash[1], 2);
+        hash[1] = hash[0];
+        hash[0] = ROR32(hash[0], 27) + src[i] + val;
+    }
+
+    // Apply the hash
+    for (int i = 0; i < 8; i++)
+        shaHash[i] += hash[i];
+}
+
 void Sha::hash2(uint32_t *src) {
     // Define the table of constants used during hashing
     static const uint32_t table[64] = {
@@ -86,7 +119,6 @@ void Sha::initFifo() {
 
     default: // SHA1
         memcpy(shaHash, hashes[2], sizeof(shaHash));
-        LOG_CRIT("SHA FIFO started with unimplemented mode: SHA1\n");
         return;
     }
 }
@@ -132,14 +164,16 @@ void Sha::processFifo() {
     // Process FIFO blocks when active and available
     while (fifoRunning && inFifo.size() >= 16) {
         // Receive an input block from the FIFO
-        uint32_t src[64];
+        uint32_t src[80];
         for (int i = 0; i < 16; i++) {
             src[i] = inFifo.front();
             inFifo.pop();
         }
 
         // Hash the block and update input length
-        if (((shaCnt >> 4) & 0x3) < 2) // SHA256/SHA224
+        if (shaCnt & BIT(5)) // SHA1
+            hash1(src);
+        else // SHA256/SHA224
             hash2(src);
         shaBlkcnt += 64;
     }

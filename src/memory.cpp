@@ -619,6 +619,54 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x10009024, core->aes.writeIv(1, IO_PARAMS)) // AES_IV1
                 DEF_IO32(0x10009028, core->aes.writeIv(2, IO_PARAMS)) // AES_IV2
                 DEF_IO32(0x1000902C, core->aes.writeIv(3, IO_PARAMS)) // AES_IV3
+                DEF_IO32(0x10009040, core->aes.writeKey(0, 0, IO_PARAMS)) // AES_KEY0_0
+                DEF_IO32(0x10009044, core->aes.writeKey(0, 1, IO_PARAMS)) // AES_KEY0_1
+                DEF_IO32(0x10009048, core->aes.writeKey(0, 2, IO_PARAMS)) // AES_KEY0_2
+                DEF_IO32(0x1000904C, core->aes.writeKey(0, 3, IO_PARAMS)) // AES_KEY0_3
+                DEF_IO32(0x10009050, core->aes.writeKeyx(0, 0, IO_PARAMS)) // AES_KEYX0_0
+                DEF_IO32(0x10009054, core->aes.writeKeyx(0, 1, IO_PARAMS)) // AES_KEYX0_1
+                DEF_IO32(0x10009058, core->aes.writeKeyx(0, 2, IO_PARAMS)) // AES_KEYX0_2
+                DEF_IO32(0x1000905C, core->aes.writeKeyx(0, 3, IO_PARAMS)) // AES_KEYX0_3
+                DEF_IO32(0x10009060, core->aes.writeKeyy(0, 0, IO_PARAMS)) // AES_KEYY0_0
+                DEF_IO32(0x10009064, core->aes.writeKeyy(0, 1, IO_PARAMS)) // AES_KEYY0_1
+                DEF_IO32(0x10009068, core->aes.writeKeyy(0, 2, IO_PARAMS)) // AES_KEYY0_2
+                DEF_IO32(0x1000906C, core->aes.writeKeyy(0, 3, IO_PARAMS)) // AES_KEYY0_3
+                DEF_IO32(0x10009070, core->aes.writeKey(1, 0, IO_PARAMS)) // AES_KEY1_0
+                DEF_IO32(0x10009074, core->aes.writeKey(1, 1, IO_PARAMS)) // AES_KEY1_1
+                DEF_IO32(0x10009078, core->aes.writeKey(1, 2, IO_PARAMS)) // AES_KEY1_2
+                DEF_IO32(0x1000907C, core->aes.writeKey(1, 3, IO_PARAMS)) // AES_KEY1_3
+                DEF_IO32(0x10009080, core->aes.writeKeyx(1, 0, IO_PARAMS)) // AES_KEYX1_0
+                DEF_IO32(0x10009084, core->aes.writeKeyx(1, 1, IO_PARAMS)) // AES_KEYX1_1
+                DEF_IO32(0x10009088, core->aes.writeKeyx(1, 2, IO_PARAMS)) // AES_KEYX1_2
+                DEF_IO32(0x1000908C, core->aes.writeKeyx(1, 3, IO_PARAMS)) // AES_KEYX1_3
+                DEF_IO32(0x10009090, core->aes.writeKeyy(1, 0, IO_PARAMS)) // AES_KEYY1_0
+                DEF_IO32(0x10009094, core->aes.writeKeyy(1, 1, IO_PARAMS)) // AES_KEYY1_1
+                DEF_IO32(0x10009098, core->aes.writeKeyy(1, 2, IO_PARAMS)) // AES_KEYY1_2
+                DEF_IO32(0x1000909C, core->aes.writeKeyy(1, 3, IO_PARAMS)) // AES_KEYY1_3
+                DEF_IO32(0x100090A0, core->aes.writeKey(2, 0, IO_PARAMS)) // AES_KEY2_0
+                DEF_IO32(0x100090A4, core->aes.writeKey(2, 1, IO_PARAMS)) // AES_KEY2_1
+                DEF_IO32(0x100090A8, core->aes.writeKey(2, 2, IO_PARAMS)) // AES_KEY2_2
+                DEF_IO32(0x100090AC, core->aes.writeKey(2, 3, IO_PARAMS)) // AES_KEY2_3
+                DEF_IO32(0x100090B0, core->aes.writeKeyx(2, 0, IO_PARAMS)) // AES_KEYX2_0
+                DEF_IO32(0x100090B4, core->aes.writeKeyx(2, 1, IO_PARAMS)) // AES_KEYX2_1
+                DEF_IO32(0x100090B8, core->aes.writeKeyx(2, 2, IO_PARAMS)) // AES_KEYX2_2
+                DEF_IO32(0x100090BC, core->aes.writeKeyx(2, 3, IO_PARAMS)) // AES_KEYX2_3
+                DEF_IO32(0x100090C0, core->aes.writeKeyy(2, 0, IO_PARAMS)) // AES_KEYY2_0
+                DEF_IO32(0x100090C4, core->aes.writeKeyy(2, 1, IO_PARAMS)) // AES_KEYY2_1
+                DEF_IO32(0x100090C8, core->aes.writeKeyy(2, 2, IO_PARAMS)) // AES_KEYY2_2
+                DEF_IO32(0x100090CC, core->aes.writeKeyy(2, 3, IO_PARAMS)) // AES_KEYY2_3
+                DEF_IO32(0x100090D0, core->aes.writeKey(3, 0, IO_PARAMS)) // AES_KEY3_0
+                DEF_IO32(0x100090D4, core->aes.writeKey(3, 1, IO_PARAMS)) // AES_KEY3_1
+                DEF_IO32(0x100090D8, core->aes.writeKey(3, 2, IO_PARAMS)) // AES_KEY3_2
+                DEF_IO32(0x100090DC, core->aes.writeKey(3, 3, IO_PARAMS)) // AES_KEY3_3
+                DEF_IO32(0x100090E0, core->aes.writeKeyx(3, 0, IO_PARAMS)) // AES_KEYX3_0
+                DEF_IO32(0x100090E4, core->aes.writeKeyx(3, 1, IO_PARAMS)) // AES_KEYX3_1
+                DEF_IO32(0x100090E8, core->aes.writeKeyx(3, 2, IO_PARAMS)) // AES_KEYX3_2
+                DEF_IO32(0x100090EC, core->aes.writeKeyx(3, 3, IO_PARAMS)) // AES_KEYX3_3
+                DEF_IO32(0x100090F0, core->aes.writeKeyy(3, 0, IO_PARAMS)) // AES_KEYY3_0
+                DEF_IO32(0x100090F4, core->aes.writeKeyy(3, 1, IO_PARAMS)) // AES_KEYY3_1
+                DEF_IO32(0x100090F8, core->aes.writeKeyy(3, 2, IO_PARAMS)) // AES_KEYY3_2
+                DEF_IO32(0x100090FC, core->aes.writeKeyy(3, 3, IO_PARAMS)) // AES_KEYY3_3
                 DEF_IO32(0x10009100, core->aes.writeKeyfifo(IO_PARAMS)) // AES_KEYFIFO
                 DEF_IO32(0x10009104, core->aes.writeKeyxfifo(IO_PARAMS)) // AES_KEYXFIFO
                 DEF_IO32(0x10009108, core->aes.writeKeyyfifo(IO_PARAMS)) // AES_KEYYFIFO
