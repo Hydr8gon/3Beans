@@ -430,6 +430,9 @@ private:
     int uxtab16(uint32_t opcode);
     int uxtab(uint32_t opcode);
     int uxtah(uint32_t opcode);
+    int rev16(uint32_t opcode);
+    int revsh(uint32_t opcode);
+    int rev(uint32_t opcode);
 
     int addRegT(uint16_t opcode);
     int subRegT(uint16_t opcode);

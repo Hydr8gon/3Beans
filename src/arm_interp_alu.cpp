@@ -1033,6 +1033,33 @@ int ArmInterp::uxtah(uint32_t opcode) { // UXTAH Rd,Rn,Rm,ROR #imm
     return 1;
 }
 
+int ArmInterp::rev16(uint32_t opcode) { // REV16 Rd,Rm
+    // Reverse byte order of two half-words
+    if (id == ARM9) return 1; // ARM11-exclusive
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    uint32_t op1 = *registers[opcode & 0xF];
+    *op0 = ((op1 >> 8) & 0xFF00FF) | ((op1 << 8) & 0xFF00FF00);
+    return 1;
+}
+
+int ArmInterp::revsh(uint32_t opcode) { // REVSH Rd,Rm
+    // Reverse byte order of half-word and sign-extend
+    if (id == ARM9) return 1; // ARM11-exclusive
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    uint32_t op1 = *registers[opcode & 0xF];
+    *op0 = int16_t(((op1 >> 8) & 0xFF) | (op1 << 8));
+    return 1;
+}
+
+int ArmInterp::rev(uint32_t opcode) { // REV Rd,Rm
+    // Reverse byte order of word
+    if (id == ARM9) return 1; // ARM11-exclusive
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    uint32_t op1 = *registers[opcode & 0xF];
+    *op0 = BSWAP32(op1);
+    return 1;
+}
+
 int ArmInterp::addRegT(uint16_t opcode) { // ADD Rd,Rs,Rn
     // Addition and set flags (THUMB)
     uint32_t *op0 = registers[opcode & 0x7];

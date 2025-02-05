@@ -449,9 +449,9 @@ int (ArmInterp::*ArmInterp::armInstrs[])(uint32_t) = {
     &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::sxtab, // 0x6A4-0x6A7
     &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, // 0x6A8-0x6AB
     &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, // 0x6AC-0x6AF
-    &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, // 0x6B0-0x6B3
+    &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::rev, // 0x6B0-0x6B3
     &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::sxtah, // 0x6B4-0x6B7
-    &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, // 0x6B8-0x6BB
+    &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::rev16, // 0x6B8-0x6BB
     &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, // 0x6BC-0x6BF
     &ArmInterp::strbPtrpll, &ArmInterp::unkArm, &ArmInterp::strbPtrplr, &ArmInterp::unkArm, // 0x6C0-0x6C3
     &ArmInterp::strbPtrpar, &ArmInterp::unkArm, &ArmInterp::strbPtrprr, &ArmInterp::uxtab16, // 0x6C4-0x6C7
@@ -467,7 +467,7 @@ int (ArmInterp::*ArmInterp::armInstrs[])(uint32_t) = {
     &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, // 0x6EC-0x6EF
     &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, // 0x6F0-0x6F3
     &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::uxtah, // 0x6F4-0x6F7
-    &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, // 0x6F8-0x6FB
+    &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::revsh, // 0x6F8-0x6FB
     &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, &ArmInterp::unkArm, // 0x6FC-0x6FF
     &ArmInterp::strOfrmll, &ArmInterp::unkArm, &ArmInterp::strOfrmlr, &ArmInterp::unkArm, // 0x700-0x703
     &ArmInterp::strOfrmar, &ArmInterp::unkArm, &ArmInterp::strOfrmrr, &ArmInterp::unkArm, // 0x704-0x707

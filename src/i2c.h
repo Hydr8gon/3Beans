@@ -37,9 +37,21 @@ private:
     Core *core;
 
     uint32_t writeCount = 0;
-    uint8_t devAddress = 0;
-    uint8_t regAddress = 0;
+    uint8_t devAddr = 0;
+    uint8_t regAddr = 0;
+    bool mcuInc = false;
 
     uint8_t i2cBusData[3] = {};
     uint8_t i2cBusCnt[3] = {};
+
+    uint32_t mcuIrqFlags = 0;
+    uint32_t mcuIrqMask = 0;
+
+    void mcuInterrupt(uint32_t mask);
+
+    uint8_t readMcuIrqFlags(int i);
+    uint8_t readMcuIrqMask(int i);
+
+    void writeMcuIrqMask(int i, uint8_t value);
+    void writeMcuLcdPower(uint8_t value);
 };

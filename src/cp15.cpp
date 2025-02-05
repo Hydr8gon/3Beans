@@ -108,14 +108,14 @@ template <typename T> void Cp15::write(CpuId id, uint32_t address, T value) {
 uint32_t Cp15::readReg(CpuId id, uint8_t cn, uint8_t cm, uint8_t cp) {
     // Read a value from a CP15 register
     if (id != ARM9) { // ARM11
-        switch ((cn << 16) | (cm << 8) | (cp << 0)) {
+        switch ((cn << 16) | (cm << 8) | cp) {
             case 0x000005: return id; // CPU ID
             case 0x010000: return ctrlRegs[id]; // Control
             case 0x020000: return tlbBase0Regs[id]; // TLB base 0
         }
     }
     else { // ARM9
-        switch ((cn << 16) | (cm << 8) | (cp << 0)) {
+        switch ((cn << 16) | (cm << 8) | cp) {
             case 0x000000: return 0x41059461; // Main ID
             case 0x000001: return 0x0F0D2112; // Cache type
             case 0x010000: return ctrlRegs[id]; // Control
@@ -132,7 +132,7 @@ uint32_t Cp15::readReg(CpuId id, uint8_t cn, uint8_t cm, uint8_t cp) {
 void Cp15::writeReg(CpuId id, uint8_t cn, uint8_t cm, uint8_t cp, uint32_t value) {
     // Write a value to a CP15 register
     if (id != ARM9) { // ARM11
-        switch ((cn << 16) | (cm << 8) | (cp << 0)) {
+        switch ((cn << 16) | (cm << 8) | cp) {
             case 0x010000: return writeCtrl11(id, value); // Control
             case 0x020000: return writeTlbBase0(id, value); // TLB base 0
             case 0x070004: return writeWfi(id, value); // Wait for interrupt
@@ -140,7 +140,7 @@ void Cp15::writeReg(CpuId id, uint8_t cn, uint8_t cm, uint8_t cp, uint32_t value
         }
     }
     else { // ARM9
-        switch ((cn << 16) | (cm << 8) | (cp << 0)) {
+        switch ((cn << 16) | (cm << 8) | cp) {
             case 0x010000: return writeCtrl9(id, value); // Control
             case 0x070004: return writeWfi(id, value); // Wait for interrupt
             case 0x070802: return writeWfi(id, value); // Wait for interrupt
