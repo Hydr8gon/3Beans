@@ -35,7 +35,7 @@ public:
     uint32_t readCmdParam() { return sdCmdParam; }
     uint16_t readData16Blkcnt() { return sdData16Blkcnt; }
     uint32_t readResponse(int i) { return sdResponse[i]; }
-    uint32_t readIrqStatus() { return sdIrqStatus; }
+    uint32_t readIrqStatus();
     uint32_t readIrqMask() { return sdIrqMask; }
     uint16_t readData16Blklen() { return sdData16Blklen; }
     uint16_t readData16Fifo();

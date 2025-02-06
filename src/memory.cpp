@@ -49,6 +49,43 @@
 #define IO_PARAMS mask << (base << 3), data << (base << 3)
 #define IO_PARAMS8 data << (base << 3)
 
+Memory::Memory(Core *core): core(core) {
+    // Build physical memory maps with 64KB pages for the ARM9 and ARM11
+    for (int arm11 = 0; arm11 < 2; arm11++) {
+        for (uint64_t address = 0; address <= 0xFFFFFFFF; address += 0x10000) {
+            // Set a pointer to readable memory if it exists at the current address
+            uint8_t *&read = (arm11 ? readMap11 : readMap9)[address >> 16];
+            if (!arm11 && address >= 0x8000000 && address < 0x8100000)
+                read = &arm9Ram[address & 0xFFFFF]; // 1MB ARM9 internal RAM
+            else if (address >= 0x20000000 && address < 0x28000000)
+                read = &fcram[address & 0x7FFFFFF]; // 128MB FCRAM
+            else if (address >= 0x18000000 && address < 0x18600000)
+                read = &vram[address & 0x7FFFFF]; // 6MB VRAM
+            else if (address >= 0x1FF00000 && address < 0x1FF80000)
+                read = &dspWram[address & 0x7FFFF]; // 512KB DSP code/data RAM
+            else if (address >= 0x1FF80000 && address < 0x20000000)
+                read = &axiWram[address & 0x7FFFF]; // 512KB AXI WRAM
+            else if (arm11 && (address < 0x20000 || address >= 0xFFFF0000))
+                read = &boot11[address & 0xFFFF]; // 64KB ARM11 boot ROM
+            else if (!arm11 && address >= 0xFFFF0000)
+                read = &boot9[address & 0xFFFF]; // 64KB ARM9 boot ROM
+
+            // Set a pointer to writable memory if it exists at the current address
+            uint8_t *&write = (arm11 ? writeMap11 : writeMap9)[address >> 16];
+            if (!arm11 && address >= 0x8000000 && address < 0x8100000)
+                write = &arm9Ram[address & 0xFFFFF]; // 1MB ARM9 internal RAM
+            else if (address >= 0x20000000 && address < 0x28000000)
+                write = &fcram[address & 0x7FFFFFF]; // 128MB FCRAM
+            else if (address >= 0x18000000 && address < 0x18600000)
+                write = &vram[address & 0x7FFFFF]; // 6MB VRAM
+            else if (address >= 0x1FF00000 && address < 0x1FF80000)
+                write = &dspWram[address & 0x7FFFF]; // 512KB DSP code/data RAM
+            else if (address >= 0x1FF80000 && address < 0x20000000)
+                write = &axiWram[address & 0x7FFFF]; // 512KB AXI WRAM
+        }
+    }
+}
+
 bool Memory::loadFiles() {
     // Try to load the ARM11 boot ROM
     FILE *file = fopen("boot11.bin", "rb");
@@ -69,76 +106,6 @@ void Memory::loadOtp(FILE *file) {
     fread(otpEncrypted, sizeof(uint32_t), 0x40, file);
 }
 
-template uint8_t Memory::read(CpuId id, uint32_t address);
-template uint16_t Memory::read(CpuId id, uint32_t address);
-template uint32_t Memory::read(CpuId id, uint32_t address);
-template <typename T> T Memory::read(CpuId id, uint32_t address) {
-    // Get a pointer to readable memory on the ARM11/ARM9 if it exists
-    uint8_t *data = nullptr;
-    if (address >= 0x20000000 && address < 0x28000000)
-        data = &fcram[address & 0x7FFFFFF]; // 128MB FCRAM
-    else if (address >= 0x18000000 && address < 0x18600000)
-        data = &vram[address & 0x7FFFFF]; // 6MB VRAM
-    else if (id == ARM9 && address >= 0x8000000 && address < 0x8100000)
-        data = &arm9Ram[address & 0xFFFFF]; // 1MB ARM9 internal RAM
-    else if (address >= 0x1FF00000 && address < 0x1FF80000)
-        data = &dspWram[address & 0x7FFFF]; // 512KB DSP code/data RAM
-    else if (address >= 0x1FF80000 && address < 0x20000000)
-        data = &axiWram[address & 0x7FFFF]; // 512KB AXI WRAM
-    else if (id != ARM9 && (address < 0x20000 || address >= 0xFFFF0000))
-        data = &boot11[address & 0xFFFF]; // 64KB ARM11 boot ROM
-    else if (id == ARM9 && address >= 0xFFFF0000)
-        data = &boot9[address & 0xFFFF]; // 64KB ARM9 boot ROM
-
-    // Form an LSB-first value from the data at the pointer
-    if (data) {
-        T value = 0;
-        for (uint32_t i = 0; i < sizeof(T); i++)
-            value |= data[i] << (i << 3);
-        return value;
-    }
-
-    // Forward the read to I/O registers if within range
-    if (address >= 0x10000000 && address < 0x18000000)
-        return ioRead<T>(id, address);
-
-    // Catch reads from unmapped memory
-    LOG_WARN("Unmapped ARM%d memory read: 0x%08X\n", (id == ARM9) ? 9 : 11, address);
-    return 0;
-}
-
-template void Memory::write(CpuId id, uint32_t address, uint8_t value);
-template void Memory::write(CpuId id, uint32_t address, uint16_t value);
-template void Memory::write(CpuId id, uint32_t address, uint32_t value);
-template <typename T> void Memory::write(CpuId id, uint32_t address, T value) {
-    // Get a pointer to writable memory on the ARM11/ARM9 if it exists
-    uint8_t *data = nullptr;
-    if (address >= 0x20000000 && address < 0x28000000)
-        data = &fcram[address & 0x7FFFFFF]; // 128MB FCRAM
-    else if (address >= 0x18000000 && address < 0x18600000)
-        data = &vram[address & 0x7FFFFF]; // 6MB VRAM
-    else if (id == ARM9 && address >= 0x8000000 && address < 0x8100000)
-        data = &arm9Ram[address & 0xFFFFF]; // 1MB ARM9 internal RAM
-    else if (address >= 0x1FF00000 && address < 0x1FF80000)
-        data = &dspWram[address & 0x7FFFF]; // 512KB DSP code/data RAM
-    else if (address >= 0x1FF80000 && address < 0x20000000)
-        data = &axiWram[address & 0x7FFFF]; // 512KB AXI WRAM
-
-    // Write an LSB-first value to the data at the pointer
-    if (data) {
-        for (uint32_t i = 0; i < sizeof(T); i++)
-            data[i] = value >> (i << 3);
-        return;
-    }
-
-    // Forward the write to I/O registers if within range
-    if (address >= 0x10000000 && address < 0x18000000)
-        return ioWrite<T>(id, address, value);
-
-    // Catch writes to unmapped memory
-    LOG_WARN("Unmapped ARM%d memory write: 0x%08X\n", (id == ARM9) ? 9 : 11, address);
-}
-
 template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
     // Read a value from one or more I/O registers
     T value = 0;
@@ -157,6 +124,7 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
             DEF_IO32(0x10101054, data = core->shas[0].readHash(5)) // SHA_HASH5_11
             DEF_IO32(0x10101058, data = core->shas[0].readHash(6)) // SHA_HASH6_11
             DEF_IO32(0x1010105C, data = core->shas[0].readHash(7)) // SHA_HASH7_11
+            DEF_IO32(0x10141200, data = core->gpu.readCfg11GpuCnt()) // CFG11_GPU_CNT
             DEF_IO08(0x10144000, data = core->i2c.readBusData(1)) // I2C_BUS1_DATA
             DEF_IO08(0x10144001, data = core->i2c.readBusCnt(1)) // I2C_BUS1_CNT
             DEF_IO16(0x10146000, data = core->input.readHidPad()) // HID_PAD
@@ -526,6 +494,7 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
             DEF_IO32(0x10101054, core->shas[0].writeHash(5, IO_PARAMS)) // SHA_HASH5_11
             DEF_IO32(0x10101058, core->shas[0].writeHash(6, IO_PARAMS)) // SHA_HASH6_11
             DEF_IO32(0x1010105C, core->shas[0].writeHash(7, IO_PARAMS)) // SHA_HASH7_11
+            DEF_IO32(0x10141200, core->gpu.writeCfg11GpuCnt(IO_PARAMS)) // CFG11_GPU_CNT
             DEF_IO08(0x10144000, core->i2c.writeBusData(1, IO_PARAMS8)) // I2C_BUS1_DATA
             DEF_IO08(0x10144001, core->i2c.writeBusCnt(1, IO_PARAMS8)) // I2C_BUS1_CNT
             DEF_IO08(0x10148000, core->i2c.writeBusData(2, IO_PARAMS8)) // I2C_BUS2_DATA

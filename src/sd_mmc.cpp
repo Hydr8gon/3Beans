@@ -85,7 +85,7 @@ void SdMmc::pushResponse(uint32_t value) {
 
 void SdMmc::readBlock() {
     // Read a block of data from the SD or MMC if present
-    uint32_t data[0x200];
+    uint32_t data[0x80];
     if (FILE *src = (sdPortSelect & BIT(0)) ? nand : sd) {
         fseek(src, curAddress, SEEK_SET);
         fread(data, sizeof(uint32_t), blockLen, src);
@@ -217,6 +217,11 @@ void SdMmc::getScr() {
     pushFifo(0);
     pushFifo(0);
     pushResponse(cardStatus);
+}
+
+uint32_t SdMmc::readIrqStatus() {
+    // Read from the SD_IRQ_STATUS register with the insert bit set for SD cards
+    return sdIrqStatus | ((~sdPortSelect & BIT(0)) << 5);
 }
 
 uint16_t SdMmc::readData16Fifo() {

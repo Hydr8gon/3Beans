@@ -45,6 +45,7 @@ void I2c::writeBusCnt(int i, uint8_t value) {
     // Handle I2C reads if the direction is set to read
     if (value & BIT(5)) {
         switch ((i << 16) | (devAddr << 8) | regAddr) {
+            case 0x14B0F: i2cBusData[i] = readMcuPowerFlags(); return;
             case 0x14B10: i2cBusData[i] = readMcuIrqFlags(0); return;
             case 0x14B11: i2cBusData[i] = readMcuIrqFlags(1); return;
             case 0x14B12: i2cBusData[i] = readMcuIrqFlags(2); return;
@@ -86,6 +87,12 @@ void I2c::writeBusCnt(int i, uint8_t value) {
         LOG_WARN("Unknown I2C bus %d write to device 0x%02X, register 0x%02X\n", i, devAddr, regAddr);
         return;
     }
+}
+
+uint8_t I2c::readMcuPowerFlags() {
+    // Report the shell as being open
+    regAddr += mcuInc;
+    return 0x2;
 }
 
 uint8_t I2c::readMcuIrqFlags(int i) {

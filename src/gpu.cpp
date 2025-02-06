@@ -19,6 +19,12 @@
 
 #include "core.h"
 
+void Gpu::writeCfg11GpuCnt(uint32_t mask, uint32_t value) {
+    // Write to the CFG11_GPU_CNT register
+    mask &= 0x1007F;
+    cfg11GpuCnt = (cfg11GpuCnt & ~mask) | (value & mask);
+}
+
 void Gpu::writeMemfillDstAddr(int i, uint32_t mask, uint32_t value) {
     // Write to one of the GPU_MEMFILL_DST_ADDR registers
     mask &= 0x1FFFFFFE;
@@ -45,8 +51,8 @@ void Gpu::writeMemfillCnt(int i, uint32_t mask, uint32_t value) {
     if ((mask & BIT(1)) && !(value & BIT(1)))
         gpuMemfillCnt[i] &= ~BIT(1);
 
-    // Check the start bit and trigger an interrupt if enabled
-    if (!(value & mask & BIT(0))) return;
+    // Check the start and enable bits and trigger an interrupt if running
+    if (!(value & mask & BIT(0)) || !(cfg11GpuCnt & BIT(1))) return;
     gpuMemfillCnt[i] |= BIT(1);
     core->interrupts.sendInterrupt(false, 0x28 + i);
 

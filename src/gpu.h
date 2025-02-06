@@ -27,11 +27,13 @@ class Gpu {
 public:
     Gpu(Core *core): core(core) {}
 
+    uint32_t readCfg11GpuCnt() { return cfg11GpuCnt; }
     uint32_t readMemfillDstAddr(int i) { return gpuMemfillDstAddr[i]; }
     uint32_t readMemfillDstEnd(int i) { return gpuMemfillDstEnd[i]; }
     uint32_t readMemfillData(int i) { return gpuMemfillData[i]; }
     uint32_t readMemfillCnt(int i) { return gpuMemfillCnt[i]; }
 
+    void writeCfg11GpuCnt(uint32_t mask, uint32_t value);
     void writeMemfillDstAddr(int i, uint32_t mask, uint32_t value);
     void writeMemfillDstEnd(int i, uint32_t mask, uint32_t value);
     void writeMemfillData(int i, uint32_t mask, uint32_t value);
@@ -40,6 +42,7 @@ public:
 private:
     Core *core;
 
+    uint32_t cfg11GpuCnt = 0;
     uint32_t gpuMemfillDstAddr[2] = {};
     uint32_t gpuMemfillDstEnd[2] = {};
     uint32_t gpuMemfillData[2] = {};

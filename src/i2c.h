@@ -49,6 +49,7 @@ private:
 
     void mcuInterrupt(uint32_t mask);
 
+    uint8_t readMcuPowerFlags();
     uint8_t readMcuIrqFlags(int i);
     uint8_t readMcuIrqMask(int i);
 
