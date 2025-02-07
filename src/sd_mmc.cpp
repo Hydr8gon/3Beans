@@ -26,17 +26,24 @@ SdMmc::~SdMmc() {
     if (sd) fclose(sd);
 }
 
-void SdMmc::loadFiles() {
-    // Try to open a GM9 NAND dump and load CID and OTP data
-    if ((nand = fopen("nand.bin", "rb"))) {
-        fseek(nand, 0xC00, SEEK_SET);
-        fread(mmcCid, sizeof(uint32_t), 0x4, nand);
-        fseek(nand, 0xE00, SEEK_SET);
-        core->memory.loadOtp(nand);
-    }
-
+bool SdMmc::init() {
     // Try to open an SD image
     sd = fopen("sd.img", "rb");
+
+    // Try to open a GM9 NAND dump and load CID and OTP data
+    if (!(nand = fopen("nand.bin", "rb"))) return false;
+    fseek(nand, 0xC00, SEEK_SET);
+    fread(mmcCid, sizeof(uint32_t), 4, nand);
+    fseek(nand, 0xE00, SEEK_SET);
+    core->memory.loadOtp(nand);
+
+    // Determine if this is a new 3DS NAND by checking for data in sector 0x96
+    uint32_t sect96[8];
+    fseek(nand, 0x12C00, SEEK_SET);
+    fread(sect96, sizeof(uint32_t), 8, nand);
+    for (int i = 0; i < 8; i++)
+        if (sect96[i] != 0xFFFFFFFF) return true;
+    return false;
 }
 
 void SdMmc::sendInterrupt(int bit) {

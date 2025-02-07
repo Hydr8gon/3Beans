@@ -24,6 +24,10 @@ ArmInterp::ArmInterp(Core *core, CpuId id): core(core), id(id) {
     // Initialize the registers for user mode
     for (int i = 0; i < 32; i++)
         registers[i] = &registersUsr[i & 0xF];
+
+    // Don't start extra ARM11 cores right away
+    if (id == ARM11C || id == ARM11D)
+        halted = true;
 }
 
 void ArmInterp::init() {
@@ -38,30 +42,26 @@ void ArmInterp::resetCycles() {
     cycles -= std::min(core->globalCycles, cycles);
 }
 
-void ArmInterp::runFrame(Core *core) {
-    ArmInterp &arm11a = core->arms[ARM11A];
-    ArmInterp &arm11b = core->arms[ARM11B];
-    ArmInterp &arm9 = core->arms[ARM9];
-
+template void ArmInterp::runFrame<false>(Core *core);
+template void ArmInterp::runFrame<true>(Core *core);
+template <bool extra> void ArmInterp::runFrame(Core *core) {
     // Run a frame of CPU instructions and events
     while (core->running.exchange(true)) {
         // Run the CPUs until the next scheduled task
         while (core->events[0].cycles > core->globalCycles) {
-            // Run the first ARM11 core
-            if (!arm11a.halted && core->globalCycles >= arm11a.cycles)
-                arm11a.cycles = core->globalCycles + arm11a.runOpcode();
-
-            // Run the second ARM11 core
-            if (!arm11b.halted && core->globalCycles >= arm11b.cycles)
-                arm11b.cycles = core->globalCycles + arm11b.runOpcode();
+            // Run 2 or 4 ARM11 cores depending on execution mode
+            for (int i = 0; i < (extra ? 4 : 2); i++)
+                if (!core->arms[i].halted && core->globalCycles >= core->arms[i].cycles)
+                    core->arms[i].cycles = core->globalCycles + core->arms[i].runOpcode();
 
             // Run the ARM9 at half the speed of the ARM11
-            if (!arm9.halted && core->globalCycles >= arm9.cycles)
-                arm9.cycles = core->globalCycles + (arm9.runOpcode() << 1);
+            if (!core->arms[ARM9].halted && core->globalCycles >= core->arms[ARM9].cycles)
+                core->arms[ARM9].cycles = core->globalCycles + (core->arms[ARM9].runOpcode() << 1);
 
-            // Count cycles up to the next soonest event
-            core->globalCycles = std::min<uint32_t>(arm9.halted ? -1 : arm9.cycles,
-                std::min<uint32_t>(arm11a.halted ? -1 : arm11a.cycles, arm11b.halted ? -1 : arm11b.cycles));
+            // Count cycles up to the next soonest CPU event
+            core->globalCycles = core->arms[ARM9].halted ? -1 : core->arms[ARM9].cycles;
+            for (int i = 0; i < (extra ? 4 : 2); i++)
+                core->globalCycles = std::min(core->globalCycles, core->arms[i].halted ? -1 : core->arms[i].cycles);
         }
 
         // Jump to the next scheduled event
@@ -114,14 +114,12 @@ int ArmInterp::exception(uint8_t vector) {
 void ArmInterp::flushPipeline() {
     // Adjust the program counter and refill the pipeline after a jump
     if (cpsr & BIT(5)) { // THUMB mode
-        *registers[15] = (*registers[15] & ~0x1) + 2;
-        pipeline[0] = core->cp15.read<uint16_t>(id, *registers[15] - 2);
-        pipeline[1] = core->cp15.read<uint16_t>(id, *registers[15]);
+        pipeline[0] = core->cp15.read<uint16_t>(id, *registers[15] &= ~1);
+        pipeline[1] = core->cp15.read<uint16_t>(id, *registers[15] += 2);
     }
     else { // ARM mode
-        *registers[15] = (*registers[15] & ~0x3) + 4;
-        pipeline[0] = core->cp15.read<uint32_t>(id, *registers[15] - 4);
-        pipeline[1] = core->cp15.read<uint32_t>(id, *registers[15]);
+        pipeline[0] = core->cp15.read<uint32_t>(id, *registers[15] &= ~3);
+        pipeline[1] = core->cp15.read<uint32_t>(id, *registers[15] += 4);
     }
 }
 
@@ -197,7 +195,10 @@ void ArmInterp::setCpsr(uint32_t value, bool save) {
             break;
 
         default:
-            LOG_CRIT("Unknown ARM%d CPU mode: 0x%X\n", (id == ARM9) ? 9 : 11, value & 0x1F);
+            if (id == ARM9)
+                LOG_CRIT("Unknown ARM9 CPU mode: 0x%X\n", value & 0x1F);
+            else
+                LOG_CRIT("Unknown ARM11 core %d CPU mode: 0x%X\n", id, value & 0x1F);
             break;
         }
     }
@@ -225,12 +226,18 @@ int ArmInterp::handleReserved(uint32_t opcode) {
 
 int ArmInterp::unkArm(uint32_t opcode) {
     // Handle an unknown ARM opcode
-    LOG_CRIT("Unknown ARM%d ARM opcode: 0x%X\n", (id == ARM9) ? 9 : 11, opcode);
+    if (id == ARM9)
+        LOG_CRIT("Unknown ARM9 ARM opcode: 0x%X\n", opcode);
+    else
+        LOG_CRIT("Unknown ARM11 core %d ARM opcode: 0x%X\n", id, opcode);
     return 1;
 }
 
 int ArmInterp::unkThumb(uint16_t opcode) {
     // Handle an unknown THUMB opcode
-    LOG_CRIT("Unknown ARM%d THUMB opcode: 0x%X\n", (id == ARM9) ? 9 : 11, opcode);
+    if (id == ARM9)
+        LOG_CRIT("Unknown ARM9 THUMB opcode: 0x%X\n", opcode);
+    else
+        LOG_CRIT("Unknown ARM11 core %d THUMB opcode: 0x%X\n", id, opcode);
     return 1;
 }

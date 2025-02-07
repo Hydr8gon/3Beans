@@ -28,7 +28,7 @@ class SdMmc {
 public:
     SdMmc(Core *core): core(core) {}
     ~SdMmc();
-    void loadFiles();
+    bool init();
 
     uint16_t readCmd() { return sdCmd; }
     uint16_t readPortSelect() { return sdPortSelect; }

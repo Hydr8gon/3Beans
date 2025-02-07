@@ -33,7 +33,7 @@ void Interrupts::sendInterrupt(bool arm9, int type) {
     }
 
     // Send an interrupt to the ARM11 cores
-    for (int id = 0; id < 2; id++) {
+    for (int id = 0; id < MAX_CPUS - 1; id++) {
         if (mpIle[id] && mpIge) {
             // Set the interrupt's pending bit
             if (type != -1)
@@ -50,10 +50,53 @@ void Interrupts::sendInterrupt(bool arm9, int type) {
 }
 
 void Interrupts::interrupt(CpuId id) {
+    // Set the unhalted bit for extra ARM11 cores if started, or ignore the interrupt
+    if (id == ARM11C || id == ARM11D) {
+        if (cfg11MpBootcnt[id - 2] & BIT(4))
+            cfg11MpBootcnt[id - 2] |= BIT(5);
+        else return;
+    }
+
     // Trigger an interrupt on a CPU if enabled and unhalt it
     if (~core->arms[id].cpsr & BIT(7))
         core->arms[id].exception(0x18);
     core->arms[id].halted = false;
+}
+
+void Interrupts::halt(CpuId id) {
+    // Halt a CPU and check if all ARM11 cores have been halted
+    core->arms[id].halted = true;
+    if (id != ARM9 && core->arms[ARM11A].halted && core->arms[ARM11B].halted &&
+            core->arms[ARM11C].halted && core->arms[ARM11D].halted) {
+        // Update the current clock/FCRAM mode and trigger an interrupt if changed
+        uint8_t mode = (cfg11MpClkcnt & 0x1) ? (cfg11MpClkcnt & 0x7) : 0;
+        if (mode != ((cfg11MpClkcnt >> 16) & 0x7)) {
+            cfg11MpClkcnt = (cfg11MpClkcnt & ~0x70000) | (mode << 16) | BIT(15);
+            core->memory.updateMap(false, 0x28000000, 0x2FFFFFFF);
+            core->memory.updateMap(true, 0x28000000, 0x2FFFFFFF);
+            sendInterrupt(false, 0x58);
+            LOG_INFO("Changing to clock/FCRAM mode %d\n", mode);
+        }
+    }
+
+    // Clear the unhalted bit for extra ARM11 cores
+    if (id != ARM11C && id != ARM11D) return;
+    cfg11MpBootcnt[id - 2] &= ~BIT(5);
+
+    // Disable an extra ARM11 core if newly stopped
+    if ((cfg11MpBootcnt[id - 2] & (BIT(0) | BIT(4))) != BIT(4)) return;
+    cfg11MpBootcnt[id - 2] &= ~BIT(4);
+    LOG_INFO("Disabling ARM11 core %d\n", id);
+
+    // Switch to 2-core execution if both extra cores are now stopped
+    if (~cfg11MpBootcnt[(id - 2) ^ 1] & BIT(4))
+        core->schedule(TOGGLE_RUN_FUNC, 1);
+}
+
+uint8_t Interrupts::readCfg11MpBootcnt(int i) {
+    // Read from a CFG11_MP_BOOTCNT register or a dummy value depending on ID
+    if (!core->n3dsMode) return 0; // N3DS-exclusive
+    return (i >= 2) ? cfg11MpBootcnt[i - 2] : 0x30;
 }
 
 uint32_t Interrupts::readMpAck(CpuId id) {
@@ -76,6 +119,34 @@ uint32_t Interrupts::readMpPending(CpuId id) {
             if (mpIe[i] & mpIp[id][i] & BIT(bit))
                 return (i << 5) + bit;
     return 0x3FF; // None
+}
+
+void Interrupts::writeCfg11MpClkcnt(uint32_t mask, uint32_t value) {
+    // Write to the CFG11_MP_CLKCNT register
+    // TODO: actually support changing clock speeds
+    if (!core->n3dsMode) return; // N3DS-exclusive
+    uint32_t mask2 = (mask & 0x7);
+    cfg11MpClkcnt = (cfg11MpClkcnt & ~mask2) | (value & mask2);
+
+    // Acknowledge the interrupt bit if it's set
+    if (value & mask & BIT(15))
+        cfg11MpClkcnt &= ~BIT(15);
+}
+
+void Interrupts::writeCfg11MpBootcnt(int i, uint8_t value) {
+    // Write to one of the CFG11_MP_BOOTCNT registers
+    if (!core->n3dsMode) return; // N3DS-exclusive
+    cfg11MpBootcnt[i - 2] = (cfg11MpBootcnt[i - 2] & ~0x3) | (value & 0x3);
+
+    // Enable an extra ARM11 core if newly started
+    if ((cfg11MpBootcnt[i - 2] & (BIT(0) | BIT(4))) != BIT(0)) return;
+    core->arms[i].halted = false;
+    cfg11MpBootcnt[i - 2] |= BIT(4) | BIT(5);
+    LOG_INFO("Enabling ARM11 core %d\n", i);
+
+    // Switch to 4-core execution if both extra cores were stopped
+    if (~cfg11MpBootcnt[(i - 2) ^ 1] & BIT(4))
+        core->schedule(TOGGLE_RUN_FUNC, 1);
 }
 
 void Interrupts::writeMpIle(CpuId id, uint32_t mask, uint32_t value) {

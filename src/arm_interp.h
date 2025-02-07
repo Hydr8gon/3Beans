@@ -28,19 +28,19 @@ class ArmInterp {
 public:
     bool halted = false;
     uint32_t cpsr = 0;
+    uint32_t *registers[32] = {};
 
     ArmInterp(Core *core, CpuId id);
     void init();
 
     void resetCycles();
-    static void runFrame(Core *core);
+    template <bool extra> static void runFrame(Core *core);
     int exception(uint8_t vector);
 
 private:
     Core *core;
     CpuId id;
 
-    uint32_t *registers[32] = {};
     uint32_t registersUsr[16] = {};
     uint32_t registersFiq[7] = {};
     uint32_t registersSvc[2] = {};

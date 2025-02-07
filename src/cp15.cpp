@@ -131,7 +131,10 @@ uint32_t Cp15::readReg(CpuId id, uint8_t cn, uint8_t cm, uint8_t cp) {
     }
 
     // Catch reads from unknown CP15 registers
-    LOG_WARN("Unknown ARM%d CP15 register read: C%d,C%d,%d\n", (id == ARM9) ? 9 : 11, cn, cm, cp);
+    if (id == ARM9)
+        LOG_WARN("Unknown ARM9 CP15 register read: C%d,C%d,%d\n", cn, cm, cp);
+    else
+        LOG_WARN("Unknown ARM11 core %d CP15 register read: C%d,C%d,%d\n", id, cn, cm, cp);
     return 0;
 }
 
@@ -156,7 +159,10 @@ void Cp15::writeReg(CpuId id, uint8_t cn, uint8_t cm, uint8_t cp, uint32_t value
     }
 
     // Catch writes to unknown CP15 registers
-    LOG_WARN("Unknown ARM%d CP15 register write: C%d,C%d,%d\n", (id == ARM9) ? 9 : 11, cn, cm, cp);
+    if (id == ARM9)
+        LOG_WARN("Unknown ARM9 CP15 register write: C%d,C%d,%d\n", cn, cm, cp);
+    else
+        LOG_WARN("Unknown ARM11 core %d CP15 register write: C%d,C%d,%d\n", id, cn, cm, cp);
 }
 
 void Cp15::writeCtrl11(CpuId id, uint32_t value) {
@@ -184,7 +190,7 @@ void Cp15::writeTlbBase0(CpuId id, uint32_t value) {
 
 void Cp15::writeWfi(CpuId id, uint32_t value) {
     // Halt the CPU
-    core->arms[id].halted = true;
+    core->interrupts.halt(id);
 }
 
 void Cp15::writeDtcm(CpuId id, uint32_t value) {

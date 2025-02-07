@@ -49,44 +49,20 @@
 #define IO_PARAMS mask << (base << 3), data << (base << 3)
 #define IO_PARAMS8 data << (base << 3)
 
-Memory::Memory(Core *core): core(core) {
-    // Build physical memory maps with 64KB pages for the ARM9 and ARM11
-    for (int arm11 = 0; arm11 < 2; arm11++) {
-        for (uint64_t address = 0; address <= 0xFFFFFFFF; address += 0x10000) {
-            // Set a pointer to readable memory if it exists at the current address
-            uint8_t *&read = (arm11 ? readMap11 : readMap9)[address >> 16];
-            if (!arm11 && address >= 0x8000000 && address < 0x8100000)
-                read = &arm9Ram[address & 0xFFFFF]; // 1MB ARM9 internal RAM
-            else if (address >= 0x20000000 && address < 0x28000000)
-                read = &fcram[address & 0x7FFFFFF]; // 128MB FCRAM
-            else if (address >= 0x18000000 && address < 0x18600000)
-                read = &vram[address & 0x7FFFFF]; // 6MB VRAM
-            else if (address >= 0x1FF00000 && address < 0x1FF80000)
-                read = &dspWram[address & 0x7FFFF]; // 512KB DSP code/data RAM
-            else if (address >= 0x1FF80000 && address < 0x20000000)
-                read = &axiWram[address & 0x7FFFF]; // 512KB AXI WRAM
-            else if (arm11 && (address < 0x20000 || address >= 0xFFFF0000))
-                read = &boot11[address & 0xFFFF]; // 64KB ARM11 boot ROM
-            else if (!arm11 && address >= 0xFFFF0000)
-                read = &boot9[address & 0xFFFF]; // 64KB ARM9 boot ROM
-
-            // Set a pointer to writable memory if it exists at the current address
-            uint8_t *&write = (arm11 ? writeMap11 : writeMap9)[address >> 16];
-            if (!arm11 && address >= 0x8000000 && address < 0x8100000)
-                write = &arm9Ram[address & 0xFFFFF]; // 1MB ARM9 internal RAM
-            else if (address >= 0x20000000 && address < 0x28000000)
-                write = &fcram[address & 0x7FFFFFF]; // 128MB FCRAM
-            else if (address >= 0x18000000 && address < 0x18600000)
-                write = &vram[address & 0x7FFFFF]; // 6MB VRAM
-            else if (address >= 0x1FF00000 && address < 0x1FF80000)
-                write = &dspWram[address & 0x7FFFF]; // 512KB DSP code/data RAM
-            else if (address >= 0x1FF80000 && address < 0x20000000)
-                write = &axiWram[address & 0x7FFFF]; // 512KB AXI WRAM
-        }
-    }
+Memory::~Memory() {
+    // Free extended FCRAM
+    delete[] fcramExt;
 }
 
-bool Memory::loadFiles() {
+bool Memory::init() {
+    // Allocate an extra 128MB of FCRAM if running in new 3DS mode
+    if (core->n3dsMode)
+        fcramExt = new uint8_t[0x8000000];
+
+    // Initialize the memory maps
+    updateMap(false, 0x0, 0xFFFFFFFF);
+    updateMap(true, 0x0, 0xFFFFFFFF);
+
     // Try to load the ARM11 boot ROM
     FILE *file = fopen("boot11.bin", "rb");
     if (!file) return false;
@@ -104,6 +80,81 @@ bool Memory::loadFiles() {
 void Memory::loadOtp(FILE *file) {
     // Load encrypted OTP data from a file
     fread(otpEncrypted, sizeof(uint32_t), 0x40, file);
+}
+
+void Memory::updateMap(bool arm9, uint32_t start, uint32_t end) {
+    // Update the ARM9 or ARM11 physical memory maps with 4KB pages
+    bool extend = !(core->interrupts.readCfg11MpClkcnt() & 0x70000);
+    for (uint64_t address = start; address <= end; address += 0x1000) {
+        // Set a pointer to readable memory if it exists at the current address
+        uint8_t *&read = (arm9 ? readMap9 : readMap11)[address >> 12];
+        if (arm9 && address >= 0x8000000 && address < 0x8100000)
+            read = &arm9Ram[address & 0xFFFFF]; // 1MB ARM9 internal RAM
+        else if (address >= 0x18000000 && address < 0x18600000)
+            read = &vram[address & 0x7FFFFF]; // 6MB VRAM
+        else if (address >= 0x1FF00000 && address < 0x1FF80000)
+            read = &dspWram[address & 0x7FFFF]; // 512KB DSP code/data RAM
+        else if (address >= 0x1FF80000 && address < 0x20000000)
+            read = &axiWram[address & 0x7FFFF]; // 512KB AXI WRAM
+        else if (address >= 0x20000000 && address < 0x28000000)
+            read = &fcram[address & 0x7FFFFFF]; // 128MB FCRAM
+        else if (extend && address >= 0x28000000 && address < 0x30000000)
+            read = &fcramExt[address & 0x7FFFFFF]; // 128MB extended FCRAM
+        else if (!arm9 && (address < 0x20000 || address >= 0xFFFF0000) && ((address & 0xF000) || !cfg11BrOverlayCnt))
+            read = &boot11[address & 0xFFFF]; // 64KB ARM11 boot ROM
+        else if (arm9 && address >= 0xFFFF0000)
+            read = &boot9[address & 0xFFFF]; // 64KB ARM9 boot ROM
+
+        // Set a pointer to writable memory if it exists at the current address
+        uint8_t *&write = (arm9 ? writeMap9 : writeMap11)[address >> 12];
+        if (arm9 && address >= 0x8000000 && address < 0x8100000)
+            write = &arm9Ram[address & 0xFFFFF]; // 1MB ARM9 internal RAM
+        else if (address >= 0x18000000 && address < 0x18600000)
+            write = &vram[address & 0x7FFFFF]; // 6MB VRAM
+        else if (address >= 0x1FF00000 && address < 0x1FF80000)
+            write = &dspWram[address & 0x7FFFF]; // 512KB DSP code/data RAM
+        else if (address >= 0x1FF80000 && address < 0x20000000)
+            write = &axiWram[address & 0x7FFFF]; // 512KB AXI WRAM
+        else if (address >= 0x20000000 && address < 0x28000000)
+            write = &fcram[address & 0x7FFFFFF]; // 128MB FCRAM
+        else if (extend && address >= 0x28000000 && address < 0x30000000)
+            write = &fcramExt[address & 0x7FFFFFF]; // 128MB extended FCRAM
+    }
+}
+
+template uint8_t Memory::readFallback(CpuId id, uint32_t address);
+template uint16_t Memory::readFallback(CpuId id, uint32_t address);
+template uint32_t Memory::readFallback(CpuId id, uint32_t address);
+template <typename T> T Memory::readFallback(CpuId id, uint32_t address) {
+    // Forward a read to I/O registers if within range
+    if (address >= 0x10000000 && address < 0x18000000)
+        return ioRead<T>(id, address);
+
+    // Handle the ARM11 bootrom overlay if reads to it have fallen through
+    if (id != ARM9 && (address < 0x20000 || address >= 0xFFFF0000))
+        return (address == *core->arms[id].registers[15]) ? 0xE59FF018 : cfg11BrOverlayVal;
+
+    // Catch reads from unmapped memory
+    if (id == ARM9)
+        LOG_WARN("Unmapped ARM9 memory read: 0x%08X\n", address);
+    else
+        LOG_WARN("Unmapped ARM11 core %d memory read: 0x%08X\n", id, address);
+    return 0;
+}
+
+template void Memory::writeFallback(CpuId id, uint32_t address, uint8_t value);
+template void Memory::writeFallback(CpuId id, uint32_t address, uint16_t value);
+template void Memory::writeFallback(CpuId id, uint32_t address, uint32_t value);
+template <typename T> void Memory::writeFallback(CpuId id, uint32_t address, T value) {
+    // Forward a write to I/O registers if within range
+    if (address >= 0x10000000 && address < 0x18000000)
+        return ioWrite<T>(id, address, value);
+
+    // Catch writes to unmapped memory
+    if (id == ARM9)
+        LOG_WARN("Unmapped ARM9 memory write: 0x%08X\n", address);
+    else
+        LOG_WARN("Unmapped ARM11 core %d memory write: 0x%08X\n", id, address);
 }
 
 template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
@@ -124,7 +175,15 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
             DEF_IO32(0x10101054, data = core->shas[0].readHash(5)) // SHA_HASH5_11
             DEF_IO32(0x10101058, data = core->shas[0].readHash(6)) // SHA_HASH6_11
             DEF_IO32(0x1010105C, data = core->shas[0].readHash(7)) // SHA_HASH7_11
+            DEF_IO32(0x10140420, data = readCfg11BrOverlayCnt()) // CFG11_BR_OVERLAY_CNT
+            DEF_IO32(0x10140424, data = readCfg11BrOverlayVal()) // CFG11_BR_OVERLAY_VAL
+            DEF_IO16(0x10140FFC, data = readCfg11Socinfo()) // CFG11_SOCINFO
             DEF_IO32(0x10141200, data = core->gpu.readCfg11GpuCnt()) // CFG11_GPU_CNT
+            DEF_IO32(0x10141300, data = core->interrupts.readCfg11MpClkcnt()) // CFG11_MP_CLKCNT
+            DEF_IO08(0x10141310, data = core->interrupts.readCfg11MpBootcnt(0)) // CFG11_MP_BOOTCNT0
+            DEF_IO08(0x10141311, data = core->interrupts.readCfg11MpBootcnt(1)) // CFG11_MP_BOOTCNT1
+            DEF_IO08(0x10141312, data = core->interrupts.readCfg11MpBootcnt(2)) // CFG11_MP_BOOTCNT2
+            DEF_IO08(0x10141313, data = core->interrupts.readCfg11MpBootcnt(3)) // CFG11_MP_BOOTCNT3
             DEF_IO08(0x10144000, data = core->i2c.readBusData(1)) // I2C_BUS1_DATA
             DEF_IO08(0x10144001, data = core->i2c.readBusCnt(1)) // I2C_BUS1_CNT
             DEF_IO16(0x10146000, data = core->input.readHidPad()) // HID_PAD
@@ -200,6 +259,7 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
             switch (base) {
                 DEF_IO08(0x10000000, data = readCfg9Sysprot9()) // CFG9_SYSPROT9
                 DEF_IO08(0x10000001, data = readCfg9Sysprot11()) // CFG9_SYSPROT11
+                DEF_IO16(0x10000FFC, data = readCfg11Socinfo()) // CFG9_MPCORECFG
                 DEF_IO32(0x10001000, data = core->interrupts.readIrqIe()) // IRQ_IE
                 DEF_IO32(0x10001004, data = core->interrupts.readIrqIf()) // IRQ_IF
                 DEF_IO16(0x10003000, data = core->timers.readTmCntL(0)) // TM0CNT_L
@@ -464,7 +524,10 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
         }
 
         // Catch reads from unknown I/O registers
-        LOG_WARN("Unknown ARM%d I/O read: 0x%08X\n", (id == ARM9) ? 9 : 11, base);
+        if (id == ARM9)
+            LOG_WARN("Unknown ARM9 I/O read: 0x%08X\n", base);
+        else
+            LOG_WARN("Unknown ARM11 core %d memory read: 0x%08X\n", id, base);
         return value;
 
     next:
@@ -494,7 +557,12 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
             DEF_IO32(0x10101054, core->shas[0].writeHash(5, IO_PARAMS)) // SHA_HASH5_11
             DEF_IO32(0x10101058, core->shas[0].writeHash(6, IO_PARAMS)) // SHA_HASH6_11
             DEF_IO32(0x1010105C, core->shas[0].writeHash(7, IO_PARAMS)) // SHA_HASH7_11
+            DEF_IO32(0x10140420, writeCfg11BrOverlayCnt(IO_PARAMS)) // CFG11_BR_OVERLAY_CNT
+            DEF_IO32(0x10140424, writeCfg11BrOverlayVal(IO_PARAMS)) // CFG11_BR_OVERLAY_VAL
             DEF_IO32(0x10141200, core->gpu.writeCfg11GpuCnt(IO_PARAMS)) // CFG11_GPU_CNT
+            DEF_IO32(0x10141300, core->interrupts.writeCfg11MpClkcnt(IO_PARAMS)) // CFG11_MP_CLKCNT
+            DEF_IO08(0x10141312, core->interrupts.writeCfg11MpBootcnt(2, IO_PARAMS8)) // CFG11_MP_BOOTCNT2
+            DEF_IO08(0x10141313, core->interrupts.writeCfg11MpBootcnt(3, IO_PARAMS8)) // CFG11_MP_BOOTCNT3
             DEF_IO08(0x10144000, core->i2c.writeBusData(1, IO_PARAMS8)) // I2C_BUS1_DATA
             DEF_IO08(0x10144001, core->i2c.writeBusCnt(1, IO_PARAMS8)) // I2C_BUS1_CNT
             DEF_IO08(0x10148000, core->i2c.writeBusData(2, IO_PARAMS8)) // I2C_BUS2_DATA
@@ -866,13 +934,39 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
         }
 
         // Catch writes to unknown I/O registers
-        LOG_WARN("Unknown ARM%d I/O write: 0x%08X\n", (id == ARM9) ? 9 : 11, base);
+        if (id == ARM9)
+            LOG_WARN("Unknown ARM9 I/O write: 0x%08X\n", base);
+        else
+            LOG_WARN("Unknown ARM11 core %d I/O write: 0x%08X\n", id, base);
         return;
 
     next:
         // Loop until the full value has been written
         i += size - base;
     }
+}
+
+uint16_t Memory::readCfg11Socinfo() {
+    // Read a value indicating the console type
+    return core->n3dsMode ? 0x7 : 0x1;
+}
+
+void Memory::writeCfg11BrOverlayCnt(uint32_t mask, uint32_t value){
+    // Write to the CFG11_BR_OVERLAY_CNT register
+    if (!core->n3dsMode) return; // N3DS-exclusive
+    mask &= 0x1;
+    cfg11BrOverlayCnt = (cfg11BrOverlayCnt & ~mask) | (value & mask);
+
+    // Update the ARM11 memory map in affected regions
+    updateMap(false, 0x0, 0xFFF);
+    updateMap(false, 0x10000, 0x10FFF);
+    updateMap(false, 0xFFFF0000, 0xFFFF0FFF);
+}
+
+void Memory::writeCfg11BrOverlayVal(uint32_t mask, uint32_t value){
+    // Write to the CFG11_BR_OVERLAY_VAL register
+    if (!core->n3dsMode) return; // N3DS-exclusive
+    cfg11BrOverlayVal = (cfg11BrOverlayVal & ~mask) | (value & mask);
 }
 
 void Memory::writeCfg9Sysprot9(uint8_t value) {

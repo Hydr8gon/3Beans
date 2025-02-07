@@ -43,8 +43,11 @@
 enum Task {
     RESET_CYCLES,
     END_FRAME,
+    TOGGLE_RUN_FUNC,
     ARM11A_INTERRUPT,
     ARM11B_INTERRUPT,
+    ARM11C_INTERRUPT,
+    ARM11D_INTERRUPT,
     ARM9_INTERRUPT,
     TIMER0_OVERFLOW,
     TIMER1_OVERFLOW,
@@ -64,6 +67,7 @@ struct Event {
 class Core {
 public:
     int fps = 0;
+    bool n3dsMode = false;
 
     Aes aes;
     ArmInterp arms[MAX_CPUS];
@@ -85,14 +89,16 @@ public:
     uint32_t globalCycles = 0;
 
     Core();
-    void runFrame() { ArmInterp::runFrame(this); }
+    void runFrame() { (*runFunc)(this); }
     void schedule(Task task, uint32_t cycles);
 
 private:
+    void (*runFunc)(Core*) = &ArmInterp::runFrame<false>;
     std::function<void()> tasks[MAX_TASKS];
     std::chrono::steady_clock::time_point lastFpsTime;
     int fpsCount = 0;
 
     void resetCycles();
     void endFrame();
+    void toggleRunFunc();
 };

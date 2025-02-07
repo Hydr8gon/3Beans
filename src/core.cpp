@@ -20,20 +20,25 @@
 #include <algorithm>
 #include "core.h"
 
-Core::Core(): aes(this), arms { ArmInterp(this, ARM11A), ArmInterp(this, ARM11B), ArmInterp(this, ARM9) },
-        cp15(this), gpu(this), i2c(this), input(this), interrupts(this), memory(this), pdc(this),
+Core::Core(): aes(this), arms { ArmInterp(this, ARM11A), ArmInterp(this, ARM11B),
+        ArmInterp(this, ARM11C), ArmInterp(this, ARM11D), ArmInterp(this, ARM9) }, cp15(this),
+        gpu(this), i2c(this), input(this), interrupts(this), memory(this), pdc(this),
         pxi(this), rsa(this), sdMmc(this), shas { Sha(this), Sha(this) }, timers(this) {
-    // Initialize memory and the CPUs
-    memory.loadFiles();
-    sdMmc.loadFiles();
+    // Initialize things that need to be done after construction
+    n3dsMode = sdMmc.init();
+    memory.init();
     for (int i = 0; i < MAX_CPUS; i++)
         arms[i].init();
+    LOG_INFO("Running in %s 3DS mode\n", n3dsMode ? "new" : "old");
 
     // Define the tasks that can be scheduled
     tasks[RESET_CYCLES] = std::bind(&Core::resetCycles, this);
     tasks[END_FRAME] = std::bind(&Core::endFrame, this);
+    tasks[TOGGLE_RUN_FUNC] = std::bind(&Core::toggleRunFunc, this);
     tasks[ARM11A_INTERRUPT] = std::bind(&Interrupts::interrupt, &interrupts, ARM11A);
     tasks[ARM11B_INTERRUPT] = std::bind(&Interrupts::interrupt, &interrupts, ARM11B);
+    tasks[ARM11C_INTERRUPT] = std::bind(&Interrupts::interrupt, &interrupts, ARM11C);
+    tasks[ARM11D_INTERRUPT] = std::bind(&Interrupts::interrupt, &interrupts, ARM11D);
     tasks[ARM9_INTERRUPT] = std::bind(&Interrupts::interrupt, &interrupts, ARM9);
     tasks[TIMER0_OVERFLOW] = std::bind(&Timers::overflow, &timers, 0);
     tasks[TIMER1_OVERFLOW] = std::bind(&Timers::overflow, &timers, 1);
@@ -72,6 +77,12 @@ void Core::endFrame() {
     // Draw a frame and schedule the next one
     pdc.drawFrame();
     schedule(END_FRAME, 268111856 / 60);
+}
+
+void Core::toggleRunFunc() {
+    // Switch between 2-core and 4-core ARM11 run functions and break execution
+    runFunc = (runFunc == &ArmInterp::runFrame<true>) ? &ArmInterp::runFrame<false> : &ArmInterp::runFrame<true>;
+    running.store(false);
 }
 
 void Core::schedule(Task task, uint32_t cycles) {

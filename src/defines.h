@@ -24,6 +24,8 @@
 enum CpuId {
     ARM11A,
     ARM11B,
+    ARM11C,
+    ARM11D,
     ARM9,
     MAX_CPUS
 };

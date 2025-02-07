@@ -26,10 +26,14 @@ class Core;
 class Interrupts {
 public:
     Interrupts(Core *core): core(core) {}
+
     void sendInterrupt(bool arm9, int type);
     void checkInterrupt(bool arm9) { sendInterrupt(arm9, -1); }
     void interrupt(CpuId id);
+    void halt(CpuId id);
 
+    uint32_t readCfg11MpClkcnt() { return cfg11MpClkcnt; }
+    uint8_t readCfg11MpBootcnt(int i);
     uint32_t readMpIle(CpuId id) { return mpIle[id]; }
     uint32_t readMpAck(CpuId id);
     uint32_t readMpPending(CpuId id);
@@ -40,6 +44,8 @@ public:
     uint32_t readIrqIe() { return irqIe; }
     uint32_t readIrqIf() { return irqIf; }
 
+    void writeCfg11MpClkcnt(uint32_t mask, uint32_t value);
+    void writeCfg11MpBootcnt(int i, uint8_t value);
     void writeMpIle(CpuId id, uint32_t mask, uint32_t value);
     void writeMpEoi(CpuId id, uint32_t mask, uint32_t value);
     void writeMpIge(uint32_t mask, uint32_t value);
@@ -51,11 +57,13 @@ public:
 private:
     Core *core;
 
-    uint32_t mpIle[2] = {};
+    uint32_t cfg11MpClkcnt = 0;
+    uint8_t cfg11MpBootcnt[2] = {};
+    uint32_t mpIle[MAX_CPUS - 1] = {};
     uint32_t mpIge = 0;
     uint32_t mpIe[4] = { 0xFFFF };
-    uint32_t mpIp[2][4] = {};
-    uint32_t mpIa[2][4] = {};
+    uint32_t mpIp[MAX_CPUS - 1][4] = {};
+    uint32_t mpIa[MAX_CPUS - 1][4] = {};
     uint32_t irqIe = 0;
     uint32_t irqIf = 0;
 };
