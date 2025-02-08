@@ -27,6 +27,7 @@ class Core;
 class Aes {
 public:
     Aes(Core *core);
+    void processFifo();
 
     uint32_t readCnt() { return aesCnt; }
     uint32_t readRdfifo();
@@ -34,7 +35,7 @@ public:
     uint8_t readKeycnt() { return aesKeycnt; }
 
     void writeCnt(uint32_t mask, uint32_t value);
-    void writeBlkcnt(uint16_t mask, uint16_t value);
+    void writeBlkcnt(uint32_t mask, uint32_t value);
     void writeWrfifo(uint32_t mask, uint32_t value);
     void writeKeysel(uint8_t value);
     void writeKeycnt(uint8_t value);
@@ -69,7 +70,7 @@ private:
     std::queue<uint32_t> keyYFifo;
 
     uint32_t aesCnt = 0;
-    uint16_t aesBlkcnt = 0;
+    uint32_t aesBlkcnt = 0;
     uint32_t aesRdfifo = 0;
     uint8_t aesKeysel = 0;
     uint8_t aesKeycnt = 0;
@@ -86,7 +87,6 @@ private:
     template <bool decrypt> void cryptBlock(uint32_t *src, uint32_t *dst);
 
     void initFifo();
-    void processFifo();
     void flushKeyFifo(bool keyX);
     void flushKeyYFifo();
     void generateKey(int i);

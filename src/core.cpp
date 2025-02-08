@@ -22,7 +22,7 @@
 
 Core::Core(): aes(this), arms { ArmInterp(this, ARM11A), ArmInterp(this, ARM11B),
         ArmInterp(this, ARM11C), ArmInterp(this, ARM11D), ArmInterp(this, ARM9) }, cp15(this),
-        gpu(this), i2c(this), input(this), interrupts(this), memory(this), pdc(this),
+        gpu(this), i2c(this), input(this), interrupts(this), memory(this), ndma(this), pdc(this),
         pxi(this), rsa(this), sdMmc(this), shas { Sha(this), Sha(this) }, timers(this) {
     // Initialize things that need to be done after construction
     n3dsMode = sdMmc.init();
@@ -44,6 +44,8 @@ Core::Core(): aes(this), arms { ArmInterp(this, ARM11A), ArmInterp(this, ARM11B)
     tasks[TIMER1_OVERFLOW] = std::bind(&Timers::overflow, &timers, 1);
     tasks[TIMER2_OVERFLOW] = std::bind(&Timers::overflow, &timers, 2);
     tasks[TIMER3_OVERFLOW] = std::bind(&Timers::overflow, &timers, 3);
+    tasks[AES_PROCESS_FIFO] = std::bind(&Aes::processFifo, &aes);
+    tasks[NDMA_UPDATE] = std::bind(&Ndma::update, &ndma);
 
     // Schedule the initial tasks
     schedule(RESET_CYCLES, 0x7FFFFFFF);

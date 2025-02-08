@@ -58,7 +58,7 @@ void Gpu::writeMemfillCnt(int i, uint32_t mask, uint32_t value) {
 
     // Perform a memory fill with the selected data width
     uint32_t start = (gpuMemfillDstAddr[i] << 3), end = (gpuMemfillDstEnd[i] << 3);
-    LOG_INFO("Performing GPU memory fill from 0x%08X to 0x%08X\n", start, end);
+    LOG_INFO("Performing GPU memory fill between 0x%08X and 0x%08X\n", start, end);
     switch ((gpuMemfillCnt[i] >> 8) & 0x3) {
     case 0: // 16-bit
         for (uint32_t addr = start; addr < end; addr += 2)

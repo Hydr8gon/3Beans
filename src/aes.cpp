@@ -139,28 +139,30 @@ template <bool decrypt> void Aes::cryptBlock(uint32_t *src, uint32_t *dst) {
 
 void Aes::initFifo() {
     // Reload the internal block counter
-    curBlock = aesBlkcnt;
+    curBlock = aesBlkcnt >> 16;
 
     // Initialize encryption/decryption based on the selected mode
-    switch (uint8_t mode = (aesCnt >> 27) & 0x7) {
+    uint8_t mode = (aesCnt >> 27) & 0x7;
+    switch (mode) {
     case 2: case 3: // CTR
         initKey(false);
         memcpy(ctr, aesIv, sizeof(ctr));
-        return;
+        break;
 
     case 4: case 5: // CBC decrypt/encrypt
         initKey(mode == 4);
         memcpy(cbc, aesIv, sizeof(cbc));
-        return;
+        break;
 
     case 6: case 7: // ECB decrypt/encrypt
         initKey(mode == 6);
-        return;
+        break;
 
     default: // Unimplemented
-        LOG_CRIT("AES FIFO started with unimplemented mode: %d\n", mode);
+        LOG_CRIT("AES FIFO started in unimplemented mode: %d\n", mode);
         return;
     }
+    LOG_INFO("AES FIFO starting in mode %d\n", mode);
 }
 
 void Aes::processFifo() {
@@ -220,10 +222,16 @@ void Aes::processFifo() {
         aesCnt &= ~BIT(31);
         if (aesCnt & BIT(30))
             core->interrupts.sendInterrupt(true, 15);
+        LOG_INFO("AES FIFO finished processing\n");
     }
 
-    // Update the FIFO word counts in AES_CNT
+    // Update FIFO sizes and check NDMA conditions
     aesCnt = (aesCnt & ~0x3FF) | (readFifo.size() << 5) | writeFifo.size();
+    if (~aesCnt & BIT(31)) return;
+    if (writeFifo.size() <= ((aesCnt >> 10) & 0xC))
+        core->ndma.triggerMode(0x8); // AES in
+    if (readFifo.size() >= ((aesCnt >> 12) & 0xC) + 4)
+        core->ndma.triggerMode(0x9); // AES out
 }
 
 void Aes::flushKeyFifo(bool keyX) {
@@ -273,7 +281,7 @@ uint32_t Aes::readRdfifo() {
     if (readFifo.empty()) return aesRdfifo;
     aesRdfifo = (aesCnt & BIT(23)) ? BSWAP32(readFifo.front()) : readFifo.front();
     readFifo.pop();
-    processFifo();
+    core->schedule(AES_PROCESS_FIFO, 1);
     return aesRdfifo;
 }
 
@@ -291,11 +299,11 @@ void Aes::writeCnt(uint32_t mask, uint32_t value) {
     // Start processing a new set of FIFO blocks if triggered
     if (!start) return;
     initFifo();
-    processFifo();
+    core->schedule(AES_PROCESS_FIFO, 1);
 }
 
-void Aes::writeBlkcnt(uint16_t mask, uint16_t value) {
-    // Write to the AES_BLKCNT transfer length
+void Aes::writeBlkcnt(uint32_t mask, uint32_t value) {
+    // Write to the AES_BLKCNT register
     aesBlkcnt = (aesBlkcnt & ~mask) | (value & mask);
 }
 
@@ -303,7 +311,7 @@ void Aes::writeWrfifo(uint32_t mask, uint32_t value) {
     // Push a value to the write FIFO based on endian settings
     if (writeFifo.size() == 16) return;
     writeFifo.push((aesCnt & BIT(23)) ? BSWAP32(value & mask) : (value & mask));
-    processFifo();
+    core->schedule(AES_PROCESS_FIFO, 1);
 }
 
 void Aes::writeKeysel(uint8_t value) {

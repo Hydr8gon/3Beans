@@ -112,7 +112,9 @@ void Sha::initFifo() {
     };
 
     // Initialize the hash based on the selected mode
-    switch (uint8_t mode = (shaCnt >> 4) & 0x3) {
+    uint8_t mode = (shaCnt >> 4) & 0x3;
+    LOG_INFO("SHA FIFO starting in mode %d\n", mode);
+    switch (mode) {
     case 0: case 1: // SHA256/SHA224
         memcpy(shaHash, hashes[mode], sizeof(shaHash));
         return;
@@ -182,6 +184,7 @@ void Sha::processFifo() {
     if (!(shaCnt & (fifoRunning << 1))) return;
     shaCnt &= ~BIT(1);
     fifoRunning = false;
+    LOG_INFO("SHA FIFO finished processing\n");
 }
 
 uint32_t Sha::readFifo() {

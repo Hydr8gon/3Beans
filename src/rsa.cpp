@@ -46,6 +46,7 @@ void Rsa::calculate() {
     rsaCnt &= ~BIT(0);
     if (rsaCnt & BIT(1))
         core->interrupts.sendInterrupt(true, 22);
+    LOG_INFO("RSA calculation performed\n");
 }
 
 void Rsa::mulMod(uint32_t *dst, uint32_t *src, uint8_t i, int8_t inc, uint8_t size) {

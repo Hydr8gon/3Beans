@@ -33,6 +33,7 @@
 #include "input.h"
 #include "interrupts.h"
 #include "memory.h"
+#include "ndma.h"
 #include "pdc.h"
 #include "pxi.h"
 #include "rsa.h"
@@ -53,6 +54,8 @@ enum Task {
     TIMER1_OVERFLOW,
     TIMER2_OVERFLOW,
     TIMER3_OVERFLOW,
+    AES_PROCESS_FIFO,
+    NDMA_UPDATE,
     MAX_TASKS
 };
 
@@ -77,6 +80,7 @@ public:
     Input input;
     Interrupts interrupts;
     Memory memory;
+    Ndma ndma;
     Pdc pdc;
     Pxi pxi;
     Rsa rsa;

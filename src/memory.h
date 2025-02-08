@@ -44,7 +44,7 @@ private:
     uint8_t *writeMap11[0x100000] = {};
     uint8_t *writeMap9[0x100000] = {};
 
-    uint8_t arm9Ram[0x100000] = {}; // 1MB ARM9 internal RAM
+    uint8_t arm9Ram[0x180000] = {}; // 1.5MB ARM9 internal RAM
     uint8_t vram[0x600000] = {}; // 6MB VRAM
     uint8_t dspWram[0x80000] = {}; // 512KB DSP code/data RAM
     uint8_t axiWram[0x80000] = {}; // 512KB AXI WRAM
@@ -57,6 +57,7 @@ private:
     uint32_t cfg11BrOverlayVal = 0;
     uint8_t cfg9Sysprot9 = 0;
     uint8_t cfg9Sysprot11 = 0;
+    uint32_t cfg9Extmemcnt9 = 0;
     uint32_t otpEncrypted[0x40] = {};
 
     template <typename T> T readFallback(CpuId id, uint32_t address);
@@ -70,12 +71,14 @@ private:
     uint16_t readCfg11Socinfo();
     uint8_t readCfg9Sysprot9() { return cfg9Sysprot9; }
     uint8_t readCfg9Sysprot11() { return cfg9Sysprot11; }
+    uint8_t readCfg9Extmemcnt9() { return cfg9Extmemcnt9; }
     uint32_t readOtpEncrypted(int i) { return otpEncrypted[i]; }
 
     void writeCfg11BrOverlayCnt(uint32_t mask, uint32_t value);
     void writeCfg11BrOverlayVal(uint32_t mask, uint32_t value);
     void writeCfg9Sysprot9(uint8_t value);
     void writeCfg9Sysprot11(uint8_t value);
+    void writeCfg9Extmemcnt9(uint32_t mask, uint32_t value);
 };
 
 template uint8_t Memory::read(CpuId id, uint32_t address);

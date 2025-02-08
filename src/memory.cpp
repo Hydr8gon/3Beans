@@ -88,8 +88,8 @@ void Memory::updateMap(bool arm9, uint32_t start, uint32_t end) {
     for (uint64_t address = start; address <= end; address += 0x1000) {
         // Set a pointer to readable memory if it exists at the current address
         uint8_t *&read = (arm9 ? readMap9 : readMap11)[address >> 12];
-        if (arm9 && address >= 0x8000000 && address < 0x8100000)
-            read = &arm9Ram[address & 0xFFFFF]; // 1MB ARM9 internal RAM
+        if (arm9 && address >= 0x8000000 && address < (cfg9Extmemcnt9 ? 0x8180000 : 0x8100000))
+            read = &arm9Ram[address & 0x1FFFFF]; // 1.5MB ARM9 internal RAM
         else if (address >= 0x18000000 && address < 0x18600000)
             read = &vram[address & 0x7FFFFF]; // 6MB VRAM
         else if (address >= 0x1FF00000 && address < 0x1FF80000)
@@ -107,8 +107,8 @@ void Memory::updateMap(bool arm9, uint32_t start, uint32_t end) {
 
         // Set a pointer to writable memory if it exists at the current address
         uint8_t *&write = (arm9 ? writeMap9 : writeMap11)[address >> 12];
-        if (arm9 && address >= 0x8000000 && address < 0x8100000)
-            write = &arm9Ram[address & 0xFFFFF]; // 1MB ARM9 internal RAM
+        if (arm9 && address >= 0x8000000 && address < (cfg9Extmemcnt9 ? 0x8180000 : 0x8100000))
+            write = &arm9Ram[address & 0x1FFFFF]; // 1.5MB ARM9 internal RAM
         else if (address >= 0x18000000 && address < 0x18600000)
             write = &vram[address & 0x7FFFFF]; // 6MB VRAM
         else if (address >= 0x1FF00000 && address < 0x1FF80000)
@@ -259,9 +259,58 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
             switch (base) {
                 DEF_IO08(0x10000000, data = readCfg9Sysprot9()) // CFG9_SYSPROT9
                 DEF_IO08(0x10000001, data = readCfg9Sysprot11()) // CFG9_SYSPROT11
+                DEF_IO32(0x10000200, data = readCfg9Extmemcnt9()) // CFG9_EXTMEMCNT9
                 DEF_IO16(0x10000FFC, data = readCfg11Socinfo()) // CFG9_MPCORECFG
                 DEF_IO32(0x10001000, data = core->interrupts.readIrqIe()) // IRQ_IE
                 DEF_IO32(0x10001004, data = core->interrupts.readIrqIf()) // IRQ_IF
+                DEF_IO32(0x10002004, data = core->ndma.readSad(0)) // NDMA0SAD
+                DEF_IO32(0x10002008, data = core->ndma.readDad(0)) // NDMA0DAD
+                DEF_IO32(0x1000200C, data = core->ndma.readTcnt(0)) // NDMA0TCNT
+                DEF_IO32(0x10002010, data = core->ndma.readWcnt(0)) // NDMA0WCNT
+                DEF_IO32(0x10002018, data = core->ndma.readFdata(0)) // NDMA0FDATA
+                DEF_IO32(0x1000201C, data = core->ndma.readCnt(0)) // NDMA0CNT
+                DEF_IO32(0x10002020, data = core->ndma.readSad(1)) // NDMA1SAD
+                DEF_IO32(0x10002024, data = core->ndma.readDad(1)) // NDMA1DAD
+                DEF_IO32(0x10002028, data = core->ndma.readTcnt(1)) // NDMA1TCNT
+                DEF_IO32(0x1000202C, data = core->ndma.readWcnt(1)) // NDMA1WCNT
+                DEF_IO32(0x10002034, data = core->ndma.readFdata(1)) // NDMA1FDATA
+                DEF_IO32(0x10002038, data = core->ndma.readCnt(1)) // NDMA1CNT
+                DEF_IO32(0x1000203C, data = core->ndma.readSad(2)) // NDMA2SAD
+                DEF_IO32(0x10002040, data = core->ndma.readDad(2)) // NDMA2DAD
+                DEF_IO32(0x10002044, data = core->ndma.readTcnt(2)) // NDMA2TCNT
+                DEF_IO32(0x10002048, data = core->ndma.readWcnt(2)) // NDMA2WCNT
+                DEF_IO32(0x10002050, data = core->ndma.readFdata(2)) // NDMA2FDATA
+                DEF_IO32(0x10002054, data = core->ndma.readCnt(2)) // NDMA2CNT
+                DEF_IO32(0x10002058, data = core->ndma.readSad(3)) // NDMA3SAD
+                DEF_IO32(0x1000205C, data = core->ndma.readDad(3)) // NDMA3DAD
+                DEF_IO32(0x10002060, data = core->ndma.readTcnt(3)) // NDMA3TCNT
+                DEF_IO32(0x10002064, data = core->ndma.readWcnt(3)) // NDMA3WCNT
+                DEF_IO32(0x1000206C, data = core->ndma.readFdata(3)) // NDMA3FDATA
+                DEF_IO32(0x10002070, data = core->ndma.readCnt(3)) // NDMA3CNT
+                DEF_IO32(0x10002074, data = core->ndma.readSad(4)) // NDMA4SAD
+                DEF_IO32(0x10002078, data = core->ndma.readDad(4)) // NDMA4DAD
+                DEF_IO32(0x1000207C, data = core->ndma.readTcnt(4)) // NDMA4TCNT
+                DEF_IO32(0x10002080, data = core->ndma.readWcnt(4)) // NDMA4WCNT
+                DEF_IO32(0x10002088, data = core->ndma.readFdata(4)) // NDMA4FDATA
+                DEF_IO32(0x1000208C, data = core->ndma.readCnt(4)) // NDMA4CNT
+                DEF_IO32(0x10002090, data = core->ndma.readSad(5)) // NDMA5SAD
+                DEF_IO32(0x10002094, data = core->ndma.readDad(5)) // NDMA5DAD
+                DEF_IO32(0x10002098, data = core->ndma.readTcnt(5)) // NDMA5TCNT
+                DEF_IO32(0x1000209C, data = core->ndma.readWcnt(5)) // NDMA5WCNT
+                DEF_IO32(0x100020A4, data = core->ndma.readFdata(5)) // NDMA5FDATA
+                DEF_IO32(0x100020A8, data = core->ndma.readCnt(5)) // NDMA5CNT
+                DEF_IO32(0x100020AC, data = core->ndma.readSad(6)) // NDMA6SAD
+                DEF_IO32(0x100020B0, data = core->ndma.readDad(6)) // NDMA6DAD
+                DEF_IO32(0x100020B4, data = core->ndma.readTcnt(6)) // NDMA6TCNT
+                DEF_IO32(0x100020B8, data = core->ndma.readWcnt(6)) // NDMA6WCNT
+                DEF_IO32(0x100020C0, data = core->ndma.readFdata(6)) // NDMA6FDATA
+                DEF_IO32(0x100020C4, data = core->ndma.readCnt(6)) // NDMA6CNT
+                DEF_IO32(0x100020C8, data = core->ndma.readSad(7)) // NDMA7SAD
+                DEF_IO32(0x100020CC, data = core->ndma.readDad(7)) // NDMA7DAD
+                DEF_IO32(0x100020D0, data = core->ndma.readTcnt(7)) // NDMA7TCNT
+                DEF_IO32(0x100020D4, data = core->ndma.readWcnt(7)) // NDMA7WCNT
+                DEF_IO32(0x100020DC, data = core->ndma.readFdata(7)) // NDMA7FDATA
+                DEF_IO32(0x100020E0, data = core->ndma.readCnt(7)) // NDMA7CNT
                 DEF_IO16(0x10003000, data = core->timers.readTmCntL(0)) // TM0CNT_L
                 DEF_IO16(0x10003002, data = core->timers.readTmCntH(0)) // TM0CNT_H
                 DEF_IO16(0x10003004, data = core->timers.readTmCntL(1)) // TM1CNT_L
@@ -624,8 +673,57 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
             switch (base) {
                 DEF_IO08(0x10000000, writeCfg9Sysprot9(IO_PARAMS8)) // CFG9_SYSPROT9
                 DEF_IO08(0x10000001, writeCfg9Sysprot11(IO_PARAMS8)) // CFG9_SYSPROT11
+                DEF_IO32(0x10000200, writeCfg9Extmemcnt9(IO_PARAMS)) // CFG9_EXTMEMCNT9
                 DEF_IO32(0x10001000, core->interrupts.writeIrqIe(IO_PARAMS)) // IRQ_IE
                 DEF_IO32(0x10001004, core->interrupts.writeIrqIf(IO_PARAMS)) // IRQ_IF
+                DEF_IO32(0x10002004, core->ndma.writeSad(0, IO_PARAMS)) // NDMA0SAD
+                DEF_IO32(0x10002008, core->ndma.writeDad(0, IO_PARAMS)) // NDMA0DAD
+                DEF_IO32(0x1000200C, core->ndma.writeTcnt(0, IO_PARAMS)) // NDMA0TCNT
+                DEF_IO32(0x10002010, core->ndma.writeWcnt(0, IO_PARAMS)) // NDMA0WCNT
+                DEF_IO32(0x10002018, core->ndma.writeFdata(0, IO_PARAMS)) // NDMA0FDATA
+                DEF_IO32(0x1000201C, core->ndma.writeCnt(0, IO_PARAMS)) // NDMA0CNT
+                DEF_IO32(0x10002020, core->ndma.writeSad(1, IO_PARAMS)) // NDMA1SAD
+                DEF_IO32(0x10002024, core->ndma.writeDad(1, IO_PARAMS)) // NDMA1DAD
+                DEF_IO32(0x10002028, core->ndma.writeTcnt(1, IO_PARAMS)) // NDMA1TCNT
+                DEF_IO32(0x1000202C, core->ndma.writeWcnt(1, IO_PARAMS)) // NDMA1WCNT
+                DEF_IO32(0x10002034, core->ndma.writeFdata(1, IO_PARAMS)) // NDMA1FDATA
+                DEF_IO32(0x10002038, core->ndma.writeCnt(1, IO_PARAMS)) // NDMA1CNT
+                DEF_IO32(0x1000203C, core->ndma.writeSad(2, IO_PARAMS)) // NDMA2SAD
+                DEF_IO32(0x10002040, core->ndma.writeDad(2, IO_PARAMS)) // NDMA2DAD
+                DEF_IO32(0x10002044, core->ndma.writeTcnt(2, IO_PARAMS)) // NDMA2TCNT
+                DEF_IO32(0x10002048, core->ndma.writeWcnt(2, IO_PARAMS)) // NDMA2WCNT
+                DEF_IO32(0x10002050, core->ndma.writeFdata(2, IO_PARAMS)) // NDMA2FDATA
+                DEF_IO32(0x10002054, core->ndma.writeCnt(2, IO_PARAMS)) // NDMA2CNT
+                DEF_IO32(0x10002058, core->ndma.writeSad(3, IO_PARAMS)) // NDMA3SAD
+                DEF_IO32(0x1000205C, core->ndma.writeDad(3, IO_PARAMS)) // NDMA3DAD
+                DEF_IO32(0x10002060, core->ndma.writeTcnt(3, IO_PARAMS)) // NDMA3TCNT
+                DEF_IO32(0x10002064, core->ndma.writeWcnt(3, IO_PARAMS)) // NDMA3WCNT
+                DEF_IO32(0x1000206C, core->ndma.writeFdata(3, IO_PARAMS)) // NDMA3FDATA
+                DEF_IO32(0x10002070, core->ndma.writeCnt(3, IO_PARAMS)) // NDMA3CNT
+                DEF_IO32(0x10002074, core->ndma.writeSad(4, IO_PARAMS)) // NDMA4SAD
+                DEF_IO32(0x10002078, core->ndma.writeDad(4, IO_PARAMS)) // NDMA4DAD
+                DEF_IO32(0x1000207C, core->ndma.writeTcnt(4, IO_PARAMS)) // NDMA4TCNT
+                DEF_IO32(0x10002080, core->ndma.writeWcnt(4, IO_PARAMS)) // NDMA4WCNT
+                DEF_IO32(0x10002088, core->ndma.writeFdata(4, IO_PARAMS)) // NDMA4FDATA
+                DEF_IO32(0x1000208C, core->ndma.writeCnt(4, IO_PARAMS)) // NDMA4CNT
+                DEF_IO32(0x10002090, core->ndma.writeSad(5, IO_PARAMS)) // NDMA5SAD
+                DEF_IO32(0x10002094, core->ndma.writeDad(5, IO_PARAMS)) // NDMA5DAD
+                DEF_IO32(0x10002098, core->ndma.writeTcnt(5, IO_PARAMS)) // NDMA5TCNT
+                DEF_IO32(0x1000209C, core->ndma.writeWcnt(5, IO_PARAMS)) // NDMA5WCNT
+                DEF_IO32(0x100020A4, core->ndma.writeFdata(5, IO_PARAMS)) // NDMA5FDATA
+                DEF_IO32(0x100020A8, core->ndma.writeCnt(5, IO_PARAMS)) // NDMA5CNT
+                DEF_IO32(0x100020AC, core->ndma.writeSad(6, IO_PARAMS)) // NDMA6SAD
+                DEF_IO32(0x100020B0, core->ndma.writeDad(6, IO_PARAMS)) // NDMA6DAD
+                DEF_IO32(0x100020B4, core->ndma.writeTcnt(6, IO_PARAMS)) // NDMA6TCNT
+                DEF_IO32(0x100020B8, core->ndma.writeWcnt(6, IO_PARAMS)) // NDMA6WCNT
+                DEF_IO32(0x100020C0, core->ndma.writeFdata(6, IO_PARAMS)) // NDMA6FDATA
+                DEF_IO32(0x100020C4, core->ndma.writeCnt(6, IO_PARAMS)) // NDMA6CNT
+                DEF_IO32(0x100020C8, core->ndma.writeSad(7, IO_PARAMS)) // NDMA7SAD
+                DEF_IO32(0x100020CC, core->ndma.writeDad(7, IO_PARAMS)) // NDMA7DAD
+                DEF_IO32(0x100020D0, core->ndma.writeTcnt(7, IO_PARAMS)) // NDMA7TCNT
+                DEF_IO32(0x100020D4, core->ndma.writeWcnt(7, IO_PARAMS)) // NDMA7WCNT
+                DEF_IO32(0x100020DC, core->ndma.writeFdata(7, IO_PARAMS)) // NDMA7FDATA
+                DEF_IO32(0x100020E0, core->ndma.writeCnt(7, IO_PARAMS)) // NDMA7CNT
                 DEF_IO16(0x10003000, core->timers.writeTmCntL(0, IO_PARAMS)) // TM0CNT_L
                 DEF_IO16(0x10003002, core->timers.writeTmCntH(0, IO_PARAMS)) // TM0CNT_H
                 DEF_IO16(0x10003004, core->timers.writeTmCntL(1, IO_PARAMS)) // TM1CNT_L
@@ -648,7 +746,7 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x10008004, core->pxi.writeCnt(1, IO_PARAMS)) // PXI_CNT9
                 DEF_IO32(0x10008008, core->pxi.writeSend(1, IO_PARAMS)) // PXI_SEND9
                 DEF_IO32(0x10009000, core->aes.writeCnt(IO_PARAMS)) // AES_CNT
-                DEF_IO16(0x10009006, core->aes.writeBlkcnt(IO_PARAMS)) // AES_BLKCNT
+                DEF_IO32(0x10009004, core->aes.writeBlkcnt(IO_PARAMS)) // AES_BLKCNT
                 DEF_IO32(0x10009008, core->aes.writeWrfifo(IO_PARAMS)) // AES_WRFIFO
                 DEF_IO08(0x10009010, core->aes.writeKeysel(IO_PARAMS8)) // AES_KEYSEL
                 DEF_IO08(0x10009011, core->aes.writeKeycnt(IO_PARAMS8)) // AES_KEYCNT
@@ -980,4 +1078,14 @@ void Memory::writeCfg9Sysprot11(uint8_t value) {
     // Set bits in the CFG9_SYSPROT11 register and disable sensitive data
     cfg9Sysprot11 |= (value & 0x1);
     if (value & BIT(0)) memset(&boot11[0x8000], 0, 0x8000);
+}
+
+void Memory::writeCfg9Extmemcnt9(uint32_t mask, uint32_t value) {
+    // Write to the CFG9_EXTMEMCNT9 register
+    if (!core->n3dsMode) return; // N3DS-exclusive
+    mask &= 0x1;
+    cfg9Extmemcnt9 = (cfg9Extmemcnt9 & ~mask) | (value & mask);
+
+    // Update the ARM9 memory map in affected regions
+    updateMap(true, 0x8100000, 0x817FFFF);
 }
