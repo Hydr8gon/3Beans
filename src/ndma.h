@@ -49,7 +49,6 @@ private:
 
     uint32_t srcAddrs[8] = {};
     uint32_t dstAddrs[8] = {};
-    uint32_t wordCounts[8] = {};
 
     uint32_t ndmaSad[8] = {};
     uint32_t ndmaDad[8] = {};

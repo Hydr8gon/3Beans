@@ -21,14 +21,16 @@
 
 void Ndma::triggerMode(uint8_t mode) {
     // Schedule transfers on enabled channels of the requested mode
+    bool scheduled = runMask;
     for (int i = 0; i < 8; i++)
         if (((ndmaCnt[i] >> 24) & 0x9F) == (0x80 | mode))
             runMask |= BIT(i);
-    if (runMask) core->schedule(NDMA_UPDATE, 1);
+    if (!scheduled && runMask)
+        core->schedule(NDMA_UPDATE, 1);
 }
 
 void Ndma::update() {
-    // Trigger scheduled transfers and acknowledge them
+    // Perform scheduled transfers and acknowledge them
     for (int i = 0; runMask >> i; i++) {
         if (~runMask & BIT(i)) continue;
         transferBlock(i);
@@ -96,7 +98,7 @@ void Ndma::transferBlock(int i) {
                 dstAddrs[i] += dstStep;
 
                 // Trigger an interrupt and end if the word total is reached
-                if (wordCounts[i]--) continue;
+                if (--ndmaTcnt[i] &= 0xFFFFFFF) continue;
                 if (ndmaCnt[i] & BIT(30))
                     core->interrupts.sendInterrupt(true, i);
                 ndmaCnt[i] &= ~BIT(31);
@@ -146,9 +148,8 @@ void Ndma::writeCnt(int i, uint32_t mask, uint32_t value) {
     uint32_t old = ndmaCnt[i];
     ndmaCnt[i] = (ndmaCnt[i] & ~mask) | (value & mask);
 
-    // Reload internal registers if a channel is newly started
+    // Reload internal addresses if a channel is newly started
     if (!(~old & ndmaCnt[i] & BIT(31))) return;
-    wordCounts[i] = ndmaTcnt[i] ? ndmaTcnt[i] : 0x10000000;
     srcAddrs[i] = ndmaSad[i];
     dstAddrs[i] = ndmaDad[i];
 
@@ -156,6 +157,6 @@ void Ndma::writeCnt(int i, uint32_t mask, uint32_t value) {
     uint8_t mode = (ndmaCnt[i] >> 24) & 0x1F;
     if (mode >= 0x10) // Immediate
         transferBlock(i);
-    else if (mode != 0x8 && mode != 0x9)
+    else if (mode != 0x6 && mode != 0x8 && mode != 0x9)
         LOG_CRIT("NDMA channel %d started in unimplemented mode: 0x%X\n", i, mode);
 }

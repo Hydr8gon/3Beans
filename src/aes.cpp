@@ -165,7 +165,14 @@ void Aes::initFifo() {
     LOG_INFO("AES FIFO starting in mode %d\n", mode);
 }
 
-void Aes::processFifo() {
+void Aes::triggerFifo() {
+    // Schedule a FIFO update if one hasn't been already
+    if (scheduled) return;
+    core->schedule(AES_UPDATE, 1);
+    scheduled = true;
+}
+
+void Aes::update() {
     // Process FIFO blocks when active and available
     while ((aesCnt & BIT(31)) && writeFifo.size() >= 4 && readFifo.size() <= 12) {
         // Receive an input block from the write FIFO based on endian settings
@@ -227,11 +234,11 @@ void Aes::processFifo() {
 
     // Update FIFO sizes and check NDMA conditions
     aesCnt = (aesCnt & ~0x3FF) | (readFifo.size() << 5) | writeFifo.size();
-    if (~aesCnt & BIT(31)) return;
     if (writeFifo.size() <= ((aesCnt >> 10) & 0xC))
         core->ndma.triggerMode(0x8); // AES in
     if (readFifo.size() >= ((aesCnt >> 12) & 0xC) + 4)
         core->ndma.triggerMode(0x9); // AES out
+    scheduled = false;
 }
 
 void Aes::flushKeyFifo(bool keyX) {
@@ -281,7 +288,7 @@ uint32_t Aes::readRdfifo() {
     if (readFifo.empty()) return aesRdfifo;
     aesRdfifo = (aesCnt & BIT(23)) ? BSWAP32(readFifo.front()) : readFifo.front();
     readFifo.pop();
-    core->schedule(AES_PROCESS_FIFO, 1);
+    triggerFifo();
     return aesRdfifo;
 }
 
@@ -299,7 +306,7 @@ void Aes::writeCnt(uint32_t mask, uint32_t value) {
     // Start processing a new set of FIFO blocks if triggered
     if (!start) return;
     initFifo();
-    core->schedule(AES_PROCESS_FIFO, 1);
+    triggerFifo();
 }
 
 void Aes::writeBlkcnt(uint32_t mask, uint32_t value) {
@@ -311,7 +318,7 @@ void Aes::writeWrfifo(uint32_t mask, uint32_t value) {
     // Push a value to the write FIFO based on endian settings
     if (writeFifo.size() == 16) return;
     writeFifo.push((aesCnt & BIT(23)) ? BSWAP32(value & mask) : (value & mask));
-    core->schedule(AES_PROCESS_FIFO, 1);
+    triggerFifo();
 }
 
 void Aes::writeKeysel(uint8_t value) {

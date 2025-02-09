@@ -27,7 +27,7 @@ class Core;
 class Aes {
 public:
     Aes(Core *core);
-    void processFifo();
+    void update();
 
     uint32_t readCnt() { return aesCnt; }
     uint32_t readRdfifo();
@@ -49,6 +49,8 @@ public:
 
 private:
     Core *core;
+    bool scheduled = false;
+
     uint8_t fsBox[0x100];
     uint8_t rsBox[0x100];
     uint32_t fTable[0x100];
@@ -87,6 +89,7 @@ private:
     template <bool decrypt> void cryptBlock(uint32_t *src, uint32_t *dst);
 
     void initFifo();
+    void triggerFifo();
     void flushKeyFifo(bool keyX);
     void flushKeyYFifo();
     void generateKey(int i);

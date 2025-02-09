@@ -59,9 +59,10 @@ void SdMmc::pushFifo(uint32_t value) {
     // Handle 32-bit FIFO mode
     if (sdDataCtl & BIT(1)) {
         // Push a value to the 32-bit read FIFO and check if full
+        uint32_t size = (readFifo32.size() << 2);
+        if (size >= 0x200) return;
         readFifo32.push(value);
-        if ((readFifo32.size() << 2) < sdData32Blklen)
-            return;
+        if (size + 4 < sdData32Blklen) return;
 
         // Trigger a 32-bit FIFO full interrupt if enabled and finish a block
         sdData32Irq |= BIT(8);
@@ -72,10 +73,11 @@ void SdMmc::pushFifo(uint32_t value) {
     }
 
     // Push a value to the 16-bit read FIFO and check if full
+    uint32_t size = (readFifo16.size() << 1);
+    if (size >= 0x200) return;
     readFifo16.push(value);
     readFifo16.push(value >> 16);
-    if ((readFifo16.size() << 1) < sdData16Blklen)
-        return;
+    if (size + 4 < sdData16Blklen) return;
 
     // Trigger a 16-bit FIFO full interrupt and finish a block
     sendInterrupt(24);
@@ -107,6 +109,7 @@ void SdMmc::readBlock() {
     for (int i = 0; i < blockLen; i++) pushFifo(data[i]);
     cardStatus = (cardStatus & ~0x1E00) | ((curBlock ? 0x5 : 0x4) << 9);
     curAddress += (blockLen << 2);
+    core->ndma.triggerMode(0x6);
 }
 
 void SdMmc::runCommand() {
@@ -319,6 +322,12 @@ void SdMmc::writeDataCtl(uint16_t mask, uint16_t value) {
 }
 
 void SdMmc::writeData32Irq(uint16_t mask, uint16_t value) {
+    // Empty the 32-bit FIFO if requested
+    if (value & mask & BIT(10)) {
+        sdData32Irq &= ~BIT(8); // Not full
+        readFifo32 = {};
+    }
+
     // Write to the SD_DATA32_IRQ register
     mask &= 0x1802;
     sdData32Irq = (sdData32Irq & ~mask) | (value & mask);
