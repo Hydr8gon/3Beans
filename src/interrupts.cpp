@@ -27,30 +27,34 @@ void Interrupts::sendInterrupt(bool arm9, int type) {
             irqIf |= BIT(type);
 
         // Schedule an interrupt if any requested interrupts are enabled
-        if (irqIe & irqIf)
-            core->schedule(ARM9_INTERRUPT, 2);
+        if (scheduled[ARM9] || !(irqIe & irqIf)) return;
+        core->schedule(ARM9_INTERRUPT, 2);
+        scheduled[ARM9] = true;
         return;
     }
 
-    // Send an interrupt to the ARM11 cores
-    for (int id = 0; id < MAX_CPUS - 1; id++) {
-        if (mpIle[id] && mpIge) {
-            // Set the interrupt's pending bit
-            if (type != -1)
-                mpIp[id][type >> 5] |= BIT(type & 0x1F);
+    // Send an interrupt to the ARM11 cores if enabled
+    if (!mpIge) return;
+    for (CpuId id = ARM11A; id < ARM9; id = CpuId(id + 1)) {
+        // Set the interrupt's pending bit on targeted cores
+        if (!mpIle[id]) continue;
+        if (type != -1 && (readMpTarget(id, type) & BIT(id)))
+            mpIp[id][type >> 5] |= BIT(type & 0x1F);
 
-            // Schedule an interrupt if any pending interrupts are enabled
-            for (int i = 0; i < 4; i++) {
-                if (!(mpIe[i] & mpIp[id][i])) continue;
-                core->schedule(Task(ARM11A_INTERRUPT + id), 1);
-                break;
-            }
+        // Schedule an interrupt if any pending interrupts are enabled
+        if (scheduled[id]) continue;
+        for (int i = 0; i < 4; i++) {
+            if (!(mpIe[i] & mpIp[id][i])) continue;
+            core->schedule(Task(ARM11A_INTERRUPT + id), 1);
+            scheduled[id] = true;
+            break;
         }
     }
 }
 
 void Interrupts::interrupt(CpuId id) {
     // Set the unhalted bit for extra ARM11 cores if started, or ignore the interrupt
+    scheduled[id] = false;
     if (id == ARM11C || id == ARM11D) {
         if (cfg11MpBootcnt[id - 2] & BIT(4))
             cfg11MpBootcnt[id - 2] |= BIT(5);
@@ -110,25 +114,39 @@ uint32_t Interrupts::readMpScuConfig() {
 }
 
 uint32_t Interrupts::readMpAck(CpuId id) {
-    // Get the ID of the next pending interrupt and switch it to active
+    // Get the ID and source of the next pending interrupt and switch it to active
     for (int i = 0; i < 4; i++) {
         for (int bit = 0; bit < 32; bit++) {
             if (!(mpIe[i] & mpIp[id][i] & BIT(bit))) continue;
             mpIp[id][i] &= ~BIT(bit);
             mpIa[id][i] |= BIT(bit);
-            return (i << 5) + bit;
+            uint32_t type = (i << 5) + bit;
+            return type | ((type < 0x10) ? (sources[id][type] << 10) : 0);
         }
     }
     return 0x3FF; // None
 }
 
 uint32_t Interrupts::readMpPending(CpuId id) {
-    // Get the ID of the next pending interrupt but don't do anything
-    for (int i = 0; i < 4; i++)
-        for (int bit = 0; bit < 32; bit++)
-            if (mpIe[i] & mpIp[id][i] & BIT(bit))
-                return (i << 5) + bit;
+    // Get the ID and source of the next pending interrupt but don't do anything
+    for (int i = 0; i < 4; i++) {
+        for (int bit = 0; bit < 32; bit++) {
+            if (!(mpIe[i] & mpIp[id][i] & BIT(bit))) continue;
+            uint32_t type = (i << 5) + bit;
+            return type | ((type < 0x10) ? (sources[id][type] << 10) : 0);
+        }
+    }
     return 0x3FF; // None
+}
+
+uint32_t Interrupts::readMpCtrlType() {
+    // Read a value indicating IRQ features based on console type
+    return core->n3dsMode ? 0x63 : 0x23;
+}
+
+uint8_t Interrupts::readMpTarget(CpuId id, int i) {
+    // Read from one of the MP_TARGET registers, or special-case private sources
+    return (i >= 0x1D && i <= 0x1F) ? BIT(id) : mpTarget[i];
 }
 
 void Interrupts::writeCfg11MpClkcnt(uint32_t mask, uint32_t value) {
@@ -160,7 +178,7 @@ void Interrupts::writeCfg11MpBootcnt(int i, uint8_t value) {
 }
 
 void Interrupts::writeMpIle(CpuId id, uint32_t mask, uint32_t value) {
-    // Write to a core's MP_ILE local interrupt enable bit
+    // Write to a core's local interrupt enable bit
     mask &= 0x1;
     mpIle[id] = (mpIle[id] & ~mask) | (value & mask);
 }
@@ -172,27 +190,56 @@ void Interrupts::writeMpEoi(CpuId id, uint32_t mask, uint32_t value) {
 }
 
 void Interrupts::writeMpIge(uint32_t mask, uint32_t value) {
-    // Write to the MP_IGE global interrupt enable bit
+    // Write to the global interrupt enable bit
     mask &= 0x1;
     mpIge = (mpIge & ~mask) | (value & mask);
 }
 
 void Interrupts::writeMpIeSet(int i, uint32_t mask, uint32_t value) {
-    // Set MP_IE interrupt enable bits and check if an interrupt should occur
+    // Set interrupt enable bits and check if any should trigger
     mpIe[i] |= (value & mask);
     checkInterrupt(false);
 }
 
 void Interrupts::writeMpIeClear(int i, uint32_t mask, uint32_t value) {
-    // Clear MP_IE interrupt enable bits
-    if (!i) mask &= ~0xFFFF; // Always set
+    // Clear interrupt enable bits
+    if (!i) mask &= ~0xFFFF;
     mpIe[i] &= ~(value & mask);
 }
 
+void Interrupts::writeMpIpSet(int i, uint32_t mask, uint32_t value) {
+    // Set interrupt pending bits on targeted ARM11 cores and check if any should trigger
+    for (int j = 0; (value & mask) >> j; j++)
+        if (value & mask & BIT(j))
+            for (CpuId id = ARM11A; id < ARM9; id = CpuId(id + 1))
+                if (readMpTarget(id, (i << 5) + j) & BIT(id))
+                    mpIp[id][i] |= BIT(j);
+    checkInterrupt(false);
+}
+
+void Interrupts::writeMpIpClear(int i, uint32_t mask, uint32_t value) {
+    // Clear interrupt pending bits on all ARM11 cores
+    if (!i) mask &= ~0xFFFF;
+    for (int id = 0; id < MAX_CPUS - 1; id++)
+        mpIp[id][i] &= ~(value & mask);
+}
+
+void Interrupts::writeMpTarget(int i, uint8_t value) {
+    // Write to one of the MP_TARGET registers if it's writable
+    if (i >= 0x20)
+        mpTarget[i] = (value & 0xF);
+}
+
 void Interrupts::writeMpSoftIrq(CpuId id, uint32_t mask, uint32_t value) {
-    // Get the software interrupt type and target list
-    uint16_t cores, type = (value & mask & 0x1FF);
-    if (type >= 0x20) return;
+    // Verify the software interrupt type
+    uint16_t type = (value & mask & 0x1FF);
+    if (type >= 0x10) {
+        LOG_CRIT("ARM11 core %d triggered software interrupt with unhandled type: 0x%X\n", id, type);
+        return;
+    }
+
+    // Get a target mask of cores to send the interrupt to
+    uint8_t cores;
     switch (((value & mask) >> 24) & 0x3) {
         case 0: cores = ((value & mask) >> 16) & 0xF; break;
         case 1: cores = ~BIT(id) & 0xF; break; // Other CPUs
@@ -203,11 +250,18 @@ void Interrupts::writeMpSoftIrq(CpuId id, uint32_t mask, uint32_t value) {
         return;
     }
 
-    // Send the interrupt to selected ARM11 cores
+    // Send the interrupt to selected ARM11 cores if enabled
+    if (!mpIge) return;
     for (int i = 0; cores >> i; i++) {
-        if (!(cores & BIT(i)) || !(mpIle[i] && mpIge)) continue;
+        // Set the interrupt's pending bit and source ID
+        if (!(cores & BIT(i)) || !mpIle[i]) continue;
         mpIp[i][type >> 5] |= BIT(type & 0x1F);
+        sources[i][type] = id;
+
+        // Schedule an interrupt if one hasn't been already
+        if (scheduled[i]) continue;
         core->schedule(Task(ARM11A_INTERRUPT + i), 1);
+        scheduled[i] = true;
     }
 }
 

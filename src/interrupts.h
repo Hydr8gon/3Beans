@@ -40,9 +40,11 @@ public:
     uint32_t readMpAck(CpuId id);
     uint32_t readMpPending(CpuId id);
     uint32_t readMpIge() { return mpIge; }
+    uint32_t readMpCtrlType();
     uint32_t readMpIe(int i) { return mpIe[i]; }
     uint32_t readMpIp(CpuId id, int i) { return mpIp[id][i]; }
     uint32_t readMpIa(CpuId id, int i) { return mpIa[id][i]; }
+    uint8_t readMpTarget(CpuId id, int i);
     uint32_t readIrqIe() { return irqIe; }
     uint32_t readIrqIf() { return irqIf; }
 
@@ -53,12 +55,18 @@ public:
     void writeMpIge(uint32_t mask, uint32_t value);
     void writeMpIeSet(int i, uint32_t mask, uint32_t value);
     void writeMpIeClear(int i, uint32_t mask, uint32_t value);
+    void writeMpIpSet(int i, uint32_t mask, uint32_t value);
+    void writeMpIpClear(int i, uint32_t mask, uint32_t value);
+    void writeMpTarget(int i, uint8_t value);
     void writeMpSoftIrq(CpuId id, uint32_t mask, uint32_t value);
     void writeIrqIe(uint32_t mask, uint32_t value);
     void writeIrqIf(uint32_t mask, uint32_t value);
 
 private:
     Core *core;
+
+    bool scheduled[MAX_CPUS] = {};
+    uint8_t sources[MAX_CPUS - 1][0x10] = {};
 
     uint32_t cfg11MpClkcnt = 0;
     uint8_t cfg11MpBootcnt[2] = {};
@@ -67,6 +75,7 @@ private:
     uint32_t mpIe[4] = { 0xFFFF };
     uint32_t mpIp[MAX_CPUS - 1][4] = {};
     uint32_t mpIa[MAX_CPUS - 1][4] = {};
+    uint8_t mpTarget[0x80] = {};
     uint32_t irqIe = 0;
     uint32_t irqIf = 0;
 };

@@ -247,6 +247,7 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x17E0010C, data = core->interrupts.readMpAck(id)) // MP_ACK
                 DEF_IO32(0x17E00118, data = core->interrupts.readMpPending(id)) // MP_PENDING
                 DEF_IO32(0x17E01000, data = core->interrupts.readMpIge()) // MP_IGE
+                DEF_IO32(0x17E01004, data = core->interrupts.readMpCtrlType()) // MP_CTRL_TYPE
                 DEF_IO32(0x17E01100, data = core->interrupts.readMpIe(0)) // MP_IE0
                 DEF_IO32(0x17E01104, data = core->interrupts.readMpIe(1)) // MP_IE1
                 DEF_IO32(0x17E01108, data = core->interrupts.readMpIe(2)) // MP_IE2
@@ -267,6 +268,134 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x17E01304, data = core->interrupts.readMpIa(id, 1)) // MP_IA1
                 DEF_IO32(0x17E01308, data = core->interrupts.readMpIa(id, 2)) // MP_IA2
                 DEF_IO32(0x17E0130C, data = core->interrupts.readMpIa(id, 3)) // MP_IA3
+                DEF_IO08(0x17E01800, data = core->interrupts.readMpTarget(id, 0x00)) // MP_TARGET00
+                DEF_IO08(0x17E01801, data = core->interrupts.readMpTarget(id, 0x01)) // MP_TARGET01
+                DEF_IO08(0x17E01802, data = core->interrupts.readMpTarget(id, 0x02)) // MP_TARGET02
+                DEF_IO08(0x17E01803, data = core->interrupts.readMpTarget(id, 0x03)) // MP_TARGET03
+                DEF_IO08(0x17E01804, data = core->interrupts.readMpTarget(id, 0x04)) // MP_TARGET04
+                DEF_IO08(0x17E01805, data = core->interrupts.readMpTarget(id, 0x05)) // MP_TARGET05
+                DEF_IO08(0x17E01806, data = core->interrupts.readMpTarget(id, 0x06)) // MP_TARGET06
+                DEF_IO08(0x17E01807, data = core->interrupts.readMpTarget(id, 0x07)) // MP_TARGET07
+                DEF_IO08(0x17E01808, data = core->interrupts.readMpTarget(id, 0x08)) // MP_TARGET08
+                DEF_IO08(0x17E01809, data = core->interrupts.readMpTarget(id, 0x09)) // MP_TARGET09
+                DEF_IO08(0x17E0180A, data = core->interrupts.readMpTarget(id, 0x0A)) // MP_TARGET0A
+                DEF_IO08(0x17E0180B, data = core->interrupts.readMpTarget(id, 0x0B)) // MP_TARGET0B
+                DEF_IO08(0x17E0180C, data = core->interrupts.readMpTarget(id, 0x0C)) // MP_TARGET0C
+                DEF_IO08(0x17E0180D, data = core->interrupts.readMpTarget(id, 0x0D)) // MP_TARGET0D
+                DEF_IO08(0x17E0180E, data = core->interrupts.readMpTarget(id, 0x0E)) // MP_TARGET0E
+                DEF_IO08(0x17E0180F, data = core->interrupts.readMpTarget(id, 0x0F)) // MP_TARGET0F
+                DEF_IO08(0x17E01810, data = core->interrupts.readMpTarget(id, 0x10)) // MP_TARGET10
+                DEF_IO08(0x17E01811, data = core->interrupts.readMpTarget(id, 0x11)) // MP_TARGET11
+                DEF_IO08(0x17E01812, data = core->interrupts.readMpTarget(id, 0x12)) // MP_TARGET12
+                DEF_IO08(0x17E01813, data = core->interrupts.readMpTarget(id, 0x13)) // MP_TARGET13
+                DEF_IO08(0x17E01814, data = core->interrupts.readMpTarget(id, 0x14)) // MP_TARGET14
+                DEF_IO08(0x17E01815, data = core->interrupts.readMpTarget(id, 0x15)) // MP_TARGET15
+                DEF_IO08(0x17E01816, data = core->interrupts.readMpTarget(id, 0x16)) // MP_TARGET16
+                DEF_IO08(0x17E01817, data = core->interrupts.readMpTarget(id, 0x17)) // MP_TARGET17
+                DEF_IO08(0x17E01818, data = core->interrupts.readMpTarget(id, 0x18)) // MP_TARGET18
+                DEF_IO08(0x17E01819, data = core->interrupts.readMpTarget(id, 0x19)) // MP_TARGET19
+                DEF_IO08(0x17E0181A, data = core->interrupts.readMpTarget(id, 0x1A)) // MP_TARGET1A
+                DEF_IO08(0x17E0181B, data = core->interrupts.readMpTarget(id, 0x1B)) // MP_TARGET1B
+                DEF_IO08(0x17E0181C, data = core->interrupts.readMpTarget(id, 0x1C)) // MP_TARGET1C
+                DEF_IO08(0x17E0181D, data = core->interrupts.readMpTarget(id, 0x1D)) // MP_TARGET1D
+                DEF_IO08(0x17E0181E, data = core->interrupts.readMpTarget(id, 0x1E)) // MP_TARGET1E
+                DEF_IO08(0x17E0181F, data = core->interrupts.readMpTarget(id, 0x1F)) // MP_TARGET1F
+                DEF_IO08(0x17E01820, data = core->interrupts.readMpTarget(id, 0x20)) // MP_TARGET20
+                DEF_IO08(0x17E01821, data = core->interrupts.readMpTarget(id, 0x21)) // MP_TARGET21
+                DEF_IO08(0x17E01822, data = core->interrupts.readMpTarget(id, 0x22)) // MP_TARGET22
+                DEF_IO08(0x17E01823, data = core->interrupts.readMpTarget(id, 0x23)) // MP_TARGET23
+                DEF_IO08(0x17E01824, data = core->interrupts.readMpTarget(id, 0x24)) // MP_TARGET24
+                DEF_IO08(0x17E01825, data = core->interrupts.readMpTarget(id, 0x25)) // MP_TARGET25
+                DEF_IO08(0x17E01826, data = core->interrupts.readMpTarget(id, 0x26)) // MP_TARGET26
+                DEF_IO08(0x17E01827, data = core->interrupts.readMpTarget(id, 0x27)) // MP_TARGET27
+                DEF_IO08(0x17E01828, data = core->interrupts.readMpTarget(id, 0x28)) // MP_TARGET28
+                DEF_IO08(0x17E01829, data = core->interrupts.readMpTarget(id, 0x29)) // MP_TARGET29
+                DEF_IO08(0x17E0182A, data = core->interrupts.readMpTarget(id, 0x2A)) // MP_TARGET2A
+                DEF_IO08(0x17E0182B, data = core->interrupts.readMpTarget(id, 0x2B)) // MP_TARGET2B
+                DEF_IO08(0x17E0182C, data = core->interrupts.readMpTarget(id, 0x2C)) // MP_TARGET2C
+                DEF_IO08(0x17E0182D, data = core->interrupts.readMpTarget(id, 0x2D)) // MP_TARGET2D
+                DEF_IO08(0x17E0182E, data = core->interrupts.readMpTarget(id, 0x2E)) // MP_TARGET2E
+                DEF_IO08(0x17E0182F, data = core->interrupts.readMpTarget(id, 0x2F)) // MP_TARGET2F
+                DEF_IO08(0x17E01830, data = core->interrupts.readMpTarget(id, 0x30)) // MP_TARGET30
+                DEF_IO08(0x17E01831, data = core->interrupts.readMpTarget(id, 0x31)) // MP_TARGET31
+                DEF_IO08(0x17E01832, data = core->interrupts.readMpTarget(id, 0x32)) // MP_TARGET32
+                DEF_IO08(0x17E01833, data = core->interrupts.readMpTarget(id, 0x33)) // MP_TARGET33
+                DEF_IO08(0x17E01834, data = core->interrupts.readMpTarget(id, 0x34)) // MP_TARGET34
+                DEF_IO08(0x17E01835, data = core->interrupts.readMpTarget(id, 0x35)) // MP_TARGET35
+                DEF_IO08(0x17E01836, data = core->interrupts.readMpTarget(id, 0x36)) // MP_TARGET36
+                DEF_IO08(0x17E01837, data = core->interrupts.readMpTarget(id, 0x37)) // MP_TARGET37
+                DEF_IO08(0x17E01838, data = core->interrupts.readMpTarget(id, 0x38)) // MP_TARGET38
+                DEF_IO08(0x17E01839, data = core->interrupts.readMpTarget(id, 0x39)) // MP_TARGET39
+                DEF_IO08(0x17E0183A, data = core->interrupts.readMpTarget(id, 0x3A)) // MP_TARGET3A
+                DEF_IO08(0x17E0183B, data = core->interrupts.readMpTarget(id, 0x3B)) // MP_TARGET3B
+                DEF_IO08(0x17E0183C, data = core->interrupts.readMpTarget(id, 0x3C)) // MP_TARGET3C
+                DEF_IO08(0x17E0183D, data = core->interrupts.readMpTarget(id, 0x3D)) // MP_TARGET3D
+                DEF_IO08(0x17E0183E, data = core->interrupts.readMpTarget(id, 0x3E)) // MP_TARGET3E
+                DEF_IO08(0x17E0183F, data = core->interrupts.readMpTarget(id, 0x3F)) // MP_TARGET3F
+                DEF_IO08(0x17E01840, data = core->interrupts.readMpTarget(id, 0x40)) // MP_TARGET40
+                DEF_IO08(0x17E01841, data = core->interrupts.readMpTarget(id, 0x41)) // MP_TARGET41
+                DEF_IO08(0x17E01842, data = core->interrupts.readMpTarget(id, 0x42)) // MP_TARGET42
+                DEF_IO08(0x17E01843, data = core->interrupts.readMpTarget(id, 0x43)) // MP_TARGET43
+                DEF_IO08(0x17E01844, data = core->interrupts.readMpTarget(id, 0x44)) // MP_TARGET44
+                DEF_IO08(0x17E01845, data = core->interrupts.readMpTarget(id, 0x45)) // MP_TARGET45
+                DEF_IO08(0x17E01846, data = core->interrupts.readMpTarget(id, 0x46)) // MP_TARGET46
+                DEF_IO08(0x17E01847, data = core->interrupts.readMpTarget(id, 0x47)) // MP_TARGET47
+                DEF_IO08(0x17E01848, data = core->interrupts.readMpTarget(id, 0x48)) // MP_TARGET48
+                DEF_IO08(0x17E01849, data = core->interrupts.readMpTarget(id, 0x49)) // MP_TARGET49
+                DEF_IO08(0x17E0184A, data = core->interrupts.readMpTarget(id, 0x4A)) // MP_TARGET4A
+                DEF_IO08(0x17E0184B, data = core->interrupts.readMpTarget(id, 0x4B)) // MP_TARGET4B
+                DEF_IO08(0x17E0184C, data = core->interrupts.readMpTarget(id, 0x4C)) // MP_TARGET4C
+                DEF_IO08(0x17E0184D, data = core->interrupts.readMpTarget(id, 0x4D)) // MP_TARGET4D
+                DEF_IO08(0x17E0184E, data = core->interrupts.readMpTarget(id, 0x4E)) // MP_TARGET4E
+                DEF_IO08(0x17E0184F, data = core->interrupts.readMpTarget(id, 0x4F)) // MP_TARGET4F
+                DEF_IO08(0x17E01850, data = core->interrupts.readMpTarget(id, 0x50)) // MP_TARGET50
+                DEF_IO08(0x17E01851, data = core->interrupts.readMpTarget(id, 0x51)) // MP_TARGET51
+                DEF_IO08(0x17E01852, data = core->interrupts.readMpTarget(id, 0x52)) // MP_TARGET52
+                DEF_IO08(0x17E01853, data = core->interrupts.readMpTarget(id, 0x53)) // MP_TARGET53
+                DEF_IO08(0x17E01854, data = core->interrupts.readMpTarget(id, 0x54)) // MP_TARGET54
+                DEF_IO08(0x17E01855, data = core->interrupts.readMpTarget(id, 0x55)) // MP_TARGET55
+                DEF_IO08(0x17E01856, data = core->interrupts.readMpTarget(id, 0x56)) // MP_TARGET56
+                DEF_IO08(0x17E01857, data = core->interrupts.readMpTarget(id, 0x57)) // MP_TARGET57
+                DEF_IO08(0x17E01858, data = core->interrupts.readMpTarget(id, 0x58)) // MP_TARGET58
+                DEF_IO08(0x17E01859, data = core->interrupts.readMpTarget(id, 0x59)) // MP_TARGET59
+                DEF_IO08(0x17E0185A, data = core->interrupts.readMpTarget(id, 0x5A)) // MP_TARGET5A
+                DEF_IO08(0x17E0185B, data = core->interrupts.readMpTarget(id, 0x5B)) // MP_TARGET5B
+                DEF_IO08(0x17E0185C, data = core->interrupts.readMpTarget(id, 0x5C)) // MP_TARGET5C
+                DEF_IO08(0x17E0185D, data = core->interrupts.readMpTarget(id, 0x5D)) // MP_TARGET5D
+                DEF_IO08(0x17E0185E, data = core->interrupts.readMpTarget(id, 0x5E)) // MP_TARGET5E
+                DEF_IO08(0x17E0185F, data = core->interrupts.readMpTarget(id, 0x5F)) // MP_TARGET5F
+                DEF_IO08(0x17E01860, data = core->interrupts.readMpTarget(id, 0x60)) // MP_TARGET60
+                DEF_IO08(0x17E01861, data = core->interrupts.readMpTarget(id, 0x61)) // MP_TARGET61
+                DEF_IO08(0x17E01862, data = core->interrupts.readMpTarget(id, 0x62)) // MP_TARGET62
+                DEF_IO08(0x17E01863, data = core->interrupts.readMpTarget(id, 0x63)) // MP_TARGET63
+                DEF_IO08(0x17E01864, data = core->interrupts.readMpTarget(id, 0x64)) // MP_TARGET64
+                DEF_IO08(0x17E01865, data = core->interrupts.readMpTarget(id, 0x65)) // MP_TARGET65
+                DEF_IO08(0x17E01866, data = core->interrupts.readMpTarget(id, 0x66)) // MP_TARGET66
+                DEF_IO08(0x17E01867, data = core->interrupts.readMpTarget(id, 0x67)) // MP_TARGET67
+                DEF_IO08(0x17E01868, data = core->interrupts.readMpTarget(id, 0x68)) // MP_TARGET68
+                DEF_IO08(0x17E01869, data = core->interrupts.readMpTarget(id, 0x69)) // MP_TARGET69
+                DEF_IO08(0x17E0186A, data = core->interrupts.readMpTarget(id, 0x6A)) // MP_TARGET6A
+                DEF_IO08(0x17E0186B, data = core->interrupts.readMpTarget(id, 0x6B)) // MP_TARGET6B
+                DEF_IO08(0x17E0186C, data = core->interrupts.readMpTarget(id, 0x6C)) // MP_TARGET6C
+                DEF_IO08(0x17E0186D, data = core->interrupts.readMpTarget(id, 0x6D)) // MP_TARGET6D
+                DEF_IO08(0x17E0186E, data = core->interrupts.readMpTarget(id, 0x6E)) // MP_TARGET6E
+                DEF_IO08(0x17E0186F, data = core->interrupts.readMpTarget(id, 0x6F)) // MP_TARGET6F
+                DEF_IO08(0x17E01870, data = core->interrupts.readMpTarget(id, 0x70)) // MP_TARGET70
+                DEF_IO08(0x17E01871, data = core->interrupts.readMpTarget(id, 0x71)) // MP_TARGET71
+                DEF_IO08(0x17E01872, data = core->interrupts.readMpTarget(id, 0x72)) // MP_TARGET72
+                DEF_IO08(0x17E01873, data = core->interrupts.readMpTarget(id, 0x73)) // MP_TARGET73
+                DEF_IO08(0x17E01874, data = core->interrupts.readMpTarget(id, 0x74)) // MP_TARGET74
+                DEF_IO08(0x17E01875, data = core->interrupts.readMpTarget(id, 0x75)) // MP_TARGET75
+                DEF_IO08(0x17E01876, data = core->interrupts.readMpTarget(id, 0x76)) // MP_TARGET76
+                DEF_IO08(0x17E01877, data = core->interrupts.readMpTarget(id, 0x77)) // MP_TARGET77
+                DEF_IO08(0x17E01878, data = core->interrupts.readMpTarget(id, 0x78)) // MP_TARGET78
+                DEF_IO08(0x17E01879, data = core->interrupts.readMpTarget(id, 0x79)) // MP_TARGET79
+                DEF_IO08(0x17E0187A, data = core->interrupts.readMpTarget(id, 0x7A)) // MP_TARGET7A
+                DEF_IO08(0x17E0187B, data = core->interrupts.readMpTarget(id, 0x7B)) // MP_TARGET7B
+                DEF_IO08(0x17E0187C, data = core->interrupts.readMpTarget(id, 0x7C)) // MP_TARGET7C
+                DEF_IO08(0x17E0187D, data = core->interrupts.readMpTarget(id, 0x7D)) // MP_TARGET7D
+                DEF_IO08(0x17E0187E, data = core->interrupts.readMpTarget(id, 0x7E)) // MP_TARGET7E
+                DEF_IO08(0x17E0187F, data = core->interrupts.readMpTarget(id, 0x7F)) // MP_TARGET7F
             }
         }
         else { // ARM9
@@ -590,7 +719,7 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
         if (id == ARM9)
             LOG_WARN("Unknown ARM9 I/O read: 0x%08X\n", base);
         else
-            LOG_WARN("Unknown ARM11 core %d memory read: 0x%08X\n", id, base);
+            LOG_WARN("Unknown ARM11 core %d I/O read: 0x%08X\n", id, base);
         return value;
 
     next:
@@ -682,6 +811,142 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x17E01184, core->interrupts.writeMpIeClear(1, IO_PARAMS)) // MP_IE1_CLEAR
                 DEF_IO32(0x17E01188, core->interrupts.writeMpIeClear(2, IO_PARAMS)) // MP_IE2_CLEAR
                 DEF_IO32(0x17E0118C, core->interrupts.writeMpIeClear(3, IO_PARAMS)) // MP_IE3_CLEAR
+                DEF_IO32(0x17E01200, core->interrupts.writeMpIpSet(0, IO_PARAMS)) // MP_IP0_SET
+                DEF_IO32(0x17E01204, core->interrupts.writeMpIpSet(1, IO_PARAMS)) // MP_IP1_SET
+                DEF_IO32(0x17E01208, core->interrupts.writeMpIpSet(2, IO_PARAMS)) // MP_IP2_SET
+                DEF_IO32(0x17E0120C, core->interrupts.writeMpIpSet(3, IO_PARAMS)) // MP_IP3_SET
+                DEF_IO32(0x17E01280, core->interrupts.writeMpIpClear(0, IO_PARAMS)) // MP_IP0_CLEAR
+                DEF_IO32(0x17E01284, core->interrupts.writeMpIpClear(1, IO_PARAMS)) // MP_IP1_CLEAR
+                DEF_IO32(0x17E01288, core->interrupts.writeMpIpClear(2, IO_PARAMS)) // MP_IP2_CLEAR
+                DEF_IO32(0x17E0128C, core->interrupts.writeMpIpClear(3, IO_PARAMS)) // MP_IP3_CLEAR
+                DEF_IO08(0x17E01800, core->interrupts.writeMpTarget(0x00, IO_PARAMS8)) // MP_TARGET00
+                DEF_IO08(0x17E01801, core->interrupts.writeMpTarget(0x01, IO_PARAMS8)) // MP_TARGET01
+                DEF_IO08(0x17E01802, core->interrupts.writeMpTarget(0x02, IO_PARAMS8)) // MP_TARGET02
+                DEF_IO08(0x17E01803, core->interrupts.writeMpTarget(0x03, IO_PARAMS8)) // MP_TARGET03
+                DEF_IO08(0x17E01804, core->interrupts.writeMpTarget(0x04, IO_PARAMS8)) // MP_TARGET04
+                DEF_IO08(0x17E01805, core->interrupts.writeMpTarget(0x05, IO_PARAMS8)) // MP_TARGET05
+                DEF_IO08(0x17E01806, core->interrupts.writeMpTarget(0x06, IO_PARAMS8)) // MP_TARGET06
+                DEF_IO08(0x17E01807, core->interrupts.writeMpTarget(0x07, IO_PARAMS8)) // MP_TARGET07
+                DEF_IO08(0x17E01808, core->interrupts.writeMpTarget(0x08, IO_PARAMS8)) // MP_TARGET08
+                DEF_IO08(0x17E01809, core->interrupts.writeMpTarget(0x09, IO_PARAMS8)) // MP_TARGET09
+                DEF_IO08(0x17E0180A, core->interrupts.writeMpTarget(0x0A, IO_PARAMS8)) // MP_TARGET0A
+                DEF_IO08(0x17E0180B, core->interrupts.writeMpTarget(0x0B, IO_PARAMS8)) // MP_TARGET0B
+                DEF_IO08(0x17E0180C, core->interrupts.writeMpTarget(0x0C, IO_PARAMS8)) // MP_TARGET0C
+                DEF_IO08(0x17E0180D, core->interrupts.writeMpTarget(0x0D, IO_PARAMS8)) // MP_TARGET0D
+                DEF_IO08(0x17E0180E, core->interrupts.writeMpTarget(0x0E, IO_PARAMS8)) // MP_TARGET0E
+                DEF_IO08(0x17E0180F, core->interrupts.writeMpTarget(0x0F, IO_PARAMS8)) // MP_TARGET0F
+                DEF_IO08(0x17E01810, core->interrupts.writeMpTarget(0x10, IO_PARAMS8)) // MP_TARGET10
+                DEF_IO08(0x17E01811, core->interrupts.writeMpTarget(0x11, IO_PARAMS8)) // MP_TARGET11
+                DEF_IO08(0x17E01812, core->interrupts.writeMpTarget(0x12, IO_PARAMS8)) // MP_TARGET12
+                DEF_IO08(0x17E01813, core->interrupts.writeMpTarget(0x13, IO_PARAMS8)) // MP_TARGET13
+                DEF_IO08(0x17E01814, core->interrupts.writeMpTarget(0x14, IO_PARAMS8)) // MP_TARGET14
+                DEF_IO08(0x17E01815, core->interrupts.writeMpTarget(0x15, IO_PARAMS8)) // MP_TARGET15
+                DEF_IO08(0x17E01816, core->interrupts.writeMpTarget(0x16, IO_PARAMS8)) // MP_TARGET16
+                DEF_IO08(0x17E01817, core->interrupts.writeMpTarget(0x17, IO_PARAMS8)) // MP_TARGET17
+                DEF_IO08(0x17E01818, core->interrupts.writeMpTarget(0x18, IO_PARAMS8)) // MP_TARGET18
+                DEF_IO08(0x17E01819, core->interrupts.writeMpTarget(0x19, IO_PARAMS8)) // MP_TARGET19
+                DEF_IO08(0x17E0181A, core->interrupts.writeMpTarget(0x1A, IO_PARAMS8)) // MP_TARGET1A
+                DEF_IO08(0x17E0181B, core->interrupts.writeMpTarget(0x1B, IO_PARAMS8)) // MP_TARGET1B
+                DEF_IO08(0x17E0181C, core->interrupts.writeMpTarget(0x1C, IO_PARAMS8)) // MP_TARGET1C
+                DEF_IO08(0x17E0181D, core->interrupts.writeMpTarget(0x1D, IO_PARAMS8)) // MP_TARGET1D
+                DEF_IO08(0x17E0181E, core->interrupts.writeMpTarget(0x1E, IO_PARAMS8)) // MP_TARGET1E
+                DEF_IO08(0x17E0181F, core->interrupts.writeMpTarget(0x1F, IO_PARAMS8)) // MP_TARGET1F
+                DEF_IO08(0x17E01820, core->interrupts.writeMpTarget(0x20, IO_PARAMS8)) // MP_TARGET20
+                DEF_IO08(0x17E01821, core->interrupts.writeMpTarget(0x21, IO_PARAMS8)) // MP_TARGET21
+                DEF_IO08(0x17E01822, core->interrupts.writeMpTarget(0x22, IO_PARAMS8)) // MP_TARGET22
+                DEF_IO08(0x17E01823, core->interrupts.writeMpTarget(0x23, IO_PARAMS8)) // MP_TARGET23
+                DEF_IO08(0x17E01824, core->interrupts.writeMpTarget(0x24, IO_PARAMS8)) // MP_TARGET24
+                DEF_IO08(0x17E01825, core->interrupts.writeMpTarget(0x25, IO_PARAMS8)) // MP_TARGET25
+                DEF_IO08(0x17E01826, core->interrupts.writeMpTarget(0x26, IO_PARAMS8)) // MP_TARGET26
+                DEF_IO08(0x17E01827, core->interrupts.writeMpTarget(0x27, IO_PARAMS8)) // MP_TARGET27
+                DEF_IO08(0x17E01828, core->interrupts.writeMpTarget(0x28, IO_PARAMS8)) // MP_TARGET28
+                DEF_IO08(0x17E01829, core->interrupts.writeMpTarget(0x29, IO_PARAMS8)) // MP_TARGET29
+                DEF_IO08(0x17E0182A, core->interrupts.writeMpTarget(0x2A, IO_PARAMS8)) // MP_TARGET2A
+                DEF_IO08(0x17E0182B, core->interrupts.writeMpTarget(0x2B, IO_PARAMS8)) // MP_TARGET2B
+                DEF_IO08(0x17E0182C, core->interrupts.writeMpTarget(0x2C, IO_PARAMS8)) // MP_TARGET2C
+                DEF_IO08(0x17E0182D, core->interrupts.writeMpTarget(0x2D, IO_PARAMS8)) // MP_TARGET2D
+                DEF_IO08(0x17E0182E, core->interrupts.writeMpTarget(0x2E, IO_PARAMS8)) // MP_TARGET2E
+                DEF_IO08(0x17E0182F, core->interrupts.writeMpTarget(0x2F, IO_PARAMS8)) // MP_TARGET2F
+                DEF_IO08(0x17E01830, core->interrupts.writeMpTarget(0x30, IO_PARAMS8)) // MP_TARGET30
+                DEF_IO08(0x17E01831, core->interrupts.writeMpTarget(0x31, IO_PARAMS8)) // MP_TARGET31
+                DEF_IO08(0x17E01832, core->interrupts.writeMpTarget(0x32, IO_PARAMS8)) // MP_TARGET32
+                DEF_IO08(0x17E01833, core->interrupts.writeMpTarget(0x33, IO_PARAMS8)) // MP_TARGET33
+                DEF_IO08(0x17E01834, core->interrupts.writeMpTarget(0x34, IO_PARAMS8)) // MP_TARGET34
+                DEF_IO08(0x17E01835, core->interrupts.writeMpTarget(0x35, IO_PARAMS8)) // MP_TARGET35
+                DEF_IO08(0x17E01836, core->interrupts.writeMpTarget(0x36, IO_PARAMS8)) // MP_TARGET36
+                DEF_IO08(0x17E01837, core->interrupts.writeMpTarget(0x37, IO_PARAMS8)) // MP_TARGET37
+                DEF_IO08(0x17E01838, core->interrupts.writeMpTarget(0x38, IO_PARAMS8)) // MP_TARGET38
+                DEF_IO08(0x17E01839, core->interrupts.writeMpTarget(0x39, IO_PARAMS8)) // MP_TARGET39
+                DEF_IO08(0x17E0183A, core->interrupts.writeMpTarget(0x3A, IO_PARAMS8)) // MP_TARGET3A
+                DEF_IO08(0x17E0183B, core->interrupts.writeMpTarget(0x3B, IO_PARAMS8)) // MP_TARGET3B
+                DEF_IO08(0x17E0183C, core->interrupts.writeMpTarget(0x3C, IO_PARAMS8)) // MP_TARGET3C
+                DEF_IO08(0x17E0183D, core->interrupts.writeMpTarget(0x3D, IO_PARAMS8)) // MP_TARGET3D
+                DEF_IO08(0x17E0183E, core->interrupts.writeMpTarget(0x3E, IO_PARAMS8)) // MP_TARGET3E
+                DEF_IO08(0x17E0183F, core->interrupts.writeMpTarget(0x3F, IO_PARAMS8)) // MP_TARGET3F
+                DEF_IO08(0x17E01840, core->interrupts.writeMpTarget(0x40, IO_PARAMS8)) // MP_TARGET40
+                DEF_IO08(0x17E01841, core->interrupts.writeMpTarget(0x41, IO_PARAMS8)) // MP_TARGET41
+                DEF_IO08(0x17E01842, core->interrupts.writeMpTarget(0x42, IO_PARAMS8)) // MP_TARGET42
+                DEF_IO08(0x17E01843, core->interrupts.writeMpTarget(0x43, IO_PARAMS8)) // MP_TARGET43
+                DEF_IO08(0x17E01844, core->interrupts.writeMpTarget(0x44, IO_PARAMS8)) // MP_TARGET44
+                DEF_IO08(0x17E01845, core->interrupts.writeMpTarget(0x45, IO_PARAMS8)) // MP_TARGET45
+                DEF_IO08(0x17E01846, core->interrupts.writeMpTarget(0x46, IO_PARAMS8)) // MP_TARGET46
+                DEF_IO08(0x17E01847, core->interrupts.writeMpTarget(0x47, IO_PARAMS8)) // MP_TARGET47
+                DEF_IO08(0x17E01848, core->interrupts.writeMpTarget(0x48, IO_PARAMS8)) // MP_TARGET48
+                DEF_IO08(0x17E01849, core->interrupts.writeMpTarget(0x49, IO_PARAMS8)) // MP_TARGET49
+                DEF_IO08(0x17E0184A, core->interrupts.writeMpTarget(0x4A, IO_PARAMS8)) // MP_TARGET4A
+                DEF_IO08(0x17E0184B, core->interrupts.writeMpTarget(0x4B, IO_PARAMS8)) // MP_TARGET4B
+                DEF_IO08(0x17E0184C, core->interrupts.writeMpTarget(0x4C, IO_PARAMS8)) // MP_TARGET4C
+                DEF_IO08(0x17E0184D, core->interrupts.writeMpTarget(0x4D, IO_PARAMS8)) // MP_TARGET4D
+                DEF_IO08(0x17E0184E, core->interrupts.writeMpTarget(0x4E, IO_PARAMS8)) // MP_TARGET4E
+                DEF_IO08(0x17E0184F, core->interrupts.writeMpTarget(0x4F, IO_PARAMS8)) // MP_TARGET4F
+                DEF_IO08(0x17E01850, core->interrupts.writeMpTarget(0x50, IO_PARAMS8)) // MP_TARGET50
+                DEF_IO08(0x17E01851, core->interrupts.writeMpTarget(0x51, IO_PARAMS8)) // MP_TARGET51
+                DEF_IO08(0x17E01852, core->interrupts.writeMpTarget(0x52, IO_PARAMS8)) // MP_TARGET52
+                DEF_IO08(0x17E01853, core->interrupts.writeMpTarget(0x53, IO_PARAMS8)) // MP_TARGET53
+                DEF_IO08(0x17E01854, core->interrupts.writeMpTarget(0x54, IO_PARAMS8)) // MP_TARGET54
+                DEF_IO08(0x17E01855, core->interrupts.writeMpTarget(0x55, IO_PARAMS8)) // MP_TARGET55
+                DEF_IO08(0x17E01856, core->interrupts.writeMpTarget(0x56, IO_PARAMS8)) // MP_TARGET56
+                DEF_IO08(0x17E01857, core->interrupts.writeMpTarget(0x57, IO_PARAMS8)) // MP_TARGET57
+                DEF_IO08(0x17E01858, core->interrupts.writeMpTarget(0x58, IO_PARAMS8)) // MP_TARGET58
+                DEF_IO08(0x17E01859, core->interrupts.writeMpTarget(0x59, IO_PARAMS8)) // MP_TARGET59
+                DEF_IO08(0x17E0185A, core->interrupts.writeMpTarget(0x5A, IO_PARAMS8)) // MP_TARGET5A
+                DEF_IO08(0x17E0185B, core->interrupts.writeMpTarget(0x5B, IO_PARAMS8)) // MP_TARGET5B
+                DEF_IO08(0x17E0185C, core->interrupts.writeMpTarget(0x5C, IO_PARAMS8)) // MP_TARGET5C
+                DEF_IO08(0x17E0185D, core->interrupts.writeMpTarget(0x5D, IO_PARAMS8)) // MP_TARGET5D
+                DEF_IO08(0x17E0185E, core->interrupts.writeMpTarget(0x5E, IO_PARAMS8)) // MP_TARGET5E
+                DEF_IO08(0x17E0185F, core->interrupts.writeMpTarget(0x5F, IO_PARAMS8)) // MP_TARGET5F
+                DEF_IO08(0x17E01860, core->interrupts.writeMpTarget(0x60, IO_PARAMS8)) // MP_TARGET60
+                DEF_IO08(0x17E01861, core->interrupts.writeMpTarget(0x61, IO_PARAMS8)) // MP_TARGET61
+                DEF_IO08(0x17E01862, core->interrupts.writeMpTarget(0x62, IO_PARAMS8)) // MP_TARGET62
+                DEF_IO08(0x17E01863, core->interrupts.writeMpTarget(0x63, IO_PARAMS8)) // MP_TARGET63
+                DEF_IO08(0x17E01864, core->interrupts.writeMpTarget(0x64, IO_PARAMS8)) // MP_TARGET64
+                DEF_IO08(0x17E01865, core->interrupts.writeMpTarget(0x65, IO_PARAMS8)) // MP_TARGET65
+                DEF_IO08(0x17E01866, core->interrupts.writeMpTarget(0x66, IO_PARAMS8)) // MP_TARGET66
+                DEF_IO08(0x17E01867, core->interrupts.writeMpTarget(0x67, IO_PARAMS8)) // MP_TARGET67
+                DEF_IO08(0x17E01868, core->interrupts.writeMpTarget(0x68, IO_PARAMS8)) // MP_TARGET68
+                DEF_IO08(0x17E01869, core->interrupts.writeMpTarget(0x69, IO_PARAMS8)) // MP_TARGET69
+                DEF_IO08(0x17E0186A, core->interrupts.writeMpTarget(0x6A, IO_PARAMS8)) // MP_TARGET6A
+                DEF_IO08(0x17E0186B, core->interrupts.writeMpTarget(0x6B, IO_PARAMS8)) // MP_TARGET6B
+                DEF_IO08(0x17E0186C, core->interrupts.writeMpTarget(0x6C, IO_PARAMS8)) // MP_TARGET6C
+                DEF_IO08(0x17E0186D, core->interrupts.writeMpTarget(0x6D, IO_PARAMS8)) // MP_TARGET6D
+                DEF_IO08(0x17E0186E, core->interrupts.writeMpTarget(0x6E, IO_PARAMS8)) // MP_TARGET6E
+                DEF_IO08(0x17E0186F, core->interrupts.writeMpTarget(0x6F, IO_PARAMS8)) // MP_TARGET6F
+                DEF_IO08(0x17E01870, core->interrupts.writeMpTarget(0x70, IO_PARAMS8)) // MP_TARGET70
+                DEF_IO08(0x17E01871, core->interrupts.writeMpTarget(0x71, IO_PARAMS8)) // MP_TARGET71
+                DEF_IO08(0x17E01872, core->interrupts.writeMpTarget(0x72, IO_PARAMS8)) // MP_TARGET72
+                DEF_IO08(0x17E01873, core->interrupts.writeMpTarget(0x73, IO_PARAMS8)) // MP_TARGET73
+                DEF_IO08(0x17E01874, core->interrupts.writeMpTarget(0x74, IO_PARAMS8)) // MP_TARGET74
+                DEF_IO08(0x17E01875, core->interrupts.writeMpTarget(0x75, IO_PARAMS8)) // MP_TARGET75
+                DEF_IO08(0x17E01876, core->interrupts.writeMpTarget(0x76, IO_PARAMS8)) // MP_TARGET76
+                DEF_IO08(0x17E01877, core->interrupts.writeMpTarget(0x77, IO_PARAMS8)) // MP_TARGET77
+                DEF_IO08(0x17E01878, core->interrupts.writeMpTarget(0x78, IO_PARAMS8)) // MP_TARGET78
+                DEF_IO08(0x17E01879, core->interrupts.writeMpTarget(0x79, IO_PARAMS8)) // MP_TARGET79
+                DEF_IO08(0x17E0187A, core->interrupts.writeMpTarget(0x7A, IO_PARAMS8)) // MP_TARGET7A
+                DEF_IO08(0x17E0187B, core->interrupts.writeMpTarget(0x7B, IO_PARAMS8)) // MP_TARGET7B
+                DEF_IO08(0x17E0187C, core->interrupts.writeMpTarget(0x7C, IO_PARAMS8)) // MP_TARGET7C
+                DEF_IO08(0x17E0187D, core->interrupts.writeMpTarget(0x7D, IO_PARAMS8)) // MP_TARGET7D
+                DEF_IO08(0x17E0187E, core->interrupts.writeMpTarget(0x7E, IO_PARAMS8)) // MP_TARGET7E
+                DEF_IO08(0x17E0187F, core->interrupts.writeMpTarget(0x7F, IO_PARAMS8)) // MP_TARGET7F
                 DEF_IO32(0x17E01F00, core->interrupts.writeMpSoftIrq(id, IO_PARAMS)) // MP_SOFT_IRQ
             }
         }
