@@ -26,7 +26,7 @@ class Core;
 
 class ArmInterp {
 public:
-    bool halted = false;
+    uint8_t halted = 0;
     uint32_t cpsr = 0;
     uint32_t *registers[32] = {};
 
@@ -59,6 +59,7 @@ private:
     uint32_t cycles = 0;
     uint32_t excAddress = 0;
     bool exclusive = false;
+    bool event = false;
 
     static int (ArmInterp::*armInstrs[0x1000])(uint32_t);
     static int (ArmInterp::*thumbInstrs[0x400])(uint16_t);
@@ -790,6 +791,9 @@ private:
     int cps(uint32_t opcode);
     int srs(uint32_t opcode);
     int rfe(uint32_t opcode);
+    int wfi(uint32_t opcode);
+    int wfe(uint32_t opcode);
+    int sev(uint32_t opcode);
 
     int bxRegT(uint16_t opcode);
     int blxRegT(uint16_t opcode);

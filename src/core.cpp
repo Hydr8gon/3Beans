@@ -46,6 +46,7 @@ Core::Core(): aes(this), arms { ArmInterp(this, ARM11A), ArmInterp(this, ARM11B)
     tasks[TIMER3_OVERFLOW] = std::bind(&Timers::overflow, &timers, 3);
     tasks[AES_UPDATE] = std::bind(&Aes::update, &aes);
     tasks[NDMA_UPDATE] = std::bind(&Ndma::update, &ndma);
+    tasks[SDMMC_READ_BLOCK] = std::bind(&SdMmc::readBlock, &sdMmc);
 
     // Schedule the initial tasks
     schedule(RESET_CYCLES, 0x7FFFFFFF);

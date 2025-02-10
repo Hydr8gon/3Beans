@@ -28,7 +28,9 @@ class SdMmc {
 public:
     SdMmc(Core *core): core(core) {}
     ~SdMmc();
+
     bool init();
+    void readBlock();
 
     uint16_t readCmd() { return sdCmd; }
     uint16_t readPortSelect() { return sdPortSelect; }
@@ -86,7 +88,6 @@ private:
     void sendInterrupt(int bit);
     void pushFifo(uint32_t value);
     void pushResponse(uint32_t value);
-    void readBlock();
     void runCommand();
     void runAppCommand();
 

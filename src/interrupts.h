@@ -30,10 +30,12 @@ public:
     void sendInterrupt(bool arm9, int type);
     void checkInterrupt(bool arm9) { sendInterrupt(arm9, -1); }
     void interrupt(CpuId id);
-    void halt(CpuId id);
+    void halt(CpuId id, uint8_t type = 0);
 
+    uint16_t readCfg11Socinfo();
     uint32_t readCfg11MpClkcnt() { return cfg11MpClkcnt; }
     uint8_t readCfg11MpBootcnt(int i);
+    uint32_t readMpScuConfig();
     uint32_t readMpIle(CpuId id) { return mpIle[id]; }
     uint32_t readMpAck(CpuId id);
     uint32_t readMpPending(CpuId id);
@@ -51,6 +53,7 @@ public:
     void writeMpIge(uint32_t mask, uint32_t value);
     void writeMpIeSet(int i, uint32_t mask, uint32_t value);
     void writeMpIeClear(int i, uint32_t mask, uint32_t value);
+    void writeMpSoftIrq(CpuId id, uint32_t mask, uint32_t value);
     void writeIrqIe(uint32_t mask, uint32_t value);
     void writeIrqIf(uint32_t mask, uint32_t value);
 

@@ -51,10 +51,12 @@ private:
     uint8_t fcram[0x8000000] = {}; // 128MB FCRAM
     uint8_t boot11[0x10000] = {}; // 64KB ARM11 boot ROM
     uint8_t boot9[0x10000] = {}; // 64KB ARM9 boot ROM
-    uint8_t *fcramExt = nullptr;
+    uint8_t *fcramExt = nullptr; // 128MB extended FCRAM
+    uint8_t *vramExt = nullptr; // 4MB extended VRAM
 
     uint32_t cfg11BrOverlayCnt = 0;
     uint32_t cfg11BrOverlayVal = 0;
+    uint32_t cfg11MpCnt = 0;
     uint8_t cfg9Sysprot9 = 0;
     uint8_t cfg9Sysprot11 = 0;
     uint32_t cfg9Extmemcnt9 = 0;
@@ -68,7 +70,7 @@ private:
 
     uint32_t readCfg11BrOverlayCnt() { return cfg11BrOverlayCnt; }
     uint32_t readCfg11BrOverlayVal() { return cfg11BrOverlayVal; }
-    uint16_t readCfg11Socinfo();
+    uint32_t readCfg11MpCnt() { return cfg11MpCnt; }
     uint8_t readCfg9Sysprot9() { return cfg9Sysprot9; }
     uint8_t readCfg9Sysprot11() { return cfg9Sysprot11; }
     uint8_t readCfg9Extmemcnt9() { return cfg9Extmemcnt9; }
@@ -76,6 +78,7 @@ private:
 
     void writeCfg11BrOverlayCnt(uint32_t mask, uint32_t value);
     void writeCfg11BrOverlayVal(uint32_t mask, uint32_t value);
+    void writeCfg11MpCnt(uint32_t mask, uint32_t value);
     void writeCfg9Sysprot9(uint8_t value);
     void writeCfg9Sysprot11(uint8_t value);
     void writeCfg9Extmemcnt9(uint32_t mask, uint32_t value);

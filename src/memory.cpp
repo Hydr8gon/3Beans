@@ -50,14 +50,19 @@
 #define IO_PARAMS8 data << (base << 3)
 
 Memory::~Memory() {
-    // Free extended FCRAM
+    // Free extended FCRAM and VRAM
     delete[] fcramExt;
+    delete[] vramExt;
 }
 
 bool Memory::init() {
-    // Allocate an extra 128MB of FCRAM if running in new 3DS mode
-    if (core->n3dsMode)
+    // Allocate extended FCRAM and VRAM if running in new 3DS mode
+    if (core->n3dsMode) {
         fcramExt = new uint8_t[0x8000000];
+        memset(fcramExt, 0, 0x8000000);
+        vramExt = new uint8_t[0x400000];
+        memset(vramExt, 0, 0x400000);
+    }
 
     // Initialize the memory maps
     updateMap(false, 0x0, 0xFFFFFFFF);
@@ -84,14 +89,20 @@ void Memory::loadOtp(FILE *file) {
 
 void Memory::updateMap(bool arm9, uint32_t start, uint32_t end) {
     // Update the ARM9 or ARM11 physical memory maps with 4KB pages
-    bool extend = !(core->interrupts.readCfg11MpClkcnt() & 0x70000);
+    bool extend = (core->interrupts.readCfg11MpClkcnt() & 0x70000);
     for (uint64_t address = start; address <= end; address += 0x1000) {
-        // Set a pointer to readable memory if it exists at the current address
+        // Look up and reset pointers for the current address
         uint8_t *&read = (arm9 ? readMap9 : readMap11)[address >> 12];
+        uint8_t *&write = (arm9 ? writeMap9 : writeMap11)[address >> 12];
+        read = write = nullptr;
+
+        // Set a pointer to readable memory if it exists at the current address
         if (arm9 && address >= 0x8000000 && address < (cfg9Extmemcnt9 ? 0x8180000 : 0x8100000))
             read = &arm9Ram[address & 0x1FFFFF]; // 1.5MB ARM9 internal RAM
         else if (address >= 0x18000000 && address < 0x18600000)
             read = &vram[address & 0x7FFFFF]; // 6MB VRAM
+        else if (!arm9 && (cfg11MpCnt & BIT(0)) && address >= 0x1F000000 && address < 0x1F400000)
+            read = &vramExt[address & 0x3FFFFF]; // 4MB extended VRAM
         else if (address >= 0x1FF00000 && address < 0x1FF80000)
             read = &dspWram[address & 0x7FFFF]; // 512KB DSP code/data RAM
         else if (address >= 0x1FF80000 && address < 0x20000000)
@@ -106,11 +117,12 @@ void Memory::updateMap(bool arm9, uint32_t start, uint32_t end) {
             read = &boot9[address & 0xFFFF]; // 64KB ARM9 boot ROM
 
         // Set a pointer to writable memory if it exists at the current address
-        uint8_t *&write = (arm9 ? writeMap9 : writeMap11)[address >> 12];
         if (arm9 && address >= 0x8000000 && address < (cfg9Extmemcnt9 ? 0x8180000 : 0x8100000))
             write = &arm9Ram[address & 0x1FFFFF]; // 1.5MB ARM9 internal RAM
         else if (address >= 0x18000000 && address < 0x18600000)
             write = &vram[address & 0x7FFFFF]; // 6MB VRAM
+        else if (!arm9 && (cfg11MpCnt & BIT(0)) && address >= 0x1F000000 && address < 0x1F400000)
+            write = &vramExt[address & 0x3FFFFF]; // 4MB extended VRAM
         else if (address >= 0x1FF00000 && address < 0x1FF80000)
             write = &dspWram[address & 0x7FFFF]; // 512KB DSP code/data RAM
         else if (address >= 0x1FF80000 && address < 0x20000000)
@@ -136,9 +148,9 @@ template <typename T> T Memory::readFallback(CpuId id, uint32_t address) {
 
     // Catch reads from unmapped memory
     if (id == ARM9)
-        LOG_WARN("Unmapped ARM9 memory read: 0x%08X\n", address);
+        LOG_CRIT("Unmapped ARM9 memory read: 0x%08X\n", address);
     else
-        LOG_WARN("Unmapped ARM11 core %d memory read: 0x%08X\n", id, address);
+        LOG_CRIT("Unmapped ARM11 core %d memory read: 0x%08X\n", id, address);
     return 0;
 }
 
@@ -152,9 +164,9 @@ template <typename T> void Memory::writeFallback(CpuId id, uint32_t address, T v
 
     // Catch writes to unmapped memory
     if (id == ARM9)
-        LOG_WARN("Unmapped ARM9 memory write: 0x%08X\n", address);
+        LOG_CRIT("Unmapped ARM9 memory write: 0x%08X\n", address);
     else
-        LOG_WARN("Unmapped ARM11 core %d memory write: 0x%08X\n", id, address);
+        LOG_CRIT("Unmapped ARM11 core %d memory write: 0x%08X\n", id, address);
 }
 
 template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
@@ -177,9 +189,10 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
             DEF_IO32(0x1010105C, data = core->shas[0].readHash(7)) // SHA_HASH7_11
             DEF_IO32(0x10140420, data = readCfg11BrOverlayCnt()) // CFG11_BR_OVERLAY_CNT
             DEF_IO32(0x10140424, data = readCfg11BrOverlayVal()) // CFG11_BR_OVERLAY_VAL
-            DEF_IO16(0x10140FFC, data = readCfg11Socinfo()) // CFG11_SOCINFO
+            DEF_IO16(0x10140FFC, data = core->interrupts.readCfg11Socinfo()) // CFG11_SOCINFO
             DEF_IO32(0x10141200, data = core->gpu.readCfg11GpuCnt()) // CFG11_GPU_CNT
             DEF_IO32(0x10141300, data = core->interrupts.readCfg11MpClkcnt()) // CFG11_MP_CLKCNT
+            DEF_IO32(0x10141304, data = readCfg11MpCnt()) // CFG11_MP_CNT
             DEF_IO08(0x10141310, data = core->interrupts.readCfg11MpBootcnt(0)) // CFG11_MP_BOOTCNT0
             DEF_IO08(0x10141311, data = core->interrupts.readCfg11MpBootcnt(1)) // CFG11_MP_BOOTCNT1
             DEF_IO08(0x10141312, data = core->interrupts.readCfg11MpBootcnt(2)) // CFG11_MP_BOOTCNT2
@@ -229,6 +242,7 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x10400568, data = core->pdc.readFramebufLt0(1)) // PDC1_FRAMEBUF_LT0
                 DEF_IO32(0x10400570, data = core->pdc.readFramebufFormat(1)) // PDC1_FRAMEBUF_FORMAT
                 DEF_IO32(0x10400574, data = core->pdc.readInterruptType(1)) // PDC1_INTERRUPT_TYPE
+                DEF_IO32(0x17E00004, data = core->interrupts.readMpScuConfig()) // MP_SCU_CONFIG
                 DEF_IO32(0x17E00100, data = core->interrupts.readMpIle(id)) // MP_ILE
                 DEF_IO32(0x17E0010C, data = core->interrupts.readMpAck(id)) // MP_ACK
                 DEF_IO32(0x17E00118, data = core->interrupts.readMpPending(id)) // MP_PENDING
@@ -260,7 +274,7 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO08(0x10000000, data = readCfg9Sysprot9()) // CFG9_SYSPROT9
                 DEF_IO08(0x10000001, data = readCfg9Sysprot11()) // CFG9_SYSPROT11
                 DEF_IO32(0x10000200, data = readCfg9Extmemcnt9()) // CFG9_EXTMEMCNT9
-                DEF_IO16(0x10000FFC, data = readCfg11Socinfo()) // CFG9_MPCORECFG
+                DEF_IO16(0x10000FFC, data = core->interrupts.readCfg11Socinfo()) // CFG9_MPCORECFG
                 DEF_IO32(0x10001000, data = core->interrupts.readIrqIe()) // IRQ_IE
                 DEF_IO32(0x10001004, data = core->interrupts.readIrqIf()) // IRQ_IF
                 DEF_IO32(0x10002004, data = core->ndma.readSad(0)) // NDMA0SAD
@@ -610,6 +624,7 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
             DEF_IO32(0x10140424, writeCfg11BrOverlayVal(IO_PARAMS)) // CFG11_BR_OVERLAY_VAL
             DEF_IO32(0x10141200, core->gpu.writeCfg11GpuCnt(IO_PARAMS)) // CFG11_GPU_CNT
             DEF_IO32(0x10141300, core->interrupts.writeCfg11MpClkcnt(IO_PARAMS)) // CFG11_MP_CLKCNT
+            DEF_IO32(0x10141304, writeCfg11MpCnt(IO_PARAMS)) // CFG11_MP_CNT
             DEF_IO08(0x10141312, core->interrupts.writeCfg11MpBootcnt(2, IO_PARAMS8)) // CFG11_MP_BOOTCNT2
             DEF_IO08(0x10141313, core->interrupts.writeCfg11MpBootcnt(3, IO_PARAMS8)) // CFG11_MP_BOOTCNT3
             DEF_IO08(0x10144000, core->i2c.writeBusData(1, IO_PARAMS8)) // I2C_BUS1_DATA
@@ -667,6 +682,7 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x17E01184, core->interrupts.writeMpIeClear(1, IO_PARAMS)) // MP_IE1_CLEAR
                 DEF_IO32(0x17E01188, core->interrupts.writeMpIeClear(2, IO_PARAMS)) // MP_IE2_CLEAR
                 DEF_IO32(0x17E0118C, core->interrupts.writeMpIeClear(3, IO_PARAMS)) // MP_IE3_CLEAR
+                DEF_IO32(0x17E01F00, core->interrupts.writeMpSoftIrq(id, IO_PARAMS)) // MP_SOFT_IRQ
             }
         }
         else { // ARM9
@@ -1044,11 +1060,6 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
     }
 }
 
-uint16_t Memory::readCfg11Socinfo() {
-    // Read a value indicating the console type
-    return core->n3dsMode ? 0x7 : 0x1;
-}
-
 void Memory::writeCfg11BrOverlayCnt(uint32_t mask, uint32_t value){
     // Write to the CFG11_BR_OVERLAY_CNT register
     if (!core->n3dsMode) return; // N3DS-exclusive
@@ -1065,6 +1076,16 @@ void Memory::writeCfg11BrOverlayVal(uint32_t mask, uint32_t value){
     // Write to the CFG11_BR_OVERLAY_VAL register
     if (!core->n3dsMode) return; // N3DS-exclusive
     cfg11BrOverlayVal = (cfg11BrOverlayVal & ~mask) | (value & mask);
+}
+
+void Memory::writeCfg11MpCnt(uint32_t mask, uint32_t value) {
+    // Write to the CFG11_MP_CNT register
+    if (!core->n3dsMode) return; // N3DS-exclusive
+    mask &= 0x101;
+    cfg11MpCnt = (cfg11MpCnt & ~mask) | (value & mask);
+
+    // Update the ARM11 memory map in affected regions
+    updateMap(false, 0x1F000000, 0x1F3FFFFF);
 }
 
 void Memory::writeCfg9Sysprot9(uint8_t value) {

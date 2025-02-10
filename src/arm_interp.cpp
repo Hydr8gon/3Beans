@@ -27,7 +27,7 @@ ArmInterp::ArmInterp(Core *core, CpuId id): core(core), id(id) {
 
     // Don't start extra ARM11 cores right away
     if (id == ARM11C || id == ARM11D)
-        halted = true;
+        halted |= BIT(0);
 }
 
 void ArmInterp::init() {

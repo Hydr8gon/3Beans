@@ -161,6 +161,33 @@ int ArmInterp::rfe(uint32_t opcode) { // RFE[DA/IA/DB/IB] Rn!
     return 1;
 }
 
+int ArmInterp::wfi(uint32_t opcode) {
+    // Halt the CPU until an interrupt occurs
+    core->interrupts.halt(id);
+    return 1;
+}
+
+int ArmInterp::wfe(uint32_t opcode) {
+    // Halt the CPU until the event flag is set or an interrupt occurs
+    if (!event)
+        core->interrupts.halt(id, 1);
+    event = false;
+    return 1;
+}
+
+int ArmInterp::sev(uint32_t opcode) {
+    // Set the event flag for other CPUs or unhalt them if already waiting
+    uint8_t cores = ~BIT(id) & 0xF;
+    for (int i = 0; cores >> i; i++) {
+        if (~cores & BIT(i)) continue;
+        if (core->arms[i].halted & BIT(1))
+            core->arms[i].halted &= ~BIT(1);
+        else
+            core->arms[i].event = true;
+    }
+    return 1;
+}
+
 int ArmInterp::bxRegT(uint16_t opcode) { // BX Rs
     // Branch to address and switch to ARM mode if bit 0 is cleared (THUMB)
     uint32_t op0 = *registers[(opcode >> 3) & 0xF];

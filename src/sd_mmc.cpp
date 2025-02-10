@@ -196,7 +196,7 @@ void SdMmc::readSingleBlock() {
     curAddress = sdCmdParam;
     curBlock = 1;
     pushResponse(cardStatus);
-    readBlock();
+    core->schedule(SDMMC_READ_BLOCK, 1);
 }
 
 void SdMmc::readMultiBlock() {
@@ -204,7 +204,7 @@ void SdMmc::readMultiBlock() {
     curAddress = sdCmdParam;
     curBlock = sdData16Blkcnt;
     pushResponse(cardStatus);
-    readBlock();
+    core->schedule(SDMMC_READ_BLOCK, 1);
 }
 
 void SdMmc::appCmd() {
@@ -243,7 +243,7 @@ uint16_t SdMmc::readData16Fifo() {
     // Clear the FIFO full bit and read another block or end with an interrupt if empty
     sdIrqStatus &= ~BIT(24);
     if (readFifo16.empty())
-        (cardStatus & 0x1E00) == (0x5 << 9) ? readBlock() : sendInterrupt(2);
+        (cardStatus & 0x1E00) == (0x5 << 9) ? core->schedule(SDMMC_READ_BLOCK, 1) : sendInterrupt(2);
     return sdData16Fifo;
 }
 
@@ -256,7 +256,7 @@ uint32_t SdMmc::readData32Fifo() {
     // Clear the FIFO full bit and read another block or end with an interrupt if empty
     sdData32Irq &= ~BIT(8);
     if (readFifo32.empty())
-        (cardStatus & 0x1E00) == (0x5 << 9) ? readBlock() : sendInterrupt(2);
+        (cardStatus & 0x1E00) == (0x5 << 9) ? core->schedule(SDMMC_READ_BLOCK, 1) : sendInterrupt(2);
     return sdData32Fifo;
 }
 

@@ -60,12 +60,12 @@ void Interrupts::interrupt(CpuId id) {
     // Trigger an interrupt on a CPU if enabled and unhalt it
     if (~core->arms[id].cpsr & BIT(7))
         core->arms[id].exception(0x18);
-    core->arms[id].halted = false;
+    core->arms[id].halted &= ~(BIT(0) | BIT(1));
 }
 
-void Interrupts::halt(CpuId id) {
+void Interrupts::halt(CpuId id, uint8_t type) {
     // Halt a CPU and check if all ARM11 cores have been halted
-    core->arms[id].halted = true;
+    core->arms[id].halted |= BIT(type);
     if (id != ARM9 && core->arms[ARM11A].halted && core->arms[ARM11B].halted &&
             core->arms[ARM11C].halted && core->arms[ARM11D].halted) {
         // Update the current clock/FCRAM mode and trigger an interrupt if changed
@@ -93,10 +93,20 @@ void Interrupts::halt(CpuId id) {
         core->schedule(TOGGLE_RUN_FUNC, 1);
 }
 
+uint16_t Interrupts::readCfg11Socinfo() {
+    // Read a value indicating the console type
+    return core->n3dsMode ? 0x7 : 0x1;
+}
+
 uint8_t Interrupts::readCfg11MpBootcnt(int i) {
     // Read from a CFG11_MP_BOOTCNT register or a dummy value depending on ID
     if (!core->n3dsMode) return 0; // N3DS-exclusive
     return (i >= 2) ? cfg11MpBootcnt[i - 2] : 0x30;
+}
+
+uint32_t Interrupts::readMpScuConfig() {
+    // Read a value indicating CPU features based on console type
+    return core->n3dsMode ? 0x5013 : 0x11;
 }
 
 uint32_t Interrupts::readMpAck(CpuId id) {
@@ -140,8 +150,8 @@ void Interrupts::writeCfg11MpBootcnt(int i, uint8_t value) {
 
     // Enable an extra ARM11 core if newly started
     if ((cfg11MpBootcnt[i - 2] & (BIT(0) | BIT(4))) != BIT(0)) return;
-    core->arms[i].halted = false;
-    cfg11MpBootcnt[i - 2] |= BIT(4) | BIT(5);
+    core->arms[i].halted &= ~(BIT(0) | BIT(1));
+    cfg11MpBootcnt[i - 2] |= (BIT(4) | BIT(5));
     LOG_INFO("Enabling ARM11 core %d\n", i);
 
     // Switch to 4-core execution if both extra cores were stopped
@@ -177,6 +187,28 @@ void Interrupts::writeMpIeClear(int i, uint32_t mask, uint32_t value) {
     // Clear MP_IE interrupt enable bits
     if (!i) mask &= ~0xFFFF; // Always set
     mpIe[i] &= ~(value & mask);
+}
+
+void Interrupts::writeMpSoftIrq(CpuId id, uint32_t mask, uint32_t value) {
+    // Get the software interrupt type and target list
+    uint16_t cores, type = (value & mask & 0x1FF);
+    if (type >= 0x20) return;
+    switch (((value & mask) >> 24) & 0x3) {
+        case 0: cores = ((value & mask) >> 16) & 0xF; break;
+        case 1: cores = ~BIT(id) & 0xF; break; // Other CPUs
+        case 2: cores = BIT(id); break; // Local CPU
+
+    default:
+        LOG_CRIT("ARM11 core %d triggered software interrupt with unhandled target mode\n", id);
+        return;
+    }
+
+    // Send the interrupt to selected ARM11 cores
+    for (int i = 0; cores >> i; i++) {
+        if (!(cores & BIT(i)) || !(mpIle[i] && mpIge)) continue;
+        mpIp[i][type >> 5] |= BIT(type & 0x1F);
+        core->schedule(Task(ARM11A_INTERRUPT + i), 1);
+    }
 }
 
 void Interrupts::writeIrqIe(uint32_t mask, uint32_t value) {
