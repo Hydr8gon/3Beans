@@ -137,7 +137,14 @@ void Sha::pushFifo() {
     fifoValue = fifoMask = 0;
 }
 
-void Sha::processFifo() {
+void Sha::triggerFifo() {
+    // Schedule a FIFO update if one hasn't been already
+    if (scheduled) return;
+    core->schedule(Task(SHA11_UPDATE + arm9), 1);
+    scheduled = true;
+}
+
+void Sha::update() {
     // Add a footer to the final block, ensuring data is a multiple of 16 words
     if (shaCnt & (fifoRunning << 1)) {
         // Append an end bit to the data and adjust length for missing bytes
@@ -180,6 +187,13 @@ void Sha::processFifo() {
         shaBlkcnt += 64;
     }
 
+    // Check NDMA conditions
+    if (inFifo.size() == 0)
+        core->ndma.triggerMode(0xA); // SHA in
+    if (outFifo.size() == 16)
+        core->ndma.triggerMode(0xB); // SHA out
+    scheduled = false;
+
     // Disable the FIFO after the final block is processed
     if (!(shaCnt & (fifoRunning << 1))) return;
     shaCnt &= ~BIT(1);
@@ -210,7 +224,7 @@ void Sha::writeCnt(uint32_t mask, uint32_t value) {
 
     // Start processing the FIFO if triggered
     if (start) initFifo();
-    processFifo();
+    triggerFifo();
 }
 
 void Sha::writeBlkcnt(uint32_t mask, uint32_t value) {
@@ -230,5 +244,5 @@ void Sha::writeFifo(uint32_t mask, uint32_t value) {
     fifoValue |= BSWAP32(value & mask);
     if ((fifoMask |= BSWAP32(mask)) != -1) return;
     pushFifo();
-    processFifo();
+    triggerFifo();
 }

@@ -26,7 +26,8 @@ class Core;
 
 class Sha {
 public:
-    Sha(Core *core): core(core) {}
+    Sha(Core *core, bool arm9): core(core), arm9(arm9) {}
+    void update();
 
     uint32_t readCnt() { return shaCnt; }
     uint32_t readBlkcnt() { return shaBlkcnt; }
@@ -40,6 +41,8 @@ public:
 
 private:
     Core *core;
+    bool arm9;
+    bool scheduled = false;
 
     std::queue<uint32_t> inFifo;
     std::queue<uint32_t> outFifo;
@@ -56,5 +59,5 @@ private:
 
     void initFifo();
     void pushFifo();
-    void processFifo();
+    void triggerFifo();
 };

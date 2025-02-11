@@ -67,3 +67,10 @@ enum CpuId {
 #else
 #define LOG_INFO(...) (0)
 #endif
+
+// If enabled, print OS logs in green
+#if LOG_LEVEL > 3
+#define LOG_OS(...) printf("\x1b[32m" __VA_ARGS__)
+#else
+#define LOG_OS(...) (0)
+#endif

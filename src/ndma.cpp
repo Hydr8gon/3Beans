@@ -157,6 +157,6 @@ void Ndma::writeCnt(int i, uint32_t mask, uint32_t value) {
     uint8_t mode = (ndmaCnt[i] >> 24) & 0x1F;
     if (mode >= 0x10) // Immediate
         transferBlock(i);
-    else if (mode != 0x6 && mode != 0x8 && mode != 0x9)
+    else if (mode != 0x6 && (mode < 0x8 || mode > 0xB))
         LOG_CRIT("NDMA channel %d started in unimplemented mode: 0x%X\n", i, mode);
 }

@@ -115,6 +115,17 @@ template <typename T> void Cp15::write(CpuId id, uint32_t address, T value) {
         }
     }
     else if (mmuEnables[id]) {
+        #if LOG_LEVEL > 3
+        // Extract process names from the active 3DS kernel process struct
+        if (address == 0xFFFF9004 && value) {
+            uint32_t kCodeSet = read<uint32_t>(id, value + 0xB8);
+            uint8_t procName[9];
+            for (int i = 0; i < 8; i++)
+                procName[i] = read<uint8_t>(id, kCodeSet + 0x50 + i);
+            LOG_OS("ARM11 core %d kernel switching to process '%s'\n", id, procName);
+        }
+        #endif
+
         // Translate the address using an ARM11 MMU if enabled
         address = mmuTranslate(id, address);
     }
@@ -132,6 +143,9 @@ uint32_t Cp15::readReg(CpuId id, uint8_t cn, uint8_t cm, uint8_t cp) {
             case 0x020000: return tlbBase0Regs[id]; // TLB base 0
             case 0x020001: return tlbBase1Regs[id]; // TLB base 1
             case 0x020002: return tlbCtrlRegs[id]; // TLB control
+            case 0x0D0002: return threadIdRegs[id][0]; // Thread ID 0
+            case 0x0D0003: return threadIdRegs[id][1]; // Thread ID 1
+            case 0x0D0004: return threadIdRegs[id][2]; // Thread ID 2
         }
     }
     else { // ARM9
@@ -162,6 +176,9 @@ void Cp15::writeReg(CpuId id, uint8_t cn, uint8_t cm, uint8_t cp, uint32_t value
             case 0x020002: return writeTlbCtrl(id, value); // TLB control
             case 0x070004: return writeWfi(id, value); // Wait for interrupt
             case 0x070802: return writeWfi(id, value); // Wait for interrupt
+            case 0x0D0002: return writeThreadId(id, 0, value); // Thread ID 0
+            case 0x0D0003: return writeThreadId(id, 1, value); // Thread ID 1
+            case 0x0D0004: return writeThreadId(id, 2, value); // Thread ID 2
         }
     }
     else { // ARM9
@@ -214,6 +231,12 @@ void Cp15::writeTlbCtrl(CpuId id, uint32_t value) {
     // Set a core's translation table control register
     tlbCtrlRegs[id] = value & 0x7;
     LOG_INFO("Changing ARM11 core %d translation table control to %d\n", id, tlbCtrlRegs[id]);
+}
+
+void Cp15::writeThreadId(CpuId id, int i, uint32_t value) {
+    // Set one of a core's thread ID registers
+    // TODO: enforce access permissions
+    threadIdRegs[id][i] = value;
 }
 
 void Cp15::writeWfi(CpuId id, uint32_t value) {

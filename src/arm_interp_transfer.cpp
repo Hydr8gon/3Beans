@@ -1093,6 +1093,16 @@ int ArmInterp::mrsRs(uint32_t opcode) { // MRS Rd,SPSR
 }
 
 int ArmInterp::mrc(uint32_t opcode) { // MRC Pn,<cpopc>,Rd,Cn,Cm,<cp>
+    // Check the coprocessor ID
+    uint8_t cp = ((opcode >> 8) & 0xF);
+    if (cp != 15) {
+        if (id == ARM9)
+            LOG_CRIT("Read from unknown ARM9 coprocessor: CP%d\n",  cp);
+        else
+            LOG_CRIT("Read from unknown ARM11 core %d coprocessor: CP%d\n", id, cp);
+        return 1;
+    }
+
     // Read from a CP15 register
     uint32_t *op2 = registers[(opcode >> 12) & 0xF];
     uint8_t op3 = (opcode >> 16) & 0xF;
@@ -1103,6 +1113,16 @@ int ArmInterp::mrc(uint32_t opcode) { // MRC Pn,<cpopc>,Rd,Cn,Cm,<cp>
 }
 
 int ArmInterp::mcr(uint32_t opcode) { // MCR Pn,<cpopc>,Rd,Cn,Cm,<cp>
+    // Check the coprocessor ID
+    uint8_t cp = ((opcode >> 8) & 0xF);
+    if (cp != 15) {
+        if (id == ARM9)
+            LOG_CRIT("Write to unknown ARM9 coprocessor: CP%d\n",  cp);
+        else
+            LOG_CRIT("Write to unknown ARM11 core %d coprocessor: CP%d\n", id, cp);
+        return 1;
+    }
+
     // Write to a CP15 register
     uint32_t op2 = *registers[(opcode >> 12) & 0xF];
     uint8_t op3 = (opcode >> 16) & 0xF;
@@ -1164,11 +1184,9 @@ int ArmInterp::strexb(uint32_t opcode) { // STREXB Rd,Rm,[Rn]
     core->cp15.write<uint8_t>(id, op2, op1);
 
     // Update exclusive states on all cores
-    uint8_t cores = ~BIT(id) & 0xF;
-    for (int i = 0; cores >> i; i++)
-        if ((cores & BIT(i)) && core->arms[i].exclusive && core->arms[i].excAddress == op2)
+    for (int i = 0; i < MAX_CPUS - 1; i++)
+        if (core->arms[i].exclusive && core->arms[i].excAddress == op2)
             core->arms[i].exclusive = false;
-    exclusive = false;
     return 1;
 }
 
@@ -1197,11 +1215,9 @@ int ArmInterp::strexh(uint32_t opcode) { // STREXH Rd,Rm,[Rn]
     core->cp15.write<uint16_t>(id, op2, op1);
 
     // Update exclusive states on all cores
-    uint8_t cores = ~BIT(id) & 0xF;
-    for (int i = 0; cores >> i; i++)
-        if ((cores & BIT(i)) && core->arms[i].exclusive && core->arms[i].excAddress == op2)
+    for (int i = 0; i < MAX_CPUS - 1; i++)
+        if (core->arms[i].exclusive && core->arms[i].excAddress == op2)
             core->arms[i].exclusive = false;
-    exclusive = false;
     return 1;
 }
 
@@ -1237,11 +1253,9 @@ int ArmInterp::strex(uint32_t opcode) { // STREX Rd,Rm,[Rn]
     core->cp15.write<uint32_t>(id, op2, op1);
 
     // Update exclusive states on all cores
-    uint8_t cores = ~BIT(id) & 0xF;
-    for (int i = 0; cores >> i; i++)
-        if ((cores & BIT(i)) && core->arms[i].exclusive && core->arms[i].excAddress == op2)
+    for (int i = 0; i < MAX_CPUS - 1; i++)
+        if (core->arms[i].exclusive && core->arms[i].excAddress == op2)
             core->arms[i].exclusive = false;
-    exclusive = false;
     return 1;
 }
 
@@ -1270,11 +1284,9 @@ int ArmInterp::strexd(uint32_t opcode) { // STREXD Rd,Rm,[Rn]
     core->cp15.write<uint32_t>(id, op2 + 4, op1[1]);
 
     // Update exclusive states on all cores
-    uint8_t cores = ~BIT(id) & 0xF;
-    for (int i = 0; cores >> i; i++)
-        if ((cores & BIT(i)) && core->arms[i].exclusive && core->arms[i].excAddress == op2)
+    for (int i = 0; i < MAX_CPUS - 1; i++)
+        if (core->arms[i].exclusive && core->arms[i].excAddress == op2)
             core->arms[i].exclusive = false;
-    exclusive = false;
     return 2;
 }
 

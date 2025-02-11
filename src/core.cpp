@@ -23,7 +23,7 @@
 Core::Core(): aes(this), arms { ArmInterp(this, ARM11A), ArmInterp(this, ARM11B),
         ArmInterp(this, ARM11C), ArmInterp(this, ARM11D), ArmInterp(this, ARM9) }, cp15(this),
         gpu(this), i2c(this), input(this), interrupts(this), memory(this), ndma(this), pdc(this),
-        pxi(this), rsa(this), sdMmc(this), shas { Sha(this), Sha(this) }, timers(this) {
+        pxi(this), rsa(this), sdMmc(this), shas { Sha(this, false), Sha(this, true) }, timers(this) {
     // Initialize things that need to be done after construction
     n3dsMode = sdMmc.init();
     memory.init();
@@ -46,6 +46,8 @@ Core::Core(): aes(this), arms { ArmInterp(this, ARM11A), ArmInterp(this, ARM11B)
     tasks[TIMER3_OVERFLOW] = std::bind(&Timers::overflow, &timers, 3);
     tasks[AES_UPDATE] = std::bind(&Aes::update, &aes);
     tasks[NDMA_UPDATE] = std::bind(&Ndma::update, &ndma);
+    tasks[SHA11_UPDATE] = std::bind(&Sha::update, &shas[0]);
+    tasks[SHA9_UPDATE] = std::bind(&Sha::update, &shas[1]);
     tasks[SDMMC_READ_BLOCK] = std::bind(&SdMmc::readBlock, &sdMmc);
 
     // Schedule the initial tasks

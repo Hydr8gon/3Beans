@@ -56,6 +56,8 @@ enum Task {
     TIMER3_OVERFLOW,
     AES_UPDATE,
     NDMA_UPDATE,
+    SHA11_UPDATE,
+    SHA9_UPDATE,
     SDMMC_READ_BLOCK,
     MAX_TASKS
 };
