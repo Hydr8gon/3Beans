@@ -224,21 +224,21 @@ FORCE_INLINE int ArmInterp::strOf(uint32_t opcode, uint32_t op2) { // STR Rd,[Rn
 
 FORCE_INLINE int ArmInterp::ldrdOf(uint32_t opcode, uint32_t op2) { // LDRD Rd,[Rn,op2]
     // Double word load, pre-adjust without writeback
-    uint8_t op0 = (opcode >> 12) & 0xF;
-    if (op0 == 15) return 1;
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    if (op0 == registers[15]) return 1;
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
-    *registers[op0] = core->cp15.read<uint32_t>(id, op1 += op2);
-    *registers[op0 + 1] = core->cp15.read<uint32_t>(id, op1 + 4);
+    op0[0] = core->cp15.read<uint32_t>(id, op1 += op2);
+    op0[1] = core->cp15.read<uint32_t>(id, op1 + 4);
     return 2;
 }
 
 FORCE_INLINE int ArmInterp::strdOf(uint32_t opcode, uint32_t op2) { // STRD Rd,[Rn,op2]
     // Double word store, pre-adjust without writeback
-    uint8_t op0 = (opcode >> 12) & 0xF;
-    if (op0 == 15) return 1;
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    if (op0 == registers[15]) return 1;
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
-    core->cp15.write<uint32_t>(id, op1 += op2, *registers[op0]);
-    core->cp15.write<uint32_t>(id, op1 + 4, *registers[op0 + 1]);
+    core->cp15.write<uint32_t>(id, op1 += op2, op0[0]);
+    core->cp15.write<uint32_t>(id, op1 + 4, op0[1]);
     return 2;
 }
 
@@ -342,21 +342,21 @@ FORCE_INLINE int ArmInterp::strPr(uint32_t opcode, uint32_t op2) { // STR Rd,[Rn
 
 FORCE_INLINE int ArmInterp::ldrdPr(uint32_t opcode, uint32_t op2) { // LDRD Rd,[Rn,op2]!
     // Double word load, pre-adjust with writeback
-    uint8_t op0 = (opcode >> 12) & 0xF;
-    if (op0 == 15) return 1;
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    if (op0 == registers[15]) return 1;
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
-    *registers[op0] = core->cp15.read<uint32_t>(id, *op1 += op2);
-    *registers[op0 + 1] = core->cp15.read<uint32_t>(id, *op1 + 4);
+    op0[0] = core->cp15.read<uint32_t>(id, *op1 += op2);
+    op0[1] = core->cp15.read<uint32_t>(id, *op1 + 4);
     return 2;
 }
 
 FORCE_INLINE int ArmInterp::strdPr(uint32_t opcode, uint32_t op2) { // STRD Rd,[Rn,op2]!
     // Double word store, pre-adjust with writeback
-    uint8_t op0 = (opcode >> 12) & 0xF;
-    if (op0 == 15) return 1;
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    if (op0 == registers[15]) return 1;
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
-    core->cp15.write<uint32_t>(id, *op1 += op2, *registers[op0]);
-    core->cp15.write<uint32_t>(id, *op1 + 4, *registers[op0 + 1]);
+    core->cp15.write<uint32_t>(id, *op1 += op2, op0[0]);
+    core->cp15.write<uint32_t>(id, *op1 + 4, op0[1]);
     return 2;
 }
 
@@ -465,22 +465,22 @@ FORCE_INLINE int ArmInterp::strPt(uint32_t opcode, uint32_t op2) { // STR Rd,[Rn
 
 FORCE_INLINE int ArmInterp::ldrdPt(uint32_t opcode, uint32_t op2) { // LDRD Rd,[Rn],op2
     // Double word load, post-adjust
-    uint8_t op0 = (opcode >> 12) & 0xF;
-    if (op0 == 15) return 1;
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    if (op0 == registers[15]) return 1;
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
     uint32_t address = (*op1 += op2) - op2;
-    *registers[op0] = core->cp15.read<uint32_t>(id, address);
-    *registers[op0 + 1] = core->cp15.read<uint32_t>(id, address + 4);
+    op0[0] = core->cp15.read<uint32_t>(id, address);
+    op0[1] = core->cp15.read<uint32_t>(id, address + 4);
     return 2;
 }
 
 FORCE_INLINE int ArmInterp::strdPt(uint32_t opcode, uint32_t op2) { // STRD Rd,[Rn],op2
     // Double word store, post-adjust
-    uint8_t op0 = (opcode >> 12) & 0xF;
-    if (op0 == 15) return 1;
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    if (op0 == registers[15]) return 1;
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
-    core->cp15.write<uint32_t>(id, *op1, *registers[op0]);
-    core->cp15.write<uint32_t>(id, *op1 + 4, *registers[op0 + 1]);
+    core->cp15.write<uint32_t>(id, *op1, op0[0]);
+    core->cp15.write<uint32_t>(id, *op1 + 4, op0[1]);
     *op1 += op2;
     return 2;
 }
@@ -1138,6 +1138,73 @@ int ArmInterp::swp(uint32_t opcode) { // SWP Rd,Rm,[Rn]
     return 2;
 }
 
+int ArmInterp::ldrexb(uint32_t opcode) { // LDREXB Rd,[Rn]
+    // Load byte exclusively
+    if (id == ARM9) return 1; // ARM11-exclusive
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    uint32_t op1 = *registers[(opcode >> 16) & 0xF];
+    *op0 = core->cp15.read<uint8_t>(id, excAddress = op1);
+    exclusive = true;
+
+    // Handle pipelining and THUMB switching
+    if (op0 != registers[15]) return 1;
+    cpsr |= (*op0 & 0x1) << 5;
+    flushPipeline();
+    return 5;
+}
+
+int ArmInterp::strexb(uint32_t opcode) { // STREXB Rd,Rm,[Rn]
+    // Store byte exclusively
+    // TODO: handle non-shared memory properly
+    if (id == ARM9) return 1; // ARM11-exclusive
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    uint32_t op1 = *registers[opcode & 0xF];
+    uint32_t op2 = *registers[(opcode >> 16) & 0xF];
+    if ((*op0 = !exclusive || excAddress != op2)) return 1;
+    core->cp15.write<uint8_t>(id, op2, op1);
+
+    // Update exclusive states on all cores
+    uint8_t cores = ~BIT(id) & 0xF;
+    for (int i = 0; cores >> i; i++)
+        if ((cores & BIT(i)) && core->arms[i].exclusive && core->arms[i].excAddress == op2)
+            core->arms[i].exclusive = false;
+    exclusive = false;
+    return 1;
+}
+
+int ArmInterp::ldrexh(uint32_t opcode) { // LDREXH Rd,[Rn]
+    // Load half-word exclusively
+    if (id == ARM9) return 1; // ARM11-exclusive
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    uint32_t op1 = *registers[(opcode >> 16) & 0xF];
+    *op0 = core->cp15.read<uint16_t>(id, excAddress = op1);
+    exclusive = true;
+
+    // Handle pipelining
+    if (op0 != registers[15]) return 1;
+    flushPipeline();
+    return 5;
+}
+
+int ArmInterp::strexh(uint32_t opcode) { // STREXH Rd,Rm,[Rn]
+    // Store half-word exclusively
+    // TODO: handle non-shared memory properly
+    if (id == ARM9) return 1; // ARM11-exclusive
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    uint32_t op1 = *registers[opcode & 0xF];
+    uint32_t op2 = *registers[(opcode >> 16) & 0xF];
+    if ((*op0 = !exclusive || excAddress != op2)) return 1;
+    core->cp15.write<uint16_t>(id, op2, op1);
+
+    // Update exclusive states on all cores
+    uint8_t cores = ~BIT(id) & 0xF;
+    for (int i = 0; cores >> i; i++)
+        if ((cores & BIT(i)) && core->arms[i].exclusive && core->arms[i].excAddress == op2)
+            core->arms[i].exclusive = false;
+    exclusive = false;
+    return 1;
+}
+
 int ArmInterp::ldrex(uint32_t opcode) { // LDREX Rd,[Rn]
     // Load word exclusively
     if (id == ARM9) return 1; // ARM11-exclusive
@@ -1167,13 +1234,48 @@ int ArmInterp::strex(uint32_t opcode) { // STREX Rd,Rm,[Rn]
     uint32_t op1 = *registers[opcode & 0xF];
     uint32_t op2 = *registers[(opcode >> 16) & 0xF];
     if ((*op0 = !exclusive || excAddress != op2)) return 1;
-    core->cp15.write(id, op2, op1);
+    core->cp15.write<uint32_t>(id, op2, op1);
 
-    // Update exclusive states on both cores
-    if (core->arms[!id].exclusive && core->arms[!id].excAddress == op2)
-        core->arms[!id].exclusive = false;
+    // Update exclusive states on all cores
+    uint8_t cores = ~BIT(id) & 0xF;
+    for (int i = 0; cores >> i; i++)
+        if ((cores & BIT(i)) && core->arms[i].exclusive && core->arms[i].excAddress == op2)
+            core->arms[i].exclusive = false;
     exclusive = false;
     return 1;
+}
+
+int ArmInterp::ldrexd(uint32_t opcode) { // LDREXD Rd,[Rn]
+    // Load double words exclusively
+    if (id == ARM9) return 1; // ARM11-exclusive
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    if (op0 == registers[15]) return 1;
+    uint32_t op1 = *registers[(opcode >> 16) & 0xF];
+    op0[0] = core->cp15.read<uint32_t>(id, excAddress = op1);
+    op0[1] = core->cp15.read<uint32_t>(id, op1 + 4);
+    exclusive = true;
+    return 2;
+}
+
+int ArmInterp::strexd(uint32_t opcode) { // STREXD Rd,Rm,[Rn]
+    // Store double words exclusively
+    // TODO: handle non-shared memory properly
+    if (id == ARM9) return 1; // ARM11-exclusive
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    uint32_t *op1 = registers[opcode & 0xF];
+    if (op1 == registers[15]) return 1;
+    uint32_t op2 = *registers[(opcode >> 16) & 0xF];
+    if ((*op0 = !exclusive || excAddress != op2)) return 1;
+    core->cp15.write<uint32_t>(id, op2, op1[0]);
+    core->cp15.write<uint32_t>(id, op2 + 4, op1[1]);
+
+    // Update exclusive states on all cores
+    uint8_t cores = ~BIT(id) & 0xF;
+    for (int i = 0; cores >> i; i++)
+        if ((cores & BIT(i)) && core->arms[i].exclusive && core->arms[i].excAddress == op2)
+            core->arms[i].exclusive = false;
+    exclusive = false;
+    return 2;
 }
 
 int ArmInterp::clrex(uint32_t opcode) { // CLREX

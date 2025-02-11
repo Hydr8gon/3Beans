@@ -20,9 +20,21 @@
 #include "core.h"
 
 uint32_t Cp15::mmuTranslate(CpuId id, uint32_t address) {
+    // Check control value X to determine the table base address
+    uint32_t base;
+    if (tlbCtrlRegs[id]) {
+        // Use base 1 if any upper X bits are set, or use base 0 with X extra bits
+        uint32_t mask = ((1 << tlbCtrlRegs[id]) - 1) << (32 - tlbCtrlRegs[id]);
+        base = (address & mask) ? (tlbBase1Regs[id] & 0xFFFFC000) : (tlbBase0Regs[id] & (0xFFFFC000 | (mask >> 18)));
+    }
+    else {
+        // Always use base 0 if X is zero
+        base = (tlbBase0Regs[id] & 0xFFFFC000);
+    }
+
     // Translate a virtual address to physical using MMU translation tables
     // TODO: handle all the extra bits
-    uint32_t entry = core->memory.read<uint32_t>(id, (tlbBase0Regs[id] & 0xFFFFC000) + ((address >> 18) & 0x3FFC));
+    uint32_t entry = core->memory.read<uint32_t>(id, base + ((address >> 18) & 0x3FFC));
     switch (entry & 0x3) {
     case 0x1: // Coarse
         entry = core->memory.read<uint32_t>(id, (entry & 0xFFFFFC00) + ((address >> 10) & 0x3FC));
@@ -118,6 +130,8 @@ uint32_t Cp15::readReg(CpuId id, uint8_t cn, uint8_t cm, uint8_t cp) {
             case 0x000005: return id; // CPU ID
             case 0x010000: return ctrlRegs[id]; // Control
             case 0x020000: return tlbBase0Regs[id]; // TLB base 0
+            case 0x020001: return tlbBase1Regs[id]; // TLB base 1
+            case 0x020002: return tlbCtrlRegs[id]; // TLB control
         }
     }
     else { // ARM9
@@ -144,6 +158,8 @@ void Cp15::writeReg(CpuId id, uint8_t cn, uint8_t cm, uint8_t cp, uint32_t value
         switch ((cn << 16) | (cm << 8) | cp) {
             case 0x010000: return writeCtrl11(id, value); // Control
             case 0x020000: return writeTlbBase0(id, value); // TLB base 0
+            case 0x020001: return writeTlbBase1(id, value); // TLB base 1
+            case 0x020002: return writeTlbCtrl(id, value); // TLB control
             case 0x070004: return writeWfi(id, value); // Wait for interrupt
             case 0x070802: return writeWfi(id, value); // Wait for interrupt
         }
@@ -183,9 +199,21 @@ void Cp15::writeCtrl9(CpuId id, uint32_t value) {
 }
 
 void Cp15::writeTlbBase0(CpuId id, uint32_t value) {
-    // Set the translation table base 0 register
+    // Set a core's translation table base 0 register
     tlbBase0Regs[id] = value;
-    LOG_INFO("Changing ARM11 core %d translation table base 0 to 0x%08X\n", id, tlbBase0Regs[id] & 0xFFFFC000);
+    LOG_INFO("Changing ARM11 core %d translation table base 0 to 0x%08X\n", id, tlbBase0Regs[id] & 0xFFFFFF80);
+}
+
+void Cp15::writeTlbBase1(CpuId id, uint32_t value) {
+    // Set a core's translation table base 1 register
+    tlbBase1Regs[id] = value;
+    LOG_INFO("Changing ARM11 core %d translation table base 1 to 0x%08X\n", id, tlbBase1Regs[id] & 0xFFFFC000);
+}
+
+void Cp15::writeTlbCtrl(CpuId id, uint32_t value) {
+    // Set a core's translation table control register
+    tlbCtrlRegs[id] = value & 0x7;
+    LOG_INFO("Changing ARM11 core %d translation table control to %d\n", id, tlbCtrlRegs[id]);
 }
 
 void Cp15::writeWfi(CpuId id, uint32_t value) {

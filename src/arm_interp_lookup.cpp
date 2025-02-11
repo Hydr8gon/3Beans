@@ -128,27 +128,27 @@ int (ArmInterp::*ArmInterp::armInstrs[])(uint32_t) = {
     &ArmInterp::orrsAri, &ArmInterp::ldrsbOfrp, &ArmInterp::orrsRri, &ArmInterp::ldrshOfrp, // 0x19C-0x19F
     &ArmInterp::movLli, &ArmInterp::movLlr, &ArmInterp::movLri, &ArmInterp::movLrr, // 0x1A0-0x1A3
     &ArmInterp::movAri, &ArmInterp::movArr, &ArmInterp::movRri, &ArmInterp::movRrr, // 0x1A4-0x1A7
-    &ArmInterp::movLli, &ArmInterp::unkArm, &ArmInterp::movLri, &ArmInterp::strhPrrp, // 0x1A8-0x1AB
+    &ArmInterp::movLli, &ArmInterp::strexd, &ArmInterp::movLri, &ArmInterp::strhPrrp, // 0x1A8-0x1AB
     &ArmInterp::movAri, &ArmInterp::ldrdPrrp, &ArmInterp::movRri, &ArmInterp::strdPrrp, // 0x1AC-0x1AF
     &ArmInterp::movsLli, &ArmInterp::movsLlr, &ArmInterp::movsLri, &ArmInterp::movsLrr, // 0x1B0-0x1B3
     &ArmInterp::movsAri, &ArmInterp::movsArr, &ArmInterp::movsRri, &ArmInterp::movsRrr, // 0x1B4-0x1B7
-    &ArmInterp::movsLli, &ArmInterp::unkArm, &ArmInterp::movsLri, &ArmInterp::ldrhPrrp, // 0x1B8-0x1BB
+    &ArmInterp::movsLli, &ArmInterp::ldrexd, &ArmInterp::movsLri, &ArmInterp::ldrhPrrp, // 0x1B8-0x1BB
     &ArmInterp::movsAri, &ArmInterp::ldrsbPrrp, &ArmInterp::movsRri, &ArmInterp::ldrshPrrp, // 0x1BC-0x1BF
     &ArmInterp::bicLli, &ArmInterp::bicLlr, &ArmInterp::bicLri, &ArmInterp::bicLrr, // 0x1C0-0x1C3
     &ArmInterp::bicAri, &ArmInterp::bicArr, &ArmInterp::bicRri, &ArmInterp::bicRrr, // 0x1C4-0x1C7
-    &ArmInterp::bicLli, &ArmInterp::unkArm, &ArmInterp::bicLri, &ArmInterp::strhOfip, // 0x1C8-0x1CB
+    &ArmInterp::bicLli, &ArmInterp::strexb, &ArmInterp::bicLri, &ArmInterp::strhOfip, // 0x1C8-0x1CB
     &ArmInterp::bicAri, &ArmInterp::ldrdOfip, &ArmInterp::bicRri, &ArmInterp::strdOfip, // 0x1CC-0x1CF
     &ArmInterp::bicsLli, &ArmInterp::bicsLlr, &ArmInterp::bicsLri, &ArmInterp::bicsLrr, // 0x1D0-0x1D3
     &ArmInterp::bicsAri, &ArmInterp::bicsArr, &ArmInterp::bicsRri, &ArmInterp::bicsRrr, // 0x1D4-0x1D7
-    &ArmInterp::bicsLli, &ArmInterp::unkArm, &ArmInterp::bicsLri, &ArmInterp::ldrhOfip, // 0x1D8-0x1DB
+    &ArmInterp::bicsLli, &ArmInterp::ldrexb, &ArmInterp::bicsLri, &ArmInterp::ldrhOfip, // 0x1D8-0x1DB
     &ArmInterp::bicsAri, &ArmInterp::ldrsbOfip, &ArmInterp::bicsRri, &ArmInterp::ldrshOfip, // 0x1DC-0x1DF
     &ArmInterp::mvnLli, &ArmInterp::mvnLlr, &ArmInterp::mvnLri, &ArmInterp::mvnLrr, // 0x1E0-0x1E3
     &ArmInterp::mvnAri, &ArmInterp::mvnArr, &ArmInterp::mvnRri, &ArmInterp::mvnRrr, // 0x1E4-0x1E7
-    &ArmInterp::mvnLli, &ArmInterp::unkArm, &ArmInterp::mvnLri, &ArmInterp::strhPrip, // 0x1E8-0x1EB
+    &ArmInterp::mvnLli, &ArmInterp::strexh, &ArmInterp::mvnLri, &ArmInterp::strhPrip, // 0x1E8-0x1EB
     &ArmInterp::mvnAri, &ArmInterp::ldrdPrip, &ArmInterp::mvnRri, &ArmInterp::strdPrip, // 0x1EC-0x1EF
     &ArmInterp::mvnsLli, &ArmInterp::mvnsLlr, &ArmInterp::mvnsLri, &ArmInterp::mvnsLrr, // 0x1F0-0x1F3
     &ArmInterp::mvnsAri, &ArmInterp::mvnsArr, &ArmInterp::mvnsRri, &ArmInterp::mvnsRrr, // 0x1F4-0x1F7
-    &ArmInterp::mvnsLli, &ArmInterp::unkArm, &ArmInterp::mvnsLri, &ArmInterp::ldrhPrip, // 0x1F8-0x1FB
+    &ArmInterp::mvnsLli, &ArmInterp::ldrexh, &ArmInterp::mvnsLri, &ArmInterp::ldrhPrip, // 0x1F8-0x1FB
     &ArmInterp::mvnsAri, &ArmInterp::ldrsbPrip, &ArmInterp::mvnsRri, &ArmInterp::ldrshPrip, // 0x1FC-0x1FF
     &ArmInterp::_andImm, &ArmInterp::_andImm, &ArmInterp::_andImm, &ArmInterp::_andImm, // 0x200-0x203
     &ArmInterp::_andImm, &ArmInterp::_andImm, &ArmInterp::_andImm, &ArmInterp::_andImm, // 0x204-0x207

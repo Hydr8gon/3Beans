@@ -754,8 +754,14 @@ private:
     int mcr(uint32_t opcode);
     int swpb(uint32_t opcode);
     int swp(uint32_t opcode);
+    int ldrexb(uint32_t opcode);
+    int strexb(uint32_t opcode);
+    int ldrexh(uint32_t opcode);
+    int strexh(uint32_t opcode);
     int ldrex(uint32_t opcode);
     int strex(uint32_t opcode);
+    int ldrexd(uint32_t opcode);
+    int strexd(uint32_t opcode);
     int clrex(uint32_t opcode);
 
     int ldrsbRegT(uint16_t opcode);

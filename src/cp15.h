@@ -50,6 +50,8 @@ private:
 
     uint32_t ctrlRegs[MAX_CPUS] = { 0x54078, 0x54078, 0x78 };
     uint32_t tlbBase0Regs[MAX_CPUS - 1] = {};
+    uint32_t tlbBase1Regs[MAX_CPUS - 1] = {};
+    uint32_t tlbCtrlRegs[MAX_CPUS - 1] = {};
     uint32_t dtcmReg = 0;
     uint32_t itcmReg = 0;
 
@@ -58,6 +60,8 @@ private:
     void writeCtrl11(CpuId id, uint32_t value);
     void writeCtrl9(CpuId id, uint32_t value);
     void writeTlbBase0(CpuId id, uint32_t value);
+    void writeTlbBase1(CpuId id, uint32_t value);
+    void writeTlbCtrl(CpuId id, uint32_t value);
     void writeWfi(CpuId id, uint32_t value);
     void writeDtcm(CpuId id, uint32_t value);
     void writeItcm(CpuId id, uint32_t value);
