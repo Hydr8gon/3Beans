@@ -52,9 +52,9 @@ void Pdc::drawScreen(bool bot, uint32_t *buffer) {
         for (int y = 0; y < 240; y++) {
             for (int x = 0; x < width; x++) {
                 uint32_t address = pdcFramebufLt0[bot] + (x * 240 + 239 - y) * 3;
-                uint8_t r = core->memory.read<uint8_t>(ARM11A, address + 2);
-                uint8_t g = core->memory.read<uint8_t>(ARM11A, address + 1);
-                uint8_t b = core->memory.read<uint8_t>(ARM11A, address + 0);
+                uint8_t r = core->memory.read<uint8_t>(ARM11, address + 2);
+                uint8_t g = core->memory.read<uint8_t>(ARM11, address + 1);
+                uint8_t b = core->memory.read<uint8_t>(ARM11, address + 0);
                 buffer[y * 400 + x] = (0xFF << 24) | (b << 16) | (g << 8) | r;
             }
         }
@@ -63,7 +63,7 @@ void Pdc::drawScreen(bool bot, uint32_t *buffer) {
     case 2: // RGB565
         for (int y = 0; y < 240; y++) {
             for (int x = 0; x < width; x++) {
-                uint16_t color = core->memory.read<uint16_t>(ARM11A, pdcFramebufLt0[bot] + (x * 240 + 239 - y) * 2);
+                uint16_t color = core->memory.read<uint16_t>(ARM11, pdcFramebufLt0[bot] + (x * 240 + 239 - y) * 2);
                 uint8_t r = ((color >> 11) & 0x1F) * 255 / 31;
                 uint8_t g = ((color >> 5) & 0x3F) * 255 / 63;
                 uint8_t b = ((color >> 0) & 0x1F) * 255 / 31;
@@ -97,9 +97,9 @@ void Pdc::drawFrame() {
     // Trigger PDC interrupts at V-blank if not disabled
     // TODO: handle timings for different modes properly
     if (((pdcInterruptType[0] >> 8) & 0x7) != 7)
-        core->interrupts.sendInterrupt(false, 0x2A);
+        core->interrupts.sendInterrupt(ARM11, 0x2A);
     if (((pdcInterruptType[1] >> 8) & 0x7) != 7)
-        core->interrupts.sendInterrupt(false, 0x2B);
+        core->interrupts.sendInterrupt(ARM11, 0x2B);
 }
 
 void Pdc::writeFramebufLt0(bool bot, uint32_t mask, uint32_t value) {

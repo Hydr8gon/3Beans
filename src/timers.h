@@ -28,22 +28,38 @@ public:
     Timers(Core *core): core(core) {}
 
     void resetCycles();
-    void overflow(int i);
+    void overflowMp(CpuId id, int i);
+    void overflowTm(int i);
 
+    uint32_t readMpReload(CpuId id, int i) { return mpReload[id][i]; }
+    uint32_t readMpCounter(CpuId id, int i);
+    uint32_t readMpTmcnt(CpuId id, int i) { return mpTmcnt[id][i]; }
+    uint32_t readMpTmirq(CpuId id, int i) { return mpTmirq[id][i]; }
     uint16_t readTmCntL(int i);
     uint16_t readTmCntH(int i) { return tmCntH[i]; }
 
+    void writeMpReload(CpuId id, int i, uint32_t mask, uint32_t value);
+    void writeMpCounter(CpuId id, int i, uint32_t mask, uint32_t value);
+    void writeMpTmcnt(CpuId id, int i, uint32_t mask, uint32_t value);
+    void writeMpTmirq(CpuId id, int i, uint32_t mask, uint32_t value);
     void writeTmCntL(int i, uint16_t mask, uint16_t value);
     void writeTmCntH(int i, uint16_t mask, uint16_t value);
 
 private:
     Core *core;
 
-    uint32_t endCycles[4] = {};
+    uint32_t endCyclesMp[MAX_CPUS - 1][2] = {};
+    uint32_t endCyclesTm[4] = {};
     uint16_t timers[4] = {};
     uint8_t shifts[4] = { 1, 1, 1, 1 };
     bool countUp[4] = {};
 
+    uint32_t mpReload[MAX_CPUS - 1][2] = {};
+    uint32_t mpCounter[MAX_CPUS - 1][2] = {};
+    uint32_t mpTmcnt[MAX_CPUS - 1][2] = {};
+    uint32_t mpTmirq[MAX_CPUS - 1][2] = {};
     uint16_t tmCntL[4] = {};
     uint16_t tmCntH[4] = {};
+
+    void scheduleMp(CpuId id, int i);
 };

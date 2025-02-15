@@ -1060,6 +1060,45 @@ int ArmInterp::rev(uint32_t opcode) { // REV Rd,Rm
     return 1;
 }
 
+int ArmInterp::uadd8(uint32_t opcode) { // UADD8 Rd,Rn,Rm
+    // Unsigned parallel 8-bit addition and set GE flags
+    if (id == ARM9) return 1; // ARM11-exclusive
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    uint32_t op1 = *registers[(opcode >> 16) & 0xF];
+    uint32_t op2 = *registers[opcode & 0xF];
+    uint32_t tmp1 = ((op1 >> 0) & 0xFF00FF) + ((op2 >> 0) & 0xFF00FF);
+    uint32_t tmp2 = ((op1 >> 8) & 0xFF00FF) + ((op2 >> 8) & 0xFF00FF);
+    *op0 = ((tmp2 & 0xFF00FF) << 8) | (tmp1 & 0xFF00FF);
+    cpsr = (cpsr & ~0xF0000) | ((tmp1 & BIT(8)) << 8) | ((tmp2 & BIT(8)) << 9) |
+        ((tmp1 & BIT(24)) >> 6) | ((tmp2 & BIT(24)) >> 5);
+    return 1;
+}
+
+int ArmInterp::uadd16(uint32_t opcode) { // UADD16 Rd,Rn,Rm
+    // Unsigned parallel 16-bit addition and set GE flags
+    if (id == ARM9) return 1; // ARM11-exclusive
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    uint32_t op1 = *registers[(opcode >> 16) & 0xF];
+    uint32_t op2 = *registers[opcode & 0xF];
+    uint32_t tmp1 = ((op1 >> 0) & 0xFFFF) + ((op2 >> 0) & 0xFFFF);
+    uint32_t tmp2 = ((op1 >> 16) & 0xFFFF) + ((op2 >> 16) & 0xFFFF);
+    *op0 = ((tmp2 & 0xFFFF) << 16) | (tmp1 & 0xFFFF);
+    cpsr = (cpsr & ~0xF0000) | ((tmp1 & BIT(16)) ? 0x30000 : 0) | ((tmp2 & BIT(16)) ? 0xC0000 : 0);
+    return 1;
+}
+
+int ArmInterp::sel(uint32_t opcode) { // SEL Rd,Rn,Rm
+    // Select bytes based on GE flags
+    if (id == ARM9) return 1; // ARM11-exclusive
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    uint32_t op1 = *registers[(opcode >> 16) & 0xF];
+    uint32_t op2 = *registers[opcode & 0xF];
+    *op0 = 0;
+    for (int i = 0; i < 4; i++)
+        *op0 |= ((cpsr & BIT(16 + i)) ? op1 : op2) & (0xFF << (i << 3));
+    return 1;
+}
+
 int ArmInterp::addRegT(uint16_t opcode) { // ADD Rd,Rs,Rn
     // Addition and set flags (THUMB)
     uint32_t *op0 = registers[opcode & 0x7];

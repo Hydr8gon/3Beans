@@ -19,9 +19,9 @@
 
 #include "core.h"
 
-void Interrupts::sendInterrupt(bool arm9, int type) {
+void Interrupts::sendInterrupt(CpuId id, int type) {
     // Send an interrupt to the ARM9
-    if (arm9) {
+    if (id == ARM9) {
         // Set the interrupt's request bit
         if (type != -1)
             irqIf |= BIT(type);
@@ -35,18 +35,18 @@ void Interrupts::sendInterrupt(bool arm9, int type) {
 
     // Send an interrupt to the ARM11 cores if enabled
     if (!mpIge) return;
-    for (CpuId id = ARM11A; id < ARM9; id = CpuId(id + 1)) {
+    for (int i = 0; i < MAX_CPUS - 1; i++) {
         // Set the interrupt's pending bit on targeted cores
-        if (!mpIle[id]) continue;
-        if (type != -1 && (readMpTarget(id, type) & BIT(id)))
-            mpIp[id][type >> 5] |= BIT(type & 0x1F);
+        if (!mpIle[i]) continue;
+        if (type != -1 && (readMpTarget(id, type) & BIT(i)))
+            mpIp[i][type >> 5] |= BIT(type & 0x1F);
 
         // Schedule an interrupt if any pending interrupts are enabled
-        if (scheduled[id]) continue;
-        for (int i = 0; i < 4; i++) {
-            if (!(mpIe[i] & mpIp[id][i])) continue;
-            core->schedule(Task(ARM11A_INTERRUPT + id), 1);
-            scheduled[id] = true;
+        if (scheduled[i]) continue;
+        for (int j = 0; j < 4; j++) {
+            if (!(mpIe[j] & mpIp[i][j])) continue;
+            core->schedule(Task(ARM11A_INTERRUPT + i), 1);
+            scheduled[i] = true;
             break;
         }
     }
@@ -78,7 +78,7 @@ void Interrupts::halt(CpuId id, uint8_t type) {
             cfg11MpClkcnt = (cfg11MpClkcnt & ~0x70000) | (mode << 16) | BIT(15);
             core->memory.updateMap(false, 0x28000000, 0x2FFFFFFF);
             core->memory.updateMap(true, 0x28000000, 0x2FFFFFFF);
-            sendInterrupt(false, 0x58);
+            sendInterrupt(ARM11, 0x58);
             LOG_INFO("Changing to clock/FCRAM mode %d\n", mode);
         }
     }
@@ -198,7 +198,7 @@ void Interrupts::writeMpIge(uint32_t mask, uint32_t value) {
 void Interrupts::writeMpIeSet(int i, uint32_t mask, uint32_t value) {
     // Set interrupt enable bits and check if any should trigger
     mpIe[i] |= (value & mask);
-    checkInterrupt(false);
+    checkInterrupt(ARM11);
 }
 
 void Interrupts::writeMpIeClear(int i, uint32_t mask, uint32_t value) {
@@ -212,9 +212,9 @@ void Interrupts::writeMpIpSet(int i, uint32_t mask, uint32_t value) {
     for (int j = 0; (value & mask) >> j; j++)
         if (value & mask & BIT(j))
             for (CpuId id = ARM11A; id < ARM9; id = CpuId(id + 1))
-                if (readMpTarget(id, (i << 5) + j) & BIT(id))
+                if (mpTarget[(i << 5) + j] & BIT(id))
                     mpIp[id][i] |= BIT(j);
-    checkInterrupt(false);
+    checkInterrupt(ARM11);
 }
 
 void Interrupts::writeMpIpClear(int i, uint32_t mask, uint32_t value) {
@@ -269,7 +269,7 @@ void Interrupts::writeIrqIe(uint32_t mask, uint32_t value) {
     // Write to the IRQ_IE register and check if an interrupt should occur
     mask &= 0x3FFFFFFF;
     irqIe = (irqIe & ~mask) | (value & mask);
-    checkInterrupt(true);
+    checkInterrupt(ARM9);
 }
 
 void Interrupts::writeIrqIf(uint32_t mask, uint32_t value) {

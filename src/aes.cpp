@@ -228,7 +228,7 @@ void Aes::update() {
         if (--curBlock > 0) continue;
         aesCnt &= ~BIT(31);
         if (aesCnt & BIT(30))
-            core->interrupts.sendInterrupt(true, 15);
+            core->interrupts.sendInterrupt(ARM9, 15);
         LOG_INFO("AES FIFO finished processing\n");
     }
 

@@ -246,6 +246,14 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x17E00100, data = core->interrupts.readMpIle(id)) // MP_ILE
                 DEF_IO32(0x17E0010C, data = core->interrupts.readMpAck(id)) // MP_ACK
                 DEF_IO32(0x17E00118, data = core->interrupts.readMpPending(id)) // MP_PENDING
+                DEF_IO32(0x17E00600, data = core->timers.readMpReload(id, 0)) // MP_RELOAD0
+                DEF_IO32(0x17E00604, data = core->timers.readMpCounter(id, 0)) // MP_COUNTER0
+                DEF_IO32(0x17E00608, data = core->timers.readMpTmcnt(id, 0)) // MP_TMCNT0
+                DEF_IO32(0x17E0060C, data = core->timers.readMpTmirq(id, 0)) // MP_TMIRQ0
+                DEF_IO32(0x17E00620, data = core->timers.readMpReload(id, 1)) // MP_RELOAD1
+                DEF_IO32(0x17E00624, data = core->timers.readMpCounter(id, 1)) // MP_COUNTER1
+                DEF_IO32(0x17E00628, data = core->timers.readMpTmcnt(id, 1)) // MP_TMCNT1
+                DEF_IO32(0x17E0062C, data = core->timers.readMpTmirq(id, 1)) // MP_TMIRQ1
                 DEF_IO32(0x17E01000, data = core->interrupts.readMpIge()) // MP_IGE
                 DEF_IO32(0x17E01004, data = core->interrupts.readMpCtrlType()) // MP_CTRL_TYPE
                 DEF_IO32(0x17E01100, data = core->interrupts.readMpIe(0)) // MP_IE0
@@ -802,6 +810,14 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x10400574, core->pdc.writeInterruptType(1, IO_PARAMS)) // PDC1_INTERRUPT_TYPE
                 DEF_IO32(0x17E00100, core->interrupts.writeMpIle(id, IO_PARAMS)) // MP_ILE
                 DEF_IO32(0x17E00110, core->interrupts.writeMpEoi(id, IO_PARAMS)) // MP_EOI
+                DEF_IO32(0x17E00600, core->timers.writeMpReload(id, 0, IO_PARAMS)) // MP_RELOAD0
+                DEF_IO32(0x17E00604, core->timers.writeMpCounter(id, 0, IO_PARAMS)) // MP_COUNTER0
+                DEF_IO32(0x17E00608, core->timers.writeMpTmcnt(id, 0, IO_PARAMS)) // MP_TMCNT0
+                DEF_IO32(0x17E0060C, core->timers.writeMpTmirq(id, 0, IO_PARAMS)) // MP_TMIRQ0
+                DEF_IO32(0x17E00620, core->timers.writeMpReload(id, 1, IO_PARAMS)) // MP_RELOAD1
+                DEF_IO32(0x17E00624, core->timers.writeMpCounter(id, 1, IO_PARAMS)) // MP_COUNTER1
+                DEF_IO32(0x17E00628, core->timers.writeMpTmcnt(id, 1, IO_PARAMS)) // MP_TMCNT1
+                DEF_IO32(0x17E0062C, core->timers.writeMpTmirq(id, 1, IO_PARAMS)) // MP_TMIRQ1
                 DEF_IO32(0x17E01000, core->interrupts.writeMpIge(IO_PARAMS)) // MP_IGE
                 DEF_IO32(0x17E01100, core->interrupts.writeMpIeSet(0, IO_PARAMS)) // MP_IE0_SET
                 DEF_IO32(0x17E01104, core->interrupts.writeMpIeSet(1, IO_PARAMS)) // MP_IE1_SET

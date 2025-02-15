@@ -52,7 +52,7 @@ void SdMmc::sendInterrupt(int bit) {
 
     // Send an interrupt to the ARM9 if conditions are met
     if (sdIrqStatus & ~sdIrqMask)
-        core->interrupts.sendInterrupt(true, 16);
+        core->interrupts.sendInterrupt(ARM9, 16);
 }
 
 void SdMmc::pushFifo(uint32_t value) {
@@ -67,7 +67,7 @@ void SdMmc::pushFifo(uint32_t value) {
         // Trigger a 32-bit FIFO full interrupt if enabled and finish a block
         sdData32Irq |= BIT(8);
         if (sdData32Irq & BIT(11))
-            core->interrupts.sendInterrupt(true, 16);
+            core->interrupts.sendInterrupt(ARM9, 16);
         curBlock--;
         return;
     }

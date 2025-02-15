@@ -84,7 +84,7 @@ void Ndma::transferBlock(int i) {
 
         // Trigger an interrupt if enabled and end if immediate
         if (ndmaCnt[i] & BIT(30))
-            core->interrupts.sendInterrupt(true, i);
+            core->interrupts.sendInterrupt(ARM9, i);
         if (ndmaCnt[i] & BIT(28))
             ndmaCnt[i] &= ~BIT(31);
     }
@@ -100,7 +100,7 @@ void Ndma::transferBlock(int i) {
                 // Trigger an interrupt and end if the word total is reached
                 if (--ndmaTcnt[i] &= 0xFFFFFFF) continue;
                 if (ndmaCnt[i] & BIT(30))
-                    core->interrupts.sendInterrupt(true, i);
+                    core->interrupts.sendInterrupt(ARM9, i);
                 ndmaCnt[i] &= ~BIT(31);
                 logiSize = 0;
                 break;

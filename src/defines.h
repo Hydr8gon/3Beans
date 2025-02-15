@@ -27,7 +27,8 @@ enum CpuId {
     ARM11C,
     ARM11D,
     ARM9,
-    MAX_CPUS
+    MAX_CPUS,
+    ARM11 = ARM11A
 };
 
 // Simple bit macro

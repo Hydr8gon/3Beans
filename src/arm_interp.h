@@ -434,6 +434,9 @@ private:
     int rev16(uint32_t opcode);
     int revsh(uint32_t opcode);
     int rev(uint32_t opcode);
+    int uadd8(uint32_t opcode);
+    int uadd16(uint32_t opcode);
+    int sel(uint32_t opcode);
 
     int addRegT(uint16_t opcode);
     int subRegT(uint16_t opcode);

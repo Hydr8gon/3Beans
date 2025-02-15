@@ -426,9 +426,9 @@ int (ArmInterp::*ArmInterp::armInstrs[])(uint32_t) = {
     &ArmInterp::strbPtrmar, &ArmInterp::unkArm, &ArmInterp::strbPtrmrr, &ArmInterp::unkArm, // 0x644-0x647
     &ArmInterp::strbPtrmll, &ArmInterp::unkArm, &ArmInterp::strbPtrmlr, &ArmInterp::unkArm, // 0x648-0x64B
     &ArmInterp::strbPtrmar, &ArmInterp::unkArm, &ArmInterp::strbPtrmrr, &ArmInterp::unkArm, // 0x64C-0x64F
-    &ArmInterp::ldrbPtrmll, &ArmInterp::unkArm, &ArmInterp::ldrbPtrmlr, &ArmInterp::unkArm, // 0x650-0x653
+    &ArmInterp::ldrbPtrmll, &ArmInterp::uadd16, &ArmInterp::ldrbPtrmlr, &ArmInterp::unkArm, // 0x650-0x653
     &ArmInterp::ldrbPtrmar, &ArmInterp::unkArm, &ArmInterp::ldrbPtrmrr, &ArmInterp::unkArm, // 0x654-0x657
-    &ArmInterp::ldrbPtrmll, &ArmInterp::unkArm, &ArmInterp::ldrbPtrmlr, &ArmInterp::unkArm, // 0x658-0x65B
+    &ArmInterp::ldrbPtrmll, &ArmInterp::uadd8, &ArmInterp::ldrbPtrmlr, &ArmInterp::unkArm, // 0x658-0x65B
     &ArmInterp::ldrbPtrmar, &ArmInterp::unkArm, &ArmInterp::ldrbPtrmrr, &ArmInterp::unkArm, // 0x65C-0x65F
     &ArmInterp::strbPtrmll, &ArmInterp::unkArm, &ArmInterp::strbPtrmlr, &ArmInterp::unkArm, // 0x660-0x663
     &ArmInterp::strbPtrmar, &ArmInterp::unkArm, &ArmInterp::strbPtrmrr, &ArmInterp::unkArm, // 0x664-0x667
@@ -440,7 +440,7 @@ int (ArmInterp::*ArmInterp::armInstrs[])(uint32_t) = {
     &ArmInterp::ldrbPtrmar, &ArmInterp::unkArm, &ArmInterp::ldrbPtrmrr, &ArmInterp::unkArm, // 0x67C-0x67F
     &ArmInterp::strPtrpll, &ArmInterp::unkArm, &ArmInterp::strPtrplr, &ArmInterp::unkArm, // 0x680-0x683
     &ArmInterp::strPtrpar, &ArmInterp::unkArm, &ArmInterp::strPtrprr, &ArmInterp::sxtab16, // 0x684-0x687
-    &ArmInterp::strPtrpll, &ArmInterp::unkArm, &ArmInterp::strPtrplr, &ArmInterp::unkArm, // 0x688-0x68B
+    &ArmInterp::strPtrpll, &ArmInterp::unkArm, &ArmInterp::strPtrplr, &ArmInterp::sel, // 0x688-0x68B
     &ArmInterp::strPtrpar, &ArmInterp::unkArm, &ArmInterp::strPtrprr, &ArmInterp::unkArm, // 0x68C-0x68F
     &ArmInterp::ldrPtrpll, &ArmInterp::unkArm, &ArmInterp::ldrPtrplr, &ArmInterp::unkArm, // 0x690-0x693
     &ArmInterp::ldrPtrpar, &ArmInterp::unkArm, &ArmInterp::ldrPtrprr, &ArmInterp::unkArm, // 0x694-0x697

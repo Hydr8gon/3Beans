@@ -206,7 +206,7 @@ void ArmInterp::setCpsr(uint32_t value, bool save) {
     // Set the CPSR, save the old value, and check if an interrupt should occur
     if (save && spsr) *spsr = cpsr;
     cpsr = value;
-    core->interrupts.checkInterrupt(id == ARM9);
+    core->interrupts.checkInterrupt(id);
 }
 
 int ArmInterp::handleReserved(uint32_t opcode) {

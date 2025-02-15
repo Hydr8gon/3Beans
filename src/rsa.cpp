@@ -45,7 +45,7 @@ void Rsa::calculate() {
     // Clear the busy bit and trigger an interrupt if enabled
     rsaCnt &= ~BIT(0);
     if (rsaCnt & BIT(1))
-        core->interrupts.sendInterrupt(true, 22);
+        core->interrupts.sendInterrupt(ARM9, 22);
     LOG_INFO("RSA calculation performed\n");
 }
 

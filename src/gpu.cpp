@@ -54,7 +54,7 @@ void Gpu::writeMemfillCnt(int i, uint32_t mask, uint32_t value) {
     // Check the start and enable bits and trigger an interrupt if running
     if (!(value & mask & BIT(0)) || !(cfg11GpuCnt & BIT(1))) return;
     gpuMemfillCnt[i] |= BIT(1);
-    core->interrupts.sendInterrupt(false, 0x28 + i);
+    core->interrupts.sendInterrupt(ARM11, 0x28 + i);
 
     // Perform a memory fill with the selected data width
     uint32_t start = (gpuMemfillDstAddr[i] << 3), end = (gpuMemfillDstEnd[i] << 3);
@@ -62,18 +62,18 @@ void Gpu::writeMemfillCnt(int i, uint32_t mask, uint32_t value) {
     switch ((gpuMemfillCnt[i] >> 8) & 0x3) {
     case 0: // 16-bit
         for (uint32_t addr = start; addr < end; addr += 2)
-            core->memory.write<uint16_t>(ARM11A, addr, gpuMemfillData[i]);
+            core->memory.write<uint16_t>(ARM11, addr, gpuMemfillData[i]);
         return;
 
     case 1: case 3: // 24-bit
         value = (gpuMemfillData[i] & 0xFFFFFF) | (gpuMemfillData[i] << 24);
         for (uint32_t addr = start; addr < end; addr += 2)
-            core->memory.write<uint16_t>(ARM11A, addr, value >> (((addr - start) * 8) % 24));
+            core->memory.write<uint16_t>(ARM11, addr, value >> (((addr - start) * 8) % 24));
         return;
 
     case 2: // 32-bit
         for (uint32_t addr = start; addr < end; addr += 4)
-            core->memory.write<uint32_t>(ARM11A, addr, gpuMemfillData[i]);
+            core->memory.write<uint32_t>(ARM11, addr, gpuMemfillData[i]);
         return;
     }
 }

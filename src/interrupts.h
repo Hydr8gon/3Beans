@@ -27,8 +27,8 @@ class Interrupts {
 public:
     Interrupts(Core *core): core(core) {}
 
-    void sendInterrupt(bool arm9, int type);
-    void checkInterrupt(bool arm9) { sendInterrupt(arm9, -1); }
+    void sendInterrupt(CpuId id, int type);
+    void checkInterrupt(CpuId id) { sendInterrupt(id, -1); }
     void interrupt(CpuId id);
     void halt(CpuId id, uint8_t type = 0);
 
