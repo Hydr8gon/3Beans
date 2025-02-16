@@ -242,6 +242,7 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x10400568, data = core->pdc.readFramebufLt0(1)) // PDC1_FRAMEBUF_LT0
                 DEF_IO32(0x10400570, data = core->pdc.readFramebufFormat(1)) // PDC1_FRAMEBUF_FORMAT
                 DEF_IO32(0x10400574, data = core->pdc.readInterruptType(1)) // PDC1_INTERRUPT_TYPE
+                DEF_IO32(0x10400C18, data = core->gpu.readMemcopyCnt()) // GPU_MEMCOPY_CNT
                 DEF_IO32(0x17E00004, data = core->interrupts.readMpScuConfig()) // MP_SCU_CONFIG
                 DEF_IO32(0x17E00100, data = core->interrupts.readMpIle(id)) // MP_ILE
                 DEF_IO32(0x17E0010C, data = core->interrupts.readMpAck(id)) // MP_ACK
@@ -254,6 +255,38 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x17E00624, data = core->timers.readMpCounter(id, 1)) // MP_COUNTER1
                 DEF_IO32(0x17E00628, data = core->timers.readMpTmcnt(id, 1)) // MP_TMCNT1
                 DEF_IO32(0x17E0062C, data = core->timers.readMpTmirq(id, 1)) // MP_TMIRQ1
+                DEF_IO32(0x17E00700, data = core->timers.readMpReload(ARM11A, 0)) // MP0_RELOAD0
+                DEF_IO32(0x17E00704, data = core->timers.readMpCounter(ARM11A, 0)) // MP0_COUNTER0
+                DEF_IO32(0x17E00708, data = core->timers.readMpTmcnt(ARM11A, 0)) // MP0_TMCNT0
+                DEF_IO32(0x17E0070C, data = core->timers.readMpTmirq(ARM11A, 0)) // MP0_TMIRQ0
+                DEF_IO32(0x17E00720, data = core->timers.readMpReload(ARM11A, 1)) // MP0_RELOAD1
+                DEF_IO32(0x17E00724, data = core->timers.readMpCounter(ARM11A, 1)) // MP0_COUNTER1
+                DEF_IO32(0x17E00728, data = core->timers.readMpTmcnt(ARM11A, 1)) // MP0_TMCNT1
+                DEF_IO32(0x17E0072C, data = core->timers.readMpTmirq(ARM11A, 1)) // MP0_TMIRQ1
+                DEF_IO32(0x17E00800, data = core->timers.readMpReload(ARM11B, 0)) // MP1_RELOAD0
+                DEF_IO32(0x17E00804, data = core->timers.readMpCounter(ARM11B, 0)) // MP1_COUNTER0
+                DEF_IO32(0x17E00808, data = core->timers.readMpTmcnt(ARM11B, 0)) // MP1_TMCNT0
+                DEF_IO32(0x17E0080C, data = core->timers.readMpTmirq(ARM11B, 0)) // MP1_TMIRQ0
+                DEF_IO32(0x17E00820, data = core->timers.readMpReload(ARM11B, 1)) // MP1_RELOAD1
+                DEF_IO32(0x17E00824, data = core->timers.readMpCounter(ARM11B, 1)) // MP1_COUNTER1
+                DEF_IO32(0x17E00828, data = core->timers.readMpTmcnt(ARM11B, 1)) // MP1_TMCNT1
+                DEF_IO32(0x17E0082C, data = core->timers.readMpTmirq(ARM11B, 1)) // MP1_TMIRQ1
+                DEF_IO32(0x17E00900, data = core->timers.readMpReload(ARM11C, 0)) // MP2_RELOAD0
+                DEF_IO32(0x17E00904, data = core->timers.readMpCounter(ARM11C, 0)) // MP2_COUNTER0
+                DEF_IO32(0x17E00908, data = core->timers.readMpTmcnt(ARM11C, 0)) // MP2_TMCNT0
+                DEF_IO32(0x17E0090C, data = core->timers.readMpTmirq(ARM11C, 0)) // MP2_TMIRQ0
+                DEF_IO32(0x17E00920, data = core->timers.readMpReload(ARM11C, 1)) // MP2_RELOAD1
+                DEF_IO32(0x17E00924, data = core->timers.readMpCounter(ARM11C, 1)) // MP2_COUNTER1
+                DEF_IO32(0x17E00928, data = core->timers.readMpTmcnt(ARM11C, 1)) // MP2_TMCNT1
+                DEF_IO32(0x17E0092C, data = core->timers.readMpTmirq(ARM11C, 1)) // MP2_TMIRQ1
+                DEF_IO32(0x17E00A00, data = core->timers.readMpReload(ARM11D, 0)) // MP3_RELOAD0
+                DEF_IO32(0x17E00A04, data = core->timers.readMpCounter(ARM11D, 0)) // MP3_COUNTER0
+                DEF_IO32(0x17E00A08, data = core->timers.readMpTmcnt(ARM11D, 0)) // MP3_TMCNT0
+                DEF_IO32(0x17E00A0C, data = core->timers.readMpTmirq(ARM11D, 0)) // MP3_TMIRQ0
+                DEF_IO32(0x17E00A20, data = core->timers.readMpReload(ARM11D, 1)) // MP3_RELOAD1
+                DEF_IO32(0x17E00A24, data = core->timers.readMpCounter(ARM11D, 1)) // MP3_COUNTER1
+                DEF_IO32(0x17E00A28, data = core->timers.readMpTmcnt(ARM11D, 1)) // MP3_TMCNT1
+                DEF_IO32(0x17E00A2C, data = core->timers.readMpTmirq(ARM11D, 1)) // MP3_TMIRQ1
                 DEF_IO32(0x17E01000, data = core->interrupts.readMpIge()) // MP_IGE
                 DEF_IO32(0x17E01004, data = core->interrupts.readMpCtrlType()) // MP_CTRL_TYPE
                 DEF_IO32(0x17E01100, data = core->interrupts.readMpIe(0)) // MP_IE0
@@ -470,22 +503,38 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO16(0x1000300A, data = core->timers.readTmCntH(2)) // TM2CNT_H
                 DEF_IO16(0x1000300C, data = core->timers.readTmCntL(3)) // TM3CNT_L
                 DEF_IO16(0x1000300E, data = core->timers.readTmCntH(3)) // TM3CNT_H
-                DEF_IO16(0x10006000, data = core->sdMmc.readCmd()) // SD_CMD
-                DEF_IO16(0x10006002, data = core->sdMmc.readPortSelect()) // SD_PORT_SELECT
-                DEF_IO32(0x10006004, data = core->sdMmc.readCmdParam()) // SD_CMD_PARAM
-                DEF_IO16(0x1000600A, data = core->sdMmc.readData16Blkcnt()) // SD_DATA16_BLKCNT
-                DEF_IO32(0x1000600C, data = core->sdMmc.readResponse(0)) // SD_RESPONSE0
-                DEF_IO32(0x10006010, data = core->sdMmc.readResponse(1)) // SD_RESPONSE1
-                DEF_IO32(0x10006014, data = core->sdMmc.readResponse(2)) // SD_RESPONSE2
-                DEF_IO32(0x10006018, data = core->sdMmc.readResponse(3)) // SD_RESPONSE3
-                DEF_IO32(0x1000601C, data = core->sdMmc.readIrqStatus()) // SD_IRQ_STATUS
-                DEF_IO32(0x10006020, data = core->sdMmc.readIrqMask()) // SD_IRQ_MASK
-                DEF_IO16(0x10006026, data = core->sdMmc.readData16Blklen()) // SD_DATA16_BLKLEN
-                DEF_IO16(0x10006030, data = core->sdMmc.readData16Fifo()) // SD_DATA16_FIFO
-                DEF_IO16(0x100060D8, data = core->sdMmc.readDataCtl()) // SD_DATA_CTL
-                DEF_IO16(0x10006100, data = core->sdMmc.readData32Irq()) // SD_DATA32_IRQ
-                DEF_IO16(0x10006104, data = core->sdMmc.readData32Blklen()) // SD_DATA32_BLKLEN
-                DEF_IO32(0x1000610C, data = core->sdMmc.readData32Fifo()) // SD_DATA32_FIFO
+                DEF_IO16(0x10006000, data = core->sdMmcs[0].readCmd()) // SD0_CMD
+                DEF_IO16(0x10006002, data = core->sdMmcs[0].readPortSelect()) // SD0_PORT_SELECT
+                DEF_IO32(0x10006004, data = core->sdMmcs[0].readCmdParam()) // SD0_CMD_PARAM
+                DEF_IO16(0x1000600A, data = core->sdMmcs[0].readData16Blkcnt()) // SD0_DATA16_BLKCNT
+                DEF_IO32(0x1000600C, data = core->sdMmcs[0].readResponse(0)) // SD0_RESPONSE0
+                DEF_IO32(0x10006010, data = core->sdMmcs[0].readResponse(1)) // SD0_RESPONSE1
+                DEF_IO32(0x10006014, data = core->sdMmcs[0].readResponse(2)) // SD0_RESPONSE2
+                DEF_IO32(0x10006018, data = core->sdMmcs[0].readResponse(3)) // SD0_RESPONSE3
+                DEF_IO32(0x1000601C, data = core->sdMmcs[0].readIrqStatus()) // SD0_IRQ_STATUS
+                DEF_IO32(0x10006020, data = core->sdMmcs[0].readIrqMask()) // SD0_IRQ_MASK
+                DEF_IO16(0x10006026, data = core->sdMmcs[0].readData16Blklen()) // SD0_DATA16_BLKLEN
+                DEF_IO16(0x10006030, data = core->sdMmcs[0].readData16Fifo()) // SD0_DATA16_FIFO
+                DEF_IO16(0x100060D8, data = core->sdMmcs[0].readDataCtl()) // SD0_DATA_CTL
+                DEF_IO16(0x10006100, data = core->sdMmcs[0].readData32Irq()) // SD0_DATA32_IRQ
+                DEF_IO16(0x10006104, data = core->sdMmcs[0].readData32Blklen()) // SD0_DATA32_BLKLEN
+                DEF_IO32(0x1000610C, data = core->sdMmcs[0].readData32Fifo()) // SD0_DATA32_FIFO
+                DEF_IO16(0x10007000, data = core->sdMmcs[1].readCmd()) // SD1_CMD
+                DEF_IO16(0x10007002, data = core->sdMmcs[1].readPortSelect()) // SD1_PORT_SELECT
+                DEF_IO32(0x10007004, data = core->sdMmcs[1].readCmdParam()) // SD1_CMD_PARAM
+                DEF_IO16(0x1000700A, data = core->sdMmcs[1].readData16Blkcnt()) // SD1_DATA16_BLKCNT
+                DEF_IO32(0x1000700C, data = core->sdMmcs[1].readResponse(0)) // SD1_RESPONSE0
+                DEF_IO32(0x10007010, data = core->sdMmcs[1].readResponse(1)) // SD1_RESPONSE1
+                DEF_IO32(0x10007014, data = core->sdMmcs[1].readResponse(2)) // SD1_RESPONSE2
+                DEF_IO32(0x10007018, data = core->sdMmcs[1].readResponse(3)) // SD1_RESPONSE3
+                DEF_IO32(0x1000701C, data = core->sdMmcs[1].readIrqStatus()) // SD1_IRQ_STATUS
+                DEF_IO32(0x10007020, data = core->sdMmcs[1].readIrqMask()) // SD1_IRQ_MASK
+                DEF_IO16(0x10007026, data = core->sdMmcs[1].readData16Blklen()) // SD1_DATA16_BLKLEN
+                DEF_IO16(0x10007030, data = core->sdMmcs[1].readData16Fifo()) // SD1_DATA16_FIFO
+                DEF_IO16(0x100070D8, data = core->sdMmcs[1].readDataCtl()) // SD1_DATA_CTL
+                DEF_IO16(0x10007100, data = core->sdMmcs[1].readData32Irq()) // SD1_DATA32_IRQ
+                DEF_IO16(0x10007104, data = core->sdMmcs[1].readData32Blklen()) // SD1_DATA32_BLKLEN
+                DEF_IO32(0x1000710C, data = core->sdMmcs[1].readData32Fifo()) // SD1_DATA32_FIFO
                 DEF_IO32(0x10008000, data = core->pxi.readSync(1)) // PXI_SYNC9
                 DEF_IO32(0x10008004, data = core->pxi.readCnt(1)) // PXI_CNT9
                 DEF_IO32(0x1000800C, data = core->pxi.readRecv(1)) // PXI_RECV9
@@ -808,6 +857,7 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x10400568, core->pdc.writeFramebufLt0(1, IO_PARAMS)) // PDC1_FRAMEBUF_LT0
                 DEF_IO32(0x10400570, core->pdc.writeFramebufFormat(1, IO_PARAMS)) // PDC1_FRAMEBUF_FORMAT
                 DEF_IO32(0x10400574, core->pdc.writeInterruptType(1, IO_PARAMS)) // PDC1_INTERRUPT_TYPE
+                DEF_IO32(0x10400C18, core->gpu.writeMemcopyCnt(IO_PARAMS)) // GPU_MEMCOPY_CNT
                 DEF_IO32(0x17E00100, core->interrupts.writeMpIle(id, IO_PARAMS)) // MP_ILE
                 DEF_IO32(0x17E00110, core->interrupts.writeMpEoi(id, IO_PARAMS)) // MP_EOI
                 DEF_IO32(0x17E00600, core->timers.writeMpReload(id, 0, IO_PARAMS)) // MP_RELOAD0
@@ -818,6 +868,38 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x17E00624, core->timers.writeMpCounter(id, 1, IO_PARAMS)) // MP_COUNTER1
                 DEF_IO32(0x17E00628, core->timers.writeMpTmcnt(id, 1, IO_PARAMS)) // MP_TMCNT1
                 DEF_IO32(0x17E0062C, core->timers.writeMpTmirq(id, 1, IO_PARAMS)) // MP_TMIRQ1
+                DEF_IO32(0x17E00700, core->timers.writeMpReload(ARM11A, 0, IO_PARAMS)) // MP0_RELOAD0
+                DEF_IO32(0x17E00704, core->timers.writeMpCounter(ARM11A, 0, IO_PARAMS)) // MP0_COUNTER0
+                DEF_IO32(0x17E00708, core->timers.writeMpTmcnt(ARM11A, 0, IO_PARAMS)) // MP0_TMCNT0
+                DEF_IO32(0x17E0070C, core->timers.writeMpTmirq(ARM11A, 0, IO_PARAMS)) // MP0_TMIRQ0
+                DEF_IO32(0x17E00720, core->timers.writeMpReload(ARM11A, 1, IO_PARAMS)) // MP0_RELOAD1
+                DEF_IO32(0x17E00724, core->timers.writeMpCounter(ARM11A, 1, IO_PARAMS)) // MP0_COUNTER1
+                DEF_IO32(0x17E00728, core->timers.writeMpTmcnt(ARM11A, 1, IO_PARAMS)) // MP0_TMCNT1
+                DEF_IO32(0x17E0072C, core->timers.writeMpTmirq(ARM11A, 1, IO_PARAMS)) // MP0_TMIRQ1
+                DEF_IO32(0x17E00800, core->timers.writeMpReload(ARM11B, 0, IO_PARAMS)) // MP1_RELOAD0
+                DEF_IO32(0x17E00804, core->timers.writeMpCounter(ARM11B, 0, IO_PARAMS)) // MP1_COUNTER0
+                DEF_IO32(0x17E00808, core->timers.writeMpTmcnt(ARM11B, 0, IO_PARAMS)) // MP1_TMCNT0
+                DEF_IO32(0x17E0080C, core->timers.writeMpTmirq(ARM11B, 0, IO_PARAMS)) // MP1_TMIRQ0
+                DEF_IO32(0x17E00820, core->timers.writeMpReload(ARM11B, 1, IO_PARAMS)) // MP1_RELOAD1
+                DEF_IO32(0x17E00824, core->timers.writeMpCounter(ARM11B, 1, IO_PARAMS)) // MP1_COUNTER1
+                DEF_IO32(0x17E00828, core->timers.writeMpTmcnt(ARM11B, 1, IO_PARAMS)) // MP1_TMCNT1
+                DEF_IO32(0x17E0082C, core->timers.writeMpTmirq(ARM11B, 1, IO_PARAMS)) // MP1_TMIRQ1
+                DEF_IO32(0x17E00900, core->timers.writeMpReload(ARM11C, 0, IO_PARAMS)) // MP2_RELOAD0
+                DEF_IO32(0x17E00904, core->timers.writeMpCounter(ARM11C, 0, IO_PARAMS)) // MP2_COUNTER0
+                DEF_IO32(0x17E00908, core->timers.writeMpTmcnt(ARM11C, 0, IO_PARAMS)) // MP2_TMCNT0
+                DEF_IO32(0x17E0090C, core->timers.writeMpTmirq(ARM11C, 0, IO_PARAMS)) // MP2_TMIRQ0
+                DEF_IO32(0x17E00920, core->timers.writeMpReload(ARM11C, 1, IO_PARAMS)) // MP2_RELOAD1
+                DEF_IO32(0x17E00924, core->timers.writeMpCounter(ARM11C, 1, IO_PARAMS)) // MP2_COUNTER1
+                DEF_IO32(0x17E00928, core->timers.writeMpTmcnt(ARM11C, 1, IO_PARAMS)) // MP2_TMCNT1
+                DEF_IO32(0x17E0092C, core->timers.writeMpTmirq(ARM11C, 1, IO_PARAMS)) // MP2_TMIRQ1
+                DEF_IO32(0x17E00A00, core->timers.writeMpReload(ARM11D, 0, IO_PARAMS)) // MP3_RELOAD0
+                DEF_IO32(0x17E00A04, core->timers.writeMpCounter(ARM11D, 0, IO_PARAMS)) // MP3_COUNTER0
+                DEF_IO32(0x17E00A08, core->timers.writeMpTmcnt(ARM11D, 0, IO_PARAMS)) // MP3_TMCNT0
+                DEF_IO32(0x17E00A0C, core->timers.writeMpTmirq(ARM11D, 0, IO_PARAMS)) // MP3_TMIRQ0
+                DEF_IO32(0x17E00A20, core->timers.writeMpReload(ARM11D, 1, IO_PARAMS)) // MP3_RELOAD1
+                DEF_IO32(0x17E00A24, core->timers.writeMpCounter(ARM11D, 1, IO_PARAMS)) // MP3_COUNTER1
+                DEF_IO32(0x17E00A28, core->timers.writeMpTmcnt(ARM11D, 1, IO_PARAMS)) // MP3_TMCNT1
+                DEF_IO32(0x17E00A2C, core->timers.writeMpTmirq(ARM11D, 1, IO_PARAMS)) // MP3_TMIRQ1
                 DEF_IO32(0x17E01000, core->interrupts.writeMpIge(IO_PARAMS)) // MP_IGE
                 DEF_IO32(0x17E01100, core->interrupts.writeMpIeSet(0, IO_PARAMS)) // MP_IE0_SET
                 DEF_IO32(0x17E01104, core->interrupts.writeMpIeSet(1, IO_PARAMS)) // MP_IE1_SET
@@ -1029,16 +1111,26 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO16(0x1000300A, core->timers.writeTmCntH(2, IO_PARAMS)) // TM2CNT_H
                 DEF_IO16(0x1000300C, core->timers.writeTmCntL(3, IO_PARAMS)) // TM3CNT_L
                 DEF_IO16(0x1000300E, core->timers.writeTmCntH(3, IO_PARAMS)) // TM3CNT_H
-                DEF_IO16(0x10006000, core->sdMmc.writeCmd(IO_PARAMS)) // SD_CMD
-                DEF_IO16(0x10006002, core->sdMmc.writePortSelect(IO_PARAMS)) // SD_PORT_SELECT
-                DEF_IO32(0x10006004, core->sdMmc.writeCmdParam(IO_PARAMS)) // SD_CMD_PARAM
-                DEF_IO16(0x1000600A, core->sdMmc.writeData16Blkcnt(IO_PARAMS)) // SD_DATA16_BLKCNT
-                DEF_IO32(0x1000601C, core->sdMmc.writeIrqStatus(IO_PARAMS)) // SD_IRQ_STATUS
-                DEF_IO32(0x10006020, core->sdMmc.writeIrqMask(IO_PARAMS)) // SD_IRQ_MASK
-                DEF_IO16(0x10006026, core->sdMmc.writeData16Blklen(IO_PARAMS)) // SD_DATA16_BLKLEN
-                DEF_IO16(0x100060D8, core->sdMmc.writeDataCtl(IO_PARAMS)) // SD_DATA_CTL
-                DEF_IO16(0x10006100, core->sdMmc.writeData32Irq(IO_PARAMS)) // SD_DATA32_IRQ
-                DEF_IO16(0x10006104, core->sdMmc.writeData32Blklen(IO_PARAMS)) // SD_DATA32_BLKLEN
+                DEF_IO16(0x10006000, core->sdMmcs[0].writeCmd(IO_PARAMS)) // SD0_CMD
+                DEF_IO16(0x10006002, core->sdMmcs[0].writePortSelect(IO_PARAMS)) // SD0_PORT_SELECT
+                DEF_IO32(0x10006004, core->sdMmcs[0].writeCmdParam(IO_PARAMS)) // SD0_CMD_PARAM
+                DEF_IO16(0x1000600A, core->sdMmcs[0].writeData16Blkcnt(IO_PARAMS)) // SD0_DATA16_BLKCNT
+                DEF_IO32(0x1000601C, core->sdMmcs[0].writeIrqStatus(IO_PARAMS)) // SD0_IRQ_STATUS
+                DEF_IO32(0x10006020, core->sdMmcs[0].writeIrqMask(IO_PARAMS)) // SD0_IRQ_MASK
+                DEF_IO16(0x10006026, core->sdMmcs[0].writeData16Blklen(IO_PARAMS)) // SD0_DATA16_BLKLEN
+                DEF_IO16(0x100060D8, core->sdMmcs[0].writeDataCtl(IO_PARAMS)) // SD0_DATA_CTL
+                DEF_IO16(0x10006100, core->sdMmcs[0].writeData32Irq(IO_PARAMS)) // SD0_DATA32_IRQ
+                DEF_IO16(0x10006104, core->sdMmcs[0].writeData32Blklen(IO_PARAMS)) // SD0_DATA32_BLKLEN
+                DEF_IO16(0x10007000, core->sdMmcs[1].writeCmd(IO_PARAMS)) // SD1_CMD
+                DEF_IO16(0x10007002, core->sdMmcs[1].writePortSelect(IO_PARAMS)) // SD1_PORT_SELECT
+                DEF_IO32(0x10007004, core->sdMmcs[1].writeCmdParam(IO_PARAMS)) // SD1_CMD_PARAM
+                DEF_IO16(0x1000700A, core->sdMmcs[1].writeData16Blkcnt(IO_PARAMS)) // SD1_DATA16_BLKCNT
+                DEF_IO32(0x1000701C, core->sdMmcs[1].writeIrqStatus(IO_PARAMS)) // SD1_IRQ_STATUS
+                DEF_IO32(0x10007020, core->sdMmcs[1].writeIrqMask(IO_PARAMS)) // SD1_IRQ_MASK
+                DEF_IO16(0x10007026, core->sdMmcs[1].writeData16Blklen(IO_PARAMS)) // SD1_DATA16_BLKLEN
+                DEF_IO16(0x100070D8, core->sdMmcs[1].writeDataCtl(IO_PARAMS)) // SD1_DATA_CTL
+                DEF_IO16(0x10007100, core->sdMmcs[1].writeData32Irq(IO_PARAMS)) // SD1_DATA32_IRQ
+                DEF_IO16(0x10007104, core->sdMmcs[1].writeData32Blklen(IO_PARAMS)) // SD1_DATA32_BLKLEN
                 DEF_IO32(0x10008000, core->pxi.writeSync(1, IO_PARAMS)) // PXI_SYNC9
                 DEF_IO32(0x10008004, core->pxi.writeCnt(1, IO_PARAMS)) // PXI_CNT9
                 DEF_IO32(0x10008008, core->pxi.writeSend(1, IO_PARAMS)) // PXI_SEND9

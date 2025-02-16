@@ -56,7 +56,7 @@ private:
     uint32_t spsrUnd = 0;
 
     uint32_t pipeline[2] = {};
-    uint32_t cycles = 0;
+    uint64_t cycles = 0;
     uint32_t excAddress = 0;
     bool exclusive = false;
     bool event = false;

@@ -48,8 +48,8 @@ public:
 private:
     Core *core;
 
-    uint32_t endCyclesMp[MAX_CPUS - 1][2] = {};
-    uint32_t endCyclesTm[4] = {};
+    uint64_t endCyclesMp[MAX_CPUS - 1][2] = {};
+    uint64_t endCyclesTm[4] = {};
     uint16_t timers[4] = {};
     uint8_t shifts[4] = { 1, 1, 1, 1 };
     bool countUp[4] = {};

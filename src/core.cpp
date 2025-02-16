@@ -20,12 +20,12 @@
 #include <algorithm>
 #include "core.h"
 
-Core::Core(): aes(this), arms { ArmInterp(this, ARM11A), ArmInterp(this, ARM11B),
-        ArmInterp(this, ARM11C), ArmInterp(this, ARM11D), ArmInterp(this, ARM9) }, cp15(this),
-        gpu(this), i2c(this), input(this), interrupts(this), memory(this), ndma(this), pdc(this),
-        pxi(this), rsa(this), sdMmc(this), shas { Sha(this, false), Sha(this, true) }, timers(this) {
+Core::Core(): aes(this), arms { ArmInterp(this, ARM11A), ArmInterp(this, ARM11B), ArmInterp(this, ARM11C),
+        ArmInterp(this, ARM11D), ArmInterp(this, ARM9) }, cp15(this), gpu(this), i2c(this),
+        input(this), interrupts(this), memory(this), ndma(this), pdc(this), pxi(this), rsa(this),
+        sdMmcs { SdMmc(this), SdMmc(this) }, shas { Sha(this, false), Sha(this, true) }, timers(this) {
     // Initialize things that need to be done after construction
-    n3dsMode = sdMmc.init();
+    n3dsMode = sdMmcs[0].init(sdMmcs[1]);
     memory.init();
     for (int i = 0; i < MAX_CPUS; i++)
         arms[i].init();
@@ -56,22 +56,23 @@ Core::Core(): aes(this), arms { ArmInterp(this, ARM11A), ArmInterp(this, ARM11B)
     tasks[NDMA_UPDATE] = std::bind(&Ndma::update, &ndma);
     tasks[SHA11_UPDATE] = std::bind(&Sha::update, &shas[0]);
     tasks[SHA9_UPDATE] = std::bind(&Sha::update, &shas[1]);
-    tasks[SDMMC_READ_BLOCK] = std::bind(&SdMmc::readBlock, &sdMmc);
+    tasks[SDMMC0_READ_BLOCK] = std::bind(&SdMmc::readBlock, &sdMmcs[0]);
+    tasks[SDMMC1_READ_BLOCK] = std::bind(&SdMmc::readBlock, &sdMmcs[1]);
 
     // Schedule the initial tasks
-    schedule(RESET_CYCLES, 0x7FFFFFFF);
+    schedule(RESET_CYCLES, 0x7FFFFFFFFFFFFFFF);
     schedule(END_FRAME, 268111856 / 60);
 }
 
 void Core::resetCycles() {
-    // Reset the global cycle count periodically to prevent overflow
+    // Reset the global cycle count eventually to prevent overflow
     for (uint32_t i = 0; i < events.size(); i++)
         events[i].cycles -= globalCycles;
     for (int i = 0; i < MAX_CPUS; i++)
         arms[i].resetCycles();
     timers.resetCycles();
     globalCycles -= globalCycles;
-    schedule(RESET_CYCLES, 0x7FFFFFFF);
+    schedule(RESET_CYCLES, 0x7FFFFFFFFFFFFFFF);
 }
 
 void Core::endFrame() {
@@ -98,7 +99,7 @@ void Core::toggleRunFunc() {
     running.store(false);
 }
 
-void Core::schedule(Task task, uint32_t cycles) {
+void Core::schedule(Task task, uint64_t cycles) {
     // Add a task to the scheduler, sorted by least to most cycles until execution
     Event event(&tasks[task], globalCycles + cycles);
     auto it = std::upper_bound(events.cbegin(), events.cend(), event);

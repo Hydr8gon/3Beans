@@ -29,7 +29,7 @@ public:
     SdMmc(Core *core): core(core) {}
     ~SdMmc();
 
-    bool init();
+    bool init(SdMmc &other);
     void readBlock();
 
     uint16_t readCmd() { return sdCmd; }
@@ -59,10 +59,12 @@ public:
 
 private:
     Core *core;
+    int id = 0;
     FILE *nand = nullptr;
     FILE *sd = nullptr;
 
     uint32_t cardStatus = 0;
+    uint32_t opCond = 0x80000000;
     uint32_t blockLen = 0;
     uint32_t curAddress = 0;
     uint16_t curBlock = 0;
@@ -91,6 +93,8 @@ private:
     void runCommand();
     void runAppCommand();
 
+    void switchFunc();
+    void setIfCond();
     void getCid();
     void getStatus();
     void setBlocklen();
@@ -98,5 +102,6 @@ private:
     void readMultiBlock();
     void appCmd();
     void sdStatus();
+    void sdSendOpCond();
     void getScr();
 };

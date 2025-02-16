@@ -32,12 +32,14 @@ public:
     uint32_t readMemfillDstEnd(int i) { return gpuMemfillDstEnd[i]; }
     uint32_t readMemfillData(int i) { return gpuMemfillData[i]; }
     uint32_t readMemfillCnt(int i) { return gpuMemfillCnt[i]; }
+    uint32_t readMemcopyCnt() { return gpuMemcopyCnt; }
 
     void writeCfg11GpuCnt(uint32_t mask, uint32_t value);
     void writeMemfillDstAddr(int i, uint32_t mask, uint32_t value);
     void writeMemfillDstEnd(int i, uint32_t mask, uint32_t value);
     void writeMemfillData(int i, uint32_t mask, uint32_t value);
     void writeMemfillCnt(int i, uint32_t mask, uint32_t value);
+    void writeMemcopyCnt(uint32_t mask, uint32_t value);
 
 private:
     Core *core;
@@ -47,4 +49,5 @@ private:
     uint32_t gpuMemfillDstEnd[2] = {};
     uint32_t gpuMemfillData[2] = {};
     uint32_t gpuMemfillCnt[2] = {};
+    uint32_t gpuMemcopyCnt = 0;
 };

@@ -31,7 +31,7 @@ void Timers::resetCycles() {
 void Timers::scheduleMp(CpuId id, int i) {
     // Schedule a timer underflow using its prescaler, with half the ARM11 frequency as a base
     if (~mpTmcnt[id][i] & BIT(0)) return;
-    uint32_t cycles = mpCounter[id][i] * (((mpTmcnt[id][i]) >> 8) + 1) * 2;
+    uint64_t cycles = uint64_t(mpCounter[id][i]) * (((mpTmcnt[id][i]) >> 8) + 1) * 2;
     core->schedule(Task(ARM11A_OVERFLOW0 + id * 2 + i), cycles);
     endCyclesMp[id][i] = core->globalCycles + cycles;
 }
@@ -69,7 +69,7 @@ void Timers::overflowTm(int i) {
 
     // Schedule the next timer overflow if not in count-up mode
     if (!countUp[i]) {
-        uint32_t cycles = (0x10000 - timers[i]) << shifts[i];
+        uint64_t cycles = (0x10000 - timers[i]) << shifts[i];
         core->schedule(Task(ARM9_OVERFLOW0 + i), cycles);
         endCyclesTm[i] = core->globalCycles + cycles;
     }
@@ -94,6 +94,10 @@ uint16_t Timers::readTmCntL(int i) {
 }
 
 void Timers::writeMpReload(CpuId id, int i, uint32_t mask, uint32_t value) {
+    // Only allow access to extra core timers if the cores are enabled
+    if ((id == ARM11C || id == ARM11D) && !(core->interrupts.readCfg11MpBootcnt(id) & BIT(4)))
+        return;
+
     // Write to one of an ARM11 core's timer reloads and reload its counter
     mpReload[id][i] = (mpReload[id][i] & ~mask) | (value & mask);
     mpCounter[id][i] = mpReload[id][i];
@@ -101,12 +105,20 @@ void Timers::writeMpReload(CpuId id, int i, uint32_t mask, uint32_t value) {
 }
 
 void Timers::writeMpCounter(CpuId id, int i, uint32_t mask, uint32_t value) {
+    // Only allow access to extra core timers if the cores are enabled
+    if ((id == ARM11C || id == ARM11D) && !(core->interrupts.readCfg11MpBootcnt(id) & BIT(4)))
+        return;
+
     // Write to one of an ARM11 core's timer counters and update its scheduling
     mpCounter[id][i] = (mpCounter[id][i] & ~mask) | (value & mask);
     scheduleMp(id, i);
 }
 
 void Timers::writeMpTmcnt(CpuId id, int i, uint32_t mask, uint32_t value) {
+    // Only allow access to extra core timers if the cores are enabled
+    if ((id == ARM11C || id == ARM11D) && !(core->interrupts.readCfg11MpBootcnt(id) & BIT(4)))
+        return;
+
     // Ensure the timer value is updated
     readMpCounter(id, i);
 
@@ -121,6 +133,10 @@ void Timers::writeMpTmcnt(CpuId id, int i, uint32_t mask, uint32_t value) {
 }
 
 void Timers::writeMpTmirq(CpuId id, int i, uint32_t mask, uint32_t value) {
+    // Only allow access to extra core timers if the cores are enabled
+    if ((id == ARM11C || id == ARM11D) && !(core->interrupts.readCfg11MpBootcnt(id) & BIT(4)))
+        return;
+
     // Acknowledge one of an ARM11 core's timer interrupt bits
     mask &= 0x1;
     mpTmirq[id][i] &= ~(value & mask);
@@ -156,7 +172,7 @@ void Timers::writeTmCntH(int i, uint16_t mask, uint16_t value) {
 
     // Schedule a timer overflow if the timer changed and isn't in count-up mode
     if (dirty && (tmCntH[i] & BIT(7)) && !countUp[i]) {
-        uint32_t cycles = (0x10000 - timers[i]) << shifts[i];
+        uint64_t cycles = (0x10000 - timers[i]) << shifts[i];
         core->schedule(Task(ARM9_OVERFLOW0 + i), cycles);
         endCyclesTm[i] = core->globalCycles + cycles;
     }

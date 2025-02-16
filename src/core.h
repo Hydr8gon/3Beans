@@ -66,15 +66,16 @@ enum Task {
     NDMA_UPDATE,
     SHA11_UPDATE,
     SHA9_UPDATE,
-    SDMMC_READ_BLOCK,
+    SDMMC0_READ_BLOCK,
+    SDMMC1_READ_BLOCK,
     MAX_TASKS
 };
 
 struct Event {
     std::function<void()> *task;
-    uint32_t cycles;
+    uint64_t cycles;
 
-    Event(std::function<void()> *task, uint32_t cycles): task(task), cycles(cycles) {}
+    Event(std::function<void()> *task, uint64_t cycles): task(task), cycles(cycles) {}
     bool operator<(const Event &event) const { return cycles < event.cycles; }
 };
 
@@ -95,17 +96,17 @@ public:
     Pdc pdc;
     Pxi pxi;
     Rsa rsa;
-    SdMmc sdMmc;
+    SdMmc sdMmcs[2];
     Sha shas[2];
     Timers timers;
 
     std::atomic<bool> running;
     std::vector<Event> events;
-    uint32_t globalCycles = 0;
+    uint64_t globalCycles = 0;
 
     Core();
     void runFrame() { (*runFunc)(this); }
-    void schedule(Task task, uint32_t cycles);
+    void schedule(Task task, uint64_t cycles);
 
 private:
     void (*runFunc)(Core*) = &ArmInterp::runFrame<false>;

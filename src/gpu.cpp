@@ -77,3 +77,17 @@ void Gpu::writeMemfillCnt(int i, uint32_t mask, uint32_t value) {
         return;
     }
 }
+
+void Gpu::writeMemcopyCnt(uint32_t mask, uint32_t value) {
+    // Allow clearing the interrupt bit but not setting it
+    if ((mask & BIT(8)) && !(value & BIT(8)))
+        gpuMemcopyCnt &= ~BIT(8);
+
+    // Check the start and enable bits and trigger an interrupt if running
+    if (!(value & mask & BIT(0)) || !(cfg11GpuCnt & BIT(4))) return;
+    gpuMemcopyCnt |= BIT(8);
+    core->interrupts.sendInterrupt(ARM11, 0x2C);
+
+    // Stub the actual memory copy for now
+    LOG_CRIT("Unimplemented GPU memory copy started\n");
+}

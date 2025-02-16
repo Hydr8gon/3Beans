@@ -22,18 +22,21 @@
 
 SdMmc::~SdMmc() {
     // Close the NAND and SD files
+    if (id == 1) return;
     if (nand) fclose(nand);
     if (sd) fclose(sd);
 }
 
-bool SdMmc::init() {
-    // Try to open an SD image
-    sd = fopen("sd.img", "rb");
+bool SdMmc::init(SdMmc &other) {
+    // Try to open an SD image to share between ports
+    other.sd = sd = fopen("sd.img", "rb");
+    other.id = 1;
 
     // Try to open a GM9 NAND dump and load CID and OTP data
-    if (!(nand = fopen("nand.bin", "rb"))) return false;
+    if (!(other.nand = nand = fopen("nand.bin", "rb"))) return false;
     fseek(nand, 0xC00, SEEK_SET);
     fread(mmcCid, sizeof(uint32_t), 4, nand);
+    memcpy(other.mmcCid, mmcCid, sizeof(mmcCid));
     fseek(nand, 0xE00, SEEK_SET);
     core->memory.loadOtp(nand);
 
@@ -52,7 +55,7 @@ void SdMmc::sendInterrupt(int bit) {
 
     // Send an interrupt to the ARM9 if conditions are met
     if (sdIrqStatus & ~sdIrqMask)
-        core->interrupts.sendInterrupt(ARM9, 16);
+        core->interrupts.sendInterrupt(ARM9, 16 + (id << 1));
 }
 
 void SdMmc::pushFifo(uint32_t value) {
@@ -67,7 +70,7 @@ void SdMmc::pushFifo(uint32_t value) {
         // Trigger a 32-bit FIFO full interrupt if enabled and finish a block
         sdData32Irq |= BIT(8);
         if (sdData32Irq & BIT(11))
-            core->interrupts.sendInterrupt(ARM9, 16);
+            core->interrupts.sendInterrupt(ARM9, 16 + (id << 1));
         curBlock--;
         return;
     }
@@ -109,13 +112,13 @@ void SdMmc::readBlock() {
     for (int i = 0; i < blockLen; i++) pushFifo(data[i]);
     cardStatus = (cardStatus & ~0x1E00) | ((curBlock ? 0x5 : 0x4) << 9);
     curAddress += (blockLen << 2);
-    core->ndma.triggerMode(0x6);
+    core->ndma.triggerMode(0x6 + id);
 }
 
 void SdMmc::runCommand() {
     // Ensure the command is being run in normal mode
     if (cardStatus & BIT(5)) {
-        LOG_WARN("Tried to run normal SD/MMC command in app mode\n");
+        LOG_WARN("Tried to run %s port %d CMD in app mode\n", (sdPortSelect & BIT(0)) ? "MMC" : "SD", id);
         cardStatus &= ~BIT(5);
         return;
     }
@@ -123,6 +126,8 @@ void SdMmc::runCommand() {
     // Execute a normal SD/MMC command
     switch (uint8_t cmd = sdCmd & 0x3F) {
         case 2: return getCid(); // ALL_GET_CID (stub)
+        case 6: return switchFunc(); // SWITCH_FUNC
+        case 8: return setIfCond(); // SET_IF_COND
         case 10: return getCid(); // GET_CID
         case 13: return getStatus(); // GET_STATUS
         case 16: return setBlocklen(); // SET_BLOCKLEN
@@ -133,13 +138,13 @@ void SdMmc::runCommand() {
     case 1: // SEND_OP_COND
     case 3: // SET_RELATIVE_ADDR
         // Stub commands that want response bit 31 to be set
-        LOG_WARN("Stubbed SD/MMC command: CMD%d\n", cmd);
+        LOG_WARN("Stubbed %s port %d command: CMD%d\n", (sdPortSelect & BIT(0)) ? "MMC" : "SD", id, cmd);
         pushResponse(0x80000000);
         return;
 
     default:
         // Assume response type 1 for unknown commands
-        LOG_WARN("Unknown SD/MMC command: CMD%d\n", cmd);
+        LOG_WARN("Unknown %s port %d command: CMD%d\n", (sdPortSelect & BIT(0)) ? "MMC" : "SD", id, cmd);
         pushResponse(cardStatus);
         return;
     }
@@ -148,7 +153,7 @@ void SdMmc::runCommand() {
 void SdMmc::runAppCommand() {
     // Ensure the command is being run in app mode
     if (~cardStatus & BIT(5)) {
-        LOG_WARN("Tried to run app SD/MMC command in normal mode\n");
+        LOG_WARN("Tried to run %s port %d ACMD in normal mode\n", (sdPortSelect & BIT(0)) ? "MMC" : "SD", id);
         return;
     }
 
@@ -158,20 +163,32 @@ void SdMmc::runAppCommand() {
     // Execute an app SD/MMC command
     switch (uint8_t cmd = sdCmd & 0x3F) {
         case 13: return sdStatus(); // SD_STATUS
+        case 41: return sdSendOpCond(); // SD_SEND_OP_COND
         case 51: return getScr(); // GET_SCR
-
-    case 41: // SD_SEND_OP_COND
-        // Stub commands that want response bit 31 to be set
-        LOG_WARN("Stubbed SD/MMC command: ACMD%d\n", cmd);
-        pushResponse(0x80000000);
-        return;
 
     default:
         // Assume response type 1 for unknown commands
-        LOG_WARN("Unknown SD/MMC command: ACMD%d\n", cmd);
+        LOG_WARN("Unknown %s port %d command: ACMD%d\n", (sdPortSelect & BIT(0)) ? "MMC" : "SD", id, cmd);
         pushResponse(cardStatus);
         return;
     }
+}
+
+void SdMmc::switchFunc() {
+    // Stub this command to return data for SD cards (needed for libn3ds)
+    LOG_WARN("Stubbed %s port %d command: CMD6\n", (sdPortSelect & BIT(0)) ? "MMC" : "SD", id);
+    pushResponse(cardStatus);
+    if (sdPortSelect & BIT(0)) return;
+
+    // Pretend to read whatever 512-bit value this returns
+    curBlock = 1;
+    for (int i = 0; i < 16; i++)
+        pushFifo(0);
+}
+
+void SdMmc::setIfCond() {
+    // Respond with the same voltage and check pattern that was input
+    pushResponse(sdCmdParam & 0xFFF);
 }
 
 void SdMmc::getCid() {
@@ -188,6 +205,7 @@ void SdMmc::getStatus() {
 void SdMmc::setBlocklen() {
     // Set the word length for multi-block reads and writes
     blockLen = std::min(0x200U, sdCmdParam + 3) >> 2;
+    core->sdMmcs[!id].blockLen = blockLen;
     pushResponse(cardStatus);
 }
 
@@ -196,7 +214,7 @@ void SdMmc::readSingleBlock() {
     curAddress = sdCmdParam;
     curBlock = 1;
     pushResponse(cardStatus);
-    core->schedule(SDMMC_READ_BLOCK, 1);
+    core->schedule(Task(SDMMC0_READ_BLOCK + id), 1);
 }
 
 void SdMmc::readMultiBlock() {
@@ -204,7 +222,7 @@ void SdMmc::readMultiBlock() {
     curAddress = sdCmdParam;
     curBlock = sdData16Blkcnt;
     pushResponse(cardStatus);
-    core->schedule(SDMMC_READ_BLOCK, 1);
+    core->schedule(Task(SDMMC0_READ_BLOCK + id), 1);
 }
 
 void SdMmc::appCmd() {
@@ -221,6 +239,12 @@ void SdMmc::sdStatus() {
     pushResponse(cardStatus);
 }
 
+void SdMmc::sdSendOpCond() {
+    // Set the SD operation condition voltage window bits
+    opCond = (opCond & ~0xFFFFFF) | (sdCmdParam & 0xFFFFFF);
+    pushResponse(opCond);
+}
+
 void SdMmc::getScr() {
     // Pretend to read the 64-bit SD configuration register
     curBlock = 1;
@@ -230,8 +254,8 @@ void SdMmc::getScr() {
 }
 
 uint32_t SdMmc::readIrqStatus() {
-    // Read from the SD_IRQ_STATUS register with the insert bit set for SD cards
-    return sdIrqStatus | ((~sdPortSelect & BIT(0)) << 5);
+    // Read from the SD_IRQ_STATUS register with the insert and write bits set for SD cards
+    return sdIrqStatus | ((sdPortSelect & BIT(0)) ? 0 : 0xA0);
 }
 
 uint16_t SdMmc::readData16Fifo() {
@@ -243,7 +267,7 @@ uint16_t SdMmc::readData16Fifo() {
     // Clear the FIFO full bit and read another block or end with an interrupt if empty
     sdIrqStatus &= ~BIT(24);
     if (readFifo16.empty())
-        (cardStatus & 0x1E00) == (0x5 << 9) ? core->schedule(SDMMC_READ_BLOCK, 1) : sendInterrupt(2);
+        (cardStatus & 0x1E00) == (0x5 << 9) ? core->schedule(Task(SDMMC0_READ_BLOCK + id), 1) : sendInterrupt(2);
     return sdData16Fifo;
 }
 
@@ -256,7 +280,7 @@ uint32_t SdMmc::readData32Fifo() {
     // Clear the FIFO full bit and read another block or end with an interrupt if empty
     sdData32Irq &= ~BIT(8);
     if (readFifo32.empty())
-        (cardStatus & 0x1E00) == (0x5 << 9) ? core->schedule(SDMMC_READ_BLOCK, 1) : sendInterrupt(2);
+        (cardStatus & 0x1E00) == (0x5 << 9) ? core->schedule(Task(SDMMC0_READ_BLOCK + id), 1) : sendInterrupt(2);
     return sdData32Fifo;
 }
 
@@ -264,20 +288,19 @@ void SdMmc::writeCmd(uint16_t mask, uint16_t value) {
     // Write to the SD_CMD register
     sdCmd = (sdCmd & ~mask) | (value & mask);
 
-    // Send a response end interrupt to indicate command completion
-    sendInterrupt(0);
-
     // Auto response type is assumed, so warn when that isn't the case
     if (uint8_t resp = (sdCmd >> 8) & 0x7)
-        LOG_WARN("Running SD/MMC command with non-auto response type: %d\n", resp);
+        LOG_WARN("Running %s port %d command with non-auto response type: %d\n",
+            (sdPortSelect & BIT(0)) ? "MMC" : "SD", id, resp);
 
-    // Run the written command
+    // Run the written command and send an interrupt for completion
+    sendInterrupt(0);
     switch (uint8_t type = (sdCmd >> 6) & 0x3) {
         case 0: return runCommand();
         case 1: return runAppCommand();
 
     default:
-        LOG_WARN("Unknown SD/MMC command type: %d\n", type);
+        LOG_WARN("Unknown %s port %d command type: %d\n", (sdPortSelect & BIT(0)) ? "MMC" : "SD", id, type);
         return;
     }
 }
