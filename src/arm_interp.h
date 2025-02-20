@@ -434,6 +434,8 @@ private:
     int rev16(uint32_t opcode);
     int revsh(uint32_t opcode);
     int rev(uint32_t opcode);
+    int uqsub8(uint32_t opcode);
+    int uqsub16(uint32_t opcode);
     int uadd8(uint32_t opcode);
     int uadd16(uint32_t opcode);
     int sel(uint32_t opcode);
@@ -755,6 +757,11 @@ private:
     int mrsRs(uint32_t opcode);
     int mrc(uint32_t opcode);
     int mcr(uint32_t opcode);
+    int mrrc(uint32_t opcode);
+    int mcrr(uint32_t opcode);
+    int ldc(uint32_t opcode);
+    int stc(uint32_t opcode);
+    int cdp(uint32_t opcode);
     int swpb(uint32_t opcode);
     int swp(uint32_t opcode);
     int ldrexb(uint32_t opcode);

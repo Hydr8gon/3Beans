@@ -40,6 +40,7 @@
 #include "sd_mmc.h"
 #include "sha.h"
 #include "timers.h"
+#include "vfp11_interp.h"
 
 enum Task {
     RESET_CYCLES,
@@ -99,6 +100,7 @@ public:
     SdMmc sdMmcs[2];
     Sha shas[2];
     Timers timers;
+    Vfp11Interp vfp11s[MAX_CPUS - 1];
 
     std::atomic<bool> running;
     std::vector<Event> events;

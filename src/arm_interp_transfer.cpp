@@ -1093,42 +1093,224 @@ int ArmInterp::mrsRs(uint32_t opcode) { // MRS Rd,SPSR
 }
 
 int ArmInterp::mrc(uint32_t opcode) { // MRC Pn,<cpopc>,Rd,Cn,Cm,<cp>
-    // Check the coprocessor ID
-    uint8_t cp = ((opcode >> 8) & 0xF);
-    if (cp != 15) {
-        if (id == ARM9)
-            LOG_CRIT("Read from unknown ARM9 coprocessor: CP%d\n",  cp);
-        else
-            LOG_CRIT("Read from unknown ARM11 core %d coprocessor: CP%d\n", id, cp);
+    // Decode the operands
+    uint8_t pn = (opcode >> 8) & 0xF;
+    uint8_t cpopc = (opcode >> 21) & 0x7;
+    uint32_t *rd = registers[(opcode >> 12) & 0xF];
+    uint8_t cn = (opcode >> 16) & 0xF;
+    uint8_t cm = (opcode & 0xF);
+    uint8_t cp = (opcode >> 5) & 0x7;
+
+    // Read a single value from a coprocessor if it exists
+    switch (pn) {
+    case 10: // VFP11 (single)
+        if (id == ARM9) break; // ARM11-exclusive
+        *rd = core->vfp11s[id].readSingleS(cpopc, cn, cm, cp);
+        return 1;
+
+    case 11: // VFP11 (double)
+        if (id == ARM9) break; // ARM11-exclusive
+        *rd = core->vfp11s[id].readSingleD(cpopc, cn, cm, cp);
+        return 1;
+
+    case 15: // CP15
+        *rd = core->cp15.readReg(id, cn, cm, cp);
         return 1;
     }
 
-    // Read from a CP15 register
-    uint32_t *op2 = registers[(opcode >> 12) & 0xF];
-    uint8_t op3 = (opcode >> 16) & 0xF;
-    uint8_t op4 = opcode & 0xF;
-    uint8_t op5 = (opcode >> 5) & 0x7;
-    *op2 = core->cp15.readReg(id, op3, op4, op5);
+    // Catch single reads from invalid coprocessors
+    if (id == ARM9)
+        LOG_CRIT("Single read from invalid ARM9 coprocessor: CP%d\n", pn);
+    else
+        LOG_CRIT("Single read from invalid ARM11 core %d coprocessor: CP%d\n", id, pn);
     return 1;
 }
 
 int ArmInterp::mcr(uint32_t opcode) { // MCR Pn,<cpopc>,Rd,Cn,Cm,<cp>
-    // Check the coprocessor ID
-    uint8_t cp = ((opcode >> 8) & 0xF);
-    if (cp != 15) {
-        if (id == ARM9)
-            LOG_CRIT("Write to unknown ARM9 coprocessor: CP%d\n",  cp);
-        else
-            LOG_CRIT("Write to unknown ARM11 core %d coprocessor: CP%d\n", id, cp);
+    // Decode the operands
+    uint8_t pn = (opcode >> 8) & 0xF;
+    uint8_t cpopc = (opcode >> 21) & 0x7;
+    uint32_t rd = *registers[(opcode >> 12) & 0xF];
+    uint8_t cn = (opcode >> 16) & 0xF;
+    uint8_t cm = (opcode & 0xF);
+    uint8_t cp = (opcode >> 5) & 0x7;
+
+    // Write a single value to a coprocessor if it exists
+    switch (pn) {
+    case 10: // VFP11 (single)
+        if (id == ARM9) break; // ARM11-exclusive
+        core->vfp11s[id].writeSingleS(cpopc, cn, cm, cp, rd);
+        return 1;
+
+    case 11: // VFP11 (double)
+        if (id == ARM9) break; // ARM11-exclusive
+        core->vfp11s[id].writeSingleD(cpopc, cn, cm, cp, rd);
+        return 1;
+
+    case 15: // CP15
+        core->cp15.writeReg(id, cn, cm, cp, rd);
         return 1;
     }
 
-    // Write to a CP15 register
-    uint32_t op2 = *registers[(opcode >> 12) & 0xF];
-    uint8_t op3 = (opcode >> 16) & 0xF;
-    uint8_t op4 = opcode & 0xF;
-    uint8_t op5 = (opcode >> 5) & 0x7;
-    core->cp15.writeReg(id, op3, op4, op5, op2);
+    // Catch single writes to invalid coprocessors
+    if (id == ARM9)
+        LOG_CRIT("Single write to invalid ARM9 coprocessor: CP%d\n", pn);
+    else
+        LOG_CRIT("Single write to invalid ARM11 core %d coprocessor: CP%d\n", id, pn);
+    return 1;
+}
+
+int ArmInterp::mrrc(uint32_t opcode) { // MRRC Pn,<cpopc>,Rd,Rn,Cm
+    // Decode the operands
+    uint8_t pn = (opcode >> 8) & 0xF;
+    uint8_t cpopc = (opcode >> 4) & 0xF;
+    uint32_t *rd = registers[(opcode >> 12) & 0xF];
+    uint32_t *rn = registers[(opcode >> 16) & 0xF];
+    uint8_t cm = (opcode & 0xF);
+
+    // Read a double value from a coprocessor if it exists
+    uint64_t value;
+    switch (pn) {
+    case 10: // VFP11 (single)
+        if (id == ARM9) break; // ARM11-exclusive
+        value = core->vfp11s[id].readDoubleS(cpopc, cm);
+        goto read;
+
+    case 11: // VFP11 (double)
+        if (id == ARM9) break; // ARM11-exclusive
+        value = core->vfp11s[id].readDoubleD(cpopc, cm);
+        goto read;
+    }
+
+    // Catch double reads from unhandled/invalid coprocessors
+    if (id == ARM9)
+        LOG_CRIT("Double read from %s ARM9 coprocessor: CP%d\n", pn == 15 ? "unhandled" : "invalid", pn);
+    else
+        LOG_CRIT("Double read from %s ARM11 core %d coprocessor: CP%d\n", pn == 15 ? "unhandled" : "invalid", id, pn);
+    return 1;
+
+read:
+    // Read a 64-bit value into two registers
+    *rd = (value >> 0);
+    *rn = (value >> 32);
+    return 1;
+}
+
+int ArmInterp::mcrr(uint32_t opcode) { // MCRR Pn,<cpopc>,Rd,Rn,Cm
+    // Decode the operands
+    uint8_t pn = (opcode >> 8) & 0xF;
+    uint8_t cpopc = (opcode >> 4) & 0xF;
+    uint32_t rd = *registers[(opcode >> 12) & 0xF];
+    uint32_t rn = *registers[(opcode >> 16) & 0xF];
+    uint8_t cm = (opcode & 0xF);
+
+    // Write a double value to a coprocessor if it exists
+    uint64_t value = (uint64_t(rn) << 32) | rd;
+    switch (pn) {
+    case 10: // VFP11 (single)
+        if (id == ARM9) break; // ARM11-exclusive
+        core->vfp11s[id].writeDoubleS(cpopc, cm, value);
+        return 1;
+
+    case 11: // VFP11 (double)
+        if (id == ARM9) break; // ARM11-exclusive
+        core->vfp11s[id].writeDoubleD(cpopc, cm, value);
+        return 1;
+    }
+
+    // Catch double writes to unhandled/invalid coprocessors
+    if (id == ARM9)
+        LOG_CRIT("Double write to %s ARM9 coprocessor: CP%d\n", pn == 15 ? "unhandled" : "invalid", pn);
+    else
+        LOG_CRIT("Double write to %s ARM11 core %d coprocessor: CP%d\n", pn == 15 ? "unhandled" : "invalid", id, pn);
+    return 1;
+}
+
+int ArmInterp::ldc(uint32_t opcode) { // LDC Pn,Cd,<Address>
+    // Decode the operands
+    uint8_t pn = (opcode >> 8) & 0xF;
+    uint8_t cpopc = (opcode >> 21) & 0xF;
+    uint8_t cd = (opcode >> 12) & 0xF;
+    uint32_t *rn = registers[(opcode >> 16) & 0xF];
+    uint16_t ofs = (opcode & 0xFF) << 2;
+
+    // Perform a memory load on a coprocessor if it exists
+    switch (pn) {
+    case 10: // VFP11 (single)
+        if (id == ARM9) break; // ARM11-exclusive
+        core->vfp11s[id].loadMemoryS(cpopc, cd, rn, ofs);
+        return 1;
+
+    case 11: // VFP11 (double)
+        if (id == ARM9) break; // ARM11-exclusive
+        core->vfp11s[id].loadMemoryD(cpopc, cd, rn, ofs);
+        return 1;
+    }
+
+    // Catch memory loads to unhandled/invalid coprocessors
+    if (id == ARM9)
+        LOG_CRIT("Memory load to %s ARM9 coprocessor: CP%d\n", pn == 15 ? "unhandled" : "invalid", pn);
+    else
+        LOG_CRIT("Memory load to %s ARM11 core %d coprocessor: CP%d\n", pn == 15 ? "unhandled" : "invalid", id, pn);
+    return 1;
+}
+
+int ArmInterp::stc(uint32_t opcode) { // STC Pn,Cd,<Address>
+    // Decode the operands
+    uint8_t pn = (opcode >> 8) & 0xF;
+    uint8_t cpopc = (opcode >> 21) & 0xF;
+    uint8_t cd = (opcode >> 12) & 0xF;
+    uint32_t *rn = registers[(opcode >> 16) & 0xF];
+    uint16_t ofs = (opcode & 0xFF) << 2;
+
+    // Perform a memory store on a coprocessor if it exists
+    switch (pn) {
+    case 10: // VFP11 (single)
+        if (id == ARM9) break; // ARM11-exclusive
+        core->vfp11s[id].storeMemoryS(cpopc, cd, rn, ofs);
+        return 1;
+
+    case 11: // VFP11 (double)
+        if (id == ARM9) break; // ARM11-exclusive
+        core->vfp11s[id].storeMemoryD(cpopc, cd, rn, ofs);
+        return 1;
+    }
+
+    // Catch memory stores from unhandled/invalid coprocessors
+    if (id == ARM9)
+        LOG_CRIT("Memory store from %s ARM9 coprocessor: CP%d\n", pn == 15 ? "unhandled" : "invalid", pn);
+    else
+        LOG_CRIT("Memory store from %s ARM11 core %d coprocessor: CP%d\n", pn == 15 ? "unhandled" : "invalid", id, pn);
+    return 1;
+}
+
+int ArmInterp::cdp(uint32_t opcode) { // CDP Pn,<cpopc>,Cd,Cn,Cm,<cp>
+    // Decode the operands
+    uint8_t pn = (opcode >> 8) & 0xF;
+    uint8_t cpopc = (opcode >> 20) & 0xF;
+    uint8_t cd = (opcode >> 12) & 0xF;
+    uint8_t cn = (opcode >> 16) & 0xF;
+    uint8_t cm = (opcode & 0xF);
+    uint8_t cp = (opcode >> 5) & 0x7;
+
+    // Perform a data operation on a coprocessor if it exists
+    switch (pn) {
+    case 10: // VFP11 (single)
+        if (id == ARM9) break; // ARM11-exclusive
+        core->vfp11s[id].dataOperS(cpopc, cd, cn, cm, cp);
+        return 1;
+
+    case 11: // VFP11 (double)
+        if (id == ARM9) break; // ARM11-exclusive
+        core->vfp11s[id].dataOperD(cpopc, cd, cn, cm, cp);
+        return 1;
+    }
+
+    // Catch data operations on unhandled/invalid coprocessors
+    if (id == ARM9)
+        LOG_CRIT("Data operation on %s ARM9 coprocessor: CP%d\n", pn == 15 ? "unhandled" : "invalid", pn);
+    else
+        LOG_CRIT("Data operation on %s ARM11 core %d coprocessor: CP%d\n", pn == 15 ? "unhandled" : "invalid", id, pn);
     return 1;
 }
 

@@ -1060,6 +1060,32 @@ int ArmInterp::rev(uint32_t opcode) { // REV Rd,Rm
     return 1;
 }
 
+int ArmInterp::uqsub8(uint32_t opcode) { // UQSUB8 Rd,Rn,Rm
+    // Unsigned parallel 8-bit subtraction with saturation
+    if (id == ARM9) return 1; // ARM11-exclusive
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    uint32_t op1 = *registers[(opcode >> 16) & 0xF];
+    uint32_t op2 = *registers[opcode & 0xF];
+    *op0 = 0;
+    for (int i = 0; i < 4; i++) {
+        int value = int((op1 >> (i << 3)) & 0xFF) - int((op2 >> (i << 3)) & 0xFF);
+        *op0 |= std::min(0xFF, std::max(0, value)) << (i << 3);
+    }
+    return 1;
+}
+
+int ArmInterp::uqsub16(uint32_t opcode) { // UQSUB16 Rd,Rn,Rm
+    // Unsigned parallel 16-bit subtraction with saturation
+    if (id == ARM9) return 1; // ARM11-exclusive
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    uint32_t op1 = *registers[(opcode >> 16) & 0xF];
+    uint32_t op2 = *registers[opcode & 0xF];
+    uint32_t tmp1 = std::min(0xFFFF, std::max(0, int((op1 >> 0) & 0xFFFF) - int((op2 >> 0) & 0xFFFF)));
+    uint32_t tmp2 = std::min(0xFFFF, std::max(0, int((op1 >> 16) & 0xFFFF) - int((op2 >> 16) & 0xFFFF)));
+    *op0 = ((tmp2 & 0xFFFF) << 16) | (tmp1 & 0xFFFF);
+    return 1;
+}
+
 int ArmInterp::uadd8(uint32_t opcode) { // UADD8 Rd,Rn,Rm
     // Unsigned parallel 8-bit addition and set GE flags
     if (id == ARM9) return 1; // ARM11-exclusive
