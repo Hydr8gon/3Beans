@@ -70,9 +70,20 @@ void b3Canvas::draw(wxPaintEvent &event) {
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    // At the swap interval, get the framebuffer as a texture
-    if (++frameCount >= swapInterval && frame->core) {
-        if (uint32_t *fb = frame->core->pdc.getFrame()) {
+    // At the swap interval, upload a new framebuffer texture if available
+    if (++frameCount >= swapInterval) {
+        uint32_t *fb;
+        frame->mutex.lock();
+        if (frame->core) {
+            fb = frame->core->pdc.getFrame();
+            frame->mutex.unlock();
+        }
+        else {
+            frame->mutex.unlock();
+            fb = new uint32_t[400 * 480];
+            memset(fb, 0, 400 * 480 * sizeof(uint32_t));
+        }
+        if (fb) {
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 400, 480, 0, GL_RGBA, GL_UNSIGNED_BYTE, fb);
             frameCount = 0;
             delete fb;
@@ -132,16 +143,20 @@ void b3Canvas::resize(wxSizeEvent &event) {
 
 void b3Canvas::pressKey(wxKeyEvent &event) {
     // Trigger a key press if a mapped key was pressed
-    if (!frame->core) return;
-    for (int i = 0; i < MAX_KEYS; i++)
-        if (event.GetKeyCode() == b3App::keyBinds[i])
-            frame->core->input.pressKey(i);
+    frame->mutex.lock();
+    if (frame->core)
+        for (int i = 0; i < MAX_KEYS; i++)
+            if (event.GetKeyCode() == b3App::keyBinds[i])
+                frame->core->input.pressKey(i);
+    frame->mutex.unlock();
 }
 
 void b3Canvas::releaseKey(wxKeyEvent &event) {
     // Trigger a key release if a mapped key was released
-    if (!frame->core) return;
-    for (int i = 0; i < MAX_KEYS; i++)
-        if (event.GetKeyCode() == b3App::keyBinds[i])
-            frame->core->input.releaseKey(i);
+    frame->mutex.lock();
+    if (frame->core)
+        for (int i = 0; i < MAX_KEYS; i++)
+            if (event.GetKeyCode() == b3App::keyBinds[i])
+                frame->core->input.releaseKey(i);
+    frame->mutex.unlock();
 }

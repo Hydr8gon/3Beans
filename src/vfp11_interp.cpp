@@ -20,9 +20,17 @@
 #include "core.h"
 
 uint32_t Vfp11Interp::readSingleS(uint8_t cpopc, uint8_t cn, uint8_t cm, uint8_t cp) {
+    // Catch the special FMSTAT encoding and prevent it from nuking the PC
+    uint32_t value = 0;
+    if (cpopc == 0x7 && ((cn << 1) | (cp >> 2)) == 0x2) {
+        uint32_t opcode = core->cp15.read<uint32_t>(id, *core->arms[id].registers[15] - 8);
+        if (((opcode >> 12) & 0xF) == 15)
+            value = *core->arms[id].registers[(opcode >> 12) & 0xF];
+    }
+
     // Stub VFP10 single reads for now
     LOG_CRIT("Unhandled ARM11 core %d VFP10 single read opcode bits: 0x%X\n", id, cpopc);
-    return 0;
+    return value;
 }
 
 uint32_t Vfp11Interp::readSingleD(uint8_t cpopc, uint8_t cn, uint8_t cm, uint8_t cp) {

@@ -21,14 +21,34 @@
 #include "b3_frame.h"
 #include "b3_canvas.h"
 
+enum FrameEvent {
+    PAUSE = 1,
+    RESTART,
+    STOP
+};
+
 wxBEGIN_EVENT_TABLE(b3Frame, wxFrame)
+EVT_MENU(PAUSE, b3Frame::pause)
+EVT_MENU(RESTART, b3Frame::restart)
+EVT_MENU(STOP, b3Frame::stop)
 EVT_CLOSE(b3Frame::close)
 wxEND_EVENT_TABLE()
 
 b3Frame::b3Frame(): wxFrame(nullptr, wxID_ANY, "3Beans") {
-    // Start running the emulator on a separate thread
-    core = new Core();
-    std::thread *thread = new std::thread(&b3Frame::runCore, this);
+    // Set up the System menu
+    systemMenu = new wxMenu();
+    systemMenu->Append(PAUSE, "&Pause");
+    systemMenu->Append(RESTART, "&Restart");
+    systemMenu->Append(STOP, "&Stop");
+
+    // Set up the menu bar
+    wxMenuBar *menuBar = new wxMenuBar();
+    menuBar->Append(systemMenu, "&System");
+    SetMenuBar(menuBar);
+
+    // Start emulation automatically
+    running.store(false);
+    startCore(true);
 
     // Set up and show the window
     SetClientSize(MIN_SIZE);
@@ -46,17 +66,83 @@ b3Frame::b3Frame(): wxFrame(nullptr, wxID_ANY, "3Beans") {
 void b3Frame::Refresh() {
     // Override the refresh function to also update the FPS counter
     wxFrame::Refresh();
-    SetLabel(wxString::Format("3Beans - %d FPS", core->fps));
+    wxString label = "3Beans";
+    mutex.lock();
+    if (running.load())
+        label += wxString::Format(" - %d FPS", core->fps);
+    mutex.unlock();
+    SetLabel(label);
 }
 
 void b3Frame::runCore() {
-    // Run the emulator
-    while (core)
+    // Run the emulator until stopped
+    while (running.load())
         core->runFrame();
 }
 
+void b3Frame::startCore(bool full) {
+    // Fully stop and restart the core
+    if (full) {
+        stopCore(true);
+        mutex.lock();
+        core = new Core();
+        mutex.unlock();
+    }
+
+    // Start the core thread if not already running
+    if (running.load()) return;
+    running.store(true);
+    thread = new std::thread(&b3Frame::runCore, this);
+
+    // Update the system menu for running
+    systemMenu->SetLabel(PAUSE, "&Pause");
+    systemMenu->SetLabel(RESTART, "&Restart");
+    systemMenu->Enable(PAUSE, true);
+    systemMenu->Enable(STOP, true);
+}
+
+void b3Frame::stopCore(bool full) {
+    // Stop the core thread if it was running
+    if (running.load()) {
+        running.store(false);
+        thread->join();
+        delete thread;
+    }
+
+    // Update the system menu for pausing or stopping
+    systemMenu->SetLabel(PAUSE, "&Resume");
+    if (!full) return;
+    systemMenu->SetLabel(RESTART, "&Start");
+    systemMenu->Enable(PAUSE, false);
+    systemMenu->Enable(STOP, false);
+
+    // Fully stop and remove the core
+    mutex.lock();
+    if (core) {
+        delete core;
+        core = nullptr;
+    }
+    mutex.unlock();
+}
+
+void b3Frame::pause(wxCommandEvent &event) {
+    // Pause or resume the core
+    running.load() ? stopCore(false) : startCore(false);
+}
+
+void b3Frame::restart(wxCommandEvent &event) {
+    // Restart the core
+    startCore(true);
+}
+
+void b3Frame::stop(wxCommandEvent &event) {
+    // Stop the core
+    stopCore(true);
+}
+
 void b3Frame::close(wxCloseEvent &event) {
-    // Tell the canvas to stop drawing
+    // Stop the canvas and the core
     canvas->finish();
+    stopCore(true);
     event.Skip(true);
 }

@@ -19,6 +19,8 @@
 
 #pragma once
 
+#include <mutex>
+#include <thread>
 #include <wx/wx.h>
 #include "../core.h"
 
@@ -28,14 +30,24 @@ class b3Canvas;
 class b3Frame: public wxFrame {
 public:
     Core *core = nullptr;
+    std::atomic<bool> running;
+    std::mutex mutex;
 
     b3Frame();
     void Refresh();
 
 private:
     b3Canvas *canvas;
-    void runCore();
+    wxMenu *systemMenu;
+    std::thread *thread;
 
+    void runCore();
+    void startCore(bool full);
+    void stopCore(bool full);
+
+    void pause(wxCommandEvent &event);
+    void restart(wxCommandEvent &event);
+    void stop(wxCommandEvent &event);
     void close(wxCloseEvent &event);
     wxDECLARE_EVENT_TABLE();
 };
