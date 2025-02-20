@@ -19,37 +19,23 @@
 
 #pragma once
 
-#include <mutex>
-#include <thread>
 #include <wx/wx.h>
-#include "../core.h"
 
-#define MIN_SIZE wxSize(400, 480)
-class b3Canvas;
-
-class b3Frame: public wxFrame {
+class PathDialog: public wxDialog {
 public:
-    Core *core = nullptr;
-    std::atomic<bool> running;
-    std::mutex mutex;
-
-    b3Frame();
-    void Refresh();
+    PathDialog();
 
 private:
-    b3Canvas *canvas;
-    wxMenu *systemMenu;
-    std::thread *thread;
+    wxTextCtrl *boot11Path;
+    wxTextCtrl *boot9Path;
+    wxTextCtrl *nandPath;
+    wxTextCtrl *sdPath;
 
-    void runCore();
-    void startCore(bool full);
-    void stopCore(bool full);
-
-    void pause(wxCommandEvent &event);
-    void restart(wxCommandEvent &event);
-    void stop(wxCommandEvent &event);
-    void pathSettings(wxCommandEvent &event);
-    void inputBindings(wxCommandEvent &event);
-    void close(wxCloseEvent &event);
+    void boot11Browse(wxCommandEvent &event);
+    void boot9Browse(wxCommandEvent &event);
+    void nandBrowse(wxCommandEvent &event);
+    void sdBrowse(wxCommandEvent &event);
+    void openFolder(wxCommandEvent &event);
+    void confirm(wxCommandEvent &event);
     wxDECLARE_EVENT_TABLE();
 };

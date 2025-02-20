@@ -19,37 +19,26 @@
 
 #pragma once
 
-#include <mutex>
-#include <thread>
-#include <wx/wx.h>
-#include "../core.h"
+#include <string>
+#include <vector>
 
-#define MIN_SIZE wxSize(400, 480)
-class b3Canvas;
+struct Setting {
+    std::string name;
+    void *value;
+    bool isString;
 
-class b3Frame: public wxFrame {
-public:
-    Core *core = nullptr;
-    std::atomic<bool> running;
-    std::mutex mutex;
+    Setting(std::string name, void *value, bool isString):
+        name(name), value(value), isString(isString) {}
+};
 
-    b3Frame();
-    void Refresh();
+namespace Settings {
+    extern std::string boot11Path;
+    extern std::string boot9Path;
+    extern std::string nandPath;
+    extern std::string sdPath;
+    extern std::string basePath;
 
-private:
-    b3Canvas *canvas;
-    wxMenu *systemMenu;
-    std::thread *thread;
-
-    void runCore();
-    void startCore(bool full);
-    void stopCore(bool full);
-
-    void pause(wxCommandEvent &event);
-    void restart(wxCommandEvent &event);
-    void stop(wxCommandEvent &event);
-    void pathSettings(wxCommandEvent &event);
-    void inputBindings(wxCommandEvent &event);
-    void close(wxCloseEvent &event);
-    wxDECLARE_EVENT_TABLE();
+    void add(std::vector<Setting> &extra);
+    bool load(std::string path = ".");
+    bool save();
 };

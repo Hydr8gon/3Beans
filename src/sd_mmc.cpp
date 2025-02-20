@@ -29,11 +29,11 @@ SdMmc::~SdMmc() {
 
 bool SdMmc::init(SdMmc &other) {
     // Try to open an SD image to share between ports
-    other.sd = sd = fopen("sd.img", "rb");
+    other.sd = sd = fopen(Settings::sdPath.c_str(), "rb");
     other.id = 1;
 
     // Try to open a GM9 NAND dump and load CID and OTP data
-    if (!(other.nand = nand = fopen("nand.bin", "rb"))) return false;
+    if (!(other.nand = nand = fopen(Settings::nandPath.c_str(), "rb"))) return false;
     fseek(nand, 0xC00, SEEK_SET);
     fread(mmcCid, sizeof(uint32_t), 4, nand);
     memcpy(other.mmcCid, mmcCid, sizeof(mmcCid));

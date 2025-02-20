@@ -19,37 +19,26 @@
 
 #pragma once
 
-#include <mutex>
-#include <thread>
+#include <vector>
 #include <wx/wx.h>
-#include "../core.h"
+#include "b3_app.h"
 
-#define MIN_SIZE wxSize(400, 480)
-class b3Canvas;
-
-class b3Frame: public wxFrame {
+class InputDialog: public wxDialog {
 public:
-    Core *core = nullptr;
-    std::atomic<bool> running;
-    std::mutex mutex;
-
-    b3Frame();
-    void Refresh();
+    InputDialog();
 
 private:
-    b3Canvas *canvas;
-    wxMenu *systemMenu;
-    std::thread *thread;
+    int keyBinds[MAX_KEYS];
+    wxButton *keyBtns[MAX_KEYS];
+    wxButton *current = nullptr;
+    int keyIndex = 0;
 
-    void runCore();
-    void startCore(bool full);
-    void stopCore(bool full);
+    static std::string keyToStr(int key);
+    void resetLabels();
 
-    void pause(wxCommandEvent &event);
-    void restart(wxCommandEvent &event);
-    void stop(wxCommandEvent &event);
-    void pathSettings(wxCommandEvent &event);
-    void inputBindings(wxCommandEvent &event);
-    void close(wxCloseEvent &event);
+    template <int i> void remapKey(wxCommandEvent &event);
+    void clearMap(wxCommandEvent &event);
+    void confirm(wxCommandEvent &event);
+    void pressKey(wxKeyEvent &event);
     wxDECLARE_EVENT_TABLE();
 };

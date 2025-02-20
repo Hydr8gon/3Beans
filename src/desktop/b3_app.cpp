@@ -17,6 +17,8 @@
     along with 3Beans. If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <wx/filename.h>
+#include <wx/stdpaths.h>
 #include "b3_app.h"
 
 enum AppEvent {
@@ -30,6 +32,43 @@ wxEND_EVENT_TABLE()
 int b3App::keyBinds[] = { 'L', 'K', 'G', 'H', 'D', 'A', 'W', 'S', 'P', 'Q', 'O', 'I' };
 
 bool b3App::OnInit() {
+    // Define and add platform-specific settings
+    std::vector<Setting> platSettings = {
+        Setting("keyA", &keyBinds[0], false),
+        Setting("keyB", &keyBinds[1], false),
+        Setting("keySelect", &keyBinds[2], false),
+        Setting("keyStart", &keyBinds[3], false),
+        Setting("keyRight", &keyBinds[4], false),
+        Setting("keyLeft", &keyBinds[5], false),
+        Setting("keyUp", &keyBinds[6], false),
+        Setting("keyDown", &keyBinds[7], false),
+        Setting("keyR", &keyBinds[8], false),
+        Setting("keyL", &keyBinds[9], false),
+        Setting("keyX", &keyBinds[10], false),
+        Setting("keyY", &keyBinds[11], false)
+    };
+    Settings::add(platSettings);
+
+    // Try to load the settings file
+    if (FILE *file = fopen("3beans.ini", "r")) {
+        // Load from the working directory if a file exists
+        fclose(file);
+        Settings::load();
+    }
+    else {
+        // Load from the system-specific application settings directory
+        std::string settingsDir;
+        wxStandardPaths &paths = wxStandardPaths::Get();
+#if defined(WINDOWS) || defined(MACOS) || !wxCHECK_VERSION(3, 1, 0)
+        settingsDir = paths.GetUserDataDir().mb_str(wxConvUTF8);
+#else
+        paths.SetFileLayout(wxStandardPaths::FileLayout_XDG);
+        settingsDir = paths.GetUserConfigDir().mb_str(wxConvUTF8);
+        settingsDir += "/3beans";
+#endif
+        Settings::load(settingsDir);
+    }
+
     // Create the program's frame
     SetAppName("3Beans");
     frame = new b3Frame();

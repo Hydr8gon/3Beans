@@ -10,8 +10,7 @@ incorporating HLE elements to achieve playable speeds.
 ### Usage
 Files dumped from a hacked 3DS are required for 3Beans to boot anything. At a minimum you need `boot9.bin`,
 `boot11.bin`, and `nand.bin`, all of which can be obtained using GodMode9. You likely also want `sd.img`, which can be
-any FAT-formatted image file to serve as an SD card. All of these files should be placed in the same folder as 3Beans
-before starting it.
+any FAT-formatted image file to serve as an SD card. These files can be configured in the path settings.
 
 ### Contributing
 This is a personal project, and I've decided to not review or accept pull requests for it. If you want to help, you can

@@ -69,13 +69,13 @@ bool Memory::init() {
     updateMap(true, 0x0, 0xFFFFFFFF);
 
     // Try to load the ARM11 boot ROM
-    FILE *file = fopen("boot11.bin", "rb");
+    FILE *file = fopen(Settings::boot11Path.c_str(), "rb");
     if (!file) return false;
     fread(boot11, sizeof(uint8_t), 0x10000, file);
     fclose(file);
 
     // Try to load the ARM9 boot ROM
-    file = fopen("boot9.bin", "rb");
+    file = fopen(Settings::boot9Path.c_str(), "rb");
     if (!file) return false;
     fread(boot9, sizeof(uint8_t), 0x10000, file);
     fclose(file);

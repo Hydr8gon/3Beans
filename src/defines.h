@@ -45,6 +45,13 @@ enum CpuId {
 #define ROL32(v, s) ((v << s) | (v >> (32 - s)))
 #define ROR32(v, s) ((v >> s) | (v << (32 - s)))
 
+// Macro to handle differing mkdir arguments on Windows
+#ifdef WINDOWS
+#define MKDIR_ARGS
+#else
+#define MKDIR_ARGS , 0777
+#endif
+
 // Macro to force inlining
 #define FORCE_INLINE inline __attribute__((always_inline))
 

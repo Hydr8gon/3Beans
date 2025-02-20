@@ -38,9 +38,14 @@
 #include "pxi.h"
 #include "rsa.h"
 #include "sd_mmc.h"
+#include "settings.h"
 #include "sha.h"
 #include "timers.h"
 #include "vfp11_interp.h"
+
+enum CoreError {
+    ERROR_BOOTROM
+};
 
 enum Task {
     RESET_CYCLES,

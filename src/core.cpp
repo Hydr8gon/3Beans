@@ -27,7 +27,8 @@ Core::Core(): aes(this), arms { ArmInterp(this, ARM11A), ArmInterp(this, ARM11B)
         ARM11A), Vfp11Interp(this, ARM11B), Vfp11Interp(this, ARM11C), Vfp11Interp(this, ARM11D) } {
     // Initialize things that need to be done after construction
     n3dsMode = sdMmcs[0].init(sdMmcs[1]);
-    memory.init();
+    if (!memory.init())
+        throw ERROR_BOOTROM;
     for (int i = 0; i < MAX_CPUS; i++)
         arms[i].init();
     LOG_INFO("Running in %s 3DS mode\n", n3dsMode ? "new" : "old");
