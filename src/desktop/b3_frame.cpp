@@ -64,15 +64,15 @@ b3Frame::b3Frame(): wxFrame(nullptr, wxID_ANY, "3Beans") {
     Centre();
     Show(true);
 
-    // Start emulation automatically
-    running.store(false);
-    startCore(true);
-
     // Set up a canvas for drawing the framebuffer
     canvas = new b3Canvas(this);
     wxBoxSizer *sizer = new wxBoxSizer(wxHORIZONTAL);
     sizer->Add(canvas, 1, wxEXPAND);
     SetSizer(sizer);
+
+    // Start emulation automatically
+    running.store(false);
+    startCore(true);
 }
 
 void b3Frame::Refresh() {
@@ -104,7 +104,7 @@ void b3Frame::startCore(bool full) {
         catch (CoreError e) {
             core = nullptr;
             mutex.unlock();
-            wxMessageDialog(this, "One of the boot ROMs is missing! Check the path settings to configure them."
+            wxMessageDialog(this, "One of the boot ROMs is missing! Check the path settings to configure them. "
                 "You probably also want a NAND dump from GodMode9 and a FAT-formatted SD image file.",
                 "Boot ROMs Missing", wxICON_NONE).ShowModal();
             return;

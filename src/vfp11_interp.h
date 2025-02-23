@@ -28,20 +28,20 @@ class Vfp11Interp {
 public:
     Vfp11Interp(Core *core, CpuId id): core(core), id(id) {}
 
-    uint32_t readSingleS(uint8_t cpopc, uint8_t cn, uint8_t cm, uint8_t cp);
-    uint32_t readSingleD(uint8_t cpopc, uint8_t cn, uint8_t cm, uint8_t cp);
-    void writeSingleS(uint8_t cpopc, uint8_t cn, uint8_t cm, uint8_t cp, uint32_t value);
-    void writeSingleD(uint8_t cpopc, uint8_t cn, uint8_t cm, uint8_t cp, uint32_t value);
+    void readSingleS(uint8_t cpopc, uint32_t *rd, uint8_t cn, uint8_t cm, uint8_t cp);
+    void readSingleD(uint8_t cpopc, uint32_t *rd, uint8_t cn, uint8_t cm, uint8_t cp);
+    void writeSingleS(uint8_t cpopc, uint32_t rd, uint8_t cn, uint8_t cm, uint8_t cp);
+    void writeSingleD(uint8_t cpopc, uint32_t rd, uint8_t cn, uint8_t cm, uint8_t cp);
 
-    uint64_t readDoubleS(uint8_t cpopc, uint8_t cm);
-    uint64_t readDoubleD(uint8_t cpopc, uint8_t cm);
-    void writeDoubleS(uint8_t cpopc, uint8_t cm, uint64_t value);
-    void writeDoubleD(uint8_t cpopc, uint8_t cm, uint64_t value);
+    void readDoubleS(uint8_t cpopc, uint32_t *rd, uint32_t *rn, uint8_t cm);
+    void readDoubleD(uint8_t cpopc, uint32_t *rd, uint32_t *rn, uint8_t cm);
+    void writeDoubleS(uint8_t cpopc, uint32_t rd, uint32_t rn, uint8_t cm);
+    void writeDoubleD(uint8_t cpopc, uint32_t rd, uint32_t rn, uint8_t cm);
 
-    void loadMemoryS(uint8_t cpopc, uint8_t cd, uint32_t *rn, uint16_t ofs);
-    void loadMemoryD(uint8_t cpopc, uint8_t cd, uint32_t *rn, uint16_t ofs);
-    void storeMemoryS(uint8_t cpopc, uint8_t cd, uint32_t *rn, uint16_t ofs);
-    void storeMemoryD(uint8_t cpopc, uint8_t cd, uint32_t *rn, uint16_t ofs);
+    void loadMemoryS(uint8_t cpopc, uint8_t cd, uint32_t *rn, uint8_t ofs);
+    void loadMemoryD(uint8_t cpopc, uint8_t cd, uint32_t *rn, uint8_t ofs);
+    void storeMemoryS(uint8_t cpopc, uint8_t cd, uint32_t *rn, uint8_t ofs);
+    void storeMemoryD(uint8_t cpopc, uint8_t cd, uint32_t *rn, uint8_t ofs);
 
     void dataOperS(uint8_t cpopc, uint8_t cd, uint8_t cn, uint8_t cm, uint8_t cp);
     void dataOperD(uint8_t cpopc, uint8_t cd, uint8_t cn, uint8_t cm, uint8_t cp);
@@ -49,4 +49,31 @@ public:
 private:
     Core *core;
     CpuId id;
+
+    uint32_t registers[32] = {};
+    uint32_t fpscr = 0;
+    uint32_t fpexc = 0;
+
+    bool checkEnable();
+
+    void fmrs(uint32_t *rd, uint8_t sn);
+    void fmrx(uint32_t *rd, uint8_t sys);
+    void fmsr(uint8_t sn, uint32_t rd);
+    void fmxr(uint8_t sys, uint32_t rd);
+
+    void fldsP(uint8_t fd, uint32_t rn, uint8_t ofs);
+    void fldsM(uint8_t fd, uint32_t rn, uint8_t ofs);
+    void flddP(uint8_t fd, uint32_t rn, uint8_t ofs);
+    void flddM(uint8_t fd, uint32_t rn, uint8_t ofs);
+    void fldmia(uint8_t fd, uint32_t rn, uint8_t ofs);
+    void fldmiaW(uint8_t fd, uint32_t *rn, uint8_t ofs);
+    void fldmdbW(uint8_t fd, uint32_t *rn, uint8_t ofs);
+
+    void fstsP(uint8_t fd, uint32_t rn, uint8_t ofs);
+    void fstsM(uint8_t fd, uint32_t rn, uint8_t ofs);
+    void fstdP(uint8_t fd, uint32_t rn, uint8_t ofs);
+    void fstdM(uint8_t fd, uint32_t rn, uint8_t ofs);
+    void fstmia(uint8_t fd, uint32_t rn, uint8_t ofs);
+    void fstmiaW(uint8_t fd, uint32_t *rn, uint8_t ofs);
+    void fstmdbW(uint8_t fd, uint32_t *rn, uint8_t ofs);
 };

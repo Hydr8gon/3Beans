@@ -143,6 +143,7 @@ uint32_t Cp15::readReg(CpuId id, uint8_t cn, uint8_t cm, uint8_t cp) {
             case 0x020000: return tlbBase0Regs[id]; // TLB base 0
             case 0x020001: return tlbBase1Regs[id]; // TLB base 1
             case 0x020002: return tlbCtrlRegs[id]; // TLB control
+            case 0x070400: return physAddrRegs[id]; // Physical address
             case 0x0D0002: return threadIdRegs[id][0]; // Thread ID 0
             case 0x0D0003: return threadIdRegs[id][1]; // Thread ID 1
             case 0x0D0004: return threadIdRegs[id][2]; // Thread ID 2
@@ -175,7 +176,10 @@ void Cp15::writeReg(CpuId id, uint8_t cn, uint8_t cm, uint8_t cp, uint32_t value
             case 0x020001: return writeTlbBase1(id, value); // TLB base 1
             case 0x020002: return writeTlbCtrl(id, value); // TLB control
             case 0x070004: return writeWfi(id, value); // Wait for interrupt
-            case 0x070802: return writeWfi(id, value); // Wait for interrupt
+            case 0x070800: return writeAddrTrans(id, value); // Privileged read address translation
+            case 0x070801: return writeAddrTrans(id, value); // Privileged write address translation
+            case 0x070802: return writeAddrTrans(id, value); // User read address translation
+            case 0x070803: return writeAddrTrans(id, value); // User write address translation
             case 0x0D0002: return writeThreadId(id, 0, value); // Thread ID 0
             case 0x0D0003: return writeThreadId(id, 1, value); // Thread ID 1
             case 0x0D0004: return writeThreadId(id, 2, value); // Thread ID 2
@@ -231,6 +235,12 @@ void Cp15::writeTlbCtrl(CpuId id, uint32_t value) {
     // Set a core's translation table control register
     tlbCtrlRegs[id] = value & 0x7;
     LOG_INFO("Changing ARM11 core %d translation table control to %d\n", id, tlbCtrlRegs[id]);
+}
+
+void Cp15::writeAddrTrans(CpuId id, uint32_t value) {
+    // Translate a virtual address and store it in the physical address register
+    // TODO: handle read/write and privileged/user variants
+    physAddrRegs[id] = mmuTranslate(id, value);
 }
 
 void Cp15::writeThreadId(CpuId id, int i, uint32_t value) {

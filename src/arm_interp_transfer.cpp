@@ -1105,12 +1105,12 @@ int ArmInterp::mrc(uint32_t opcode) { // MRC Pn,<cpopc>,Rd,Cn,Cm,<cp>
     switch (pn) {
     case 10: // VFP11 (single)
         if (id == ARM9) break; // ARM11-exclusive
-        *rd = core->vfp11s[id].readSingleS(cpopc, cn, cm, cp);
+        core->vfp11s[id].readSingleS(cpopc, rd, cn, cm, cp);
         return 1;
 
     case 11: // VFP11 (double)
         if (id == ARM9) break; // ARM11-exclusive
-        *rd = core->vfp11s[id].readSingleD(cpopc, cn, cm, cp);
+        core->vfp11s[id].readSingleD(cpopc, rd, cn, cm, cp);
         return 1;
 
     case 15: // CP15
@@ -1139,12 +1139,12 @@ int ArmInterp::mcr(uint32_t opcode) { // MCR Pn,<cpopc>,Rd,Cn,Cm,<cp>
     switch (pn) {
     case 10: // VFP11 (single)
         if (id == ARM9) break; // ARM11-exclusive
-        core->vfp11s[id].writeSingleS(cpopc, cn, cm, cp, rd);
+        core->vfp11s[id].writeSingleS(cpopc, rd, cn, cm, cp);
         return 1;
 
     case 11: // VFP11 (double)
         if (id == ARM9) break; // ARM11-exclusive
-        core->vfp11s[id].writeSingleD(cpopc, cn, cm, cp, rd);
+        core->vfp11s[id].writeSingleD(cpopc, rd, cn, cm, cp);
         return 1;
 
     case 15: // CP15
@@ -1169,17 +1169,16 @@ int ArmInterp::mrrc(uint32_t opcode) { // MRRC Pn,<cpopc>,Rd,Rn,Cm
     uint8_t cm = (opcode & 0xF);
 
     // Read a double value from a coprocessor if it exists
-    uint64_t value;
     switch (pn) {
     case 10: // VFP11 (single)
         if (id == ARM9) break; // ARM11-exclusive
-        value = core->vfp11s[id].readDoubleS(cpopc, cm);
-        goto read;
+        core->vfp11s[id].readDoubleS(cpopc, rd, rn, cm);
+        return 1;
 
     case 11: // VFP11 (double)
         if (id == ARM9) break; // ARM11-exclusive
-        value = core->vfp11s[id].readDoubleD(cpopc, cm);
-        goto read;
+        core->vfp11s[id].readDoubleD(cpopc, rd, rn, cm);
+        return 1;
     }
 
     // Catch double reads from unhandled/invalid coprocessors
@@ -1187,12 +1186,6 @@ int ArmInterp::mrrc(uint32_t opcode) { // MRRC Pn,<cpopc>,Rd,Rn,Cm
         LOG_CRIT("Double read from %s ARM9 coprocessor: CP%d\n", pn == 15 ? "unhandled" : "invalid", pn);
     else
         LOG_CRIT("Double read from %s ARM11 core %d coprocessor: CP%d\n", pn == 15 ? "unhandled" : "invalid", id, pn);
-    return 1;
-
-read:
-    // Read a 64-bit value into two registers
-    *rd = (value >> 0);
-    *rn = (value >> 32);
     return 1;
 }
 
@@ -1205,16 +1198,15 @@ int ArmInterp::mcrr(uint32_t opcode) { // MCRR Pn,<cpopc>,Rd,Rn,Cm
     uint8_t cm = (opcode & 0xF);
 
     // Write a double value to a coprocessor if it exists
-    uint64_t value = (uint64_t(rn) << 32) | rd;
     switch (pn) {
     case 10: // VFP11 (single)
         if (id == ARM9) break; // ARM11-exclusive
-        core->vfp11s[id].writeDoubleS(cpopc, cm, value);
+        core->vfp11s[id].writeDoubleS(cpopc, rd, rn, cm);
         return 1;
 
     case 11: // VFP11 (double)
         if (id == ARM9) break; // ARM11-exclusive
-        core->vfp11s[id].writeDoubleD(cpopc, cm, value);
+        core->vfp11s[id].writeDoubleD(cpopc, rd, rn, cm);
         return 1;
     }
 
@@ -1232,7 +1224,7 @@ int ArmInterp::ldc(uint32_t opcode) { // LDC Pn,Cd,<Address>
     uint8_t cpopc = (opcode >> 21) & 0xF;
     uint8_t cd = (opcode >> 12) & 0xF;
     uint32_t *rn = registers[(opcode >> 16) & 0xF];
-    uint16_t ofs = (opcode & 0xFF) << 2;
+    uint8_t ofs = (opcode & 0xFF);
 
     // Perform a memory load on a coprocessor if it exists
     switch (pn) {
@@ -1261,7 +1253,7 @@ int ArmInterp::stc(uint32_t opcode) { // STC Pn,Cd,<Address>
     uint8_t cpopc = (opcode >> 21) & 0xF;
     uint8_t cd = (opcode >> 12) & 0xF;
     uint32_t *rn = registers[(opcode >> 16) & 0xF];
-    uint16_t ofs = (opcode & 0xFF) << 2;
+    uint8_t ofs = (opcode & 0xFF);
 
     // Perform a memory store on a coprocessor if it exists
     switch (pn) {
