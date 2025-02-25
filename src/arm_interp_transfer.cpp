@@ -1334,7 +1334,7 @@ int ArmInterp::swp(uint32_t opcode) { // SWP Rd,Rm,[Rn]
 
 int ArmInterp::ldrexb(uint32_t opcode) { // LDREXB Rd,[Rn]
     // Load byte exclusively
-    if (id == ARM9) return 1; // ARM11-exclusive
+    if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
     *op0 = core->cp15.read<uint8_t>(id, excAddress = op1);
@@ -1350,7 +1350,7 @@ int ArmInterp::ldrexb(uint32_t opcode) { // LDREXB Rd,[Rn]
 int ArmInterp::strexb(uint32_t opcode) { // STREXB Rd,Rm,[Rn]
     // Store byte exclusively
     // TODO: handle non-shared memory properly
-    if (id == ARM9) return 1; // ARM11-exclusive
+    if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[opcode & 0xF];
     uint32_t op2 = *registers[(opcode >> 16) & 0xF];
@@ -1366,7 +1366,7 @@ int ArmInterp::strexb(uint32_t opcode) { // STREXB Rd,Rm,[Rn]
 
 int ArmInterp::ldrexh(uint32_t opcode) { // LDREXH Rd,[Rn]
     // Load half-word exclusively
-    if (id == ARM9) return 1; // ARM11-exclusive
+    if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
     *op0 = core->cp15.read<uint16_t>(id, excAddress = op1);
@@ -1381,7 +1381,7 @@ int ArmInterp::ldrexh(uint32_t opcode) { // LDREXH Rd,[Rn]
 int ArmInterp::strexh(uint32_t opcode) { // STREXH Rd,Rm,[Rn]
     // Store half-word exclusively
     // TODO: handle non-shared memory properly
-    if (id == ARM9) return 1; // ARM11-exclusive
+    if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[opcode & 0xF];
     uint32_t op2 = *registers[(opcode >> 16) & 0xF];
@@ -1397,7 +1397,7 @@ int ArmInterp::strexh(uint32_t opcode) { // STREXH Rd,Rm,[Rn]
 
 int ArmInterp::ldrex(uint32_t opcode) { // LDREX Rd,[Rn]
     // Load word exclusively
-    if (id == ARM9) return 1; // ARM11-exclusive
+    if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
     *op0 = core->cp15.read<uint32_t>(id, excAddress = op1);
@@ -1419,7 +1419,7 @@ int ArmInterp::ldrex(uint32_t opcode) { // LDREX Rd,[Rn]
 int ArmInterp::strex(uint32_t opcode) { // STREX Rd,Rm,[Rn]
     // Store word exclusively
     // TODO: handle non-shared memory properly
-    if (id == ARM9) return 1; // ARM11-exclusive
+    if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[opcode & 0xF];
     uint32_t op2 = *registers[(opcode >> 16) & 0xF];
@@ -1435,7 +1435,7 @@ int ArmInterp::strex(uint32_t opcode) { // STREX Rd,Rm,[Rn]
 
 int ArmInterp::ldrexd(uint32_t opcode) { // LDREXD Rd,[Rn]
     // Load double words exclusively
-    if (id == ARM9) return 1; // ARM11-exclusive
+    if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     if (op0 == registers[15]) return 1;
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
@@ -1448,7 +1448,7 @@ int ArmInterp::ldrexd(uint32_t opcode) { // LDREXD Rd,[Rn]
 int ArmInterp::strexd(uint32_t opcode) { // STREXD Rd,Rm,[Rn]
     // Store double words exclusively
     // TODO: handle non-shared memory properly
-    if (id == ARM9) return 1; // ARM11-exclusive
+    if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t *op1 = registers[opcode & 0xF];
     if (op1 == registers[15]) return 1;

@@ -804,6 +804,7 @@ private:
     int bl(uint32_t opcode);
     int blx(uint32_t opcode);
     int swi(uint32_t opcode);
+    int bkpt(uint32_t opcode);
     int cps(uint32_t opcode);
     int srs(uint32_t opcode);
     int rfe(uint32_t opcode);
@@ -832,4 +833,5 @@ private:
     int blOffT(uint16_t opcode);
     int blxOffT(uint16_t opcode);
     int swiT(uint16_t opcode);
+    int bkptT(uint16_t opcode);
 };

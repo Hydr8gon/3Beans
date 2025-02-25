@@ -95,7 +95,7 @@ int (ArmInterp::*ArmInterp::armInstrs[])(uint32_t) = {
     &ArmInterp::tstLli, &ArmInterp::unkArm, &ArmInterp::tstLri, &ArmInterp::ldrhOfrm, // 0x118-0x11B
     &ArmInterp::tstAri, &ArmInterp::ldrsbOfrm, &ArmInterp::tstRri, &ArmInterp::ldrshOfrm, // 0x11C-0x11F
     &ArmInterp::msrRc, &ArmInterp::bx, &ArmInterp::unkArm, &ArmInterp::blxReg, // 0x120-0x123
-    &ArmInterp::unkArm, &ArmInterp::qsub, &ArmInterp::unkArm, &ArmInterp::unkArm, // 0x124-0x127
+    &ArmInterp::unkArm, &ArmInterp::qsub, &ArmInterp::unkArm, &ArmInterp::bkpt, // 0x124-0x127
     &ArmInterp::smlawb, &ArmInterp::unkArm, &ArmInterp::smulwb, &ArmInterp::strhPrrm, // 0x128-0x12B
     &ArmInterp::smlawt, &ArmInterp::ldrdPrrm, &ArmInterp::smulwt, &ArmInterp::strdPrrm, // 0x12C-0x12F
     &ArmInterp::teqLli, &ArmInterp::teqLlr, &ArmInterp::teqLri, &ArmInterp::teqLrr, // 0x130-0x133
@@ -1240,7 +1240,7 @@ int (ArmInterp::*ArmInterp::thumbInstrs[])(uint16_t) = {
     &ArmInterp::unkThumb, &ArmInterp::unkThumb, &ArmInterp::unkThumb, &ArmInterp::unkThumb, // 0x2EC-0x2EF
     &ArmInterp::popT, &ArmInterp::popT, &ArmInterp::popT, &ArmInterp::popT, // 0x2F0-0x2F3
     &ArmInterp::popPcT, &ArmInterp::popPcT, &ArmInterp::popPcT, &ArmInterp::popPcT, // 0x2F4-0x2F7
-    &ArmInterp::unkThumb, &ArmInterp::unkThumb, &ArmInterp::unkThumb, &ArmInterp::unkThumb, // 0x2F8-0x2FB
+    &ArmInterp::bkptT, &ArmInterp::bkptT, &ArmInterp::bkptT, &ArmInterp::bkptT, // 0x2F8-0x2FB
     &ArmInterp::unkThumb, &ArmInterp::unkThumb, &ArmInterp::unkThumb, &ArmInterp::unkThumb, // 0x2FC-0x2FF
     &ArmInterp::stmiaT, &ArmInterp::stmiaT, &ArmInterp::stmiaT, &ArmInterp::stmiaT, // 0x300-0x303
     &ArmInterp::stmiaT, &ArmInterp::stmiaT, &ArmInterp::stmiaT, &ArmInterp::stmiaT, // 0x304-0x307

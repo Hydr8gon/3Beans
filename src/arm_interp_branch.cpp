@@ -68,8 +68,22 @@ int ArmInterp::blx(uint32_t opcode) { // BLX label
 
 int ArmInterp::swi(uint32_t opcode) { // SWI #i
     // Software interrupt
+    if (id == ARM9)
+        LOG_INFO("Triggering ARM9 software interrupt: 0x%X\n", opcode & 0xFFFFFF);
+    else
+        LOG_INFO("Triggering ARM11 core %d software interrupt: 0x%X\n", id, opcode & 0xFFFFFF);
     *registers[15] -= 4;
     return exception(0x08);
+}
+
+int ArmInterp::bkpt(uint32_t opcode) { // BKPT
+    // Software breakpoint
+    if (id == ARM9)
+        LOG_INFO("Triggering ARM9 software breakpoint\n");
+    else
+        LOG_INFO("Triggering ARM11 core %d software breakpoint\n", id);
+    *registers[15] -= 4;
+    return exception(0x0C);
 }
 
 int ArmInterp::cps(uint32_t opcode) { // CPS[IE/ID] AIF,#mode
@@ -371,6 +385,20 @@ int ArmInterp::blxOffT(uint16_t opcode) { // BLX label
 
 int ArmInterp::swiT(uint16_t opcode) { // SWI #i
     // Software interrupt (THUMB)
+    if (id == ARM9)
+        LOG_INFO("Triggering ARM9 software interrupt: 0x%X\n", opcode & 0xFF);
+    else
+        LOG_INFO("Triggering ARM11 core %d software interrupt: 0x%X\n", id, opcode & 0xFF);
     *registers[15] -= 4;
     return exception(0x08);
+}
+
+int ArmInterp::bkptT(uint16_t opcode) { // BKPT
+    // Software breakpoint (THUMB)
+    if (id == ARM9)
+        LOG_INFO("Triggering ARM9 software breakpoint\n");
+    else
+        LOG_INFO("Triggering ARM11 core %d software breakpoint\n", id);
+    *registers[15] -= 4;
+    return exception(0x0C);
 }
