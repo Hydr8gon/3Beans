@@ -200,8 +200,8 @@ FORCE_INLINE int ArmInterp::ldrOf(uint32_t opcode, uint32_t op2) { // LDR Rd,[Rn
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
     *op0 = core->cp15.read<uint32_t>(id, op1 += op2);
 
-    // Rotate misaligned reads
-    if (op1 & 0x3) {
+    // Rotate misaligned reads on ARM9
+    if (id == ARM9 && (op1 & 0x3)) {
         uint8_t shift = (op1 & 0x3) << 3;
         *op0 = (*op0 << (32 - shift)) | (*op0 >> shift);
     }
@@ -318,8 +318,8 @@ FORCE_INLINE int ArmInterp::ldrPr(uint32_t opcode, uint32_t op2) { // LDR Rd,[Rn
     uint32_t address = *op1 += op2;
     *op0 = core->cp15.read<uint32_t>(id, address);
 
-    // Rotate misaligned reads
-    if (address & 0x3) {
+    // Rotate misaligned reads on ARM9
+    if (id == ARM9 && (address & 0x3)) {
         uint8_t shift = (address & 0x3) << 3;
         *op0 = (*op0 << (32 - shift)) | (*op0 >> shift);
     }
@@ -440,8 +440,8 @@ FORCE_INLINE int ArmInterp::ldrPt(uint32_t opcode, uint32_t op2) { // LDR Rd,[Rn
     uint32_t address = (*op1 += op2) - op2;
     *op0 = core->cp15.read<uint32_t>(id, address);
 
-    // Rotate misaligned reads
-    if (address & 0x3) {
+    // Rotate misaligned reads on ARM9
+    if (id == ARM9 && (address & 0x3)) {
         uint8_t shift = (address & 0x3) << 3;
         *op0 = (*op0 << (32 - shift)) | (*op0 >> shift);
     }
@@ -1324,8 +1324,8 @@ int ArmInterp::swp(uint32_t opcode) { // SWP Rd,Rm,[Rn]
     *op0 = core->cp15.read<uint32_t>(id, op2);
     core->cp15.write<uint32_t>(id, op2, op1);
 
-    // Rotate misaligned reads
-    if (op2 & 0x3) {
+    // Rotate misaligned reads on ARM9
+    if (id == ARM9 && (op2 & 0x3)) {
         uint8_t shift = (op2 & 0x3) << 3;
         *op0 = (*op0 << (32 - shift)) | (*op0 >> shift);
     }
@@ -1402,12 +1402,6 @@ int ArmInterp::ldrex(uint32_t opcode) { // LDREX Rd,[Rn]
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
     *op0 = core->cp15.read<uint32_t>(id, excAddress = op1);
     exclusive = true;
-
-    // Rotate misaligned reads
-    if (op1 & 0x3) {
-        uint8_t shift = (op1 & 0x3) << 3;
-        *op0 = (*op0 << (32 - shift)) | (*op0 >> shift);
-    }
 
     // Handle pipelining and THUMB switching
     if (op0 != registers[15]) return 1;
@@ -1531,8 +1525,8 @@ int ArmInterp::ldrRegT(uint16_t opcode) { // LDR Rd,[Rb,Ro]
     uint32_t op2 = *registers[(opcode >> 6) & 0x7];
     *op0 = core->cp15.read<uint32_t>(id, op1 += op2);
 
-    // Rotate misaligned reads
-    if (op1 & 0x3) {
+    // Rotate misaligned reads on ARM9
+    if (id == ARM9 && (op1 & 0x3)) {
         uint8_t shift = (op1 & 0x3) << 3;
         *op0 = (*op0 << (32 - shift)) | (*op0 >> shift);
     }
@@ -1591,8 +1585,8 @@ int ArmInterp::ldrImm5T(uint16_t opcode) { // LDR Rd,[Rb,#i]
     uint32_t op2 = (opcode >> 4) & 0x7C;
     *op0 = core->cp15.read<uint32_t>(id, op1 += op2);
 
-    // Rotate misaligned reads
-    if (op1 & 0x3) {
+    // Rotate misaligned reads on ARM9
+    if (id == ARM9 && (op1 & 0x3)) {
         uint8_t shift = (op1 & 0x3) << 3;
         *op0 = (*op0 << (32 - shift)) | (*op0 >> shift);
     }
@@ -1615,8 +1609,8 @@ int ArmInterp::ldrPcT(uint16_t opcode) { // LDR Rd,[PC,#i]
     uint32_t op2 = (opcode & 0xFF) << 2;
     *op0 = core->cp15.read<uint32_t>(id, op1 += op2);
 
-    // Rotate misaligned reads
-    if (op1 & 0x3) {
+    // Rotate misaligned reads on ARM9
+    if (id == ARM9 && (op1 & 0x3)) {
         uint8_t shift = (op1 & 0x3) << 3;
         *op0 = (*op0 << (32 - shift)) | (*op0 >> shift);
     }
@@ -1630,8 +1624,8 @@ int ArmInterp::ldrSpT(uint16_t opcode) { // LDR Rd,[SP,#i]
     uint32_t op2 = (opcode & 0xFF) << 2;
     *op0 = core->cp15.read<uint32_t>(id, op1 += op2);
 
-    // Rotate misaligned reads
-    if (op1 & 0x3) {
+    // Rotate misaligned reads on ARM9
+    if (id == ARM9 && (op1 & 0x3)) {
         uint8_t shift = (op1 & 0x3) << 3;
         *op0 = (*op0 << (32 - shift)) | (*op0 >> shift);
     }

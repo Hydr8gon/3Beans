@@ -62,11 +62,11 @@ template uint8_t Cp15::read(CpuId id, uint32_t address);
 template uint16_t Cp15::read(CpuId id, uint32_t address);
 template uint32_t Cp15::read(CpuId id, uint32_t address);
 template <typename T> T Cp15::read(CpuId id, uint32_t address) {
-    // Align the address
-    address &= ~(sizeof(T) - 1);
-
     // Handle special cases that only apply to CPU memory reads
     if (id == ARM9) {
+        // Align the address
+        address &= ~(sizeof(T) - 1);
+
         // Get a pointer to readable TCM memory on the ARM9 if it exists
         uint8_t *data = nullptr;
         if (address < itcmSize && itcmRead)
@@ -95,11 +95,11 @@ template void Cp15::write(CpuId id, uint32_t address, uint8_t value);
 template void Cp15::write(CpuId id, uint32_t address, uint16_t value);
 template void Cp15::write(CpuId id, uint32_t address, uint32_t value);
 template <typename T> void Cp15::write(CpuId id, uint32_t address, T value) {
-    // Align the address
-    address &= ~(sizeof(T) - 1);
-
     // Handle special cases that only apply to CPU memory writes
     if (id == ARM9) {
+        // Align the address
+        address &= ~(sizeof(T) - 1);
+
         // Get a pointer to writable TCM memory on the ARM9 if it exists
         uint8_t *data = nullptr;
         if (address < itcmSize && itcmWrite)

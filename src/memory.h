@@ -91,7 +91,7 @@ template <typename T> FORCE_INLINE T Memory::read(CpuId id, uint32_t address) {
     // Look up a readable memory pointer and load an LSB-first value if it exists
     if (uint8_t *data = (id == ARM9 ? readMap9 : readMap11)[address >> 12]) {
         T value = 0;
-        data += address & (0x1000 - sizeof(T));
+        data += (address & 0xFFF);
         for (uint32_t i = 0; i < sizeof(T); i++)
             value |= data[i] << (i << 3);
         return value;
@@ -105,7 +105,7 @@ template void Memory::write(CpuId id, uint32_t address, uint32_t value);
 template <typename T> FORCE_INLINE void Memory::write(CpuId id, uint32_t address, T value) {
     // Look up a writable memory pointer and store an LSB-first value if it exists
     if (uint8_t *data = (id == ARM9 ? writeMap9 : writeMap11)[address >> 12]) {
-        data += address & (0x1000 - sizeof(T));
+        data += (address & 0xFFF);
         for (uint32_t i = 0; i < sizeof(T); i++)
             data[i] = value >> (i << 3);
         return;
