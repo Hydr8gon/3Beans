@@ -29,11 +29,11 @@ SdMmc::~SdMmc() {
 
 bool SdMmc::init(SdMmc &other) {
     // Try to open an SD image to share between ports
-    other.sd = sd = fopen(Settings::sdPath.c_str(), "rb");
+    other.sd = sd = fopen(Settings::sdPath.c_str(), "rb+");
     other.id = 1;
 
     // Try to open a GM9 NAND dump and load CID and OTP data
-    if (!(other.nand = nand = fopen(Settings::nandPath.c_str(), "rb"))) return false;
+    if (!(other.nand = nand = fopen(Settings::nandPath.c_str(), "rb+"))) return false;
     fseek(nand, 0xC00, SEEK_SET);
     fread(mmcCid, sizeof(uint32_t), 4, nand);
     memcpy(other.mmcCid, mmcCid, sizeof(mmcCid));
@@ -58,13 +58,45 @@ void SdMmc::sendInterrupt(int bit) {
         core->interrupts.sendInterrupt(ARM9, 16 + (id << 1));
 }
 
+uint32_t SdMmc::popFifo() {
+    // Handle 32-bit FIFO mode
+    if (sdDataCtl & BIT(1)) {
+        // Pop a value from the 32-bit FIFO and check if empty
+        if (dataFifo32.empty()) return 0;
+        uint32_t value = dataFifo32.front();
+        dataFifo32.pop();
+        sdData32Irq &= ~BIT(8); // Not full
+        if (!dataFifo32.empty()) return value;
+
+        // Trigger a 32-bit FIFO empty interrupt if enabled and finish a block
+        sdData32Irq &= ~BIT(9); // Empty
+        if (sdData32Irq & BIT(12))
+            core->interrupts.sendInterrupt(ARM9, 16 + (id << 1));
+        curBlock--;
+        return value;
+    }
+
+    // Pop two values from the 16-bit FIFO and check if empty
+    if (dataFifo16.empty()) return 0;
+    uint16_t value = dataFifo16.front();
+    dataFifo16.pop();
+    value |= dataFifo16.front() << 16;
+    dataFifo16.pop();
+    if (!dataFifo32.empty()) return value;
+
+    // Trigger a 16-bit FIFO empty interrupt and finish a block
+    sendInterrupt(25);
+    curBlock--;
+}
+
 void SdMmc::pushFifo(uint32_t value) {
     // Handle 32-bit FIFO mode
     if (sdDataCtl & BIT(1)) {
-        // Push a value to the 32-bit read FIFO and check if full
-        uint32_t size = (readFifo32.size() << 2);
+        // Push a value to the 32-bit FIFO and check if full
+        uint32_t size = (dataFifo32.size() << 2);
         if (size >= 0x200) return;
-        readFifo32.push(value);
+        dataFifo32.push(value);
+        sdData32Irq |= BIT(9); // Not empty
         if (size + 4 < sdData32Blklen) return;
 
         // Trigger a 32-bit FIFO full interrupt if enabled and finish a block
@@ -75,11 +107,11 @@ void SdMmc::pushFifo(uint32_t value) {
         return;
     }
 
-    // Push a value to the 16-bit read FIFO and check if full
-    uint32_t size = (readFifo16.size() << 1);
+    // Push two values to the 16-bit FIFO and check if full
+    uint32_t size = (dataFifo16.size() << 1);
     if (size >= 0x200) return;
-    readFifo16.push(value);
-    readFifo16.push(value >> 16);
+    dataFifo16.push(value);
+    dataFifo16.push(value >> 16);
     if (size + 4 < sdData16Blklen) return;
 
     // Trigger a 16-bit FIFO full interrupt and finish a block
@@ -106,13 +138,33 @@ void SdMmc::readBlock() {
         memset(data, 0, sizeof(data));
     }
 
-    // Push data to the read FIFO and change state based on blocks left
-    LOG_INFO("Read %s block from 0x%08X with size 0x%X\n",
+    // Push data to a FIFO and change state based on blocks left
+    LOG_INFO("Reading %s block from 0x%08X with size 0x%X\n",
         (sdPortSelect & BIT(0)) ? "MMC" : "SD", curAddress, blockLen << 2);
     for (int i = 0; i < blockLen; i++) pushFifo(data[i]);
     cardStatus = (cardStatus & ~0x1E00) | ((curBlock ? 0x5 : 0x4) << 9);
     curAddress += (blockLen << 2);
     core->ndma.triggerMode(0x6 + id);
+}
+
+void SdMmc::writeBlock() {
+    // Pop data from a FIFO and change state based on blocks left
+    uint32_t data[0x80];
+    LOG_INFO("Writing %s block to 0x%08X with size 0x%X\n",
+        (sdPortSelect & BIT(0)) ? "MMC" : "SD", curAddress, blockLen << 2);
+    for (int i = 0; i < blockLen; i++) data[i] = popFifo();
+    cardStatus = (cardStatus & ~0x1E00) | ((curBlock ? 0x6 : 0x4) << 9);
+    core->ndma.triggerMode(0x6 + id);
+
+    // Write a block of data to the SD or MMC if present
+    if (FILE *dst = (sdPortSelect & BIT(0)) ? nand : sd) {
+        fseek(dst, curAddress, SEEK_SET);
+        fwrite(data, sizeof(uint32_t), blockLen, dst);
+    }
+
+    // Trigger a data end interrupt if there are no more blocks
+    curAddress += (blockLen << 2);
+    if (!curBlock) sendInterrupt(2);
 }
 
 void SdMmc::runCommand() {
@@ -133,6 +185,8 @@ void SdMmc::runCommand() {
         case 16: return setBlocklen(); // SET_BLOCKLEN
         case 17: return readSingleBlock(); // READ_SINGLE_BLOCK
         case 18: return readMultiBlock(); // READ_MULTIPLE_BLOCK
+        case 24: return writeSingleBlock(); // WRITE_SINGLE_BLOCK
+        case 25: return writeMultiBlock(); // WRITE_MULTIPLE_BLOCK
         case 55: return appCmd(); // APP_CMD
 
     case 1: // SEND_OP_COND
@@ -225,6 +279,30 @@ void SdMmc::readMultiBlock() {
     core->schedule(Task(SDMMC0_READ_BLOCK + id), 1);
 }
 
+void SdMmc::writeSingleBlock() {
+    // Prepare to write a single block of data
+    curAddress = sdCmdParam;
+    curBlock = 1;
+    pushResponse(cardStatus);
+    cardStatus = (cardStatus & ~0x1E00) | (0x6 << 9);
+
+    // Write a block right away if enough data is present
+    if ((sdDataCtl & BIT(1)) ? (dataFifo32.size() << 2) >= sdData32Blklen : (dataFifo16.size() << 1) >= sdData16Blklen)
+        core->schedule(Task(SDMMC0_WRITE_BLOCK + id), 1);
+}
+
+void SdMmc::writeMultiBlock() {
+    // Prepare to write multiple blocks of data
+    curAddress = sdCmdParam;
+    curBlock = sdData16Blkcnt;
+    pushResponse(cardStatus);
+    cardStatus = (cardStatus & ~0x1E00) | (0x6 << 9);
+
+    // Write a block right away if enough data is present
+    if ((sdDataCtl & BIT(1)) ? (dataFifo32.size() << 2) >= sdData32Blklen : (dataFifo16.size() << 1) >= sdData16Blklen)
+        core->schedule(Task(SDMMC0_WRITE_BLOCK + id), 1);
+}
+
 void SdMmc::appCmd() {
     // Switch to app command mode
     cardStatus |= BIT(5);
@@ -259,28 +337,33 @@ uint32_t SdMmc::readIrqStatus() {
 }
 
 uint16_t SdMmc::readData16Fifo() {
-    // Pop a value from the 16-bit read FIFO
-    if (readFifo16.empty()) return sdData16Fifo;
-    sdData16Fifo = readFifo16.front();
-    readFifo16.pop();
+    // Pop a value from the 16-bit FIFO and check if empty
+    if (dataFifo16.empty()) return sdData16Fifo;
+    sdData16Fifo = dataFifo16.front();
+    dataFifo16.pop();
+    if (!dataFifo16.empty()) return sdData16Fifo;
 
-    // Clear the FIFO full bit and read another block or end with an interrupt if empty
-    sdIrqStatus &= ~BIT(24);
-    if (readFifo16.empty())
-        (cardStatus & 0x1E00) == (0x5 << 9) ? core->schedule(Task(SDMMC0_READ_BLOCK + id), 1) : sendInterrupt(2);
+    // Trigger a 16-bit FIFO empty interrupt and read another block or finish with a data end interrupt
+    sendInterrupt(25);
+    (cardStatus & 0x1E00) == (0x5 << 9) ? core->schedule(Task(SDMMC0_READ_BLOCK + id), 1) : sendInterrupt(2);
     return sdData16Fifo;
 }
 
 uint32_t SdMmc::readData32Fifo() {
-    // Pop a value from the 32-bit read FIFO
-    if (readFifo32.empty()) return sdData32Fifo;
-    sdData32Fifo = readFifo32.front();
-    readFifo32.pop();
+    // Pop a value from the 32-bit read FIFO and check if empty
+    if (dataFifo32.empty()) return sdData32Fifo;
+    sdData32Fifo = dataFifo32.front();
+    dataFifo32.pop();
+    sdData32Irq &= ~BIT(8); // Not full
+    if (!dataFifo32.empty()) return sdData32Fifo;
 
-    // Clear the FIFO full bit and read another block or end with an interrupt if empty
-    sdData32Irq &= ~BIT(8);
-    if (readFifo32.empty())
-        (cardStatus & 0x1E00) == (0x5 << 9) ? core->schedule(Task(SDMMC0_READ_BLOCK + id), 1) : sendInterrupt(2);
+    // Trigger a 32-bit FIFO empty interrupt if enabled
+    sdData32Irq &= ~BIT(9);
+    if (sdData32Irq & BIT(12))
+        core->interrupts.sendInterrupt(ARM9, 16 + (id << 1));
+
+    // Read another block or finish with a data end interrupt
+    (cardStatus & 0x1E00) == (0x5 << 9) ? core->schedule(Task(SDMMC0_READ_BLOCK + id), 1) : sendInterrupt(2);
     return sdData32Fifo;
 }
 
@@ -338,6 +421,19 @@ void SdMmc::writeData16Blklen(uint16_t mask, uint16_t value) {
     sdData16Blklen = std::min(0x200, (sdData16Blklen & ~mask) | (value & mask));
 }
 
+void SdMmc::writeData16Fifo(uint16_t mask, uint16_t value) {
+    // Push a value to the 16-bit FIFO and check if full
+    uint32_t size = (dataFifo16.size() << 1);
+    if (size >= 0x200) return;
+    dataFifo16.push(value & mask);
+    if (size + 2 < sdData16Blklen) return;
+
+    // Trigger a 16-bit FIFO full interrupt and write a block if in write mode
+    sendInterrupt(25);
+    if ((cardStatus & 0x1E00) == (0x6 << 9))
+        core->schedule(Task(SDMMC0_WRITE_BLOCK + id), 1);
+}
+
 void SdMmc::writeDataCtl(uint16_t mask, uint16_t value) {
     // Write to the SD_DATA_CTL register
     mask &= 0x22;
@@ -347,8 +443,8 @@ void SdMmc::writeDataCtl(uint16_t mask, uint16_t value) {
 void SdMmc::writeData32Irq(uint16_t mask, uint16_t value) {
     // Empty the 32-bit FIFO if requested
     if (value & mask & BIT(10)) {
-        sdData32Irq &= ~BIT(8); // Not full
-        readFifo32 = {};
+        sdData32Irq &= ~(BIT(8) | BIT(9)); // Not full, empty
+        dataFifo32 = {};
     }
 
     // Write to the SD_DATA32_IRQ register
@@ -360,4 +456,22 @@ void SdMmc::writeData32Blklen(uint16_t mask, uint16_t value) {
     // Write to the SD_DATA32_BLKLEN block length
     mask &= 0x3FF;
     sdData32Blklen = (sdData32Blklen & ~mask) | (value & mask);
+}
+
+void SdMmc::writeData32Fifo(uint32_t mask, uint32_t value) {
+    // Push a value to the 32-bit FIFO and check if full
+    uint32_t size = (dataFifo32.size() << 2);
+    if (size >= 0x200) return;
+    dataFifo32.push(value & mask);
+    sdData32Irq |= BIT(9); // Not empty
+    if (size + 4 < sdData32Blklen) return;
+
+    // Trigger a 32-bit FIFO full interrupt if enabled
+    sdData32Irq |= BIT(8);
+    if (sdData32Irq & BIT(11))
+        core->interrupts.sendInterrupt(ARM9, 16 + (id << 1));
+
+    // Write a block if in write mode
+    if ((cardStatus & 0x1E00) == (0x6 << 9))
+        core->schedule(Task(SDMMC0_WRITE_BLOCK + id), 1);
 }

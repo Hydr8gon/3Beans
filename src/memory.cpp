@@ -1118,9 +1118,11 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x1000601C, core->sdMmcs[0].writeIrqStatus(IO_PARAMS)) // SD0_IRQ_STATUS
                 DEF_IO32(0x10006020, core->sdMmcs[0].writeIrqMask(IO_PARAMS)) // SD0_IRQ_MASK
                 DEF_IO16(0x10006026, core->sdMmcs[0].writeData16Blklen(IO_PARAMS)) // SD0_DATA16_BLKLEN
+                DEF_IO16(0x10006030, core->sdMmcs[0].writeData16Fifo(IO_PARAMS)) // SD0_DATA16_FIFO
                 DEF_IO16(0x100060D8, core->sdMmcs[0].writeDataCtl(IO_PARAMS)) // SD0_DATA_CTL
                 DEF_IO16(0x10006100, core->sdMmcs[0].writeData32Irq(IO_PARAMS)) // SD0_DATA32_IRQ
                 DEF_IO16(0x10006104, core->sdMmcs[0].writeData32Blklen(IO_PARAMS)) // SD0_DATA32_BLKLEN
+                DEF_IO32(0x1000610C, core->sdMmcs[0].writeData32Fifo(IO_PARAMS)) // SD0_DATA32_FIFO
                 DEF_IO16(0x10007000, core->sdMmcs[1].writeCmd(IO_PARAMS)) // SD1_CMD
                 DEF_IO16(0x10007002, core->sdMmcs[1].writePortSelect(IO_PARAMS)) // SD1_PORT_SELECT
                 DEF_IO32(0x10007004, core->sdMmcs[1].writeCmdParam(IO_PARAMS)) // SD1_CMD_PARAM
@@ -1128,9 +1130,11 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x1000701C, core->sdMmcs[1].writeIrqStatus(IO_PARAMS)) // SD1_IRQ_STATUS
                 DEF_IO32(0x10007020, core->sdMmcs[1].writeIrqMask(IO_PARAMS)) // SD1_IRQ_MASK
                 DEF_IO16(0x10007026, core->sdMmcs[1].writeData16Blklen(IO_PARAMS)) // SD1_DATA16_BLKLEN
+                DEF_IO16(0x10007030, core->sdMmcs[1].writeData16Fifo(IO_PARAMS)) // SD1_DATA16_FIFO
                 DEF_IO16(0x100070D8, core->sdMmcs[1].writeDataCtl(IO_PARAMS)) // SD1_DATA_CTL
                 DEF_IO16(0x10007100, core->sdMmcs[1].writeData32Irq(IO_PARAMS)) // SD1_DATA32_IRQ
                 DEF_IO16(0x10007104, core->sdMmcs[1].writeData32Blklen(IO_PARAMS)) // SD1_DATA32_BLKLEN
+                DEF_IO32(0x1000710C, core->sdMmcs[1].writeData32Fifo(IO_PARAMS)) // SD1_DATA32_FIFO
                 DEF_IO32(0x10008000, core->pxi.writeSync(1, IO_PARAMS)) // PXI_SYNC9
                 DEF_IO32(0x10008004, core->pxi.writeCnt(1, IO_PARAMS)) // PXI_CNT9
                 DEF_IO32(0x10008008, core->pxi.writeSend(1, IO_PARAMS)) // PXI_SEND9

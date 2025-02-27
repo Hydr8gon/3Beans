@@ -31,6 +31,7 @@ public:
 
     bool init(SdMmc &other);
     void readBlock();
+    void writeBlock();
 
     uint16_t readCmd() { return sdCmd; }
     uint16_t readPortSelect() { return sdPortSelect; }
@@ -53,9 +54,11 @@ public:
     void writeIrqStatus(uint32_t mask, uint32_t value);
     void writeIrqMask(uint32_t mask, uint32_t value);
     void writeData16Blklen(uint16_t mask, uint16_t value);
+    void writeData16Fifo(uint16_t mask, uint16_t value);
     void writeDataCtl(uint16_t mask, uint16_t value);
     void writeData32Irq(uint16_t mask, uint16_t value);
     void writeData32Blklen(uint16_t mask, uint16_t value);
+    void writeData32Fifo(uint32_t mask, uint32_t value);
 
 private:
     Core *core;
@@ -69,8 +72,8 @@ private:
     uint32_t curAddress = 0;
     uint16_t curBlock = 0;
 
-    std::queue<uint16_t> readFifo16;
-    std::queue<uint32_t> readFifo32;
+    std::queue<uint16_t> dataFifo16;
+    std::queue<uint32_t> dataFifo32;
 
     uint32_t mmcCid[0x4] = {};
     uint16_t sdCmd = 0;
@@ -88,6 +91,7 @@ private:
     uint32_t sdData32Fifo = 0;
 
     void sendInterrupt(int bit);
+    uint32_t popFifo();
     void pushFifo(uint32_t value);
     void pushResponse(uint32_t value);
     void runCommand();
@@ -100,6 +104,8 @@ private:
     void setBlocklen();
     void readSingleBlock();
     void readMultiBlock();
+    void writeSingleBlock();
+    void writeMultiBlock();
     void appCmd();
     void sdStatus();
     void sdSendOpCond();
