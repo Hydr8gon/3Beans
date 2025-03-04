@@ -212,6 +212,128 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
         // Check registers that are exclusive to one CPU
         if (id != ARM9) { // ARM11
             switch (base) {
+                DEF_IO32(0x10200000, data = core->cdmas[CDMA0].readCsr(8)) // CDMA0_DSR
+                DEF_IO32(0x10200004, data = core->cdmas[CDMA0].readCpc(8)) // CDMA0_DPC
+                DEF_IO32(0x10200100, data = core->cdmas[CDMA0].readCsr(0)) // CDMA0_CSR0
+                DEF_IO32(0x10200104, data = core->cdmas[CDMA0].readCpc(0)) // CDMA0_CPC0
+                DEF_IO32(0x10200108, data = core->cdmas[CDMA0].readCsr(1)) // CDMA0_CSR1
+                DEF_IO32(0x1020010C, data = core->cdmas[CDMA0].readCpc(1)) // CDMA0_CPC1
+                DEF_IO32(0x10200110, data = core->cdmas[CDMA0].readCsr(2)) // CDMA0_CSR2
+                DEF_IO32(0x10200114, data = core->cdmas[CDMA0].readCpc(2)) // CDMA0_CPC2
+                DEF_IO32(0x10200118, data = core->cdmas[CDMA0].readCsr(3)) // CDMA0_CSR3
+                DEF_IO32(0x1020011C, data = core->cdmas[CDMA0].readCpc(3)) // CDMA0_CPC3
+                DEF_IO32(0x10200120, data = core->cdmas[CDMA0].readCsr(4)) // CDMA0_CSR4
+                DEF_IO32(0x10200124, data = core->cdmas[CDMA0].readCpc(4)) // CDMA0_CPC4
+                DEF_IO32(0x10200128, data = core->cdmas[CDMA0].readCsr(5)) // CDMA0_CSR5
+                DEF_IO32(0x1020012C, data = core->cdmas[CDMA0].readCpc(5)) // CDMA0_CPC5
+                DEF_IO32(0x10200130, data = core->cdmas[CDMA0].readCsr(6)) // CDMA0_CSR6
+                DEF_IO32(0x10200134, data = core->cdmas[CDMA0].readCpc(6)) // CDMA0_CPC6
+                DEF_IO32(0x10200138, data = core->cdmas[CDMA0].readCsr(7)) // CDMA0_CSR7
+                DEF_IO32(0x1020013C, data = core->cdmas[CDMA0].readCpc(7)) // CDMA0_CPC7
+                DEF_IO32(0x10200400, data = core->cdmas[CDMA0].readSar(0)) // CDMA0_SAR0
+                DEF_IO32(0x10200404, data = core->cdmas[CDMA0].readDar(0)) // CDMA0_DAR0
+                DEF_IO32(0x10200408, data = core->cdmas[CDMA0].readCcr(0)) // CDMA0_CCR0
+                DEF_IO32(0x1020040C, data = core->cdmas[CDMA0].readLc0(0)) // CDMA0_LC0_0
+                DEF_IO32(0x10200410, data = core->cdmas[CDMA0].readLc1(0)) // CDMA0_LC1_0
+                DEF_IO32(0x10200420, data = core->cdmas[CDMA0].readSar(1)) // CDMA0_SAR1
+                DEF_IO32(0x10200424, data = core->cdmas[CDMA0].readDar(1)) // CDMA0_DAR1
+                DEF_IO32(0x10200428, data = core->cdmas[CDMA0].readCcr(1)) // CDMA0_CCR1
+                DEF_IO32(0x1020042C, data = core->cdmas[CDMA0].readLc0(1)) // CDMA0_LC0_1
+                DEF_IO32(0x10200430, data = core->cdmas[CDMA0].readLc1(1)) // CDMA0_LC1_1
+                DEF_IO32(0x10200440, data = core->cdmas[CDMA0].readSar(2)) // CDMA0_SAR2
+                DEF_IO32(0x10200444, data = core->cdmas[CDMA0].readDar(2)) // CDMA0_DAR2
+                DEF_IO32(0x10200448, data = core->cdmas[CDMA0].readCcr(2)) // CDMA0_CCR2
+                DEF_IO32(0x1020044C, data = core->cdmas[CDMA0].readLc0(2)) // CDMA0_LC0_2
+                DEF_IO32(0x10200450, data = core->cdmas[CDMA0].readLc1(2)) // CDMA0_LC1_2
+                DEF_IO32(0x10200460, data = core->cdmas[CDMA0].readSar(3)) // CDMA0_SAR3
+                DEF_IO32(0x10200464, data = core->cdmas[CDMA0].readDar(3)) // CDMA0_DAR3
+                DEF_IO32(0x10200468, data = core->cdmas[CDMA0].readCcr(3)) // CDMA0_CCR3
+                DEF_IO32(0x1020046C, data = core->cdmas[CDMA0].readLc0(3)) // CDMA0_LC0_3
+                DEF_IO32(0x10200470, data = core->cdmas[CDMA0].readLc1(3)) // CDMA0_LC1_3
+                DEF_IO32(0x10200480, data = core->cdmas[CDMA0].readSar(4)) // CDMA0_SAR4
+                DEF_IO32(0x10200484, data = core->cdmas[CDMA0].readDar(4)) // CDMA0_DAR4
+                DEF_IO32(0x10200488, data = core->cdmas[CDMA0].readCcr(4)) // CDMA0_CCR4
+                DEF_IO32(0x1020048C, data = core->cdmas[CDMA0].readLc0(4)) // CDMA0_LC0_4
+                DEF_IO32(0x10200490, data = core->cdmas[CDMA0].readLc1(4)) // CDMA0_LC1_4
+                DEF_IO32(0x102004A0, data = core->cdmas[CDMA0].readSar(5)) // CDMA0_SAR5
+                DEF_IO32(0x102004A4, data = core->cdmas[CDMA0].readDar(5)) // CDMA0_DAR5
+                DEF_IO32(0x102004A8, data = core->cdmas[CDMA0].readCcr(5)) // CDMA0_CCR5
+                DEF_IO32(0x102004AC, data = core->cdmas[CDMA0].readLc0(5)) // CDMA0_LC0_5
+                DEF_IO32(0x102004B0, data = core->cdmas[CDMA0].readLc1(5)) // CDMA0_LC1_5
+                DEF_IO32(0x102004C0, data = core->cdmas[CDMA0].readSar(6)) // CDMA0_SAR6
+                DEF_IO32(0x102004C4, data = core->cdmas[CDMA0].readDar(6)) // CDMA0_DAR6
+                DEF_IO32(0x102004C8, data = core->cdmas[CDMA0].readCcr(6)) // CDMA0_CCR6
+                DEF_IO32(0x102004CC, data = core->cdmas[CDMA0].readLc0(6)) // CDMA0_LC0_6
+                DEF_IO32(0x102004D0, data = core->cdmas[CDMA0].readLc1(6)) // CDMA0_LC1_6
+                DEF_IO32(0x102004E0, data = core->cdmas[CDMA0].readSar(7)) // CDMA0_SAR7
+                DEF_IO32(0x102004E4, data = core->cdmas[CDMA0].readDar(7)) // CDMA0_DAR7
+                DEF_IO32(0x102004E8, data = core->cdmas[CDMA0].readCcr(7)) // CDMA0_CCR7
+                DEF_IO32(0x102004EC, data = core->cdmas[CDMA0].readLc0(7)) // CDMA0_LC0_7
+                DEF_IO32(0x102004F0, data = core->cdmas[CDMA0].readLc1(7)) // CDMA0_LC1_7
+                DEF_IO32(0x10200D00, data = core->cdmas[CDMA0].readDbgstatus()) // CDMA0_DBGSTATUS
+                DEF_IO32(0x10200D08, data = core->cdmas[CDMA0].readDbginst0()) // CDMA0_DBGINST0
+                DEF_IO32(0x10200D0C, data = core->cdmas[CDMA0].readDbginst1()) // CDMA0_DBGINST1
+                DEF_IO32(0x10206000, data = core->cdmas[CDMA1].readCsr(8)) // CDMA1_DSR
+                DEF_IO32(0x10206004, data = core->cdmas[CDMA1].readCpc(8)) // CDMA1_DPC
+                DEF_IO32(0x10206100, data = core->cdmas[CDMA1].readCsr(0)) // CDMA1_CSR0
+                DEF_IO32(0x10206104, data = core->cdmas[CDMA1].readCpc(0)) // CDMA1_CPC0
+                DEF_IO32(0x10206108, data = core->cdmas[CDMA1].readCsr(1)) // CDMA1_CSR1
+                DEF_IO32(0x1020610C, data = core->cdmas[CDMA1].readCpc(1)) // CDMA1_CPC1
+                DEF_IO32(0x10206110, data = core->cdmas[CDMA1].readCsr(2)) // CDMA1_CSR2
+                DEF_IO32(0x10206114, data = core->cdmas[CDMA1].readCpc(2)) // CDMA1_CPC2
+                DEF_IO32(0x10206118, data = core->cdmas[CDMA1].readCsr(3)) // CDMA1_CSR3
+                DEF_IO32(0x1020611C, data = core->cdmas[CDMA1].readCpc(3)) // CDMA1_CPC3
+                DEF_IO32(0x10206120, data = core->cdmas[CDMA1].readCsr(4)) // CDMA1_CSR4
+                DEF_IO32(0x10206124, data = core->cdmas[CDMA1].readCpc(4)) // CDMA1_CPC4
+                DEF_IO32(0x10206128, data = core->cdmas[CDMA1].readCsr(5)) // CDMA1_CSR5
+                DEF_IO32(0x1020612C, data = core->cdmas[CDMA1].readCpc(5)) // CDMA1_CPC5
+                DEF_IO32(0x10206130, data = core->cdmas[CDMA1].readCsr(6)) // CDMA1_CSR6
+                DEF_IO32(0x10206134, data = core->cdmas[CDMA1].readCpc(6)) // CDMA1_CPC6
+                DEF_IO32(0x10206138, data = core->cdmas[CDMA1].readCsr(7)) // CDMA1_CSR7
+                DEF_IO32(0x1020613C, data = core->cdmas[CDMA1].readCpc(7)) // CDMA1_CPC7
+                DEF_IO32(0x10206400, data = core->cdmas[CDMA1].readSar(0)) // CDMA1_SAR0
+                DEF_IO32(0x10206404, data = core->cdmas[CDMA1].readDar(0)) // CDMA1_DAR0
+                DEF_IO32(0x10206408, data = core->cdmas[CDMA1].readCcr(0)) // CDMA1_CCR0
+                DEF_IO32(0x1020640C, data = core->cdmas[CDMA1].readLc0(0)) // CDMA1_LC0_0
+                DEF_IO32(0x10206410, data = core->cdmas[CDMA1].readLc1(0)) // CDMA1_LC1_0
+                DEF_IO32(0x10206420, data = core->cdmas[CDMA1].readSar(1)) // CDMA1_SAR1
+                DEF_IO32(0x10206424, data = core->cdmas[CDMA1].readDar(1)) // CDMA1_DAR1
+                DEF_IO32(0x10206428, data = core->cdmas[CDMA1].readCcr(1)) // CDMA1_CCR1
+                DEF_IO32(0x1020642C, data = core->cdmas[CDMA1].readLc0(1)) // CDMA1_LC0_1
+                DEF_IO32(0x10206430, data = core->cdmas[CDMA1].readLc1(1)) // CDMA1_LC1_1
+                DEF_IO32(0x10206440, data = core->cdmas[CDMA1].readSar(2)) // CDMA1_SAR2
+                DEF_IO32(0x10206444, data = core->cdmas[CDMA1].readDar(2)) // CDMA1_DAR2
+                DEF_IO32(0x10206448, data = core->cdmas[CDMA1].readCcr(2)) // CDMA1_CCR2
+                DEF_IO32(0x1020644C, data = core->cdmas[CDMA1].readLc0(2)) // CDMA1_LC0_2
+                DEF_IO32(0x10206450, data = core->cdmas[CDMA1].readLc1(2)) // CDMA1_LC1_2
+                DEF_IO32(0x10206460, data = core->cdmas[CDMA1].readSar(3)) // CDMA1_SAR3
+                DEF_IO32(0x10206464, data = core->cdmas[CDMA1].readDar(3)) // CDMA1_DAR3
+                DEF_IO32(0x10206468, data = core->cdmas[CDMA1].readCcr(3)) // CDMA1_CCR3
+                DEF_IO32(0x1020646C, data = core->cdmas[CDMA1].readLc0(3)) // CDMA1_LC0_3
+                DEF_IO32(0x10206470, data = core->cdmas[CDMA1].readLc1(3)) // CDMA1_LC1_3
+                DEF_IO32(0x10206480, data = core->cdmas[CDMA1].readSar(4)) // CDMA1_SAR4
+                DEF_IO32(0x10206484, data = core->cdmas[CDMA1].readDar(4)) // CDMA1_DAR4
+                DEF_IO32(0x10206488, data = core->cdmas[CDMA1].readCcr(4)) // CDMA1_CCR4
+                DEF_IO32(0x1020648C, data = core->cdmas[CDMA1].readLc0(4)) // CDMA1_LC0_4
+                DEF_IO32(0x10206490, data = core->cdmas[CDMA1].readLc1(4)) // CDMA1_LC1_4
+                DEF_IO32(0x102064A0, data = core->cdmas[CDMA1].readSar(5)) // CDMA1_SAR5
+                DEF_IO32(0x102064A4, data = core->cdmas[CDMA1].readDar(5)) // CDMA1_DAR5
+                DEF_IO32(0x102064A8, data = core->cdmas[CDMA1].readCcr(5)) // CDMA1_CCR5
+                DEF_IO32(0x102064AC, data = core->cdmas[CDMA1].readLc0(5)) // CDMA1_LC0_5
+                DEF_IO32(0x102064B0, data = core->cdmas[CDMA1].readLc1(5)) // CDMA1_LC1_5
+                DEF_IO32(0x102064C0, data = core->cdmas[CDMA1].readSar(6)) // CDMA1_SAR6
+                DEF_IO32(0x102064C4, data = core->cdmas[CDMA1].readDar(6)) // CDMA1_DAR6
+                DEF_IO32(0x102064C8, data = core->cdmas[CDMA1].readCcr(6)) // CDMA1_CCR6
+                DEF_IO32(0x102064CC, data = core->cdmas[CDMA1].readLc0(6)) // CDMA1_LC0_6
+                DEF_IO32(0x102064D0, data = core->cdmas[CDMA1].readLc1(6)) // CDMA1_LC1_6
+                DEF_IO32(0x102064E0, data = core->cdmas[CDMA1].readSar(7)) // CDMA1_SAR7
+                DEF_IO32(0x102064E4, data = core->cdmas[CDMA1].readDar(7)) // CDMA1_DAR7
+                DEF_IO32(0x102064E8, data = core->cdmas[CDMA1].readCcr(7)) // CDMA1_CCR7
+                DEF_IO32(0x102064EC, data = core->cdmas[CDMA1].readLc0(7)) // CDMA1_LC0_7
+                DEF_IO32(0x102064F0, data = core->cdmas[CDMA1].readLc1(7)) // CDMA1_LC1_7
+                DEF_IO32(0x10206D00, data = core->cdmas[CDMA1].readDbgstatus()) // CDMA1_DBGSTATUS
+                DEF_IO32(0x10206D08, data = core->cdmas[CDMA1].readDbginst0()) // CDMA1_DBGINST0
+                DEF_IO32(0x10206D0C, data = core->cdmas[CDMA1].readDbginst1()) // CDMA1_DBGINST1
                 DEF_IO32(0x10301000, data = core->shas[0].readFifo()) // SHA_FIFO11
                 DEF_IO32(0x10301004, data = core->shas[0].readFifo()) // SHA_FIFO11
                 DEF_IO32(0x10301008, data = core->shas[0].readFifo()) // SHA_FIFO11
@@ -705,6 +827,39 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x1000B8F4, data = core->rsa.readData(61)) // RSA_DATA61
                 DEF_IO32(0x1000B8F8, data = core->rsa.readData(62)) // RSA_DATA62
                 DEF_IO32(0x1000B8FC, data = core->rsa.readData(63)) // RSA_DATA63
+                DEF_IO32(0x1000C000, data = core->cdmas[XDMA].readCsr(8)) // XDMA_DSR
+                DEF_IO32(0x1000C004, data = core->cdmas[XDMA].readCpc(8)) // XDMA_DPC
+                DEF_IO32(0x1000C100, data = core->cdmas[XDMA].readCsr(0)) // XDMA_CSR0
+                DEF_IO32(0x1000C104, data = core->cdmas[XDMA].readCpc(0)) // XDMA_CPC0
+                DEF_IO32(0x1000C108, data = core->cdmas[XDMA].readCsr(2)) // XDMA_CSR1
+                DEF_IO32(0x1000C10C, data = core->cdmas[XDMA].readCpc(1)) // XDMA_CPC1
+                DEF_IO32(0x1000C110, data = core->cdmas[XDMA].readCsr(2)) // XDMA_CSR2
+                DEF_IO32(0x1000C114, data = core->cdmas[XDMA].readCpc(2)) // XDMA_CPC2
+                DEF_IO32(0x1000C118, data = core->cdmas[XDMA].readCsr(3)) // XDMA_CSR3
+                DEF_IO32(0x1000C11C, data = core->cdmas[XDMA].readCpc(3)) // XDMA_CPC3
+                DEF_IO32(0x1000C400, data = core->cdmas[XDMA].readSar(0)) // XDMA_SAR0
+                DEF_IO32(0x1000C404, data = core->cdmas[XDMA].readDar(0)) // XDMA_DAR0
+                DEF_IO32(0x1000C408, data = core->cdmas[XDMA].readCcr(0)) // XDMA_CCR0
+                DEF_IO32(0x1000C40C, data = core->cdmas[XDMA].readLc0(0)) // XDMA_LC0_0
+                DEF_IO32(0x1000C410, data = core->cdmas[XDMA].readLc1(0)) // XDMA_LC1_0
+                DEF_IO32(0x1000C420, data = core->cdmas[XDMA].readSar(1)) // XDMA_SAR1
+                DEF_IO32(0x1000C424, data = core->cdmas[XDMA].readDar(1)) // XDMA_DAR1
+                DEF_IO32(0x1000C428, data = core->cdmas[XDMA].readCcr(1)) // XDMA_CCR1
+                DEF_IO32(0x1000C42C, data = core->cdmas[XDMA].readLc0(1)) // XDMA_LC0_1
+                DEF_IO32(0x1000C430, data = core->cdmas[XDMA].readLc1(1)) // XDMA_LC1_1
+                DEF_IO32(0x1000C440, data = core->cdmas[XDMA].readSar(2)) // XDMA_SAR2
+                DEF_IO32(0x1000C444, data = core->cdmas[XDMA].readDar(2)) // XDMA_DAR2
+                DEF_IO32(0x1000C448, data = core->cdmas[XDMA].readCcr(2)) // XDMA_CCR2
+                DEF_IO32(0x1000C44C, data = core->cdmas[XDMA].readLc0(2)) // XDMA_LC0_2
+                DEF_IO32(0x1000C450, data = core->cdmas[XDMA].readLc1(2)) // XDMA_LC1_2
+                DEF_IO32(0x1000C460, data = core->cdmas[XDMA].readSar(3)) // XDMA_SAR3
+                DEF_IO32(0x1000C464, data = core->cdmas[XDMA].readDar(3)) // XDMA_DAR3
+                DEF_IO32(0x1000C468, data = core->cdmas[XDMA].readCcr(3)) // XDMA_CCR3
+                DEF_IO32(0x1000C46C, data = core->cdmas[XDMA].readLc0(3)) // XDMA_LC0_3
+                DEF_IO32(0x1000C470, data = core->cdmas[XDMA].readLc1(3)) // XDMA_LC1_3
+                DEF_IO32(0x1000CD00, data = core->cdmas[XDMA].readDbgstatus()) // XDMA_DBGSTATUS
+                DEF_IO32(0x1000CD08, data = core->cdmas[XDMA].readDbginst0()) // XDMA_DBGINST0
+                DEF_IO32(0x1000CD0C, data = core->cdmas[XDMA].readDbginst1()) // XDMA_DBGINST1
                 DEF_IO32(0x10012000, data = readOtpEncrypted(0)) // OTP_ENCRYPTED0
                 DEF_IO32(0x10012004, data = readOtpEncrypted(1)) // OTP_ENCRYPTED1
                 DEF_IO32(0x10012008, data = readOtpEncrypted(2)) // OTP_ENCRYPTED2
@@ -827,6 +982,12 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
         // Check registers that are exclusive to one CPU
         if (id != ARM9) { // ARM11
             switch (base) {
+                DEF_IO32(0x10200D04, core->cdmas[CDMA0].writeDbgcmd(IO_PARAMS)) // CDMA0_DBGCMD
+                DEF_IO32(0x10200D08, core->cdmas[CDMA0].writeDbginst0(IO_PARAMS)) // CDMA0_DBGINST0
+                DEF_IO32(0x10200D0C, core->cdmas[CDMA0].writeDbginst1(IO_PARAMS)) // CDMA0_DBGINST1
+                DEF_IO32(0x10206D04, core->cdmas[CDMA1].writeDbgcmd(IO_PARAMS)) // CDMA1_DBGCMD
+                DEF_IO32(0x10206D08, core->cdmas[CDMA1].writeDbginst0(IO_PARAMS)) // CDMA1_DBGINST0
+                DEF_IO32(0x10206D0C, core->cdmas[CDMA1].writeDbginst1(IO_PARAMS)) // CDMA1_DBGINST1
                 DEF_IO32(0x10301000, core->shas[0].writeFifo(IO_PARAMS)) // SHA_FIFO11
                 DEF_IO32(0x10301004, core->shas[0].writeFifo(IO_PARAMS)) // SHA_FIFO11
                 DEF_IO32(0x10301008, core->shas[0].writeFifo(IO_PARAMS)) // SHA_FIFO11
@@ -1421,6 +1582,9 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x1000B8F4, core->rsa.writeData(61, IO_PARAMS)) // RSA_DATA61
                 DEF_IO32(0x1000B8F8, core->rsa.writeData(62, IO_PARAMS)) // RSA_DATA62
                 DEF_IO32(0x1000B8FC, core->rsa.writeData(63, IO_PARAMS)) // RSA_DATA63
+                DEF_IO32(0x1000CD04, core->cdmas[XDMA].writeDbgcmd(IO_PARAMS)) // XDMA_DBGCMD
+                DEF_IO32(0x1000CD08, core->cdmas[XDMA].writeDbginst0(IO_PARAMS)) // XDMA_DBGINST0
+                DEF_IO32(0x1000CD0C, core->cdmas[XDMA].writeDbginst1(IO_PARAMS)) // XDMA_DBGINST1
             }
         }
 

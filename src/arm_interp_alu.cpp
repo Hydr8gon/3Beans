@@ -1464,7 +1464,7 @@ int ArmInterp::mulDpT(uint16_t opcode) { // MUL Rd,Rs
     return 4;
 }
 
-int ArmInterp::sxtbT(uint16_t opcode) {
+int ArmInterp::sxtbT(uint16_t opcode) { // SXTB Rd,Rm
     // Sign-extend byte (THUMB)
     if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
     uint32_t *op0 = registers[opcode & 0x7];
@@ -1473,7 +1473,7 @@ int ArmInterp::sxtbT(uint16_t opcode) {
     return 1;
 }
 
-int ArmInterp::sxthT(uint16_t opcode) {
+int ArmInterp::sxthT(uint16_t opcode) { // SXTH Rd,Rm
     // Sign-extend half-word (THUMB)
     if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
     uint32_t *op0 = registers[opcode & 0x7];
@@ -1482,7 +1482,7 @@ int ArmInterp::sxthT(uint16_t opcode) {
     return 1;
 }
 
-int ArmInterp::uxtbT(uint16_t opcode) {
+int ArmInterp::uxtbT(uint16_t opcode) { // UXTB Rd,Rm
     // Zero-extend byte (THUMB)
     if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
     uint32_t *op0 = registers[opcode & 0x7];
@@ -1491,11 +1491,38 @@ int ArmInterp::uxtbT(uint16_t opcode) {
     return 1;
 }
 
-int ArmInterp::uxthT(uint16_t opcode) {
+int ArmInterp::uxthT(uint16_t opcode) { // UXTH Rd,Rm
     // Zero-extend half-word (THUMB)
     if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
     uint32_t *op0 = registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
     *op0 = uint16_t(op1);
+    return 1;
+}
+
+int ArmInterp::rev16T(uint16_t opcode) { // REV16 Rd,Rm
+    // Reverse byte order of two half-words (THUMB)
+    if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
+    uint32_t *op0 = registers[opcode & 0x7];
+    uint32_t op1 = *registers[(opcode >> 3) & 0x7];
+    *op0 = ((op1 >> 8) & 0xFF00FF) | ((op1 << 8) & 0xFF00FF00);
+    return 1;
+}
+
+int ArmInterp::revshT(uint16_t opcode) { // REVSH Rd,Rm
+    // Reverse byte order of half-word and sign-extend (THUMB)
+    if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
+    uint32_t *op0 = registers[opcode & 0x7];
+    uint32_t op1 = *registers[(opcode >> 3) & 0x7];
+    *op0 = int16_t(((op1 >> 8) & 0xFF) | (op1 << 8));
+    return 1;
+}
+
+int ArmInterp::revT(uint16_t opcode) { // REV Rd,Rm
+    // Reverse byte order of word (THUMB)
+    if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
+    uint32_t *op0 = registers[opcode & 0x7];
+    uint32_t op1 = *registers[(opcode >> 3) & 0x7];
+    *op0 = BSWAP32(op1);
     return 1;
 }

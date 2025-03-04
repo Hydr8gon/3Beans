@@ -217,7 +217,6 @@ uint32_t Sha::readHash(int i) {
 
 void Sha::writeCnt(uint32_t mask, uint32_t value) {
     // Write to the SHA_CNT register
-    // TODO: implement the reset bit and DMA interrupts
     bool start = (value & mask & ~shaCnt & BIT(0));
     mask &= 0x53E;
     shaCnt = (shaCnt & ~mask) | (value & mask);

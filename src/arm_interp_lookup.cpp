@@ -1236,7 +1236,7 @@ int (ArmInterp::*ArmInterp::thumbInstrs[])(uint16_t) = {
     &ArmInterp::unkThumb, &ArmInterp::unkThumb, &ArmInterp::unkThumb, &ArmInterp::unkThumb, // 0x2DC-0x2DF
     &ArmInterp::unkThumb, &ArmInterp::unkThumb, &ArmInterp::unkThumb, &ArmInterp::unkThumb, // 0x2E0-0x2E3
     &ArmInterp::unkThumb, &ArmInterp::unkThumb, &ArmInterp::unkThumb, &ArmInterp::unkThumb, // 0x2E4-0x2E7
-    &ArmInterp::unkThumb, &ArmInterp::unkThumb, &ArmInterp::unkThumb, &ArmInterp::unkThumb, // 0x2E8-0x2EB
+    &ArmInterp::revT, &ArmInterp::rev16T, &ArmInterp::unkThumb, &ArmInterp::revshT, // 0x2E8-0x2EB
     &ArmInterp::unkThumb, &ArmInterp::unkThumb, &ArmInterp::unkThumb, &ArmInterp::unkThumb, // 0x2EC-0x2EF
     &ArmInterp::popT, &ArmInterp::popT, &ArmInterp::popT, &ArmInterp::popT, // 0x2F0-0x2F3
     &ArmInterp::popPcT, &ArmInterp::popPcT, &ArmInterp::popPcT, &ArmInterp::popPcT, // 0x2F4-0x2F7

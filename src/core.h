@@ -26,6 +26,7 @@
 
 #include "aes.h"
 #include "arm_interp.h"
+#include "cdma.h"
 #include "cp15.h"
 #include "defines.h"
 #include "gpu.h"
@@ -69,6 +70,9 @@ enum Task {
     ARM9_OVERFLOW2,
     ARM9_OVERFLOW3,
     AES_UPDATE,
+    CDMA0_UPDATE,
+    CDMA1_UPDATE,
+    XDMA_UPDATE,
     NDMA_UPDATE,
     SHA11_UPDATE,
     SHA9_UPDATE,
@@ -94,6 +98,7 @@ public:
 
     Aes aes;
     ArmInterp arms[MAX_CPUS];
+    Cdma cdmas[3];
     Cp15 cp15;
     Gpu gpu;
     I2c i2c;

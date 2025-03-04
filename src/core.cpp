@@ -21,10 +21,11 @@
 #include "core.h"
 
 Core::Core(): aes(this), arms { ArmInterp(this, ARM11A), ArmInterp(this, ARM11B), ArmInterp(this, ARM11C),
-        ArmInterp(this, ARM11D), ArmInterp(this, ARM9) }, cp15(this), gpu(this), i2c(this), input(this),
-        interrupts(this), memory(this), ndma(this), pdc(this), pxi(this), rsa(this), sdMmcs { SdMmc(this),
-        SdMmc(this) }, shas { Sha(this, false), Sha(this, true) }, timers(this), vfp11s { Vfp11Interp(this,
-        ARM11A), Vfp11Interp(this, ARM11B), Vfp11Interp(this, ARM11C), Vfp11Interp(this, ARM11D) } {
+        ArmInterp(this, ARM11D), ArmInterp(this, ARM9) }, cdmas { Cdma(this, CDMA0), Cdma(this, CDMA1),
+        Cdma(this, XDMA) }, cp15(this), gpu(this), i2c(this), input(this), interrupts(this), memory(this),
+        ndma(this), pdc(this), pxi(this), rsa(this), sdMmcs { SdMmc(this), SdMmc(this) }, shas {
+        Sha(this, false), Sha(this, true) }, timers(this), vfp11s { Vfp11Interp(this, ARM11A),
+        Vfp11Interp(this, ARM11B), Vfp11Interp(this, ARM11C), Vfp11Interp(this, ARM11D) } {
     // Initialize things that need to be done after construction
     n3dsMode = sdMmcs[0].init(sdMmcs[1]);
     if (!memory.init())
@@ -55,6 +56,9 @@ Core::Core(): aes(this), arms { ArmInterp(this, ARM11A), ArmInterp(this, ARM11B)
     tasks[ARM9_OVERFLOW2] = std::bind(&Timers::overflowTm, &timers, 2);
     tasks[ARM9_OVERFLOW3] = std::bind(&Timers::overflowTm, &timers, 3);
     tasks[AES_UPDATE] = std::bind(&Aes::update, &aes);
+    tasks[CDMA0_UPDATE] = std::bind(&Cdma::update, &cdmas[CDMA0]);
+    tasks[CDMA1_UPDATE] = std::bind(&Cdma::update, &cdmas[CDMA1]);
+    tasks[XDMA_UPDATE] = std::bind(&Cdma::update, &cdmas[XDMA]);
     tasks[NDMA_UPDATE] = std::bind(&Ndma::update, &ndma);
     tasks[SHA11_UPDATE] = std::bind(&Sha::update, &shas[0]);
     tasks[SHA9_UPDATE] = std::bind(&Sha::update, &shas[1]);
