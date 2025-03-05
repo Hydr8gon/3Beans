@@ -20,6 +20,7 @@
 #pragma once
 
 #include <cstdint>
+#include <queue>
 
 class Core;
 
@@ -31,9 +32,17 @@ enum CdmaId {
 
 class Cdma {
 public:
-    Cdma(Core *core, CdmaId id): core(core), id(id) {}
-    void update();
+    Cdma(Core *core, CdmaId id);
 
+    void update();
+    void sendInterrupt(int type);
+
+    uint32_t readInten() { return inten; }
+    uint32_t readIntEventRis() { return intEventRis; }
+    uint32_t readIntmis() { return intmis; }
+    uint32_t readFsrd() { return fsrc >> 8; }
+    uint32_t readFsrc() { return fsrc & 0xFF; }
+    uint32_t readFtr(int i) { return ftrs[i]; }
     uint32_t readCpc(int i) { return cpcs[i]; }
     uint32_t readCsr(int i) { return csrs[i]; }
     uint32_t readSar(int i) { return sars[i]; }
@@ -45,6 +54,8 @@ public:
     uint32_t readDbginst0() { return dbginst0; }
     uint32_t readDbginst1() { return dbginst1; }
 
+    void writeInten(uint32_t mask, uint32_t value);
+    void writeIntclr(uint32_t mask, uint32_t value);
     void writeDbgcmd(uint32_t mask, uint32_t value);
     void writeDbginst0(uint32_t mask, uint32_t value);
     void writeDbginst1(uint32_t mask, uint32_t value);
@@ -52,8 +63,17 @@ public:
 private:
     Core *core;
     CdmaId id;
-    bool scheduled = false;
+    CpuId cpu;
 
+    std::queue<uint8_t> fifos[8];
+    bool scheduled = false;
+    uint8_t dbgId = 0;
+
+    uint32_t inten = 0;
+    uint32_t intEventRis = 0;
+    uint32_t intmis = 0;
+    uint32_t fsrc = 0;
+    uint32_t ftrs[9] = {};
     uint32_t csrs[9] = {};
     uint32_t cpcs[9] = {};
     uint32_t sars[8] = {};
@@ -67,4 +87,13 @@ private:
 
     void triggerUpdate();
     void runOpcodes(int i);
+    void fault(int i, int type);
+    void dmaStubC(int i, int inc);
+
+    void dmaEnd(int i);
+    void dmaLp0(int i);
+    void dmaLp1(int i);
+    void dmaWfp(int i, uint16_t burst);
+    void dmaGoNs(int i);
+    void dmaMov(int i);
 };

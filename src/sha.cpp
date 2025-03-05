@@ -187,14 +187,22 @@ void Sha::update() {
         shaBlkcnt += 64;
     }
 
-    // Check NDMA conditions
-    if (inFifo.size() == 0)
-        core->ndma.triggerMode(0xA); // SHA in
-    if (outFifo.size() == 16)
-        core->ndma.triggerMode(0xB); // SHA out
-    scheduled = false;
+    // Check ARM9 DMA conditions
+    if (arm9) {
+        if (outFifo.size() == 16) { // SHA out
+            core->ndma.triggerMode(0xB);
+            if (shaCnt & BIT(10))
+                core->cdmas[XDMA].sendInterrupt(0x7);
+        }
+        if (inFifo.size() == 0) { // SHA in
+            core->ndma.triggerMode(0xA);
+            if (shaCnt & BIT(2))
+                core->cdmas[XDMA].sendInterrupt(0x6);
+        }
+    }
 
     // Disable the FIFO after the final block is processed
+    scheduled = false;
     if (!(shaCnt & (fifoRunning << 1))) return;
     shaCnt &= ~BIT(1);
     fifoRunning = false;

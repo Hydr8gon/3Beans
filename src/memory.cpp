@@ -214,6 +214,20 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
             switch (base) {
                 DEF_IO32(0x10200000, data = core->cdmas[CDMA0].readCsr(8)) // CDMA0_DSR
                 DEF_IO32(0x10200004, data = core->cdmas[CDMA0].readCpc(8)) // CDMA0_DPC
+                DEF_IO32(0x10200020, data = core->cdmas[CDMA0].readInten()) // CDMA0_INTEN
+                DEF_IO32(0x10200024, data = core->cdmas[CDMA0].readIntEventRis()) // CDMA0_INT_EVENT_RIS
+                DEF_IO32(0x10200028, data = core->cdmas[CDMA0].readIntmis()) // CDMA0_INTMIS
+                DEF_IO32(0x10200030, data = core->cdmas[CDMA0].readFsrd()) // CDMA0_FSRD
+                DEF_IO32(0x10200034, data = core->cdmas[CDMA0].readFsrc()) // CDMA0_FSRC
+                DEF_IO32(0x10200038, data = core->cdmas[CDMA0].readFtr(8)) // CDMA0_FTRD
+                DEF_IO32(0x10200040, data = core->cdmas[CDMA0].readFtr(0)) // CDMA0_FTR0
+                DEF_IO32(0x10200044, data = core->cdmas[CDMA0].readFtr(1)) // CDMA0_FTR1
+                DEF_IO32(0x10200048, data = core->cdmas[CDMA0].readFtr(2)) // CDMA0_FTR2
+                DEF_IO32(0x1020004C, data = core->cdmas[CDMA0].readFtr(3)) // CDMA0_FTR3
+                DEF_IO32(0x10200050, data = core->cdmas[CDMA0].readFtr(4)) // CDMA0_FTR4
+                DEF_IO32(0x10200054, data = core->cdmas[CDMA0].readFtr(5)) // CDMA0_FTR5
+                DEF_IO32(0x10200058, data = core->cdmas[CDMA0].readFtr(6)) // CDMA0_FTR6
+                DEF_IO32(0x1020005C, data = core->cdmas[CDMA0].readFtr(7)) // CDMA0_FTR7
                 DEF_IO32(0x10200100, data = core->cdmas[CDMA0].readCsr(0)) // CDMA0_CSR0
                 DEF_IO32(0x10200104, data = core->cdmas[CDMA0].readCpc(0)) // CDMA0_CPC0
                 DEF_IO32(0x10200108, data = core->cdmas[CDMA0].readCsr(1)) // CDMA0_CSR1
@@ -275,6 +289,20 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x10200D0C, data = core->cdmas[CDMA0].readDbginst1()) // CDMA0_DBGINST1
                 DEF_IO32(0x10206000, data = core->cdmas[CDMA1].readCsr(8)) // CDMA1_DSR
                 DEF_IO32(0x10206004, data = core->cdmas[CDMA1].readCpc(8)) // CDMA1_DPC
+                DEF_IO32(0x10206020, data = core->cdmas[CDMA1].readInten()) // CDMA1_INTEN
+                DEF_IO32(0x10206024, data = core->cdmas[CDMA1].readIntEventRis()) // CDMA1_INT_EVENT_RIS
+                DEF_IO32(0x10206028, data = core->cdmas[CDMA1].readIntmis()) // CDMA1_INTMIS
+                DEF_IO32(0x10206030, data = core->cdmas[CDMA1].readFsrd()) // CDMA1_FSRD
+                DEF_IO32(0x10206034, data = core->cdmas[CDMA1].readFsrc()) // CDMA1_FSRC
+                DEF_IO32(0x10206038, data = core->cdmas[CDMA1].readFtr(8)) // CDMA1_FTRD
+                DEF_IO32(0x10206040, data = core->cdmas[CDMA1].readFtr(0)) // CDMA1_FTR0
+                DEF_IO32(0x10206044, data = core->cdmas[CDMA1].readFtr(1)) // CDMA1_FTR1
+                DEF_IO32(0x10206048, data = core->cdmas[CDMA1].readFtr(2)) // CDMA1_FTR2
+                DEF_IO32(0x1020604C, data = core->cdmas[CDMA1].readFtr(3)) // CDMA1_FTR3
+                DEF_IO32(0x10206050, data = core->cdmas[CDMA1].readFtr(4)) // CDMA1_FTR4
+                DEF_IO32(0x10206054, data = core->cdmas[CDMA1].readFtr(5)) // CDMA1_FTR5
+                DEF_IO32(0x10206058, data = core->cdmas[CDMA1].readFtr(6)) // CDMA1_FTR6
+                DEF_IO32(0x1020605C, data = core->cdmas[CDMA1].readFtr(7)) // CDMA1_FTR7
                 DEF_IO32(0x10206100, data = core->cdmas[CDMA1].readCsr(0)) // CDMA1_CSR0
                 DEF_IO32(0x10206104, data = core->cdmas[CDMA1].readCpc(0)) // CDMA1_CPC0
                 DEF_IO32(0x10206108, data = core->cdmas[CDMA1].readCsr(1)) // CDMA1_CSR1
@@ -829,6 +857,16 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x1000B8FC, data = core->rsa.readData(63)) // RSA_DATA63
                 DEF_IO32(0x1000C000, data = core->cdmas[XDMA].readCsr(8)) // XDMA_DSR
                 DEF_IO32(0x1000C004, data = core->cdmas[XDMA].readCpc(8)) // XDMA_DPC
+                DEF_IO32(0x1000C020, data = core->cdmas[XDMA].readInten()) // XDMA_INTEN
+                DEF_IO32(0x1000C024, data = core->cdmas[XDMA].readIntEventRis()) // XDMA_INT_EVENT_RIS
+                DEF_IO32(0x1000C028, data = core->cdmas[XDMA].readIntmis()) // XDMA_INTMIS
+                DEF_IO32(0x1000C030, data = core->cdmas[XDMA].readFsrd()) // XDMA_FSRD
+                DEF_IO32(0x1000C034, data = core->cdmas[XDMA].readFsrc()) // XDMA_FSRC
+                DEF_IO32(0x1000C038, data = core->cdmas[XDMA].readFtr(8)) // XDMA_FTRD
+                DEF_IO32(0x1000C040, data = core->cdmas[XDMA].readFtr(0)) // XDMA_FTR0
+                DEF_IO32(0x1000C044, data = core->cdmas[XDMA].readFtr(1)) // XDMA_FTR1
+                DEF_IO32(0x1000C048, data = core->cdmas[XDMA].readFtr(2)) // XDMA_FTR2
+                DEF_IO32(0x1000C04C, data = core->cdmas[XDMA].readFtr(3)) // XDMA_FTR3
                 DEF_IO32(0x1000C100, data = core->cdmas[XDMA].readCsr(0)) // XDMA_CSR0
                 DEF_IO32(0x1000C104, data = core->cdmas[XDMA].readCpc(0)) // XDMA_CPC0
                 DEF_IO32(0x1000C108, data = core->cdmas[XDMA].readCsr(2)) // XDMA_CSR1
@@ -985,9 +1023,13 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x10200D04, core->cdmas[CDMA0].writeDbgcmd(IO_PARAMS)) // CDMA0_DBGCMD
                 DEF_IO32(0x10200D08, core->cdmas[CDMA0].writeDbginst0(IO_PARAMS)) // CDMA0_DBGINST0
                 DEF_IO32(0x10200D0C, core->cdmas[CDMA0].writeDbginst1(IO_PARAMS)) // CDMA0_DBGINST1
+                DEF_IO32(0x10200020, core->cdmas[CDMA0].writeInten(IO_PARAMS)) // CDMA0_INTEN
+                DEF_IO32(0x1020002C, core->cdmas[CDMA0].writeIntclr(IO_PARAMS)) // CDMA0_INTCLR
                 DEF_IO32(0x10206D04, core->cdmas[CDMA1].writeDbgcmd(IO_PARAMS)) // CDMA1_DBGCMD
                 DEF_IO32(0x10206D08, core->cdmas[CDMA1].writeDbginst0(IO_PARAMS)) // CDMA1_DBGINST0
                 DEF_IO32(0x10206D0C, core->cdmas[CDMA1].writeDbginst1(IO_PARAMS)) // CDMA1_DBGINST1
+                DEF_IO32(0x10206020, core->cdmas[CDMA1].writeInten(IO_PARAMS)) // CDMA1_INTEN
+                DEF_IO32(0x1020602C, core->cdmas[CDMA1].writeIntclr(IO_PARAMS)) // CDMA1_INTCLR
                 DEF_IO32(0x10301000, core->shas[0].writeFifo(IO_PARAMS)) // SHA_FIFO11
                 DEF_IO32(0x10301004, core->shas[0].writeFifo(IO_PARAMS)) // SHA_FIFO11
                 DEF_IO32(0x10301008, core->shas[0].writeFifo(IO_PARAMS)) // SHA_FIFO11
@@ -1582,6 +1624,8 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x1000B8F4, core->rsa.writeData(61, IO_PARAMS)) // RSA_DATA61
                 DEF_IO32(0x1000B8F8, core->rsa.writeData(62, IO_PARAMS)) // RSA_DATA62
                 DEF_IO32(0x1000B8FC, core->rsa.writeData(63, IO_PARAMS)) // RSA_DATA63
+                DEF_IO32(0x1000C020, core->cdmas[XDMA].writeInten(IO_PARAMS)) // XDMA_INTEN
+                DEF_IO32(0x1000C02C, core->cdmas[XDMA].writeIntclr(IO_PARAMS)) // XDMA_INTCLR
                 DEF_IO32(0x1000CD04, core->cdmas[XDMA].writeDbgcmd(IO_PARAMS)) // XDMA_DBGCMD
                 DEF_IO32(0x1000CD08, core->cdmas[XDMA].writeDbginst0(IO_PARAMS)) // XDMA_DBGINST0
                 DEF_IO32(0x1000CD0C, core->cdmas[XDMA].writeDbginst1(IO_PARAMS)) // XDMA_DBGINST1
