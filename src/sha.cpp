@@ -194,7 +194,7 @@ void Sha::update() {
             if (shaCnt & BIT(10))
                 core->cdmas[XDMA].sendInterrupt(0x7);
         }
-        if (inFifo.size() == 0) { // SHA in
+        else if (outFifo.empty() && inFifo.empty()) { // SHA in
             core->ndma.triggerMode(0xA);
             if (shaCnt & BIT(2))
                 core->cdmas[XDMA].sendInterrupt(0x6);
@@ -215,6 +215,7 @@ uint32_t Sha::readFifo() {
     uint32_t value = BSWAP32(outFifo.front());
     outFifo.pop();
     if (outFifo.empty()) shaCnt &= ~BIT(9);
+    triggerFifo();
     return value;
 }
 
@@ -225,12 +226,12 @@ uint32_t Sha::readHash(int i) {
 
 void Sha::writeCnt(uint32_t mask, uint32_t value) {
     // Write to the SHA_CNT register
-    bool start = (value & mask & ~shaCnt & BIT(0));
-    mask &= 0x53E;
-    shaCnt = (shaCnt & ~mask) | (value & mask);
+    uint32_t mask2 = (mask & 0x53E);
+    shaCnt = (shaCnt & ~mask2) | (value & mask2);
 
     // Start processing the FIFO if triggered
-    if (start) initFifo();
+    if (value & mask & BIT(0))
+        initFifo();
     triggerFifo();
 }
 

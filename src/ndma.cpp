@@ -99,6 +99,7 @@ void Ndma::transferBlock(int i) {
 
                 // Trigger an interrupt and end if the word total is reached
                 if (--ndmaTcnt[i] &= 0xFFFFFFF) continue;
+                LOG_INFO("NDMA channel %d reached total word count\n", i);
                 if (ndmaCnt[i] & BIT(30))
                     core->interrupts.sendInterrupt(ARM9, i);
                 ndmaCnt[i] &= ~BIT(31);
@@ -155,8 +156,9 @@ void Ndma::writeCnt(int i, uint32_t mask, uint32_t value) {
 
     // Handle immediate transfers or catch unimplemented modes
     uint8_t mode = (ndmaCnt[i] >> 24) & 0x1F;
-    if (mode >= 0x10) // Immediate
-        transferBlock(i);
-    else if (mode < 0x6 || mode > 0xB)
+    if (mode < 0x6 || (mode > 0xB && mode < 0x10))
         LOG_CRIT("NDMA channel %d started in unimplemented mode: 0x%X\n", i, mode);
+    else
+        LOG_INFO("NDMA channel %d starting in mode 0x%X\n", i, mode);
+    if (mode >= 0x10) transferBlock(i); // Immediate
 }

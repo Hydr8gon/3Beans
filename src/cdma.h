@@ -66,8 +66,9 @@ private:
     CpuId cpu;
 
     std::queue<uint8_t> fifos[8];
-    bool scheduled = false;
     uint8_t dbgId = 0;
+    bool burstReq = false;
+    bool scheduled = false;
 
     uint32_t inten = 0;
     uint32_t intEventRis = 0;
@@ -91,9 +92,18 @@ private:
     void dmaStubC(int i, int inc);
 
     void dmaEnd(int i);
+    void dmaLd(int i);
+    void dmaSt(int i);
     void dmaLp0(int i);
     void dmaLp1(int i);
+    void dmaLdps(int i);
+    void dmaLdpb(int i);
+    void dmaStps(int i);
+    void dmaStpb(int i);
     void dmaWfp(int i, uint16_t burst);
+    void dmaSev(int i);
+    void dmaLpend0(int i);
+    void dmaLpend1(int i);
     void dmaGoNs(int i);
     void dmaMov(int i);
 };
