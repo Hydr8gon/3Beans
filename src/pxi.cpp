@@ -121,6 +121,7 @@ void Pxi::writeSend(bool arm9, uint32_t mask, uint32_t value) {
 
     // Send a value to the FIFO
     fifos[arm9].push(value & mask);
+    LOG_INFO("ARM%d sending value through PXI FIFO: 0x%X\n", arm9 ? 9 : 11, value & mask);
 
     if (fifos[arm9].size() == 1) {
         // Clear the empty bits if the FIFO is no longer empty

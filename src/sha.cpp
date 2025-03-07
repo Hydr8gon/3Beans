@@ -153,21 +153,19 @@ void Sha::update() {
             uint32_t b = 0x80, s = 0;
             while (!(fifoMask & (b << s))) s += 8;
             fifoValue |= (b << (s -= 8));
-            shaBlkcnt -= ((16 - inFifo.size()) << 2) - (3 - (s >> 3));
+            shaBlkcnt += 3 - (s >> 3);
             pushFifo();
         }
         else {
             // Push a new word containing the end bit
-            shaBlkcnt -= (16 - inFifo.size()) << 2;
             inFifo.push(0x80000000);
         }
 
         // Append padding and 64-bit length, adjusting if a new block is required
         while ((inFifo.size() & 0xF) != 14) inFifo.push(0);
-        uint64_t len = uint64_t(shaBlkcnt + 64) << 3;
+        uint64_t len = uint64_t(shaBlkcnt) << 3;
         inFifo.push(len >> 32);
         inFifo.push(len >> 0);
-        if (inFifo.size() > 16) shaBlkcnt -= 64;
     }
 
     // Process FIFO blocks when active and available
@@ -184,7 +182,6 @@ void Sha::update() {
             hash1(src);
         else // SHA256/SHA224
             hash2(src);
-        shaBlkcnt += 64;
     }
 
     // Check ARM9 DMA conditions
@@ -251,6 +248,7 @@ void Sha::writeFifo(uint32_t mask, uint32_t value) {
     if (inFifo.size() == 16) return;
     fifoValue |= BSWAP32(value & mask);
     if ((fifoMask |= BSWAP32(mask)) != -1) return;
+    shaBlkcnt += 4;
     pushFifo();
     triggerFifo();
 }

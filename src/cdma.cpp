@@ -236,7 +236,7 @@ void Cdma::dmaSt(int i) { // DMAST
         for (int j = 0; j < len; j++) {
             uint64_t value = 0;
             for (int k = 0; k < 64; k += 8) {
-                value |= fifos[i].front() << k;
+                value |= uint64_t(fifos[i].front()) << k;
                 fifos[i].pop();
             }
             core->memory.write<uint32_t>(cpu, dars[i], value);
