@@ -22,9 +22,9 @@
 
 Core::Core(): aes(this), arms { ArmInterp(this, ARM11A), ArmInterp(this, ARM11B), ArmInterp(this, ARM11C),
         ArmInterp(this, ARM11D), ArmInterp(this, ARM9) }, cdmas { Cdma(this, CDMA0), Cdma(this, CDMA1),
-        Cdma(this, XDMA) }, cp15(this), gpu(this), i2c(this), input(this), interrupts(this), memory(this),
-        ndma(this), pdc(this), pxi(this), rsa(this), sdMmcs { SdMmc(this), SdMmc(this) }, shas {
-        Sha(this, false), Sha(this, true) }, timers(this), vfp11s { Vfp11Interp(this, ARM11A),
+        Cdma(this, XDMA) }, cp15(this), csnd(this), gpu(this), i2c(this), input(this), interrupts(this),
+        memory(this), ndma(this), pdc(this), pxi(this), rsa(this), sdMmcs { SdMmc(this), SdMmc(this) },
+        shas { Sha(this, false), Sha(this, true) }, timers(this), vfp11s { Vfp11Interp(this, ARM11A),
         Vfp11Interp(this, ARM11B), Vfp11Interp(this, ARM11C), Vfp11Interp(this, ARM11D) } {
     // Initialize things that need to be done after construction
     n3dsMode = sdMmcs[0].init(sdMmcs[1]);
@@ -62,6 +62,7 @@ Core::Core(): aes(this), arms { ArmInterp(this, ARM11A), ArmInterp(this, ARM11B)
     tasks[NDMA_UPDATE] = std::bind(&Ndma::update, &ndma);
     tasks[SHA11_UPDATE] = std::bind(&Sha::update, &shas[0]);
     tasks[SHA9_UPDATE] = std::bind(&Sha::update, &shas[1]);
+    tasks[CSND_SAMPLE] = std::bind(&Csnd::runSample, &csnd);
     tasks[SDMMC0_READ_BLOCK] = std::bind(&SdMmc::readBlock, &sdMmcs[0]);
     tasks[SDMMC1_READ_BLOCK] = std::bind(&SdMmc::readBlock, &sdMmcs[1]);
     tasks[SDMMC0_WRITE_BLOCK] = std::bind(&SdMmc::writeBlock, &sdMmcs[0]);
@@ -70,6 +71,7 @@ Core::Core(): aes(this), arms { ArmInterp(this, ARM11A), ArmInterp(this, ARM11B)
     // Schedule the initial tasks
     schedule(RESET_CYCLES, 0x7FFFFFFFFFFFFFFF);
     schedule(END_FRAME, 268111856 / 60);
+    schedule(CSND_SAMPLE, 2048);
 }
 
 void Core::resetCycles() {

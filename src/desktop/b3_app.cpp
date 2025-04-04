@@ -76,10 +76,51 @@ bool b3App::OnInit() {
     // Set up the update timer
     timer = new wxTimer(this, UPDATE);
     timer->Start(6);
+
+    // Initialize the audio output stream
+    Pa_Initialize();
+    Pa_OpenDefaultStream(&stream, 0, 2, paInt16, 48000, 1024, audioCallback, frame);
+    Pa_StartStream(stream);
     return true;
+}
+
+int b3App::OnExit() {
+    // Clean up the audio output stream
+    Pa_StopStream(stream);
+    Pa_CloseStream(stream);
+    Pa_Terminate();
+    return wxApp::OnExit();
 }
 
 void b3App::update(wxTimerEvent &event) {
     // Continuously refresh the frame
     frame->Refresh();
+}
+
+int b3App::audioCallback(const void *in, void *out, unsigned long count,
+        const PaStreamCallbackTimeInfo *info, PaStreamCallbackFlags flags, void *data) {
+    // Calculate the scale for resampling
+    const int scale = 131072 * count / 48000;
+    int16_t *buffer = (int16_t*)out;
+    b3Frame *frame = (b3Frame*)data;
+
+    // Get samples from the core if available
+    frame->mutex.lock();
+    uint32_t *samples = frame->core ? frame->core->csnd.getSamples(scale) : nullptr;
+    frame->mutex.unlock();
+
+    // Play silence if the emulator isn't running
+    if (!samples) {
+        memset(buffer, 0, count * sizeof(uint32_t));
+        return paContinue;
+    }
+
+    // Resample core audio into the output buffer
+    for (int i = 0; i < count; i++) {
+        uint32_t sample = samples[i * scale / count];
+        buffer[i * 2 + 0] = (sample >> 0);
+        buffer[i * 2 + 1] = (sample >> 16);
+    }
+    delete[] samples;
+    return paContinue;
 }

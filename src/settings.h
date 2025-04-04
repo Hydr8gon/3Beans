@@ -32,6 +32,7 @@ struct Setting {
 };
 
 namespace Settings {
+    extern int fpsLimiter;
     extern std::string boot11Path;
     extern std::string boot9Path;
     extern std::string nandPath;

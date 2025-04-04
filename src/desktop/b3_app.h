@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include <portaudio.h>
 #include "b3_frame.h"
 
 #define MAX_KEYS 12
@@ -30,8 +31,13 @@ public:
 private:
     b3Frame *frame;
     wxTimer *timer;
+    PaStream *stream;
 
     bool OnInit();
+    int OnExit();
+
+    static int audioCallback(const void *in, void *out, unsigned long count,
+        const PaStreamCallbackTimeInfo *info, PaStreamCallbackFlags flags, void *data);
 
     void update(wxTimerEvent &event);
     wxDECLARE_EVENT_TABLE();

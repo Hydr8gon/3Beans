@@ -187,6 +187,136 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
             DEF_IO32(0x10101054, data = core->shas[0].readHash(5)) // SHA_HASH5_11
             DEF_IO32(0x10101058, data = core->shas[0].readHash(6)) // SHA_HASH6_11
             DEF_IO32(0x1010105C, data = core->shas[0].readHash(7)) // SHA_HASH7_11
+            DEF_IO16(0x10103000, data = core->csnd.readMainVol()) // CSND_MAIN_VOL
+            DEF_IO16(0x10103002, data = core->csnd.readMainCnt()) // CSND_MAIN_CNT
+            DEF_IO16(0x10103400, data = core->csnd.readChanCnt(0)) // CSND_CHAN0_CNT
+            DEF_IO16(0x10103404, data = core->csnd.readChanRvol(0)) // CSND_CHAN0_RVOL
+            DEF_IO16(0x10103406, data = core->csnd.readChanLvol(0)) // CSND_CHAN0_LVOL
+            DEF_IO32(0x1010340C, data = core->csnd.readChanStart(0)) // CSND_CHAN0_START
+            DEF_IO16(0x10103420, data = core->csnd.readChanCnt(1)) // CSND_CHAN1_CNT
+            DEF_IO16(0x10103424, data = core->csnd.readChanRvol(1)) // CSND_CHAN1_RVOL
+            DEF_IO16(0x10103426, data = core->csnd.readChanLvol(1)) // CSND_CHAN1_LVOL
+            DEF_IO32(0x1010342C, data = core->csnd.readChanStart(1)) // CSND_CHAN1_START
+            DEF_IO16(0x10103440, data = core->csnd.readChanCnt(2)) // CSND_CHAN2_CNT
+            DEF_IO16(0x10103444, data = core->csnd.readChanRvol(2)) // CSND_CHAN2_RVOL
+            DEF_IO16(0x10103446, data = core->csnd.readChanLvol(2)) // CSND_CHAN2_LVOL
+            DEF_IO32(0x1010344C, data = core->csnd.readChanStart(2)) // CSND_CHAN2_START
+            DEF_IO16(0x10103460, data = core->csnd.readChanCnt(3)) // CSND_CHAN3_CNT
+            DEF_IO16(0x10103464, data = core->csnd.readChanRvol(3)) // CSND_CHAN3_RVOL
+            DEF_IO16(0x10103466, data = core->csnd.readChanLvol(3)) // CSND_CHAN3_LVOL
+            DEF_IO32(0x1010346C, data = core->csnd.readChanStart(3)) // CSND_CHAN3_START
+            DEF_IO16(0x10103480, data = core->csnd.readChanCnt(4)) // CSND_CHAN4_CNT
+            DEF_IO16(0x10103484, data = core->csnd.readChanRvol(4)) // CSND_CHAN4_RVOL
+            DEF_IO16(0x10103486, data = core->csnd.readChanLvol(4)) // CSND_CHAN4_LVOL
+            DEF_IO32(0x1010348C, data = core->csnd.readChanStart(4)) // CSND_CHAN4_START
+            DEF_IO16(0x101034A0, data = core->csnd.readChanCnt(5)) // CSND_CHAN5_CNT
+            DEF_IO16(0x101034A4, data = core->csnd.readChanRvol(5)) // CSND_CHAN5_RVOL
+            DEF_IO16(0x101034A6, data = core->csnd.readChanLvol(5)) // CSND_CHAN5_LVOL
+            DEF_IO32(0x101034AC, data = core->csnd.readChanStart(5)) // CSND_CHAN5_START
+            DEF_IO16(0x101034C0, data = core->csnd.readChanCnt(6)) // CSND_CHAN6_CNT
+            DEF_IO16(0x101034C4, data = core->csnd.readChanRvol(6)) // CSND_CHAN6_RVOL
+            DEF_IO16(0x101034C6, data = core->csnd.readChanLvol(6)) // CSND_CHAN6_LVOL
+            DEF_IO32(0x101034CC, data = core->csnd.readChanStart(6)) // CSND_CHAN6_START
+            DEF_IO16(0x101034E0, data = core->csnd.readChanCnt(7)) // CSND_CHAN7_CNT
+            DEF_IO16(0x101034E4, data = core->csnd.readChanRvol(7)) // CSND_CHAN7_RVOL
+            DEF_IO16(0x101034E6, data = core->csnd.readChanLvol(7)) // CSND_CHAN7_LVOL
+            DEF_IO32(0x101034EC, data = core->csnd.readChanStart(7)) // CSND_CHAN7_START
+            DEF_IO16(0x10103500, data = core->csnd.readChanCnt(8)) // CSND_CHAN8_CNT
+            DEF_IO16(0x10103504, data = core->csnd.readChanRvol(8)) // CSND_CHAN8_RVOL
+            DEF_IO16(0x10103506, data = core->csnd.readChanLvol(8)) // CSND_CHAN8_LVOL
+            DEF_IO32(0x1010350C, data = core->csnd.readChanStart(8)) // CSND_CHAN8_START
+            DEF_IO16(0x10103520, data = core->csnd.readChanCnt(9)) // CSND_CHAN9_CNT
+            DEF_IO16(0x10103524, data = core->csnd.readChanRvol(9)) // CSND_CHAN9_RVOL
+            DEF_IO16(0x10103526, data = core->csnd.readChanLvol(9)) // CSND_CHAN9_LVOL
+            DEF_IO32(0x1010352C, data = core->csnd.readChanStart(9)) // CSND_CHAN9_START
+            DEF_IO16(0x10103540, data = core->csnd.readChanCnt(10)) // CSND_CHAN10_CNT
+            DEF_IO16(0x10103544, data = core->csnd.readChanRvol(10)) // CSND_CHAN10_RVOL
+            DEF_IO16(0x10103546, data = core->csnd.readChanLvol(10)) // CSND_CHAN10_LVOL
+            DEF_IO32(0x1010354C, data = core->csnd.readChanStart(10)) // CSND_CHAN10_START
+            DEF_IO16(0x10103560, data = core->csnd.readChanCnt(11)) // CSND_CHAN11_CNT
+            DEF_IO16(0x10103564, data = core->csnd.readChanRvol(11)) // CSND_CHAN11_RVOL
+            DEF_IO16(0x10103566, data = core->csnd.readChanLvol(11)) // CSND_CHAN11_LVOL
+            DEF_IO32(0x1010356C, data = core->csnd.readChanStart(11)) // CSND_CHAN11_START
+            DEF_IO16(0x10103580, data = core->csnd.readChanCnt(12)) // CSND_CHAN12_CNT
+            DEF_IO16(0x10103584, data = core->csnd.readChanRvol(12)) // CSND_CHAN12_RVOL
+            DEF_IO16(0x10103586, data = core->csnd.readChanLvol(12)) // CSND_CHAN12_LVOL
+            DEF_IO32(0x1010358C, data = core->csnd.readChanStart(12)) // CSND_CHAN12_START
+            DEF_IO16(0x101035A0, data = core->csnd.readChanCnt(13)) // CSND_CHAN13_CNT
+            DEF_IO16(0x101035A4, data = core->csnd.readChanRvol(13)) // CSND_CHAN13_RVOL
+            DEF_IO16(0x101035A6, data = core->csnd.readChanLvol(13)) // CSND_CHAN13_LVOL
+            DEF_IO32(0x101035AC, data = core->csnd.readChanStart(13)) // CSND_CHAN13_START
+            DEF_IO16(0x101035C0, data = core->csnd.readChanCnt(14)) // CSND_CHAN14_CNT
+            DEF_IO16(0x101035C4, data = core->csnd.readChanRvol(14)) // CSND_CHAN14_RVOL
+            DEF_IO16(0x101035C6, data = core->csnd.readChanLvol(14)) // CSND_CHAN14_LVOL
+            DEF_IO32(0x101035CC, data = core->csnd.readChanStart(14)) // CSND_CHAN14_START
+            DEF_IO16(0x101035E0, data = core->csnd.readChanCnt(15)) // CSND_CHAN15_CNT
+            DEF_IO16(0x101035E4, data = core->csnd.readChanRvol(15)) // CSND_CHAN15_RVOL
+            DEF_IO16(0x101035E6, data = core->csnd.readChanLvol(15)) // CSND_CHAN15_LVOL
+            DEF_IO32(0x101035EC, data = core->csnd.readChanStart(15)) // CSND_CHAN15_START
+            DEF_IO16(0x10103600, data = core->csnd.readChanCnt(16)) // CSND_CHAN16_CNT
+            DEF_IO16(0x10103604, data = core->csnd.readChanRvol(16)) // CSND_CHAN16_RVOL
+            DEF_IO16(0x10103606, data = core->csnd.readChanLvol(16)) // CSND_CHAN16_LVOL
+            DEF_IO32(0x1010360C, data = core->csnd.readChanStart(16)) // CSND_CHAN16_START
+            DEF_IO16(0x10103620, data = core->csnd.readChanCnt(17)) // CSND_CHAN17_CNT
+            DEF_IO16(0x10103624, data = core->csnd.readChanRvol(17)) // CSND_CHAN17_RVOL
+            DEF_IO16(0x10103626, data = core->csnd.readChanLvol(17)) // CSND_CHAN17_LVOL
+            DEF_IO32(0x1010362C, data = core->csnd.readChanStart(17)) // CSND_CHAN17_START
+            DEF_IO16(0x10103640, data = core->csnd.readChanCnt(18)) // CSND_CHAN18_CNT
+            DEF_IO16(0x10103644, data = core->csnd.readChanRvol(18)) // CSND_CHAN18_RVOL
+            DEF_IO16(0x10103646, data = core->csnd.readChanLvol(18)) // CSND_CHAN18_LVOL
+            DEF_IO32(0x1010364C, data = core->csnd.readChanStart(18)) // CSND_CHAN18_START
+            DEF_IO16(0x10103660, data = core->csnd.readChanCnt(19)) // CSND_CHAN19_CNT
+            DEF_IO16(0x10103664, data = core->csnd.readChanRvol(19)) // CSND_CHAN19_RVOL
+            DEF_IO16(0x10103666, data = core->csnd.readChanLvol(19)) // CSND_CHAN19_LVOL
+            DEF_IO32(0x1010366C, data = core->csnd.readChanStart(19)) // CSND_CHAN19_START
+            DEF_IO16(0x10103680, data = core->csnd.readChanCnt(20)) // CSND_CHAN20_CNT
+            DEF_IO16(0x10103684, data = core->csnd.readChanRvol(20)) // CSND_CHAN20_RVOL
+            DEF_IO16(0x10103686, data = core->csnd.readChanLvol(20)) // CSND_CHAN20_LVOL
+            DEF_IO32(0x1010368C, data = core->csnd.readChanStart(20)) // CSND_CHAN20_START
+            DEF_IO16(0x101036A0, data = core->csnd.readChanCnt(21)) // CSND_CHAN21_CNT
+            DEF_IO16(0x101036A4, data = core->csnd.readChanRvol(21)) // CSND_CHAN21_RVOL
+            DEF_IO16(0x101036A6, data = core->csnd.readChanLvol(21)) // CSND_CHAN21_LVOL
+            DEF_IO32(0x101036AC, data = core->csnd.readChanStart(21)) // CSND_CHAN21_START
+            DEF_IO16(0x101036C0, data = core->csnd.readChanCnt(22)) // CSND_CHAN22_CNT
+            DEF_IO16(0x101036C4, data = core->csnd.readChanRvol(22)) // CSND_CHAN22_RVOL
+            DEF_IO16(0x101036C6, data = core->csnd.readChanLvol(22)) // CSND_CHAN22_LVOL
+            DEF_IO32(0x101036CC, data = core->csnd.readChanStart(22)) // CSND_CHAN22_START
+            DEF_IO16(0x101036E0, data = core->csnd.readChanCnt(23)) // CSND_CHAN23_CNT
+            DEF_IO16(0x101036E4, data = core->csnd.readChanRvol(23)) // CSND_CHAN23_RVOL
+            DEF_IO16(0x101036E6, data = core->csnd.readChanLvol(23)) // CSND_CHAN23_LVOL
+            DEF_IO32(0x101036EC, data = core->csnd.readChanStart(23)) // CSND_CHAN23_START
+            DEF_IO16(0x10103700, data = core->csnd.readChanCnt(24)) // CSND_CHAN24_CNT
+            DEF_IO16(0x10103704, data = core->csnd.readChanRvol(24)) // CSND_CHAN24_RVOL
+            DEF_IO16(0x10103706, data = core->csnd.readChanLvol(24)) // CSND_CHAN24_LVOL
+            DEF_IO32(0x1010370C, data = core->csnd.readChanStart(24)) // CSND_CHAN24_START
+            DEF_IO16(0x10103720, data = core->csnd.readChanCnt(25)) // CSND_CHAN25_CNT
+            DEF_IO16(0x10103724, data = core->csnd.readChanRvol(25)) // CSND_CHAN25_RVOL
+            DEF_IO16(0x10103726, data = core->csnd.readChanLvol(25)) // CSND_CHAN25_LVOL
+            DEF_IO32(0x1010372C, data = core->csnd.readChanStart(25)) // CSND_CHAN25_START
+            DEF_IO16(0x10103740, data = core->csnd.readChanCnt(26)) // CSND_CHAN26_CNT
+            DEF_IO16(0x10103744, data = core->csnd.readChanRvol(26)) // CSND_CHAN26_RVOL
+            DEF_IO16(0x10103746, data = core->csnd.readChanLvol(26)) // CSND_CHAN26_LVOL
+            DEF_IO32(0x1010374C, data = core->csnd.readChanStart(26)) // CSND_CHAN26_START
+            DEF_IO16(0x10103760, data = core->csnd.readChanCnt(27)) // CSND_CHAN27_CNT
+            DEF_IO16(0x10103764, data = core->csnd.readChanRvol(27)) // CSND_CHAN27_RVOL
+            DEF_IO16(0x10103766, data = core->csnd.readChanLvol(27)) // CSND_CHAN27_LVOL
+            DEF_IO32(0x1010376C, data = core->csnd.readChanStart(27)) // CSND_CHAN27_START
+            DEF_IO16(0x10103780, data = core->csnd.readChanCnt(28)) // CSND_CHAN28_CNT
+            DEF_IO16(0x10103784, data = core->csnd.readChanRvol(28)) // CSND_CHAN28_RVOL
+            DEF_IO16(0x10103786, data = core->csnd.readChanLvol(28)) // CSND_CHAN28_LVOL
+            DEF_IO32(0x1010378C, data = core->csnd.readChanStart(28)) // CSND_CHAN28_START
+            DEF_IO16(0x101037A0, data = core->csnd.readChanCnt(29)) // CSND_CHAN29_CNT
+            DEF_IO16(0x101037A4, data = core->csnd.readChanRvol(29)) // CSND_CHAN29_RVOL
+            DEF_IO16(0x101037A6, data = core->csnd.readChanLvol(29)) // CSND_CHAN29_LVOL
+            DEF_IO32(0x101037AC, data = core->csnd.readChanStart(29)) // CSND_CHAN29_START
+            DEF_IO16(0x101037C0, data = core->csnd.readChanCnt(30)) // CSND_CHAN30_CNT
+            DEF_IO16(0x101037C4, data = core->csnd.readChanRvol(30)) // CSND_CHAN30_RVOL
+            DEF_IO16(0x101037C6, data = core->csnd.readChanLvol(30)) // CSND_CHAN30_LVOL
+            DEF_IO32(0x101037CC, data = core->csnd.readChanStart(30)) // CSND_CHAN30_START
+            DEF_IO16(0x101037E0, data = core->csnd.readChanCnt(31)) // CSND_CHAN31_CNT
+            DEF_IO16(0x101037E4, data = core->csnd.readChanRvol(31)) // CSND_CHAN31_RVOL
+            DEF_IO16(0x101037E6, data = core->csnd.readChanLvol(31)) // CSND_CHAN31_LVOL
+            DEF_IO32(0x101037EC, data = core->csnd.readChanStart(31)) // CSND_CHAN31_START
             DEF_IO32(0x10140420, data = readCfg11BrOverlayCnt()) // CFG11_BR_OVERLAY_CNT
             DEF_IO32(0x10140424, data = readCfg11BrOverlayVal()) // CFG11_BR_OVERLAY_VAL
             DEF_IO16(0x10140FFC, data = core->interrupts.readCfg11Socinfo()) // CFG11_SOCINFO
@@ -999,6 +1129,296 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
             DEF_IO32(0x10101054, core->shas[0].writeHash(5, IO_PARAMS)) // SHA_HASH5_11
             DEF_IO32(0x10101058, core->shas[0].writeHash(6, IO_PARAMS)) // SHA_HASH6_11
             DEF_IO32(0x1010105C, core->shas[0].writeHash(7, IO_PARAMS)) // SHA_HASH7_11
+            DEF_IO16(0x10103000, core->csnd.writeMainVol(IO_PARAMS)) // CSND_MAIN_VOL
+            DEF_IO16(0x10103002, core->csnd.writeMainCnt(IO_PARAMS)) // CSND_MAIN_CNT
+            DEF_IO16(0x10103400, core->csnd.writeChanCnt(0, IO_PARAMS)) // CSND_CHAN0_CNT
+            DEF_IO16(0x10103402, core->csnd.writeChanRate(0, IO_PARAMS)) // CSND_CHAN0_RATE
+            DEF_IO16(0x10103404, core->csnd.writeChanRvol(0, IO_PARAMS)) // CSND_CHAN0_RVOL
+            DEF_IO16(0x10103406, core->csnd.writeChanLvol(0, IO_PARAMS)) // CSND_CHAN0_LVOL
+            DEF_IO32(0x1010340C, core->csnd.writeChanStart(0, IO_PARAMS)) // CSND_CHAN0_START
+            DEF_IO32(0x10103410, core->csnd.writeChanSize(0, IO_PARAMS)) // CSND_CHAN0_SIZE
+            DEF_IO32(0x10103414, core->csnd.writeChanLoop(0, IO_PARAMS)) // CSND_CHAN0_LOOP
+            DEF_IO32(0x10103418, core->csnd.writeAdpcmStart(0, IO_PARAMS)) // CSND_ADPCM0_START
+            DEF_IO32(0x1010341C, core->csnd.writeAdpcmLoop(0, IO_PARAMS)) // CSND_ADPCM0_LOOP
+            DEF_IO16(0x10103420, core->csnd.writeChanCnt(1, IO_PARAMS)) // CSND_CHAN1_CNT
+            DEF_IO16(0x10103422, core->csnd.writeChanRate(1, IO_PARAMS)) // CSND_CHAN1_RATE
+            DEF_IO16(0x10103424, core->csnd.writeChanRvol(1, IO_PARAMS)) // CSND_CHAN1_RVOL
+            DEF_IO16(0x10103426, core->csnd.writeChanLvol(1, IO_PARAMS)) // CSND_CHAN1_LVOL
+            DEF_IO32(0x1010342C, core->csnd.writeChanStart(1, IO_PARAMS)) // CSND_CHAN1_START
+            DEF_IO32(0x10103430, core->csnd.writeChanSize(1, IO_PARAMS)) // CSND_CHAN1_SIZE
+            DEF_IO32(0x10103434, core->csnd.writeChanLoop(1, IO_PARAMS)) // CSND_CHAN1_LOOP
+            DEF_IO32(0x10103438, core->csnd.writeAdpcmStart(1, IO_PARAMS)) // CSND_ADPCM1_START
+            DEF_IO32(0x1010343C, core->csnd.writeAdpcmLoop(1, IO_PARAMS)) // CSND_ADPCM1_LOOP
+            DEF_IO16(0x10103440, core->csnd.writeChanCnt(2, IO_PARAMS)) // CSND_CHAN2_CNT
+            DEF_IO16(0x10103442, core->csnd.writeChanRate(2, IO_PARAMS)) // CSND_CHAN2_RATE
+            DEF_IO16(0x10103444, core->csnd.writeChanRvol(2, IO_PARAMS)) // CSND_CHAN2_RVOL
+            DEF_IO16(0x10103446, core->csnd.writeChanLvol(2, IO_PARAMS)) // CSND_CHAN2_LVOL
+            DEF_IO32(0x1010344C, core->csnd.writeChanStart(2, IO_PARAMS)) // CSND_CHAN2_START
+            DEF_IO32(0x10103450, core->csnd.writeChanSize(2, IO_PARAMS)) // CSND_CHAN2_SIZE
+            DEF_IO32(0x10103454, core->csnd.writeChanLoop(2, IO_PARAMS)) // CSND_CHAN2_LOOP
+            DEF_IO32(0x10103458, core->csnd.writeAdpcmStart(2, IO_PARAMS)) // CSND_ADPCM2_START
+            DEF_IO32(0x1010345C, core->csnd.writeAdpcmLoop(2, IO_PARAMS)) // CSND_ADPCM2_LOOP
+            DEF_IO16(0x10103460, core->csnd.writeChanCnt(3, IO_PARAMS)) // CSND_CHAN3_CNT
+            DEF_IO16(0x10103462, core->csnd.writeChanRate(3, IO_PARAMS)) // CSND_CHAN3_RATE
+            DEF_IO16(0x10103464, core->csnd.writeChanRvol(3, IO_PARAMS)) // CSND_CHAN3_RVOL
+            DEF_IO16(0x10103466, core->csnd.writeChanLvol(3, IO_PARAMS)) // CSND_CHAN3_LVOL
+            DEF_IO32(0x1010346C, core->csnd.writeChanStart(3, IO_PARAMS)) // CSND_CHAN3_START
+            DEF_IO32(0x10103470, core->csnd.writeChanSize(3, IO_PARAMS)) // CSND_CHAN3_SIZE
+            DEF_IO32(0x10103474, core->csnd.writeChanLoop(3, IO_PARAMS)) // CSND_CHAN3_LOOP
+            DEF_IO32(0x10103478, core->csnd.writeAdpcmStart(3, IO_PARAMS)) // CSND_ADPCM3_START
+            DEF_IO32(0x1010347C, core->csnd.writeAdpcmLoop(3, IO_PARAMS)) // CSND_ADPCM3_LOOP
+            DEF_IO16(0x10103480, core->csnd.writeChanCnt(4, IO_PARAMS)) // CSND_CHAN4_CNT
+            DEF_IO16(0x10103482, core->csnd.writeChanRate(4, IO_PARAMS)) // CSND_CHAN4_RATE
+            DEF_IO16(0x10103484, core->csnd.writeChanRvol(4, IO_PARAMS)) // CSND_CHAN4_RVOL
+            DEF_IO16(0x10103486, core->csnd.writeChanLvol(4, IO_PARAMS)) // CSND_CHAN4_LVOL
+            DEF_IO32(0x1010348C, core->csnd.writeChanStart(4, IO_PARAMS)) // CSND_CHAN4_START
+            DEF_IO32(0x10103490, core->csnd.writeChanSize(4, IO_PARAMS)) // CSND_CHAN4_SIZE
+            DEF_IO32(0x10103494, core->csnd.writeChanLoop(4, IO_PARAMS)) // CSND_CHAN4_LOOP
+            DEF_IO32(0x10103498, core->csnd.writeAdpcmStart(4, IO_PARAMS)) // CSND_ADPCM4_START
+            DEF_IO32(0x1010349C, core->csnd.writeAdpcmLoop(4, IO_PARAMS)) // CSND_ADPCM4_LOOP
+            DEF_IO16(0x101034A0, core->csnd.writeChanCnt(5, IO_PARAMS)) // CSND_CHAN5_CNT
+            DEF_IO16(0x101034A2, core->csnd.writeChanRate(5, IO_PARAMS)) // CSND_CHAN5_RATE
+            DEF_IO16(0x101034A4, core->csnd.writeChanRvol(5, IO_PARAMS)) // CSND_CHAN5_RVOL
+            DEF_IO16(0x101034A6, core->csnd.writeChanLvol(5, IO_PARAMS)) // CSND_CHAN5_LVOL
+            DEF_IO32(0x101034AC, core->csnd.writeChanStart(5, IO_PARAMS)) // CSND_CHAN5_START
+            DEF_IO32(0x101034B0, core->csnd.writeChanSize(5, IO_PARAMS)) // CSND_CHAN5_SIZE
+            DEF_IO32(0x101034B4, core->csnd.writeChanLoop(5, IO_PARAMS)) // CSND_CHAN5_LOOP
+            DEF_IO32(0x101034B8, core->csnd.writeAdpcmStart(5, IO_PARAMS)) // CSND_ADPCM5_START
+            DEF_IO32(0x101034BC, core->csnd.writeAdpcmLoop(5, IO_PARAMS)) // CSND_ADPCM5_LOOP
+            DEF_IO16(0x101034C0, core->csnd.writeChanCnt(6, IO_PARAMS)) // CSND_CHAN6_CNT
+            DEF_IO16(0x101034C2, core->csnd.writeChanRate(6, IO_PARAMS)) // CSND_CHAN6_RATE
+            DEF_IO16(0x101034C4, core->csnd.writeChanRvol(6, IO_PARAMS)) // CSND_CHAN6_RVOL
+            DEF_IO16(0x101034C6, core->csnd.writeChanLvol(6, IO_PARAMS)) // CSND_CHAN6_LVOL
+            DEF_IO32(0x101034CC, core->csnd.writeChanStart(6, IO_PARAMS)) // CSND_CHAN6_START
+            DEF_IO32(0x101034D0, core->csnd.writeChanSize(6, IO_PARAMS)) // CSND_CHAN6_SIZE
+            DEF_IO32(0x101034D4, core->csnd.writeChanLoop(6, IO_PARAMS)) // CSND_CHAN6_LOOP
+            DEF_IO32(0x101034D8, core->csnd.writeAdpcmStart(6, IO_PARAMS)) // CSND_ADPCM6_START
+            DEF_IO32(0x101034DC, core->csnd.writeAdpcmLoop(6, IO_PARAMS)) // CSND_ADPCM6_LOOP
+            DEF_IO16(0x101034E0, core->csnd.writeChanCnt(7, IO_PARAMS)) // CSND_CHAN7_CNT
+            DEF_IO16(0x101034E2, core->csnd.writeChanRate(7, IO_PARAMS)) // CSND_CHAN7_RATE
+            DEF_IO16(0x101034E4, core->csnd.writeChanRvol(7, IO_PARAMS)) // CSND_CHAN7_RVOL
+            DEF_IO16(0x101034E6, core->csnd.writeChanLvol(7, IO_PARAMS)) // CSND_CHAN7_LVOL
+            DEF_IO32(0x101034EC, core->csnd.writeChanStart(7, IO_PARAMS)) // CSND_CHAN7_START
+            DEF_IO32(0x101034F0, core->csnd.writeChanSize(7, IO_PARAMS)) // CSND_CHAN7_SIZE
+            DEF_IO32(0x101034F4, core->csnd.writeChanLoop(7, IO_PARAMS)) // CSND_CHAN7_LOOP
+            DEF_IO32(0x101034F8, core->csnd.writeAdpcmStart(7, IO_PARAMS)) // CSND_ADPCM7_START
+            DEF_IO32(0x101034FC, core->csnd.writeAdpcmLoop(7, IO_PARAMS)) // CSND_ADPCM7_LOOP
+            DEF_IO16(0x10103500, core->csnd.writeChanCnt(8, IO_PARAMS)) // CSND_CHAN8_CNT
+            DEF_IO16(0x10103502, core->csnd.writeChanRate(8, IO_PARAMS)) // CSND_CHAN8_RATE
+            DEF_IO16(0x10103504, core->csnd.writeChanRvol(8, IO_PARAMS)) // CSND_CHAN8_RVOL
+            DEF_IO16(0x10103506, core->csnd.writeChanLvol(8, IO_PARAMS)) // CSND_CHAN8_LVOL
+            DEF_IO32(0x1010350C, core->csnd.writeChanStart(8, IO_PARAMS)) // CSND_CHAN8_START
+            DEF_IO32(0x10103510, core->csnd.writeChanSize(8, IO_PARAMS)) // CSND_CHAN8_SIZE
+            DEF_IO32(0x10103514, core->csnd.writeChanLoop(8, IO_PARAMS)) // CSND_CHAN8_LOOP
+            DEF_IO32(0x10103518, core->csnd.writeAdpcmStart(8, IO_PARAMS)) // CSND_ADPCM8_START
+            DEF_IO32(0x1010351C, core->csnd.writeAdpcmLoop(8, IO_PARAMS)) // CSND_ADPCM8_LOOP
+            DEF_IO16(0x10103520, core->csnd.writeChanCnt(9, IO_PARAMS)) // CSND_CHAN9_CNT
+            DEF_IO16(0x10103522, core->csnd.writeChanRate(9, IO_PARAMS)) // CSND_CHAN9_RATE
+            DEF_IO16(0x10103524, core->csnd.writeChanRvol(9, IO_PARAMS)) // CSND_CHAN9_RVOL
+            DEF_IO16(0x10103526, core->csnd.writeChanLvol(9, IO_PARAMS)) // CSND_CHAN9_LVOL
+            DEF_IO32(0x1010352C, core->csnd.writeChanStart(9, IO_PARAMS)) // CSND_CHAN9_START
+            DEF_IO32(0x10103530, core->csnd.writeChanSize(9, IO_PARAMS)) // CSND_CHAN9_SIZE
+            DEF_IO32(0x10103534, core->csnd.writeChanLoop(9, IO_PARAMS)) // CSND_CHAN9_LOOP
+            DEF_IO32(0x10103538, core->csnd.writeAdpcmStart(9, IO_PARAMS)) // CSND_ADPCM9_START
+            DEF_IO32(0x1010353C, core->csnd.writeAdpcmLoop(9, IO_PARAMS)) // CSND_ADPCM9_LOOP
+            DEF_IO16(0x10103540, core->csnd.writeChanCnt(10, IO_PARAMS)) // CSND_CHAN10_CNT
+            DEF_IO16(0x10103542, core->csnd.writeChanRate(10, IO_PARAMS)) // CSND_CHAN10_RATE
+            DEF_IO16(0x10103544, core->csnd.writeChanRvol(10, IO_PARAMS)) // CSND_CHAN10_RVOL
+            DEF_IO16(0x10103546, core->csnd.writeChanLvol(10, IO_PARAMS)) // CSND_CHAN10_LVOL
+            DEF_IO32(0x1010354C, core->csnd.writeChanStart(10, IO_PARAMS)) // CSND_CHAN10_START
+            DEF_IO32(0x10103550, core->csnd.writeChanSize(10, IO_PARAMS)) // CSND_CHAN10_SIZE
+            DEF_IO32(0x10103554, core->csnd.writeChanLoop(10, IO_PARAMS)) // CSND_CHAN10_LOOP
+            DEF_IO32(0x10103558, core->csnd.writeAdpcmStart(10, IO_PARAMS)) // CSND_ADPCM10_START
+            DEF_IO32(0x1010355C, core->csnd.writeAdpcmLoop(10, IO_PARAMS)) // CSND_ADPCM10_LOOP
+            DEF_IO16(0x10103560, core->csnd.writeChanCnt(11, IO_PARAMS)) // CSND_CHAN11_CNT
+            DEF_IO16(0x10103562, core->csnd.writeChanRate(11, IO_PARAMS)) // CSND_CHAN11_RATE
+            DEF_IO16(0x10103564, core->csnd.writeChanRvol(11, IO_PARAMS)) // CSND_CHAN11_RVOL
+            DEF_IO16(0x10103566, core->csnd.writeChanLvol(11, IO_PARAMS)) // CSND_CHAN11_LVOL
+            DEF_IO32(0x1010356C, core->csnd.writeChanStart(11, IO_PARAMS)) // CSND_CHAN11_START
+            DEF_IO32(0x10103570, core->csnd.writeChanSize(11, IO_PARAMS)) // CSND_CHAN11_SIZE
+            DEF_IO32(0x10103574, core->csnd.writeChanLoop(11, IO_PARAMS)) // CSND_CHAN11_LOOP
+            DEF_IO32(0x10103578, core->csnd.writeAdpcmStart(11, IO_PARAMS)) // CSND_ADPCM11_START
+            DEF_IO32(0x1010357C, core->csnd.writeAdpcmLoop(11, IO_PARAMS)) // CSND_ADPCM11_LOOP
+            DEF_IO16(0x10103580, core->csnd.writeChanCnt(12, IO_PARAMS)) // CSND_CHAN12_CNT
+            DEF_IO16(0x10103582, core->csnd.writeChanRate(12, IO_PARAMS)) // CSND_CHAN12_RATE
+            DEF_IO16(0x10103584, core->csnd.writeChanRvol(12, IO_PARAMS)) // CSND_CHAN12_RVOL
+            DEF_IO16(0x10103586, core->csnd.writeChanLvol(12, IO_PARAMS)) // CSND_CHAN12_LVOL
+            DEF_IO32(0x1010358C, core->csnd.writeChanStart(12, IO_PARAMS)) // CSND_CHAN12_START
+            DEF_IO32(0x10103590, core->csnd.writeChanSize(12, IO_PARAMS)) // CSND_CHAN12_SIZE
+            DEF_IO32(0x10103594, core->csnd.writeChanLoop(12, IO_PARAMS)) // CSND_CHAN12_LOOP
+            DEF_IO32(0x10103598, core->csnd.writeAdpcmStart(12, IO_PARAMS)) // CSND_ADPCM12_START
+            DEF_IO32(0x1010359C, core->csnd.writeAdpcmLoop(12, IO_PARAMS)) // CSND_ADPCM12_LOOP
+            DEF_IO16(0x101035A0, core->csnd.writeChanCnt(13, IO_PARAMS)) // CSND_CHAN13_CNT
+            DEF_IO16(0x101035A2, core->csnd.writeChanRate(13, IO_PARAMS)) // CSND_CHAN13_RATE
+            DEF_IO16(0x101035A4, core->csnd.writeChanRvol(13, IO_PARAMS)) // CSND_CHAN13_RVOL
+            DEF_IO16(0x101035A6, core->csnd.writeChanLvol(13, IO_PARAMS)) // CSND_CHAN13_LVOL
+            DEF_IO32(0x101035AC, core->csnd.writeChanStart(13, IO_PARAMS)) // CSND_CHAN13_START
+            DEF_IO32(0x101035B0, core->csnd.writeChanSize(13, IO_PARAMS)) // CSND_CHAN13_SIZE
+            DEF_IO32(0x101035B4, core->csnd.writeChanLoop(13, IO_PARAMS)) // CSND_CHAN13_LOOP
+            DEF_IO32(0x101035B8, core->csnd.writeAdpcmStart(13, IO_PARAMS)) // CSND_ADPCM13_START
+            DEF_IO32(0x101035BC, core->csnd.writeAdpcmLoop(13, IO_PARAMS)) // CSND_ADPCM13_LOOP
+            DEF_IO16(0x101035C0, core->csnd.writeChanCnt(14, IO_PARAMS)) // CSND_CHAN14_CNT
+            DEF_IO16(0x101035C2, core->csnd.writeChanRate(14, IO_PARAMS)) // CSND_CHAN14_RATE
+            DEF_IO16(0x101035C4, core->csnd.writeChanRvol(14, IO_PARAMS)) // CSND_CHAN14_RVOL
+            DEF_IO16(0x101035C6, core->csnd.writeChanLvol(14, IO_PARAMS)) // CSND_CHAN14_LVOL
+            DEF_IO32(0x101035CC, core->csnd.writeChanStart(14, IO_PARAMS)) // CSND_CHAN14_START
+            DEF_IO32(0x101035D0, core->csnd.writeChanSize(14, IO_PARAMS)) // CSND_CHAN14_SIZE
+            DEF_IO32(0x101035D4, core->csnd.writeChanLoop(14, IO_PARAMS)) // CSND_CHAN14_LOOP
+            DEF_IO32(0x101035D8, core->csnd.writeAdpcmStart(14, IO_PARAMS)) // CSND_ADPCM14_START
+            DEF_IO32(0x101035DC, core->csnd.writeAdpcmLoop(14, IO_PARAMS)) // CSND_ADPCM14_LOOP
+            DEF_IO16(0x101035E0, core->csnd.writeChanCnt(15, IO_PARAMS)) // CSND_CHAN15_CNT
+            DEF_IO16(0x101035E2, core->csnd.writeChanRate(15, IO_PARAMS)) // CSND_CHAN15_RATE
+            DEF_IO16(0x101035E4, core->csnd.writeChanRvol(15, IO_PARAMS)) // CSND_CHAN15_RVOL
+            DEF_IO16(0x101035E6, core->csnd.writeChanLvol(15, IO_PARAMS)) // CSND_CHAN15_LVOL
+            DEF_IO32(0x101035EC, core->csnd.writeChanStart(15, IO_PARAMS)) // CSND_CHAN15_START
+            DEF_IO32(0x101035F0, core->csnd.writeChanSize(15, IO_PARAMS)) // CSND_CHAN15_SIZE
+            DEF_IO32(0x101035F4, core->csnd.writeChanLoop(15, IO_PARAMS)) // CSND_CHAN15_LOOP
+            DEF_IO32(0x101035F8, core->csnd.writeAdpcmStart(15, IO_PARAMS)) // CSND_ADPCM15_START
+            DEF_IO32(0x101035FC, core->csnd.writeAdpcmLoop(15, IO_PARAMS)) // CSND_ADPCM15_LOOP
+            DEF_IO16(0x10103600, core->csnd.writeChanCnt(16, IO_PARAMS)) // CSND_CHAN16_CNT
+            DEF_IO16(0x10103602, core->csnd.writeChanRate(16, IO_PARAMS)) // CSND_CHAN16_RATE
+            DEF_IO16(0x10103604, core->csnd.writeChanRvol(16, IO_PARAMS)) // CSND_CHAN16_RVOL
+            DEF_IO16(0x10103606, core->csnd.writeChanLvol(16, IO_PARAMS)) // CSND_CHAN16_LVOL
+            DEF_IO32(0x1010360C, core->csnd.writeChanStart(16, IO_PARAMS)) // CSND_CHAN16_START
+            DEF_IO32(0x10103610, core->csnd.writeChanSize(16, IO_PARAMS)) // CSND_CHAN16_SIZE
+            DEF_IO32(0x10103614, core->csnd.writeChanLoop(16, IO_PARAMS)) // CSND_CHAN16_LOOP
+            DEF_IO32(0x10103618, core->csnd.writeAdpcmStart(16, IO_PARAMS)) // CSND_ADPCM16_START
+            DEF_IO32(0x1010361C, core->csnd.writeAdpcmLoop(16, IO_PARAMS)) // CSND_ADPCM16_LOOP
+            DEF_IO16(0x10103620, core->csnd.writeChanCnt(17, IO_PARAMS)) // CSND_CHAN17_CNT
+            DEF_IO16(0x10103622, core->csnd.writeChanRate(17, IO_PARAMS)) // CSND_CHAN17_RATE
+            DEF_IO16(0x10103624, core->csnd.writeChanRvol(17, IO_PARAMS)) // CSND_CHAN17_RVOL
+            DEF_IO16(0x10103626, core->csnd.writeChanLvol(17, IO_PARAMS)) // CSND_CHAN17_LVOL
+            DEF_IO32(0x1010362C, core->csnd.writeChanStart(17, IO_PARAMS)) // CSND_CHAN17_START
+            DEF_IO32(0x10103630, core->csnd.writeChanSize(17, IO_PARAMS)) // CSND_CHAN17_SIZE
+            DEF_IO32(0x10103634, core->csnd.writeChanLoop(17, IO_PARAMS)) // CSND_CHAN17_LOOP
+            DEF_IO32(0x10103638, core->csnd.writeAdpcmStart(17, IO_PARAMS)) // CSND_ADPCM17_START
+            DEF_IO32(0x1010363C, core->csnd.writeAdpcmLoop(17, IO_PARAMS)) // CSND_ADPCM17_LOOP
+            DEF_IO16(0x10103640, core->csnd.writeChanCnt(18, IO_PARAMS)) // CSND_CHAN18_CNT
+            DEF_IO16(0x10103642, core->csnd.writeChanRate(18, IO_PARAMS)) // CSND_CHAN18_RATE
+            DEF_IO16(0x10103644, core->csnd.writeChanRvol(18, IO_PARAMS)) // CSND_CHAN18_RVOL
+            DEF_IO16(0x10103646, core->csnd.writeChanLvol(18, IO_PARAMS)) // CSND_CHAN18_LVOL
+            DEF_IO32(0x1010364C, core->csnd.writeChanStart(18, IO_PARAMS)) // CSND_CHAN18_START
+            DEF_IO32(0x10103650, core->csnd.writeChanSize(18, IO_PARAMS)) // CSND_CHAN18_SIZE
+            DEF_IO32(0x10103654, core->csnd.writeChanLoop(18, IO_PARAMS)) // CSND_CHAN18_LOOP
+            DEF_IO32(0x10103658, core->csnd.writeAdpcmStart(18, IO_PARAMS)) // CSND_ADPCM18_START
+            DEF_IO32(0x1010365C, core->csnd.writeAdpcmLoop(18, IO_PARAMS)) // CSND_ADPCM18_LOOP
+            DEF_IO16(0x10103660, core->csnd.writeChanCnt(19, IO_PARAMS)) // CSND_CHAN19_CNT
+            DEF_IO16(0x10103662, core->csnd.writeChanRate(19, IO_PARAMS)) // CSND_CHAN19_RATE
+            DEF_IO16(0x10103664, core->csnd.writeChanRvol(19, IO_PARAMS)) // CSND_CHAN19_RVOL
+            DEF_IO16(0x10103666, core->csnd.writeChanLvol(19, IO_PARAMS)) // CSND_CHAN19_LVOL
+            DEF_IO32(0x1010366C, core->csnd.writeChanStart(19, IO_PARAMS)) // CSND_CHAN19_START
+            DEF_IO32(0x10103670, core->csnd.writeChanSize(19, IO_PARAMS)) // CSND_CHAN19_SIZE
+            DEF_IO32(0x10103674, core->csnd.writeChanLoop(19, IO_PARAMS)) // CSND_CHAN19_LOOP
+            DEF_IO32(0x10103678, core->csnd.writeAdpcmStart(19, IO_PARAMS)) // CSND_ADPCM19_START
+            DEF_IO32(0x1010367C, core->csnd.writeAdpcmLoop(19, IO_PARAMS)) // CSND_ADPCM19_LOOP
+            DEF_IO16(0x10103680, core->csnd.writeChanCnt(20, IO_PARAMS)) // CSND_CHAN20_CNT
+            DEF_IO16(0x10103682, core->csnd.writeChanRate(20, IO_PARAMS)) // CSND_CHAN20_RATE
+            DEF_IO16(0x10103684, core->csnd.writeChanRvol(20, IO_PARAMS)) // CSND_CHAN20_RVOL
+            DEF_IO16(0x10103686, core->csnd.writeChanLvol(20, IO_PARAMS)) // CSND_CHAN20_LVOL
+            DEF_IO32(0x1010368C, core->csnd.writeChanStart(20, IO_PARAMS)) // CSND_CHAN20_START
+            DEF_IO32(0x10103690, core->csnd.writeChanSize(20, IO_PARAMS)) // CSND_CHAN20_SIZE
+            DEF_IO32(0x10103694, core->csnd.writeChanLoop(20, IO_PARAMS)) // CSND_CHAN20_LOOP
+            DEF_IO32(0x10103698, core->csnd.writeAdpcmStart(20, IO_PARAMS)) // CSND_ADPCM20_START
+            DEF_IO32(0x1010369C, core->csnd.writeAdpcmLoop(20, IO_PARAMS)) // CSND_ADPCM20_LOOP
+            DEF_IO16(0x101036A0, core->csnd.writeChanCnt(21, IO_PARAMS)) // CSND_CHAN21_CNT
+            DEF_IO16(0x101036A2, core->csnd.writeChanRate(21, IO_PARAMS)) // CSND_CHAN21_RATE
+            DEF_IO16(0x101036A4, core->csnd.writeChanRvol(21, IO_PARAMS)) // CSND_CHAN21_RVOL
+            DEF_IO16(0x101036A6, core->csnd.writeChanLvol(21, IO_PARAMS)) // CSND_CHAN21_LVOL
+            DEF_IO32(0x101036AC, core->csnd.writeChanStart(21, IO_PARAMS)) // CSND_CHAN21_START
+            DEF_IO32(0x101036B0, core->csnd.writeChanSize(21, IO_PARAMS)) // CSND_CHAN21_SIZE
+            DEF_IO32(0x101036B4, core->csnd.writeChanLoop(21, IO_PARAMS)) // CSND_CHAN21_LOOP
+            DEF_IO32(0x101036B8, core->csnd.writeAdpcmStart(21, IO_PARAMS)) // CSND_ADPCM21_START
+            DEF_IO32(0x101036BC, core->csnd.writeAdpcmLoop(21, IO_PARAMS)) // CSND_ADPCM21_LOOP
+            DEF_IO16(0x101036C0, core->csnd.writeChanCnt(22, IO_PARAMS)) // CSND_CHAN22_CNT
+            DEF_IO16(0x101036C2, core->csnd.writeChanRate(22, IO_PARAMS)) // CSND_CHAN22_RATE
+            DEF_IO16(0x101036C4, core->csnd.writeChanRvol(22, IO_PARAMS)) // CSND_CHAN22_RVOL
+            DEF_IO16(0x101036C6, core->csnd.writeChanLvol(22, IO_PARAMS)) // CSND_CHAN22_LVOL
+            DEF_IO32(0x101036CC, core->csnd.writeChanStart(22, IO_PARAMS)) // CSND_CHAN22_START
+            DEF_IO32(0x101036D0, core->csnd.writeChanSize(22, IO_PARAMS)) // CSND_CHAN22_SIZE
+            DEF_IO32(0x101036D4, core->csnd.writeChanLoop(22, IO_PARAMS)) // CSND_CHAN22_LOOP
+            DEF_IO32(0x101036D8, core->csnd.writeAdpcmStart(22, IO_PARAMS)) // CSND_ADPCM22_START
+            DEF_IO32(0x101036DC, core->csnd.writeAdpcmLoop(22, IO_PARAMS)) // CSND_ADPCM22_LOOP
+            DEF_IO16(0x101036E0, core->csnd.writeChanCnt(23, IO_PARAMS)) // CSND_CHAN23_CNT
+            DEF_IO16(0x101036E2, core->csnd.writeChanRate(23, IO_PARAMS)) // CSND_CHAN23_RATE
+            DEF_IO16(0x101036E4, core->csnd.writeChanRvol(23, IO_PARAMS)) // CSND_CHAN23_RVOL
+            DEF_IO16(0x101036E6, core->csnd.writeChanLvol(23, IO_PARAMS)) // CSND_CHAN23_LVOL
+            DEF_IO32(0x101036EC, core->csnd.writeChanStart(23, IO_PARAMS)) // CSND_CHAN23_START
+            DEF_IO32(0x101036F0, core->csnd.writeChanSize(23, IO_PARAMS)) // CSND_CHAN23_SIZE
+            DEF_IO32(0x101036F4, core->csnd.writeChanLoop(23, IO_PARAMS)) // CSND_CHAN23_LOOP
+            DEF_IO32(0x101036F8, core->csnd.writeAdpcmStart(23, IO_PARAMS)) // CSND_ADPCM23_START
+            DEF_IO32(0x101036FC, core->csnd.writeAdpcmLoop(23, IO_PARAMS)) // CSND_ADPCM23_LOOP
+            DEF_IO16(0x10103700, core->csnd.writeChanCnt(24, IO_PARAMS)) // CSND_CHAN24_CNT
+            DEF_IO16(0x10103702, core->csnd.writeChanRate(24, IO_PARAMS)) // CSND_CHAN24_RATE
+            DEF_IO16(0x10103704, core->csnd.writeChanRvol(24, IO_PARAMS)) // CSND_CHAN24_RVOL
+            DEF_IO16(0x10103706, core->csnd.writeChanLvol(24, IO_PARAMS)) // CSND_CHAN24_LVOL
+            DEF_IO32(0x1010370C, core->csnd.writeChanStart(24, IO_PARAMS)) // CSND_CHAN24_START
+            DEF_IO32(0x10103710, core->csnd.writeChanSize(24, IO_PARAMS)) // CSND_CHAN24_SIZE
+            DEF_IO32(0x10103714, core->csnd.writeChanLoop(24, IO_PARAMS)) // CSND_CHAN24_LOOP
+            DEF_IO32(0x10103718, core->csnd.writeAdpcmStart(24, IO_PARAMS)) // CSND_ADPCM24_START
+            DEF_IO32(0x1010371C, core->csnd.writeAdpcmLoop(24, IO_PARAMS)) // CSND_ADPCM24_LOOP
+            DEF_IO16(0x10103720, core->csnd.writeChanCnt(25, IO_PARAMS)) // CSND_CHAN25_CNT
+            DEF_IO16(0x10103722, core->csnd.writeChanRate(25, IO_PARAMS)) // CSND_CHAN25_RATE
+            DEF_IO16(0x10103724, core->csnd.writeChanRvol(25, IO_PARAMS)) // CSND_CHAN25_RVOL
+            DEF_IO16(0x10103726, core->csnd.writeChanLvol(25, IO_PARAMS)) // CSND_CHAN25_LVOL
+            DEF_IO32(0x1010372C, core->csnd.writeChanStart(25, IO_PARAMS)) // CSND_CHAN25_START
+            DEF_IO32(0x10103730, core->csnd.writeChanSize(25, IO_PARAMS)) // CSND_CHAN25_SIZE
+            DEF_IO32(0x10103734, core->csnd.writeChanLoop(25, IO_PARAMS)) // CSND_CHAN25_LOOP
+            DEF_IO32(0x10103738, core->csnd.writeAdpcmStart(25, IO_PARAMS)) // CSND_ADPCM25_START
+            DEF_IO32(0x1010373C, core->csnd.writeAdpcmLoop(25, IO_PARAMS)) // CSND_ADPCM25_LOOP
+            DEF_IO16(0x10103740, core->csnd.writeChanCnt(26, IO_PARAMS)) // CSND_CHAN26_CNT
+            DEF_IO16(0x10103742, core->csnd.writeChanRate(26, IO_PARAMS)) // CSND_CHAN26_RATE
+            DEF_IO16(0x10103744, core->csnd.writeChanRvol(26, IO_PARAMS)) // CSND_CHAN26_RVOL
+            DEF_IO16(0x10103746, core->csnd.writeChanLvol(26, IO_PARAMS)) // CSND_CHAN26_LVOL
+            DEF_IO32(0x1010374C, core->csnd.writeChanStart(26, IO_PARAMS)) // CSND_CHAN26_START
+            DEF_IO32(0x10103750, core->csnd.writeChanSize(26, IO_PARAMS)) // CSND_CHAN26_SIZE
+            DEF_IO32(0x10103754, core->csnd.writeChanLoop(26, IO_PARAMS)) // CSND_CHAN26_LOOP
+            DEF_IO32(0x10103758, core->csnd.writeAdpcmStart(26, IO_PARAMS)) // CSND_ADPCM26_START
+            DEF_IO32(0x1010375C, core->csnd.writeAdpcmLoop(26, IO_PARAMS)) // CSND_ADPCM26_LOOP
+            DEF_IO16(0x10103760, core->csnd.writeChanCnt(27, IO_PARAMS)) // CSND_CHAN27_CNT
+            DEF_IO16(0x10103762, core->csnd.writeChanRate(27, IO_PARAMS)) // CSND_CHAN27_RATE
+            DEF_IO16(0x10103764, core->csnd.writeChanRvol(27, IO_PARAMS)) // CSND_CHAN27_RVOL
+            DEF_IO16(0x10103766, core->csnd.writeChanLvol(27, IO_PARAMS)) // CSND_CHAN27_LVOL
+            DEF_IO32(0x1010376C, core->csnd.writeChanStart(27, IO_PARAMS)) // CSND_CHAN27_START
+            DEF_IO32(0x10103770, core->csnd.writeChanSize(27, IO_PARAMS)) // CSND_CHAN27_SIZE
+            DEF_IO32(0x10103774, core->csnd.writeChanLoop(27, IO_PARAMS)) // CSND_CHAN27_LOOP
+            DEF_IO32(0x10103778, core->csnd.writeAdpcmStart(27, IO_PARAMS)) // CSND_ADPCM27_START
+            DEF_IO32(0x1010377C, core->csnd.writeAdpcmLoop(27, IO_PARAMS)) // CSND_ADPCM27_LOOP
+            DEF_IO16(0x10103780, core->csnd.writeChanCnt(28, IO_PARAMS)) // CSND_CHAN28_CNT
+            DEF_IO16(0x10103782, core->csnd.writeChanRate(28, IO_PARAMS)) // CSND_CHAN28_RATE
+            DEF_IO16(0x10103784, core->csnd.writeChanRvol(28, IO_PARAMS)) // CSND_CHAN28_RVOL
+            DEF_IO16(0x10103786, core->csnd.writeChanLvol(28, IO_PARAMS)) // CSND_CHAN28_LVOL
+            DEF_IO32(0x1010378C, core->csnd.writeChanStart(28, IO_PARAMS)) // CSND_CHAN28_START
+            DEF_IO32(0x10103790, core->csnd.writeChanSize(28, IO_PARAMS)) // CSND_CHAN28_SIZE
+            DEF_IO32(0x10103794, core->csnd.writeChanLoop(28, IO_PARAMS)) // CSND_CHAN28_LOOP
+            DEF_IO32(0x10103798, core->csnd.writeAdpcmStart(28, IO_PARAMS)) // CSND_ADPCM28_START
+            DEF_IO32(0x1010379C, core->csnd.writeAdpcmLoop(28, IO_PARAMS)) // CSND_ADPCM28_LOOP
+            DEF_IO16(0x101037A0, core->csnd.writeChanCnt(29, IO_PARAMS)) // CSND_CHAN29_CNT
+            DEF_IO16(0x101037A2, core->csnd.writeChanRate(29, IO_PARAMS)) // CSND_CHAN29_RATE
+            DEF_IO16(0x101037A4, core->csnd.writeChanRvol(29, IO_PARAMS)) // CSND_CHAN29_RVOL
+            DEF_IO16(0x101037A6, core->csnd.writeChanLvol(29, IO_PARAMS)) // CSND_CHAN29_LVOL
+            DEF_IO32(0x101037AC, core->csnd.writeChanStart(29, IO_PARAMS)) // CSND_CHAN29_START
+            DEF_IO32(0x101037B0, core->csnd.writeChanSize(29, IO_PARAMS)) // CSND_CHAN29_SIZE
+            DEF_IO32(0x101037B4, core->csnd.writeChanLoop(29, IO_PARAMS)) // CSND_CHAN29_LOOP
+            DEF_IO32(0x101037B8, core->csnd.writeAdpcmStart(29, IO_PARAMS)) // CSND_ADPCM29_START
+            DEF_IO32(0x101037BC, core->csnd.writeAdpcmLoop(29, IO_PARAMS)) // CSND_ADPCM29_LOOP
+            DEF_IO16(0x101037C0, core->csnd.writeChanCnt(30, IO_PARAMS)) // CSND_CHAN30_CNT
+            DEF_IO16(0x101037C2, core->csnd.writeChanRate(30, IO_PARAMS)) // CSND_CHAN30_RATE
+            DEF_IO16(0x101037C4, core->csnd.writeChanRvol(30, IO_PARAMS)) // CSND_CHAN30_RVOL
+            DEF_IO16(0x101037C6, core->csnd.writeChanLvol(30, IO_PARAMS)) // CSND_CHAN30_LVOL
+            DEF_IO32(0x101037CC, core->csnd.writeChanStart(30, IO_PARAMS)) // CSND_CHAN30_START
+            DEF_IO32(0x101037D0, core->csnd.writeChanSize(30, IO_PARAMS)) // CSND_CHAN30_SIZE
+            DEF_IO32(0x101037D4, core->csnd.writeChanLoop(30, IO_PARAMS)) // CSND_CHAN30_LOOP
+            DEF_IO32(0x101037D8, core->csnd.writeAdpcmStart(30, IO_PARAMS)) // CSND_ADPCM30_START
+            DEF_IO32(0x101037DC, core->csnd.writeAdpcmLoop(30, IO_PARAMS)) // CSND_ADPCM30_LOOP
+            DEF_IO16(0x101037E0, core->csnd.writeChanCnt(31, IO_PARAMS)) // CSND_CHAN31_CNT
+            DEF_IO16(0x101037E2, core->csnd.writeChanRate(31, IO_PARAMS)) // CSND_CHAN31_RATE
+            DEF_IO16(0x101037E4, core->csnd.writeChanRvol(31, IO_PARAMS)) // CSND_CHAN31_RVOL
+            DEF_IO16(0x101037E6, core->csnd.writeChanLvol(31, IO_PARAMS)) // CSND_CHAN31_LVOL
+            DEF_IO32(0x101037EC, core->csnd.writeChanStart(31, IO_PARAMS)) // CSND_CHAN31_START
+            DEF_IO32(0x101037F0, core->csnd.writeChanSize(31, IO_PARAMS)) // CSND_CHAN31_SIZE
+            DEF_IO32(0x101037F4, core->csnd.writeChanLoop(31, IO_PARAMS)) // CSND_CHAN31_LOOP
+            DEF_IO32(0x101037F8, core->csnd.writeAdpcmStart(31, IO_PARAMS)) // CSND_ADPCM31_START
+            DEF_IO32(0x101037FC, core->csnd.writeAdpcmLoop(31, IO_PARAMS)) // CSND_ADPCM31_LOOP
             DEF_IO32(0x10140420, writeCfg11BrOverlayCnt(IO_PARAMS)) // CFG11_BR_OVERLAY_CNT
             DEF_IO32(0x10140424, writeCfg11BrOverlayVal(IO_PARAMS)) // CFG11_BR_OVERLAY_VAL
             DEF_IO32(0x10141200, core->gpu.writeCfg11GpuCnt(IO_PARAMS)) // CFG11_GPU_CNT

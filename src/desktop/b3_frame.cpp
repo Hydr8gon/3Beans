@@ -27,6 +27,7 @@ enum FrameEvent {
     PAUSE = 1,
     RESTART,
     STOP,
+    FPS_LIMITER,
     PATH_SETTINGS,
     INPUT_BINDINGS
 };
@@ -35,6 +36,7 @@ wxBEGIN_EVENT_TABLE(b3Frame, wxFrame)
 EVT_MENU(PAUSE, b3Frame::pause)
 EVT_MENU(RESTART, b3Frame::restart)
 EVT_MENU(STOP, b3Frame::stop)
+EVT_MENU(FPS_LIMITER, b3Frame::fpsLimiter)
 EVT_MENU(PATH_SETTINGS, b3Frame::pathSettings)
 EVT_MENU(INPUT_BINDINGS, b3Frame::inputBindings)
 EVT_CLOSE(b3Frame::close)
@@ -49,8 +51,13 @@ b3Frame::b3Frame(): wxFrame(nullptr, wxID_ANY, "3Beans") {
 
     // Set up the settings menu
     wxMenu *settingsMenu = new wxMenu();
+    settingsMenu->AppendCheckItem(FPS_LIMITER, "&FPS Limiter");
+    settingsMenu->AppendSeparator();
     settingsMenu->Append(PATH_SETTINGS, "&Path Settings");
     settingsMenu->Append(INPUT_BINDINGS, "&Input Bindings");
+
+    // Set the initial settings checkbox states
+    settingsMenu->Check(FPS_LIMITER, Settings::fpsLimiter);
 
     // Set up the menu bar
     wxMenuBar *menuBar = new wxMenuBar();
@@ -160,6 +167,12 @@ void b3Frame::restart(wxCommandEvent &event) {
 void b3Frame::stop(wxCommandEvent &event) {
     // Stop the core
     stopCore(true);
+}
+
+void b3Frame::fpsLimiter(wxCommandEvent &event) {
+    // Toggle the FPS limiter setting
+    Settings::fpsLimiter = !Settings::fpsLimiter;
+    Settings::save();
 }
 
 void b3Frame::pathSettings(wxCommandEvent &event) {

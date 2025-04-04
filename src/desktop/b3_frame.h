@@ -48,6 +48,7 @@ private:
     void pause(wxCommandEvent &event);
     void restart(wxCommandEvent &event);
     void stop(wxCommandEvent &event);
+    void fpsLimiter(wxCommandEvent &event);
     void pathSettings(wxCommandEvent &event);
     void inputBindings(wxCommandEvent &event);
     void close(wxCloseEvent &event);

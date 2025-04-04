@@ -28,6 +28,7 @@
 #include "arm_interp.h"
 #include "cdma.h"
 #include "cp15.h"
+#include "csnd.h"
 #include "defines.h"
 #include "gpu.h"
 #include "i2c.h"
@@ -76,6 +77,7 @@ enum Task {
     NDMA_UPDATE,
     SHA11_UPDATE,
     SHA9_UPDATE,
+    CSND_SAMPLE,
     SDMMC0_READ_BLOCK,
     SDMMC1_READ_BLOCK,
     SDMMC0_WRITE_BLOCK,
@@ -100,6 +102,7 @@ public:
     ArmInterp arms[MAX_CPUS];
     Cdma cdmas[3];
     Cp15 cp15;
+    Csnd csnd;
     Gpu gpu;
     I2c i2c;
     Input input;
