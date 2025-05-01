@@ -78,6 +78,24 @@ void Gpu::writeMemfillCnt(int i, uint32_t mask, uint32_t value) {
     }
 }
 
+void Gpu::writeMemcopySrcAddr(uint32_t mask, uint32_t value) {
+    // Write to the GPU_MEMCOPY_SRC_ADDR register
+    mask &= 0x1FFFFFFE;
+    gpuMemcopySrcAddr = (gpuMemcopySrcAddr & ~mask) | (value & mask);
+}
+
+void Gpu::writeMemcopyDstAddr(uint32_t mask, uint32_t value) {
+    // Write to the GPU_MEMCOPY_DST_ADDR register
+    mask &= 0x1FFFFFFE;
+    gpuMemcopyDstAddr = (gpuMemcopyDstAddr & ~mask) | (value & mask);
+}
+
+void Gpu::writeMemcopyFlags(uint32_t mask, uint32_t value) {
+    // Write to the GPU_MEMCOPY_FLAGS register
+    mask &= 0x301772F;
+    gpuMemcopyFlags = (gpuMemcopyFlags & ~mask) | (value & mask);
+}
+
 void Gpu::writeMemcopyCnt(uint32_t mask, uint32_t value) {
     // Allow clearing the interrupt bit but not setting it
     if ((mask & BIT(8)) && !(value & BIT(8)))
@@ -88,6 +106,41 @@ void Gpu::writeMemcopyCnt(uint32_t mask, uint32_t value) {
     gpuMemcopyCnt |= BIT(8);
     core->interrupts.sendInterrupt(ARM11, 0x2C);
 
-    // Stub the actual memory copy for now
-    LOG_CRIT("Unimplemented GPU memory copy started\n");
+    // Check the copy mode and ignore display copies for now
+    if (~gpuMemcopyFlags & BIT(3)) {
+        LOG_CRIT("GPU memory copy started with unimplemented display mode\n");
+        return;
+    }
+
+    // Get the source and destination parameters for a texture copy
+    uint32_t srcAddr = (gpuMemcopySrcAddr << 3);
+    uint32_t srcWidth = (gpuMemcopyTexSrcWidth << 4) & 0xFFFF0;
+    uint32_t srcGap = (gpuMemcopyTexSrcWidth >> 12) & 0xFFFF0;
+    uint32_t dstAddr = (gpuMemcopyDstAddr << 3);
+    uint32_t dstWidth = (gpuMemcopyTexDstWidth << 4) & 0xFFFF0;
+    uint32_t dstGap = (gpuMemcopyTexDstWidth >> 12) & 0xFFFF0;
+
+    // Perform a texture copy, applying address gaps when widths are reached
+    LOG_INFO("Performing GPU texture copy from 0x%08X to 0x%08X with size 0x%X\n", srcAddr, dstAddr, gpuMemcopyTexSize);
+    for (uint32_t i = 0; i < gpuMemcopyTexSize; i += 4) {
+        core->memory.write<uint32_t>(ARM11, dstAddr + i, core->memory.read<uint32_t>(ARM11, srcAddr + i));
+        if (srcWidth && !((i + 4) % srcWidth)) srcAddr += srcGap;
+        if (dstWidth && !((i + 4) % dstWidth)) dstAddr += dstGap;
+    }
+}
+
+void Gpu::writeMemcopyTexSize(uint32_t mask, uint32_t value) {
+    // Write to the GPU_MEMCOPY_TEX_SIZE register
+    mask &= 0xFFFFFFF0;
+    gpuMemcopyTexSize = (gpuMemcopyTexSize & ~mask) | (value & mask);
+}
+
+void Gpu::writeMemcopyTexSrcWidth(uint32_t mask, uint32_t value) {
+    // Write to the GPU_MEMCOPY_TEX_SRC_WIDTH register
+    gpuMemcopyTexSrcWidth = (gpuMemcopyTexSrcWidth & ~mask) | (value & mask);
+}
+
+void Gpu::writeMemcopyTexDstWidth(uint32_t mask, uint32_t value) {
+    // Write to the GPU_MEMCOPY_TEX_DST_WIDTH register
+    gpuMemcopyTexDstWidth = (gpuMemcopyTexDstWidth & ~mask) | (value & mask);
 }

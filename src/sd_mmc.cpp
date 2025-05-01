@@ -178,8 +178,8 @@ void SdMmc::runCommand() {
     // Execute a normal SD/MMC command
     switch (uint8_t cmd = sdCmd & 0x3F) {
         case 2: return getCid(); // ALL_GET_CID (stub)
-        case 6: return switchFunc(); // SWITCH_FUNC
         case 8: return setIfCond(); // SET_IF_COND
+        case 9: return getCsd(); // GET_CSD
         case 10: return getCid(); // GET_CID
         case 13: return getStatus(); // GET_STATUS
         case 16: return setBlocklen(); // SET_BLOCKLEN
@@ -228,21 +228,15 @@ void SdMmc::runAppCommand() {
     }
 }
 
-void SdMmc::switchFunc() {
-    // Stub this command to return data for SD cards (needed for libn3ds)
-    LOG_WARN("Stubbed %s port %d command: CMD6\n", (sdPortSelect & BIT(0)) ? "MMC" : "SD", id);
-    pushResponse(cardStatus);
-    if (sdPortSelect & BIT(0)) return;
-
-    // Pretend to read whatever 512-bit value this returns
-    curBlock = 1;
-    for (int i = 0; i < 16; i++)
-        pushFifo(0);
-}
-
 void SdMmc::setIfCond() {
     // Respond with the same voltage and check pattern that was input
     pushResponse(sdCmdParam & 0xFFF);
+}
+
+void SdMmc::getCsd() {
+    // Pretend to read the 128-bit CSD register
+    for (int i = 0; i < 4; i++)
+        pushResponse(0);
 }
 
 void SdMmc::getCid() {

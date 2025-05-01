@@ -97,9 +97,9 @@ private:
     void runCommand();
     void runAppCommand();
 
-    void switchFunc();
     void setIfCond();
     void getCid();
+    void getCsd();
     void getStatus();
     void setBlocklen();
     void readSingleBlock();

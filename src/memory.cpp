@@ -522,7 +522,13 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x10400568, data = core->pdc.readFramebufLt0(1)) // PDC1_FRAMEBUF_LT0
                 DEF_IO32(0x10400570, data = core->pdc.readFramebufFormat(1)) // PDC1_FRAMEBUF_FORMAT
                 DEF_IO32(0x10400574, data = core->pdc.readInterruptType(1)) // PDC1_INTERRUPT_TYPE
+                DEF_IO32(0x10400C00, data = core->gpu.readMemcopySrcAddr()) // GPU_MEMCOPY_SRC_ADDR
+                DEF_IO32(0x10400C04, data = core->gpu.readMemcopyDstAddr()) // GPU_MEMCOPY_DST_ADDR
+                DEF_IO32(0x10400C10, data = core->gpu.readMemcopyFlags()) // GPU_MEMCOPY_FLAGS
                 DEF_IO32(0x10400C18, data = core->gpu.readMemcopyCnt()) // GPU_MEMCOPY_CNT
+                DEF_IO32(0x10400C20, data = core->gpu.readMemcopyTexSize()) // GPU_MEMCOPY_TEX_SIZE
+                DEF_IO32(0x10400C24, data = core->gpu.readMemcopyTexSrcWidth()) // GPU_MEMCOPY_TEX_SRC_WIDTH
+                DEF_IO32(0x10400C28, data = core->gpu.readMemcopyTexDstWidth()) // GPU_MEMCOPY_TEX_DST_WIDTH
                 DEF_IO32(0x17E00004, data = core->interrupts.readMpScuConfig()) // MP_SCU_CONFIG
                 DEF_IO32(0x17E00100, data = core->interrupts.readMpIle(id)) // MP_ILE
                 DEF_IO32(0x17E0010C, data = core->interrupts.readMpAck(id)) // MP_ACK
@@ -1480,7 +1486,13 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x10400568, core->pdc.writeFramebufLt0(1, IO_PARAMS)) // PDC1_FRAMEBUF_LT0
                 DEF_IO32(0x10400570, core->pdc.writeFramebufFormat(1, IO_PARAMS)) // PDC1_FRAMEBUF_FORMAT
                 DEF_IO32(0x10400574, core->pdc.writeInterruptType(1, IO_PARAMS)) // PDC1_INTERRUPT_TYPE
+                DEF_IO32(0x10400C00, core->gpu.writeMemcopySrcAddr(IO_PARAMS)) // GPU_MEMCOPY_SRC_ADDR
+                DEF_IO32(0x10400C04, core->gpu.writeMemcopyDstAddr(IO_PARAMS)) // GPU_MEMCOPY_DST_ADDR
+                DEF_IO32(0x10400C10, core->gpu.writeMemcopyFlags(IO_PARAMS)) // GPU_MEMCOPY_FLAGS
                 DEF_IO32(0x10400C18, core->gpu.writeMemcopyCnt(IO_PARAMS)) // GPU_MEMCOPY_CNT
+                DEF_IO32(0x10400C20, core->gpu.writeMemcopyTexSize(IO_PARAMS)) // GPU_MEMCOPY_TEX_SIZE
+                DEF_IO32(0x10400C24, core->gpu.writeMemcopyTexSrcWidth(IO_PARAMS)) // GPU_MEMCOPY_TEX_SRC_WIDTH
+                DEF_IO32(0x10400C28, core->gpu.writeMemcopyTexDstWidth(IO_PARAMS)) // GPU_MEMCOPY_TEX_DST_WIDTH
                 DEF_IO32(0x17E00100, core->interrupts.writeMpIle(id, IO_PARAMS)) // MP_ILE
                 DEF_IO32(0x17E00110, core->interrupts.writeMpEoi(id, IO_PARAMS)) // MP_EOI
                 DEF_IO32(0x17E00600, core->timers.writeMpReload(id, 0, IO_PARAMS)) // MP_RELOAD0

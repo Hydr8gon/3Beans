@@ -32,14 +32,26 @@ public:
     uint32_t readMemfillDstEnd(int i) { return gpuMemfillDstEnd[i]; }
     uint32_t readMemfillData(int i) { return gpuMemfillData[i]; }
     uint32_t readMemfillCnt(int i) { return gpuMemfillCnt[i]; }
+    uint32_t readMemcopySrcAddr() { return gpuMemcopySrcAddr; }
+    uint32_t readMemcopyDstAddr() { return gpuMemcopyDstAddr; }
+    uint32_t readMemcopyFlags() { return gpuMemcopyFlags; }
     uint32_t readMemcopyCnt() { return gpuMemcopyCnt; }
+    uint32_t readMemcopyTexSize() { return gpuMemcopyTexSize; }
+    uint32_t readMemcopyTexSrcWidth() { return gpuMemcopyTexSrcWidth; }
+    uint32_t readMemcopyTexDstWidth() { return gpuMemcopyTexDstWidth; }
 
     void writeCfg11GpuCnt(uint32_t mask, uint32_t value);
     void writeMemfillDstAddr(int i, uint32_t mask, uint32_t value);
     void writeMemfillDstEnd(int i, uint32_t mask, uint32_t value);
     void writeMemfillData(int i, uint32_t mask, uint32_t value);
     void writeMemfillCnt(int i, uint32_t mask, uint32_t value);
+    void writeMemcopySrcAddr(uint32_t mask, uint32_t value);
+    void writeMemcopyDstAddr(uint32_t mask, uint32_t value);
+    void writeMemcopyFlags(uint32_t mask, uint32_t value);
     void writeMemcopyCnt(uint32_t mask, uint32_t value);
+    void writeMemcopyTexSize(uint32_t mask, uint32_t value);
+    void writeMemcopyTexSrcWidth(uint32_t mask, uint32_t value);
+    void writeMemcopyTexDstWidth(uint32_t mask, uint32_t value);
 
 private:
     Core *core;
@@ -49,5 +61,11 @@ private:
     uint32_t gpuMemfillDstEnd[2] = {};
     uint32_t gpuMemfillData[2] = {};
     uint32_t gpuMemfillCnt[2] = {};
+    uint32_t gpuMemcopySrcAddr = 0;
+    uint32_t gpuMemcopyDstAddr = 0;
+    uint32_t gpuMemcopyFlags = 0;
     uint32_t gpuMemcopyCnt = 0;
+    uint32_t gpuMemcopyTexSize = 0;
+    uint32_t gpuMemcopyTexSrcWidth = 0;
+    uint32_t gpuMemcopyTexDstWidth = 0;
 };
