@@ -116,13 +116,18 @@ template <typename T> void Cp15::write(CpuId id, uint32_t address, T value) {
     }
     else if (mmuEnables[id]) {
         #if LOG_LEVEL > 3
-        // Extract process names from the active 3DS kernel process struct
+        // Catch writes to special memory used by the 3DS OS
         if (address == 0xFFFF9004 && value) {
-            uint32_t kCodeSet = read<uint32_t>(id, value + 0xB8);
+            // Log process names when the active 3DS kernel process struct changes
+            uint32_t kCodeSet = read<uint32_t>(id, value + 0xB0 + core->n3dsMode * 8);
             uint8_t procName[9];
             for (int i = 0; i < 8; i++)
                 procName[i] = read<uint8_t>(id, kCodeSet + 0x50 + i);
             LOG_OS("ARM11 core %d kernel switching to process '%s'\n", id, procName);
+        }
+        else if (address >= threadIdRegs[id][1] + 0x80 && address < threadIdRegs[id][1] + 0x180) {
+            // Log IPC commands when the TLS buffer is written to
+            LOG_OS("ARM11 core %d writing IPC command: 0x%X @ 0x%X\n", id, value, address - threadIdRegs[id][1] - 0x80);
         }
         #endif
 

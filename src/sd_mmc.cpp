@@ -45,7 +45,7 @@ bool SdMmc::init(SdMmc &other) {
     fseek(nand, 0x12C00, SEEK_SET);
     fread(sect96, sizeof(uint32_t), 8, nand);
     for (int i = 0; i < 8; i++)
-        if (sect96[i] != 0xFFFFFFFF) return true;
+        if (sect96[i] != 0) return true;
     return false;
 }
 
