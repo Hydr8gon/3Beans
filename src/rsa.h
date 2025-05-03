@@ -50,5 +50,5 @@ private:
     uint32_t rsaData[0x40] = {};
 
     void calculate();
-    void mulMod(uint32_t *dst, uint32_t *src, uint8_t i, int8_t inc, uint8_t size);
+    void mulMod(uint32_t *dst, uint32_t *src, uint8_t size);
 };

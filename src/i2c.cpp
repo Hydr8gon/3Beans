@@ -44,10 +44,11 @@ void I2c::writeBusCnt(int i, uint8_t value) {
 
     // Handle I2C reads if the direction is set to read
     if (value & BIT(5)) {
-        switch ((i << 16) | (devAddr << 8) | regAddr) {
+        switch ((i << 16) | (devAddr << 8) | ((regAddr += mcuInc) - mcuInc)) {
             case 0x14B00: i2cBusData[i] = 0x13; return; // Version high
             case 0x14B01: i2cBusData[i] = 0x41; return; // Version low
-            case 0x14B0F: i2cBusData[i] = readMcuPowerFlags(); return;
+            case 0x14B0B: i2cBusData[i] = 0x64; return; // Battery percent
+            case 0x14B0F: i2cBusData[i] = 0x02; return; // Power flags
             case 0x14B10: i2cBusData[i] = readMcuIrqFlags(0); return;
             case 0x14B11: i2cBusData[i] = readMcuIrqFlags(1); return;
             case 0x14B12: i2cBusData[i] = readMcuIrqFlags(2); return;
@@ -78,7 +79,7 @@ void I2c::writeBusCnt(int i, uint8_t value) {
     }
 
     // Handle I2C writes if the direction is set to write
-    switch ((i << 16) | (devAddr << 8) | regAddr) {
+    switch ((i << 16) | (devAddr << 8) | ((regAddr += mcuInc) - mcuInc)) {
         case 0x14A18: return writeMcuIrqMask(0, i2cBusData[i]);
         case 0x14A19: return writeMcuIrqMask(1, i2cBusData[i]);
         case 0x14A1A: return writeMcuIrqMask(2, i2cBusData[i]);
@@ -91,23 +92,15 @@ void I2c::writeBusCnt(int i, uint8_t value) {
     }
 }
 
-uint8_t I2c::readMcuPowerFlags() {
-    // Report the shell as being open
-    regAddr += mcuInc;
-    return 0x2;
-}
-
 uint8_t I2c::readMcuIrqFlags(int i) {
     // Read MCU interrupt flags and clear them
     uint8_t value = mcuIrqFlags >> (i << 3);
     mcuIrqFlags &= ~(0xFF << (i << 3));
-    regAddr += mcuInc;
     return value;
 }
 
 uint8_t I2c::readMcuIrqMask(int i) {
     // Read part of the MCU interrupt mask
-    regAddr += mcuInc;
     return mcuIrqMask >> (i << 3);
 }
 
@@ -115,7 +108,6 @@ void I2c::writeMcuIrqMask(int i, uint8_t value) {
     // Write part of the MCU interrupt mask
     mcuIrqMask = (mcuIrqMask & ~(0xFF << (i << 3))) | (value << (i << 3));
     mcuInterrupt(0);
-    regAddr += mcuInc;
 }
 
 void I2c::writeMcuLcdPower(uint8_t value) {
@@ -126,5 +118,4 @@ void I2c::writeMcuLcdPower(uint8_t value) {
     if (value & BIT(3)) mcuInterrupt(BIT(27)); // Bottom backlight on
     if (value & BIT(4)) mcuInterrupt(BIT(28)); // Top backlight off
     if (value & BIT(5)) mcuInterrupt(BIT(29)); // Top backlight on
-    regAddr += mcuInc;
 }

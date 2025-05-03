@@ -21,24 +21,20 @@
 #include "core.h"
 
 void Rsa::calculate() {
-    // Get the exponent and endianness settings to use
+    // Get the exponent and set initial large numbers for RSA calculation
     std::deque<uint32_t> &exp = expFifos[(rsaCnt >> 4) & 0x3];
-    uint8_t i = (rsaCnt & BIT(9)) ? 0x3F : 0;
-    int8_t inc = (rsaCnt & BIT(9)) ? -1 : 1;
     uint8_t size = exp.size();
-
-    // Set initial large numbers for RSA calculation
     uint32_t base[0x40];
     memcpy(base, rsaData, sizeof(base));
     memset(rsaData, 0, sizeof(rsaData));
-    rsaData[i] = 1;
+    rsaData[0] = 1;
 
     // Apply the exponent using multiplication and modulo after every step
     for (int j = 0; j < size; j++) {
         for (int k = 0; k < 32; k++) {
             if (exp[j] & BIT(k))
-                mulMod(rsaData, base, i, inc, size);
-            mulMod(base, base, i, inc, size);
+                mulMod(rsaData, base, size);
+            mulMod(base, base, size);
         }
     }
 
@@ -49,12 +45,12 @@ void Rsa::calculate() {
     LOG_INFO("RSA calculation performed\n");
 }
 
-void Rsa::mulMod(uint32_t *dst, uint32_t *src, uint8_t i, int8_t inc, uint8_t size) {
+void Rsa::mulMod(uint32_t *dst, uint32_t *src, uint8_t size) {
     // Initialize arrays for the following calculations
     uint32_t *mod = rsaMods[(rsaCnt >> 4) & 0x3];
     uint32_t temp[0x80];
     uint32_t over = 0;
-    uint8_t d = i, s = i, t = 0;
+    uint8_t d = 0, s = 0, t = 0;
     temp[t + 0] = 0;
 
     // Calculate the lower half of a long multiplication
@@ -62,14 +58,13 @@ void Rsa::mulMod(uint32_t *dst, uint32_t *src, uint8_t i, int8_t inc, uint8_t si
         temp[t + 1] = over;
         over = 0;
         for (int k = 0; k <= j; k++) {
-            uint64_t val = uint64_t(dst[d + k * inc]) * src[s - k * inc];
+            uint64_t val = uint64_t(dst[d + k]) * src[s - k];
             uint64_t res = val + ((uint64_t(temp[t + 1]) << 32) | temp[t + 0]);
             temp[t + 0] = (res >> 0);
             temp[t + 1] = (res >> 32);
             over += (res < val);
         }
-        t += 1;
-        s += inc;
+        s++, t++;
     }
 
     // Calculate the upper half of a long multiplication
@@ -77,14 +72,13 @@ void Rsa::mulMod(uint32_t *dst, uint32_t *src, uint8_t i, int8_t inc, uint8_t si
         temp[t + 1] = over;
         over = 0;
         for (int k = 1; k <= j; k++) {
-            uint64_t val = uint64_t(dst[d + k * inc]) * src[s - k * inc];
+            uint64_t val = uint64_t(dst[d + k]) * src[s - k];
             uint64_t res = val + ((uint64_t(temp[t + 1]) << 32) | temp[t + 0]);
             temp[t + 0] = (res >> 0);
             temp[t + 1] = (res >> 32);
             over += (res < val);
         }
-        t += 1;
-        d += inc;
+        d++, t++;
     }
 
     // Apply the selected modulo to the multiplication result
@@ -95,7 +89,7 @@ void Rsa::mulMod(uint32_t *dst, uint32_t *src, uint8_t i, int8_t inc, uint8_t si
             // Check if the current segment is less than the modulo
             if (temp[j + size - 1] == 0) continue;
             for (int k = size - 1; k >= 0; k--) {
-                if (int64_t cmp = int64_t(temp[j + k]) - mod[i + k * inc]) {
+                if (int64_t cmp = int64_t(temp[j + k]) - mod[k]) {
                     check = (cmp > 0);
                     break;
                 }
@@ -105,7 +99,7 @@ void Rsa::mulMod(uint32_t *dst, uint32_t *src, uint8_t i, int8_t inc, uint8_t si
             // If not, subtract the modulo from the segment
             bool under = false;
             for (int k = 0; k < size; k++) {
-                uint32_t res = temp[j + k] - mod[i + k * inc] - under;
+                uint32_t res = temp[j + k] - mod[k] - under;
                 under = (res > temp[j + k] || (res == temp[j + k] && under));
                 temp[j + k] = res;
             }
@@ -114,7 +108,7 @@ void Rsa::mulMod(uint32_t *dst, uint32_t *src, uint8_t i, int8_t inc, uint8_t si
         }
 
         // Calculate a multiplication factor for the modulo
-        uint32_t factor = mod[i + (size - 1) * inc];
+        uint32_t factor = mod[size - 1];
         if (temp[j + size] >= factor)
             factor = 0xFFFFFFFF;
         else if (factor != 0)
@@ -124,7 +118,7 @@ void Rsa::mulMod(uint32_t *dst, uint32_t *src, uint8_t i, int8_t inc, uint8_t si
         uint32_t msw = 0;
         bool under = false;
         for (int k = 0; k < size; k++) {
-            uint64_t val = uint64_t(mod[i + k * inc]) * factor + msw;
+            uint64_t val = uint64_t(mod[k]) * factor + msw;
             uint32_t res = temp[j + k] - val - under;
             under = (res > temp[j + k] || (res == temp[j + k] && under));
             temp[j + k] = res;
@@ -137,7 +131,7 @@ void Rsa::mulMod(uint32_t *dst, uint32_t *src, uint8_t i, int8_t inc, uint8_t si
         // Add the modulo back to the segment until there's no underflow
         while (under) {
             for (int k = 0; k < size; k++) {
-                res = temp[j + k] + mod[i + k * inc] + !under;
+                res = temp[j + k] + mod[k] + !under;
                 under = !(res < temp[j + k] || (res == temp[j + k] && !under));
                 temp[j + k] = res;
             }
@@ -148,17 +142,19 @@ void Rsa::mulMod(uint32_t *dst, uint32_t *src, uint8_t i, int8_t inc, uint8_t si
 
     // Copy the final result to the destination
     for (int j = 0; j < size; j++)
-        dst[i + j * inc] = temp[j];
+        dst[j] = temp[j];
 }
 
 uint32_t Rsa::readMod(int i) {
     // Read from part of the selected RSA_MOD value based on endian settings
+    if (rsaCnt & BIT(9)) i = 63 - i;
     uint32_t value = rsaMods[(rsaCnt >> 4) & 0x3][i];
     return (rsaCnt & BIT(8)) ? BSWAP32(value) : value;
 }
 
 uint32_t Rsa::readData(int i) {
     // Read from part of the RSA_DATA value based on endian settings
+    if (rsaCnt & BIT(9)) i = 63 - i;
     return (rsaCnt & BIT(8)) ? BSWAP32(rsaData[i]) : rsaData[i];
 }
 
@@ -180,6 +176,7 @@ void Rsa::writeSlotcnt(int i, uint32_t mask, uint32_t value) {
 
 void Rsa::writeMod(int i, uint32_t mask, uint32_t value) {
     // Write to part of the selected RSA_MOD value based on endian settings
+    if (rsaCnt & BIT(9)) i = 63 - i;
     uint32_t *mod = rsaMods[(rsaCnt >> 4) & 0x3];
     mod[i] = (rsaCnt & BIT(8)) ? (mod[i] & ~BSWAP32(mask)) |
         BSWAP32(value & mask) : (mod[i] & ~mask) | (value & mask);
@@ -187,6 +184,7 @@ void Rsa::writeMod(int i, uint32_t mask, uint32_t value) {
 
 void Rsa::writeData(int i, uint32_t mask, uint32_t value) {
     // Write to part of the RSA_DATA value based on endian settings
+    if (rsaCnt & BIT(9)) i = 63 - i;
     rsaData[i] = (rsaCnt & BIT(8)) ? (rsaData[i] & ~BSWAP32(mask)) |
         BSWAP32(value & mask) : (rsaData[i] & ~mask) | (value & mask);
 }
