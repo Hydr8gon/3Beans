@@ -64,12 +64,12 @@ void Interrupts::interrupt(CpuId id) {
     // Trigger an interrupt on a CPU if enabled and unhalt it
     if (~core->arms[id].cpsr & BIT(7))
         core->arms[id].exception(0x18);
-    core->arms[id].halted &= ~(BIT(0) | BIT(1));
+    core->arms[id].unhalt(BIT(0) | BIT(1));
 }
 
 void Interrupts::halt(CpuId id, uint8_t type) {
     // Halt a CPU and check if all ARM11 cores have been halted
-    core->arms[id].halted |= BIT(type);
+    core->arms[id].halt(BIT(type));
     if (id != ARM9 && core->arms[ARM11A].halted && core->arms[ARM11B].halted &&
             core->arms[ARM11C].halted && core->arms[ARM11D].halted) {
         // Update the current clock/FCRAM mode and trigger an interrupt if changed
@@ -168,7 +168,7 @@ void Interrupts::writeCfg11MpBootcnt(int i, uint8_t value) {
 
     // Enable an extra ARM11 core if newly started
     if ((cfg11MpBootcnt[i - 2] & (BIT(0) | BIT(4))) != BIT(0)) return;
-    core->arms[i].halted &= ~(BIT(0) | BIT(1));
+    core->arms[i].unhalt(BIT(0) | BIT(1));
     cfg11MpBootcnt[i - 2] |= (BIT(4) | BIT(5));
     LOG_INFO("Enabling ARM11 core %d\n", i);
 

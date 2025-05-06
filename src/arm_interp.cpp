@@ -27,7 +27,7 @@ ArmInterp::ArmInterp(Core *core, CpuId id): core(core), id(id) {
 
     // Don't start extra ARM11 cores right away
     if (id == ARM11C || id == ARM11D)
-        halted |= BIT(0);
+        halt(BIT(0));
 }
 
 void ArmInterp::init() {
@@ -39,7 +39,15 @@ void ArmInterp::init() {
 
 void ArmInterp::resetCycles() {
     // Adjust CPU cycles for a global cycle reset
-    cycles -= std::min(core->globalCycles, cycles);
+    if (cycles != -1)
+        cycles -= std::min(core->globalCycles, cycles);
+}
+
+void ArmInterp::stopCycles(Core *core) {
+    // Set the next cycle of halted CPUs to an unreachable value
+    for (int i = 0; i < MAX_CPUS; i++)
+        if (core->arms[i].halted)
+            core->arms[i].cycles = -1;
 }
 
 template void ArmInterp::runFrame<false>(Core *core);
@@ -51,23 +59,23 @@ template <bool extra> void ArmInterp::runFrame(Core *core) {
         while (core->events[0].cycles > core->globalCycles) {
             // Run 2 or 4 ARM11 cores depending on execution mode
             for (int i = 0; i < (extra ? 4 : 2); i++)
-                if (!core->arms[i].halted && core->globalCycles >= core->arms[i].cycles)
+                if (core->globalCycles >= core->arms[i].cycles)
                     core->arms[i].cycles = core->globalCycles + core->arms[i].runOpcode();
 
-            // Run the ARM9 at half the speed of the ARM11
-            if (!core->arms[ARM9].halted && core->globalCycles >= core->arms[ARM9].cycles)
+            // Run the ARM9 and DSP at half the speed of the ARM11
+            if (core->globalCycles >= core->arms[ARM9].cycles)
                 core->arms[ARM9].cycles = core->globalCycles + (core->arms[ARM9].runOpcode() << 1);
+            if (core->globalCycles >= core->teak.cycles)
+                core->teak.cycles = core->globalCycles + (core->teak.runOpcode() << 1);
 
             // Count cycles up to the next soonest CPU event
-            core->globalCycles = core->arms[ARM9].halted ? -1 : core->arms[ARM9].cycles;
+            core->globalCycles = std::min(core->arms[ARM9].cycles, core->teak.cycles);
             for (int i = 0; i < (extra ? 4 : 2); i++)
-                core->globalCycles = std::min(core->globalCycles, core->arms[i].halted ? -1 : core->arms[i].cycles);
+                core->globalCycles = std::min(core->globalCycles, core->arms[i].cycles);
         }
 
-        // Jump to the next scheduled event
+        // Jump to the next task and run all that are scheduled now
         core->globalCycles = core->events[0].cycles;
-
-        // Run all events that are scheduled now
         while (core->events[0].cycles <= core->globalCycles) {
             (*core->events[0].task)();
             core->events.erase(core->events.begin());
@@ -99,6 +107,22 @@ FORCE_INLINE int ArmInterp::runOpcode() {
             default: return (this->*armInstrs[((opcode >> 16) & 0xFF0) | ((opcode >> 4) & 0xF)])(opcode);
         }
     }
+}
+
+void ArmInterp::halt(uint8_t mask) {
+    // Set a halt bit and disable the CPU if newly halted
+    bool before = halted;
+    halted |= mask;
+    if (!before && halted)
+        core->schedule(ARM_STOP_CYCLES, 0);
+}
+
+void ArmInterp::unhalt(uint8_t mask) {
+    // Clear a halt bit and enable the CPU if newly unhalted
+    bool before = halted;
+    halted &= ~mask;
+    if (before && !halted)
+        cycles = 0;
 }
 
 int ArmInterp::exception(uint8_t vector) {

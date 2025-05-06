@@ -195,7 +195,7 @@ int ArmInterp::sev(uint32_t opcode) {
     for (int i = 0; cores >> i; i++) {
         if (~cores & BIT(i)) continue;
         if (core->arms[i].halted & BIT(1))
-            core->arms[i].halted &= ~BIT(1);
+            core->arms[i].unhalt(BIT(1));
         else
             core->arms[i].event = true;
     }

@@ -30,6 +30,7 @@
 #include "cp15.h"
 #include "csnd.h"
 #include "defines.h"
+#include "dsp.h"
 #include "gpu.h"
 #include "i2c.h"
 #include "input.h"
@@ -42,6 +43,7 @@
 #include "sd_mmc.h"
 #include "settings.h"
 #include "sha.h"
+#include "teak_interp.h"
 #include "timers.h"
 #include "vfp11_interp.h"
 
@@ -53,6 +55,7 @@ enum Task {
     RESET_CYCLES,
     END_FRAME,
     TOGGLE_RUN_FUNC,
+    ARM_STOP_CYCLES,
     ARM11A_INTERRUPT,
     ARM11B_INTERRUPT,
     ARM11C_INTERRUPT,
@@ -103,6 +106,7 @@ public:
     Cdma cdmas[3];
     Cp15 cp15;
     Csnd csnd;
+    Dsp dsp;
     Gpu gpu;
     I2c i2c;
     Input input;
@@ -114,6 +118,7 @@ public:
     Rsa rsa;
     SdMmc sdMmcs[2];
     Sha shas[2];
+    TeakInterp teak;
     Timers timers;
     Vfp11Interp vfp11s[MAX_CPUS - 1];
 

@@ -34,7 +34,11 @@ public:
     void init();
 
     void resetCycles();
+    static void stopCycles(Core *core);
     template <bool extra> static void runFrame(Core *core);
+
+    void halt(uint8_t mask);
+    void unhalt(uint8_t mask);
     int exception(uint8_t vector);
 
 private:
