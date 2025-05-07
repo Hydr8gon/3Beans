@@ -17,27 +17,16 @@
     along with 3Beans. If not, see <https://www.gnu.org/licenses/>.
 */
 
-#pragma once
+#include "core.h"
 
-#include <cstdint>
+int TeakInterp::loadPage(uint16_t opcode) { // LOAD Imm8u, PAGE
+    // Set the data page to an 8-bit immediate
+    writeMod1((regMod[1] & 0xFF00) | (opcode & 0xFF));
+    return 1;
+}
 
-class Core;
-
-class Dsp {
-public:
-    Dsp(Core *core): core(core) {}
-
-    uint16_t readData(uint16_t address);
-    void writeData(uint16_t address, uint16_t value);
-
-    uint16_t readPcfg() { return dspPcfg; }
-    uint16_t readPsts() { return dspPsts; }
-
-    void writePcfg(uint16_t mask, uint16_t value);
-
-private:
-    Core *core;
-
-    uint16_t dspPcfg = 0x1;
-    uint16_t dspPsts = 0xE100;
-};
+int TeakInterp::movI16sm(uint16_t opcode) { // MOV Imm16, SttMod
+    // Move a 16-bit immediate to an SttMod register
+    (this->*writeSttMod[opcode & 0x7])(readParam());
+    return 2;
+}

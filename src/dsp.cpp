@@ -21,6 +21,25 @@
 
 #include "core.h"
 
+uint16_t Dsp::readData(uint16_t address) {
+    // Read a value from DSP data memory if not within the I/O area
+    if (address < 0x8000 || address >= 0x8800)
+        return core->memory.read<uint16_t>(ARM11, 0x1FF40000 + (address << 1));
+
+    // Stub DSP I/O reads for now
+    LOG_WARN("Unknown DSP I/O read: 0x%X\n", address);
+    return 0;
+}
+
+void Dsp::writeData(uint16_t address, uint16_t value) {
+    // Write a value to DSP data memory if not within the I/O area
+    if (address < 0x8000 || address >= 0x8800)
+        return core->memory.write<uint16_t>(ARM11, 0x1FF40000 + (address << 1), value);
+
+    // Stub DSP I/O writes for now
+    LOG_WARN("Unknown DSP I/O write: 0x%X\n", address);
+}
+
 void Dsp::writePcfg(uint16_t mask, uint16_t value) {
     // Write to the DSP_PCFG register
     dspPcfg = (dspPcfg & ~mask) | (value & mask);

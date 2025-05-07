@@ -28,11 +28,44 @@ public:
     uint64_t cycles = -1;
     uint32_t regPc = 0;
 
-    TeakInterp(Core *core): core(core) {}
+    TeakInterp(Core *core);
 
     void resetCycles();
     int runOpcode();
 
 private:
     Core *core;
+
+    static int (TeakInterp::*teakInstrs[0x10000])(uint16_t);
+    static void (TeakInterp::*writeSttMod[0x8])(uint16_t);
+
+    int64_t regA[2] = {};
+    uint16_t regSt[3] = {};
+    uint16_t regIcr = 0;
+    uint16_t regStt[3] = {};
+    uint16_t regMod[4] = { 0x4 };
+
+    uint16_t readParam();
+    bool checkCond(uint8_t cond);
+
+    void writeA(bool i, int64_t value);
+    void writeStt0(uint16_t value);
+    void writeStt1(uint16_t value);
+    void writeStt2(uint16_t value);
+    void writeMod0(uint16_t value);
+    void writeMod1(uint16_t value);
+    void writeMod2(uint16_t value);
+    void writeMod3(uint16_t value);
+    void writeNone(uint16_t value);
+
+    int unkOp(uint16_t opcode);
+
+    int clrrA(uint16_t opcode);
+    int cmpuMi8(uint16_t opcode);
+
+    int br(uint16_t opcode);
+    int nop(uint16_t opcode);
+
+    int loadPage(uint16_t opcode);
+    int movI16sm(uint16_t opcode);
 };

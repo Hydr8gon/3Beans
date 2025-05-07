@@ -17,27 +17,17 @@
     along with 3Beans. If not, see <https://www.gnu.org/licenses/>.
 */
 
-#pragma once
+#include "core.h"
 
-#include <cstdint>
+int TeakInterp::br(uint16_t opcode) { // BR Address18, Cond
+    // Branch to an 18-bit address if the condition is met
+    uint16_t param = readParam();
+    if (checkCond(opcode))
+        regPc = ((opcode << 12) & 0x30000) | param;
+    return 2;
+}
 
-class Core;
-
-class Dsp {
-public:
-    Dsp(Core *core): core(core) {}
-
-    uint16_t readData(uint16_t address);
-    void writeData(uint16_t address, uint16_t value);
-
-    uint16_t readPcfg() { return dspPcfg; }
-    uint16_t readPsts() { return dspPsts; }
-
-    void writePcfg(uint16_t mask, uint16_t value);
-
-private:
-    Core *core;
-
-    uint16_t dspPcfg = 0x1;
-    uint16_t dspPsts = 0xE100;
-};
+int TeakInterp::nop(uint16_t opcode) { // NOP
+    // Do nothing
+    return 1;
+}
