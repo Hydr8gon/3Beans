@@ -21,9 +21,28 @@
 
 int (TeakInterp::*TeakInterp::teakInstrs[])(uint16_t) = {};
 
-void (TeakInterp::*TeakInterp::writeSttMod[0x8])(uint16_t) = {
+void (TeakInterp::*TeakInterp::writeRegister[])(uint16_t) = {
+    &TeakInterp::writeR<0>, &TeakInterp::writeR<1>, &TeakInterp::writeR<2>, &TeakInterp::writeR<3>,
+    &TeakInterp::writeR<4>, &TeakInterp::writeR<5>, &TeakInterp::writeR<7>, &TeakInterp::writeY0,
+    &TeakInterp::writeSt0, &TeakInterp::writeSt1, &TeakInterp::writeSt2, &TeakInterp::writeP0h,
+    &TeakInterp::writePc, &TeakInterp::writeSp, &TeakInterp::writeCfg<0>, &TeakInterp::writeCfg<1>,
+    &TeakInterp::writeBh<0>, &TeakInterp::writeBh<1>, &TeakInterp::writeBl<0>, &TeakInterp::writeBl<1>,
+    &TeakInterp::writeExt<0>, &TeakInterp::writeExt<1>, &TeakInterp::writeExt<2>, &TeakInterp::writeExt<3>,
+    &TeakInterp::writeA16<0>, &TeakInterp::writeA16<1>, &TeakInterp::writeAl<0>, &TeakInterp::writeAl<1>,
+    &TeakInterp::writeAh<0>, &TeakInterp::writeAh<1>, &TeakInterp::writeLc, &TeakInterp::writeSv
+};
+
+void (TeakInterp::*TeakInterp::writeSttMod[])(uint16_t) = {
     &TeakInterp::writeStt0, &TeakInterp::writeStt1, &TeakInterp::writeStt2, &TeakInterp::writeNone,
     &TeakInterp::writeMod0, &TeakInterp::writeMod1, &TeakInterp::writeMod2, &TeakInterp::writeMod3
+};
+
+void (TeakInterp::*TeakInterp::writeAb[])(int64_t) = {
+    &TeakInterp::writeB40<0>, &TeakInterp::writeB40<1>, &TeakInterp::writeA40<0>, &TeakInterp::writeA40<1>
+};
+
+void (TeakInterp::*TeakInterp::writeAx[])(int64_t) = {
+    &TeakInterp::writeA40<0>, &TeakInterp::writeA40<1>
 };
 
 TeakInterp::TeakInterp(Core *core): core(core) {
@@ -32,16 +51,32 @@ TeakInterp::TeakInterp(Core *core): core(core) {
     for (uint32_t op = 0; op < 0x10000; op++) {
         if ((op & 0xFFC0) == 0x4180)
             teakInstrs[op] = &TeakInterp::br;
+        else if ((op & 0xF800) == 0x5000)
+            teakInstrs[op] = &TeakInterp::brr;
         else if ((op & 0xEFF0) == 0x67C0)
             teakInstrs[op] = &TeakInterp::clrrA;
         else if ((op & 0xFE00) == 0xBE00)
             teakInstrs[op] = &TeakInterp::cmpuMi8;
         else if ((op & 0xFF00) == 0x0400)
             teakInstrs[op] = &TeakInterp::loadPage;
+        else if ((op & 0xF100) == 0x3000)
+            teakInstrs[op] = &TeakInterp::movAblhi8;
+        else if ((op & 0xFFE0) == 0x5E00)
+            teakInstrs[op] = &TeakInterp::movI16reg;
         else if ((op & 0xFFF8) == 0x0030)
             teakInstrs[op] = &TeakInterp::movI16sm;
+        else if ((op & 0xFC00) == 0x5800)
+            teakInstrs[op] = &TeakInterp::movRegreg;
         else if (op == 0x0000)
             teakInstrs[op] = &TeakInterp::nop;
+        else if ((op & 0xF39F) == 0xD291)
+            teakInstrs[op] = &TeakInterp::orAbaa;
+        else if ((op & 0xFE00) == 0xC000)
+            teakInstrs[op] = &TeakInterp::orI8a;
+        else if ((op & 0xF240) == 0x9240)
+            teakInstrs[op] = &TeakInterp::shfi;
+        else if ((op & 0xFEE0) == 0x8EA0)
+            teakInstrs[op] = &TeakInterp::subRega;
         else
             teakInstrs[op] = &TeakInterp::unkOp;
     }
@@ -89,10 +124,54 @@ bool TeakInterp::checkCond(uint8_t cond) {
     }
 }
 
-void TeakInterp::writeA(bool i, int64_t value) {
-    // Write to one of the 40-bit A registers and mirror extension bits to ST
-    regA[i] = (value << 24) >> 24;
-    regSt[i] = (regSt[i] & ~0xF000) | ((regA[i] >> 20) & 0xF000);
+template <int i> void TeakInterp::writeA40(int64_t value) {
+    // Write a 40-bit value to one of the A accumulators and mirror extension bits to ST
+    regA[i].v = (value << 24) >> 24;
+    regSt[i] = (regSt[i] & ~0xF000) | ((regA[i].v >> 20) & 0xF000);
+}
+
+template <int i> void TeakInterp::writeA16(uint16_t value) {
+    // Write a 16-bit value to one of the A accumulators and mirror extension bits to ST
+    regA[i].v = int16_t(value);
+    regSt[i] = (regSt[i] & ~0xF000) | ((regA[i].v >> 20) & 0xF000);
+}
+
+template <int i> void TeakInterp::writeB40(int64_t value) {
+    // Write a 40-bit value to one of the B accumulators
+    regB[i].v = (value << 24) >> 24;
+}
+
+void TeakInterp::writeP0h(uint16_t value) {
+    // Write to the upper word of the P0 register and sign-extend the 33rd bit in STT1
+    regP[0].h = value;
+    regP[0].v = int32_t(regP[0].v);
+    regStt[1] = (regStt[1] & ~0x4000) | ((value >> 1) & 0x4000);
+}
+
+void TeakInterp::writeSt0(uint16_t value) {
+    // Write to the ST0 register and mirror bits to new registers and A0
+    regSt[0] = value;
+    regStt[0] = (regStt[0] & ~0xFF) | ((regSt[0] >> 4) & 0xFE) | ((regSt[0] >> 5) & 0x1);
+    regStt[1] = (regStt[1] & ~0x10) | (regSt[0] & 0x10);
+    regMod[0] = (regMod[0] & ~0x1) | (regSt[0] & 0x1);
+    regMod[3] = (regMod[3] & ~0x380) | ((regSt[0] << 6) & 0x380);
+    regA[0].e = int16_t(regSt[0]) >> 12;
+}
+
+void TeakInterp::writeSt1(uint16_t value) {
+    // Write to the ST1 register and mirror bits to new registers and A1
+    regSt[1] = (regSt[1] & ~0xFCFF) | (value & 0xFCFF);
+    regMod[0] = (regMod[0] & ~0xC00) | (regSt[1] & 0xC00);
+    regMod[1] = (regMod[1] & ~0xFF) | (regSt[1] & 0xFF);
+    regA[1].e = int16_t(regSt[1]) >> 12;
+}
+
+void TeakInterp::writeSt2(uint16_t value) {
+    // Write to the ST2 register and mirror bits to new registers
+    regSt[2] = (regSt[2] & ~0x3FF) | (value & 0x3FF);
+    regMod[0] = (regMod[0] & ~0x380) | (regSt[2] & 0x380);
+    regMod[2] = (regMod[2] & ~0x3F) | (regSt[2] & 0x3F);
+    regMod[3] = (regMod[3] & ~0x400) | ((regSt[2] << 4) & 0x400);
 }
 
 void TeakInterp::writeStt0(uint16_t value) {
@@ -102,9 +181,11 @@ void TeakInterp::writeStt0(uint16_t value) {
 }
 
 void TeakInterp::writeStt1(uint16_t value) {
-    // Write to the STT1 register and mirror the R flag to ST0
+    // Write to the STT1 register and mirror the R flag and 33rd P bits
     regStt[1] = (regStt[1] & ~0xC010) | (value & 0xC010);
     regSt[0] = (regSt[0] & ~0x10) | (regStt[1] & 0x10);
+    regP[0].e = int16_t(regStt[1] << 1) >> 15;
+    regP[1].e = int16_t(regStt[1] << 0) >> 15;
 }
 
 void TeakInterp::writeStt2(uint16_t value) {
@@ -143,6 +224,21 @@ void TeakInterp::writeMod3(uint16_t value) {
 void TeakInterp::writeNone(uint16_t value) {
     // Ignore writes to reserved registers
 }
+
+// Define write functions for registers with no special cases
+#define WRITE_FUNC(id, reg) id(uint16_t value) { reg = value; }
+WRITE_FUNC(template <int i> void TeakInterp::writeAl, regA[i].l)
+WRITE_FUNC(template <int i> void TeakInterp::writeAh, regA[i].h)
+WRITE_FUNC(template <int i> void TeakInterp::writeBl, regB[i].l)
+WRITE_FUNC(template <int i> void TeakInterp::writeBh, regB[i].h)
+WRITE_FUNC(template <int i> void TeakInterp::writeR, regR[i])
+WRITE_FUNC(template <int i> void TeakInterp::writeExt, regExt[i])
+WRITE_FUNC(template <int i> void TeakInterp::writeCfg, regCfg[i])
+WRITE_FUNC(void TeakInterp::writeY0, regY[0])
+WRITE_FUNC(void TeakInterp::writePc, regPc)
+WRITE_FUNC(void TeakInterp::writeSp, regSp)
+WRITE_FUNC(void TeakInterp::writeSv, regSv)
+WRITE_FUNC(void TeakInterp::writeLc, regLc)
 
 int TeakInterp::unkOp(uint16_t opcode) {
     // Handle an unknown Teak DSP opcode

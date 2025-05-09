@@ -27,6 +27,13 @@ int TeakInterp::br(uint16_t opcode) { // BR Address18, Cond
     return 2;
 }
 
+int TeakInterp::brr(uint16_t opcode) { // BRR RelAddr7, Cond
+    // Branch to a relative 7-bit signed offset if the condition is met
+    if (checkCond(opcode))
+        regPc += int8_t(opcode >> 3) >> 1;
+    return 1;
+}
+
 int TeakInterp::nop(uint16_t opcode) { // NOP
     // Do nothing
     return 1;

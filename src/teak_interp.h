@@ -23,6 +23,15 @@
 
 class Core;
 
+union SplitReg {
+    int64_t v;
+    struct {
+        uint16_t l;
+        uint16_t h;
+        int32_t e;
+    };
+};
+
 class TeakInterp {
 public:
     uint64_t cycles = -1;
@@ -36,19 +45,61 @@ public:
 private:
     Core *core;
 
-    static int (TeakInterp::*teakInstrs[0x10000])(uint16_t);
-    static void (TeakInterp::*writeSttMod[0x8])(uint16_t);
+    uint16_t *readRegisterP0[0x20] = { &regR[0], &regR[1], &regR[2], &regR[3], &regR[4], &regR[5], &regR[7],
+        &regY[0], &regSt[0], &regSt[1], &regSt[2], &regP[0].l, (uint16_t*)&regPc, &regSp, &regCfg[0],
+        &regCfg[1], &regB[0].h, &regB[1].h, &regB[0].l, &regB[1].l, &regExt[0], &regExt[1], &regExt[2],
+        &regExt[3], &regA[0].l, &regA[1].l, &regA[0].l, &regA[1].l, &regA[0].h, &regA[1].h, &regLc, &regSv };
 
-    int64_t regA[2] = {};
-    uint16_t regSt[3] = {};
-    uint16_t regIcr = 0;
+    uint16_t *readAblh[0x8] = { &regB[0].l, &regB[0].h, &regB[1].l,
+        &regB[1].h, &regA[0].l, &regA[0].h, &regA[1].l, &regA[1].h };
+    int64_t *readAb[0x4] = { &regB[0].v, &regB[1].v, &regA[0].v, &regA[1].v };
+    int64_t *readAx[0x2] = { &regA[0].v, &regA[1].v };
+
+    static int (TeakInterp::*teakInstrs[0x10000])(uint16_t);
+    static void (TeakInterp::*writeRegister[0x20])(uint16_t);
+    static void (TeakInterp::*writeSttMod[0x8])(uint16_t);
+    static void (TeakInterp::*writeAb[0x4])(int64_t);
+    static void (TeakInterp::*writeAx[0x2])(int64_t);
+
+    SplitReg regA[2] = {};
+    SplitReg regB[2] = {};
+    SplitReg regP[2] = {};
+    uint16_t regY[2] = {};
+    uint16_t regR[8] = {};
+    uint16_t regExt[4] = {};
+    uint16_t regSp = 0;
+    uint16_t regSv = 0;
+    uint16_t regLc = 0;
+    uint16_t regIcr = 0xFF00;
+    uint16_t regSt[3] = { 0x0, 0x300, 0x1000 };
     uint16_t regStt[3] = {};
     uint16_t regMod[4] = { 0x4 };
+    uint16_t regCfg[2] = {};
 
     uint16_t readParam();
     bool checkCond(uint8_t cond);
+    static uint16_t calcZmne(int64_t res);
 
-    void writeA(bool i, int64_t value);
+    template <int i> void writeA40(int64_t value);
+    template <int i> void writeA16(uint16_t value);
+    template <int i> void writeAl(uint16_t value);
+    template <int i> void writeAh(uint16_t value);
+    template <int i> void writeB40(int64_t value);
+    template <int i> void writeBl(uint16_t value);
+    template <int i> void writeBh(uint16_t value);
+    template <int i> void writeR(uint16_t value);
+    template <int i> void writeExt(uint16_t value);
+    template <int i> void writeCfg(uint16_t value);
+
+    void writeP0h(uint16_t value);
+    void writeY0(uint16_t value);
+    void writePc(uint16_t value);
+    void writeSp(uint16_t value);
+    void writeSv(uint16_t value);
+    void writeLc(uint16_t value);
+    void writeSt0(uint16_t value);
+    void writeSt1(uint16_t value);
+    void writeSt2(uint16_t value);
     void writeStt0(uint16_t value);
     void writeStt1(uint16_t value);
     void writeStt2(uint16_t value);
@@ -62,10 +113,18 @@ private:
 
     int clrrA(uint16_t opcode);
     int cmpuMi8(uint16_t opcode);
+    int orAbaa(uint16_t opcode);
+    int orI8a(uint16_t opcode);
+    int shfi(uint16_t opcode);
+    int subRega(uint16_t opcode);
 
     int br(uint16_t opcode);
+    int brr(uint16_t opcode);
     int nop(uint16_t opcode);
 
     int loadPage(uint16_t opcode);
+    int movAblhi8(uint16_t opcode);
+    int movI16reg(uint16_t opcode);
     int movI16sm(uint16_t opcode);
+    int movRegreg(uint16_t opcode);
 };

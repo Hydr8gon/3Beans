@@ -40,4 +40,8 @@ private:
 
     uint16_t dspPcfg = 0x1;
     uint16_t dspPsts = 0xE100;
+
+    uint16_t miuIoBase = 0x8000;
+
+    void writeIoBase(uint16_t value);
 };

@@ -23,21 +23,40 @@
 
 uint16_t Dsp::readData(uint16_t address) {
     // Read a value from DSP data memory if not within the I/O area
-    if (address < 0x8000 || address >= 0x8800)
+    if (address < miuIoBase || address >= miuIoBase + 0x800)
         return core->memory.read<uint16_t>(ARM11, 0x1FF40000 + (address << 1));
 
-    // Stub DSP I/O reads for now
-    LOG_WARN("Unknown DSP I/O read: 0x%X\n", address);
-    return 0;
+    // Read a value from a DSP I/O register
+    switch (address - miuIoBase) {
+        case 0x11E: return miuIoBase;
+
+    default:
+        // Catch reads from unknown I/O registers
+        LOG_WARN("Unknown DSP I/O read: 0x%X\n", address);
+        return 0;
+    }
 }
 
 void Dsp::writeData(uint16_t address, uint16_t value) {
     // Write a value to DSP data memory if not within the I/O area
-    if (address < 0x8000 || address >= 0x8800)
+    if (address < miuIoBase || address >= miuIoBase + 0x800)
         return core->memory.write<uint16_t>(ARM11, 0x1FF40000 + (address << 1), value);
 
-    // Stub DSP I/O writes for now
-    LOG_WARN("Unknown DSP I/O write: 0x%X\n", address);
+    // Write a value to a DSP I/O register
+    switch (address - miuIoBase) {
+        case 0x11E: return writeIoBase(value);
+
+    default:
+        // Stub DSP I/O writes for now
+        LOG_WARN("Unknown DSP I/O write: 0x%X\n", address);
+        return;
+    }
+}
+
+void Dsp::writeIoBase(uint16_t value) {
+    // Write to the DSP I/O base address register
+    miuIoBase = (value & 0xFC00);
+    LOG_INFO("Remapping DSP I/O registers to 0x%X\n", miuIoBase);
 }
 
 void Dsp::writePcfg(uint16_t mask, uint16_t value) {
@@ -50,6 +69,7 @@ void Dsp::writePcfg(uint16_t mask, uint16_t value) {
         core->teak.regPc = 0;
     }
     else if (core->teak.cycles == -1) {
+        LOG_INFO("Starting Teak DSP execution\n");
         core->teak.cycles = 0;
     }
 }

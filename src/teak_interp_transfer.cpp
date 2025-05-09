@@ -25,8 +25,26 @@ int TeakInterp::loadPage(uint16_t opcode) { // LOAD Imm8u, PAGE
     return 1;
 }
 
+int TeakInterp::movAblhi8(uint16_t opcode) { // MOV Ablh, MemImm8
+    // Move part of an accumulator to memory addressed by an 8-bit immediate
+    core->dsp.writeData((regMod[1] << 8) | (opcode & 0xFF), *readAblh[(opcode >> 9) & 0x7]);
+    return 1;
+}
+
+int TeakInterp::movI16reg(uint16_t opcode) { // MOV Imm16, Register
+    // Move a 16-bit immediate to a register
+    (this->*writeRegister[opcode & 0x1F])(readParam());
+    return 2;
+}
+
 int TeakInterp::movI16sm(uint16_t opcode) { // MOV Imm16, SttMod
-    // Move a 16-bit immediate to an SttMod register
+    // Move a 16-bit immediate to an STT/MOD register
     (this->*writeSttMod[opcode & 0x7])(readParam());
     return 2;
+}
+
+int TeakInterp::movRegreg(uint16_t opcode) { // MOV RegisterP0, Register
+    // Move a register value to another register
+    (this->*writeRegister[(opcode >> 5) & 0x1F])(*readRegisterP0[opcode & 0x1F]);
+    return 1;
 }
