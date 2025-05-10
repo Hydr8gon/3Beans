@@ -31,6 +31,12 @@ int TeakInterp::movAblhi8(uint16_t opcode) { // MOV Ablh, MemImm8
     return 1;
 }
 
+int TeakInterp::movI16arap(uint16_t opcode) { // MOV Imm16, ArArp
+    // Move a 16-bit immediate to an AR/ARP register
+    (this->*writeArArp[opcode & 0x7])(readParam());
+    return 2;
+}
+
 int TeakInterp::movI16reg(uint16_t opcode) { // MOV Imm16, Register
     // Move a 16-bit immediate to a register
     (this->*writeRegister[opcode & 0x1F])(readParam());
@@ -43,8 +49,26 @@ int TeakInterp::movI16sm(uint16_t opcode) { // MOV Imm16, SttMod
     return 2;
 }
 
+int TeakInterp::movI16stp(uint16_t opcode) { // MOV Imm16, Step
+    // Move a 16-bit immediate to a step register
+    regStep[(opcode >> 3) & 0x1] = readParam();
+    return 2;
+}
+
 int TeakInterp::movRegreg(uint16_t opcode) { // MOV RegisterP0, Register
     // Move a register value to another register
     (this->*writeRegister[(opcode >> 5) & 0x1F])(*readRegisterP0[opcode & 0x1F]);
+    return 1;
+}
+
+int TeakInterp::popReg(uint16_t opcode) { // POP Register
+    // Pop a register from the stack
+    (this->*writeRegister[opcode & 0x1F])(core->dsp.readData(regSp++));
+    return 1;
+}
+
+int TeakInterp::pushReg(uint16_t opcode) { // PUSH Register
+    // Push a register to the stack
+    core->dsp.writeData(--regSp, *readRegister[opcode & 0x1F]);
     return 1;
 }
