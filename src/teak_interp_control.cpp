@@ -19,6 +19,25 @@
 
 #include "core.h"
 
+// Set up a block repeat with a loop count and end address
+#define BKREP_FUNC(name, op0, op1h) int TeakInterp::name(uint16_t opcode) { \
+    uint16_t param = readParam(); \
+    uint8_t count = (regStt[2] >> 12) & 0x7; \
+    if (count < 4) { \
+        bkStart[count] = regPc; \
+        bkEnd[count] = ((((op1h) & 0x30000) | param) + 1) & 0x3FFFF; \
+        bkStack[count] = regLc; \
+        regLc = (op0); \
+        regStt[2] = (regStt[2] | BIT(15)) + BIT(12); \
+        regIcr = (regIcr | BIT(4)) + BIT(5); \
+    } \
+    return 2; \
+}
+
+BKREP_FUNC(bkrepI8, (opcode & 0xFF), regPc) // BKREP Imm8u, Address16
+BKREP_FUNC(bkrepReg, *readRegister[opcode & 0x1F], (opcode << 11)) // BKREP Register, Address18
+BKREP_FUNC(bkrepR6, regR[6], (opcode << 16)) // BKREP R6, Address18
+
 int TeakInterp::br(uint16_t opcode) { // BR Address18, Cond
     // Branch to an 18-bit address if the condition is met
     uint16_t param = readParam();
@@ -97,6 +116,17 @@ int TeakInterp::nop(uint16_t opcode) { // NOP
     // Do nothing
     return 1;
 }
+
+// Set up the next opcode to repeat with a count value
+#define REP_FUNC(name, op0) int TeakInterp::name(uint16_t opcode) { \
+    repCount = (op0) + 1; \
+    repAddr = regPc; \
+    return 1; \
+}
+
+REP_FUNC(repI8, (opcode & 0xFF)) // REP Imm8u
+REP_FUNC(repReg, *readRegister[opcode & 0x1F]) // REP Register
+REP_FUNC(repR6, regR[6]) // REP R6
 
 int TeakInterp::ret(uint16_t opcode) { // RET, Cond
     // Pop PC from the stack if the condition is met

@@ -19,45 +19,62 @@
 
 #include "core.h"
 
+int TeakInterp::loadMod(uint16_t opcode) { // LOAD Imm9u, Mod
+    // Load one of the mod values with a 9-bit immediate
+    uint16_t &value = regCfg[(opcode >> 11) & 0x1];
+    value = (value & ~0xFF80) | ((opcode << 7) & 0xFF80);
+    return 1;
+}
+
 int TeakInterp::loadPage(uint16_t opcode) { // LOAD Imm8u, PAGE
-    // Set the data page to an 8-bit immediate
+    // Load the data page with an 8-bit immediate
     writeMod1((regMod[1] & 0xFF00) | (opcode & 0xFF));
     return 1;
 }
 
-int TeakInterp::movAblhi8(uint16_t opcode) { // MOV Ablh, MemImm8
-    // Move part of an accumulator to memory addressed by an 8-bit immediate
-    core->dsp.writeData((regMod[1] << 8) | (opcode & 0xFF), *readAblh[(opcode >> 9) & 0x7]);
+int TeakInterp::loadStep(uint16_t opcode) { // LOAD Imm7s, Step
+    // Load one of the step values with a 7-bit immediate
+    uint16_t &value = regCfg[(opcode >> 10) & 0x1];
+    value = (value & ~0x7F) | (opcode & 0x7F);
     return 1;
 }
 
-int TeakInterp::movI16arap(uint16_t opcode) { // MOV Imm16, ArArp
-    // Move a 16-bit immediate to an AR/ARP register
-    (this->*writeArArp[opcode & 0x7])(readParam());
-    return 2;
+// Move a value to a register directly
+#define MOV_FUNC(name, op0, op1, cyc) int TeakInterp::name(uint16_t opcode) { \
+    op1 = op0; \
+    return cyc; \
 }
 
-int TeakInterp::movI16reg(uint16_t opcode) { // MOV Imm16, Register
-    // Move a 16-bit immediate to a register
-    (this->*writeRegister[opcode & 0x1F])(readParam());
-    return 2;
+MOV_FUNC(movI16r6, readParam(), regR[6], 2) // MOV Imm16, R6
+MOV_FUNC(movI16stp, readParam(), regStep[(opcode >> 3) & 0x1], 2) // MOV Imm16, Step0
+MOV_FUNC(movRegr6, *readRegister[opcode & 0x1F], regR[6], 1) // MOV Register, R6
+
+// Move a value to a register using a write handler
+#define MOVH_FUNC(name, op0, op1, cyc) int TeakInterp::name(uint16_t opcode) { \
+    (this->*op1)(op0); \
+    return cyc; \
 }
 
-int TeakInterp::movI16sm(uint16_t opcode) { // MOV Imm16, SttMod
-    // Move a 16-bit immediate to an STT/MOD register
-    (this->*writeSttMod[opcode & 0x7])(readParam());
-    return 2;
+MOVH_FUNC(movI16arap, readParam(), writeArArp[opcode & 0x7], 2) // MOV Imm16, ArArp
+MOVH_FUNC(movI16reg, readParam(), writeRegister[opcode & 0x1F], 2) // MOV Imm16, Register
+MOVH_FUNC(movI16sm, readParam(), writeSttMod[opcode & 0x7], 2) // MOV Imm16, SttMod
+MOVH_FUNC(movMi16a, int16_t(core->dsp.readData(readParam())), writeAx[(opcode >> 8) & 0x1], 2) // MOV MemImm16, Ax
+MOVH_FUNC(movRegreg, *readRegisterP0[opcode & 0x1F], writeRegister[(opcode >> 5) & 0x1F], 1) // MOV RegisterP0, Register
+
+// Move a value to an address in data memory
+#define MOVM_FUNC(name, op0, op1a, cyc) int TeakInterp::name(uint16_t opcode) { \
+    core->dsp.writeData(op1a, op0); \
+    return cyc; \
 }
 
-int TeakInterp::movI16stp(uint16_t opcode) { // MOV Imm16, Step
-    // Move a 16-bit immediate to a step register
-    regStep[(opcode >> 3) & 0x1] = readParam();
-    return 2;
-}
+MOVM_FUNC(movAblhmi8, *readAblh[(opcode >> 9) & 0x7], (regMod[1] << 8) | (opcode & 0xFF), 1) // MOV Ablh, MemImm8
+MOVM_FUNC(movAlmi16, regA[(opcode >> 8) & 0x1].l, readParam(), 2) // MOV Axl, MemImm16
+MOVM_FUNC(movRegmrn, *readRegister[(opcode >> 5) & 0x1F], getRnStepZids(opcode), 1) // MOV Register, MemRnStepZids
 
-int TeakInterp::movRegreg(uint16_t opcode) { // MOV RegisterP0, Register
-    // Move a register value to another register
-    (this->*writeRegister[(opcode >> 5) & 0x1F])(*readRegisterP0[opcode & 0x1F]);
+int TeakInterp::movpPmareg(uint16_t opcode) { // MOVP ProgMemAx, Register
+    // Move program memory addressed by an A accumulator to a register
+    uint32_t address = 0x1FF00000 + ((regA[(opcode >> 5) & 0x1].v & 0x3FFFF) << 1);
+    (this->*writeRegister[opcode & 0x1F])(core->memory.read<uint16_t>(ARM11, address));
     return 1;
 }
 

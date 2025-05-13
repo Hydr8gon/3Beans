@@ -19,8 +19,6 @@
 
 #include "core.h"
 
-int (TeakInterp::*TeakInterp::teakInstrs[])(uint16_t) = {};
-
 void (TeakInterp::*TeakInterp::writeRegister[])(uint16_t) = {
     &TeakInterp::writeR<0>, &TeakInterp::writeR<1>, &TeakInterp::writeR<2>, &TeakInterp::writeR<3>,
     &TeakInterp::writeR<4>, &TeakInterp::writeR<5>, &TeakInterp::writeR<7>, &TeakInterp::writeY0,
@@ -46,79 +44,13 @@ void (TeakInterp::*TeakInterp::writeAb[])(int64_t) = {
     &TeakInterp::writeB40<0>, &TeakInterp::writeB40<1>, &TeakInterp::writeA40<0>, &TeakInterp::writeA40<1>
 };
 
-void (TeakInterp::*TeakInterp::writeAx[])(int64_t) = {
-    &TeakInterp::writeA40<0>, &TeakInterp::writeA40<1>
-};
+void (TeakInterp::**TeakInterp::writeAx)(int64_t) = &writeAb[2];
+void (TeakInterp::**TeakInterp::writeBx)(int64_t) = &writeAb[0];
 
 TeakInterp::TeakInterp(Core *core): core(core) {
-    // Initialize the instruction lookup table if it hasn't been already
-    if (teakInstrs[0]) return;
-    for (uint32_t op = 0; op < 0x10000; op++) {
-        if ((op & 0xFFE0) == 0x87E0)
-            teakInstrs[op] = &TeakInterp::addvReg;
-        else if ((op & 0xFFC0) == 0x4180)
-            teakInstrs[op] = &TeakInterp::br;
-        else if ((op & 0xF800) == 0x5000)
-            teakInstrs[op] = &TeakInterp::brr;
-        else if ((op & 0xFFC0) == 0x41C0)
-            teakInstrs[op] = &TeakInterp::call;
-        else if ((op & 0xEFF0) == 0x6760)
-            teakInstrs[op] = &TeakInterp::clrA;
-        else if ((op & 0xEFF0) == 0x67C0)
-            teakInstrs[op] = &TeakInterp::clrrA;
-        else if ((op & 0xFEE0) == 0x9EA0)
-            teakInstrs[op] = &TeakInterp::cmpuReg;
-        else if ((op & 0xFE00) == 0xBE00)
-            teakInstrs[op] = &TeakInterp::cmpuMi8;
-        else if (op == 0xD390)
-            teakInstrs[op] = &TeakInterp::cntxR;
-        else if (op == 0xD380)
-            teakInstrs[op] = &TeakInterp::cntxS;
-        else if ((op & 0xEFF0) == 0x67E0)
-            teakInstrs[op] = &TeakInterp::dec;
-        else if (op == 0x43C0)
-            teakInstrs[op] = &TeakInterp::dint;
-        else if (op == 0x4380)
-            teakInstrs[op] = &TeakInterp::eint;
-        else if ((op & 0xFF00) == 0x0400)
-            teakInstrs[op] = &TeakInterp::loadPage;
-        else if ((op & 0xF100) == 0x3000)
-            teakInstrs[op] = &TeakInterp::movAblhi8;
-        else if ((op & 0xFFF8) == 0x0008)
-            teakInstrs[op] = &TeakInterp::movI16arap;
-        else if ((op & 0xFFE0) == 0x5E00)
-            teakInstrs[op] = &TeakInterp::movI16reg;
-        else if ((op & 0xFFF8) == 0x0030)
-            teakInstrs[op] = &TeakInterp::movI16sm;
-        else if ((op & 0xFC00) == 0x5800)
-            teakInstrs[op] = &TeakInterp::movRegreg;
-        else if ((op & 0xFFF7) == 0x8971)
-            teakInstrs[op] = &TeakInterp::movI16stp;
-        else if (op == 0x0000)
-            teakInstrs[op] = &TeakInterp::nop;
-        else if ((op & 0xF39F) == 0xD291)
-            teakInstrs[op] = &TeakInterp::orAba;
-        else if ((op & 0xFEFF) == 0x80C0)
-            teakInstrs[op] = &TeakInterp::orI16;
-        else if ((op & 0xFE00) == 0xC000)
-            teakInstrs[op] = &TeakInterp::orI8;
-        else if ((op & 0xFFE0) == 0x5E60)
-            teakInstrs[op] = &TeakInterp::popReg;
-        else if ((op & 0xFFE0) == 0x5E40)
-            teakInstrs[op] = &TeakInterp::pushReg;
-        else if ((op & 0xFFF0) == 0x4580)
-            teakInstrs[op] = &TeakInterp::ret;
-        else if ((op & 0xFFF8) == 0x4388)
-            teakInstrs[op] = &TeakInterp::rstI16sm;
-        else if ((op & 0xFFF8) == 0x43C8)
-            teakInstrs[op] = &TeakInterp::setI16sm;
-        else if ((op & 0xF240) == 0x9240)
-            teakInstrs[op] = &TeakInterp::shfi;
-        else if ((op & 0xFEE0) == 0x8EA0)
-            teakInstrs[op] = &TeakInterp::subRega;
-        else
-            teakInstrs[op] = &TeakInterp::unkOp;
-    }
+    // Initialize the lookup table if it hasn't been done
+    if (!teakInstrs[0])
+        initLookup();
 }
 
 void TeakInterp::resetCycles() {
@@ -127,17 +59,49 @@ void TeakInterp::resetCycles() {
         cycles -= std::min(core->globalCycles, cycles);
 }
 
+void TeakInterp::incrementPc() {
+    // Increment the program counter and check if it's at the end of a loop
+    regPc = (regPc + 1) & 0x3FFFF;
+    if (~regStt[2] & BIT(15)) return;
+    uint8_t count = ((regStt[2] >> 12) & 0x7) - 1;
+    if (regPc != bkEnd[count]) return;
+
+    // Decrement the loop counter and jump to the loop start if non-zero
+    if (regLc-- > 0) {
+        regPc = bkStart[count];
+        return;
+    }
+
+    // Finish a loop and return to the previous one if nested
+    if (count > 0) { // Nested
+        regLc = bkStack[count];
+        regStt[2] -= BIT(12);
+        regIcr -= BIT(5);
+    }
+    else { // Finished
+        regLc = 0;
+        regStt[2] &= ~0xF000;
+        regIcr &= ~0xF0;
+    }
+}
+
 int TeakInterp::runOpcode() {
+    // Reset the program counter and decrement the repeat counter if non-zero
+    if (repCount) {
+        regPc = repAddr;
+        repCount--;
+    }
+
     // Look up an instruction to execute and increment the program counter
     uint16_t opcode = core->memory.read<uint16_t>(ARM11, 0x1FF00000 + (regPc << 1));
-    regPc = (regPc + 1) & 0x3FFFF;
+    incrementPc();
     return (this->*teakInstrs[opcode])(opcode);
 }
 
 uint16_t TeakInterp::readParam() {
     // Read an additional parameter word and increment the program counter
     uint16_t param = core->memory.read<uint16_t>(ARM11, 0x1FF00000 + (regPc << 1));
-    regPc = (regPc + 1) & 0x3FFFF;
+    incrementPc();
     return param;
 }
 
@@ -171,6 +135,20 @@ uint16_t TeakInterp::calcZmne(int64_t res) {
     bool e = (res != int32_t(res));
     bool n = (!e && (((res >> 1) ^ res) & BIT(30))) || z;
     return (z << 7) | (m << 6) | (n << 5) | (e << 2);
+}
+
+uint16_t TeakInterp::getRnStepZids(uint8_t rnStep) {
+    // Get an address register value and post-adjust with a ZIDS step
+    uint16_t &reg = regR[rnStep & 0x7];
+    switch ((rnStep >> 3) & 0x3) {
+        case 0: return reg; // Zero
+        case 1: return reg++; // Increment
+        case 2: return reg--; // Decrement
+
+    default: // Step
+        LOG_CRIT("Unhandled Teak DSP step mode used\n");
+        return reg;
+    }
 }
 
 template <int i> void TeakInterp::writeA40(int64_t value) {
@@ -298,6 +276,5 @@ WRITE_FUNC(void TeakInterp::writeLc, regLc)
 int TeakInterp::unkOp(uint16_t opcode) {
     // Handle an unknown Teak DSP opcode
     LOG_CRIT("Unknown Teak DSP opcode: 0x%X\n", opcode);
-    regPc = (regPc - 1) & 0x3FFFF;
     return 1;
 }
