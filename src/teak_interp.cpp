@@ -19,7 +19,38 @@
 
 #include "core.h"
 
-void (TeakInterp::*TeakInterp::writeRegister[])(uint16_t) = {
+// Lookup table for register reads with accumulator saturation
+uint16_t (TeakInterp::*TeakInterp::readRegS[])() = {
+    &TeakInterp::readR<0>, &TeakInterp::readR<1>, &TeakInterp::readR<2>, &TeakInterp::readR<3>,
+    &TeakInterp::readR<4>, &TeakInterp::readR<5>, &TeakInterp::readR<7>, &TeakInterp::readY0,
+    &TeakInterp::readSt<0>, &TeakInterp::readSt<1>, &TeakInterp::readSt<2>, &TeakInterp::readP0h,
+    &TeakInterp::readPc, &TeakInterp::readSp, &TeakInterp::readCfg<0>, &TeakInterp::readCfg<1>,
+    &TeakInterp::readBhS<0>, &TeakInterp::readBhS<1>, &TeakInterp::readBlS<0>, &TeakInterp::readBlS<1>,
+    &TeakInterp::readExt<0>, &TeakInterp::readExt<1>, &TeakInterp::readExt<2>, &TeakInterp::readExt<3>,
+    &TeakInterp::readAlS<0>, &TeakInterp::readAlS<1>, &TeakInterp::readAlS<0>, &TeakInterp::readAlS<1>,
+    &TeakInterp::readAhS<0>, &TeakInterp::readAhS<1>, &TeakInterp::readLc, &TeakInterp::readSv
+};
+
+// Lookup table for register reads with P0 and accumulator saturation
+uint16_t (TeakInterp::*TeakInterp::readRegP0S[])() = {
+    &TeakInterp::readR<0>, &TeakInterp::readR<1>, &TeakInterp::readR<2>, &TeakInterp::readR<3>,
+    &TeakInterp::readR<4>, &TeakInterp::readR<5>, &TeakInterp::readR<7>, &TeakInterp::readY0,
+    &TeakInterp::readSt<0>, &TeakInterp::readSt<1>, &TeakInterp::readSt<2>, &TeakInterp::readP0,
+    &TeakInterp::readPc, &TeakInterp::readSp, &TeakInterp::readCfg<0>, &TeakInterp::readCfg<1>,
+    &TeakInterp::readBhS<0>, &TeakInterp::readBhS<1>, &TeakInterp::readBlS<0>, &TeakInterp::readBlS<1>,
+    &TeakInterp::readExt<0>, &TeakInterp::readExt<1>, &TeakInterp::readExt<2>, &TeakInterp::readExt<3>,
+    &TeakInterp::readAlS<0>, &TeakInterp::readAlS<1>, &TeakInterp::readAlS<0>, &TeakInterp::readAlS<1>,
+    &TeakInterp::readAhS<0>, &TeakInterp::readAhS<1>, &TeakInterp::readLc, &TeakInterp::readSv
+};
+
+// Lookup table for 16-bit accumulator reads with saturation
+uint16_t (TeakInterp::*TeakInterp::readAblhS[])()= {
+    &TeakInterp::readBlS<0>, &TeakInterp::readBhS<0>, &TeakInterp::readBlS<1>, &TeakInterp::readBhS<1>,
+    &TeakInterp::readAlS<0>, &TeakInterp::readAhS<0>, &TeakInterp::readAlS<1>, &TeakInterp::readAhS<1>
+};
+
+// Lookup table for general register writes
+void (TeakInterp::*TeakInterp::writeReg[])(uint16_t) = {
     &TeakInterp::writeR<0>, &TeakInterp::writeR<1>, &TeakInterp::writeR<2>, &TeakInterp::writeR<3>,
     &TeakInterp::writeR<4>, &TeakInterp::writeR<5>, &TeakInterp::writeR<7>, &TeakInterp::writeY0,
     &TeakInterp::writeSt0, &TeakInterp::writeSt1, &TeakInterp::writeSt2, &TeakInterp::writeP0h,
@@ -30,16 +61,31 @@ void (TeakInterp::*TeakInterp::writeRegister[])(uint16_t) = {
     &TeakInterp::writeAh<0>, &TeakInterp::writeAh<1>, &TeakInterp::writeLc, &TeakInterp::writeSv
 };
 
+// Lookup table for register writes with accumulator extension
+void (TeakInterp::*TeakInterp::writeRegAe[])(uint16_t) = {
+    &TeakInterp::writeR<0>, &TeakInterp::writeR<1>, &TeakInterp::writeR<2>, &TeakInterp::writeR<3>,
+    &TeakInterp::writeR<4>, &TeakInterp::writeR<5>, &TeakInterp::writeR<7>, &TeakInterp::writeY0,
+    &TeakInterp::writeSt0, &TeakInterp::writeSt1, &TeakInterp::writeSt2, &TeakInterp::writeP0h,
+    &TeakInterp::writePc, &TeakInterp::writeSp, &TeakInterp::writeCfg<0>, &TeakInterp::writeCfg<1>,
+    &TeakInterp::writeBhe<0>, &TeakInterp::writeBhe<1>, &TeakInterp::writeBle<0>, &TeakInterp::writeBle<1>,
+    &TeakInterp::writeExt<0>, &TeakInterp::writeExt<1>, &TeakInterp::writeExt<2>, &TeakInterp::writeExt<3>,
+    &TeakInterp::writeA16<0>, &TeakInterp::writeA16<1>, &TeakInterp::writeAle<0>, &TeakInterp::writeAle<1>,
+    &TeakInterp::writeAhe<0>, &TeakInterp::writeAhe<1>, &TeakInterp::writeLc, &TeakInterp::writeSv
+};
+
+// Lookup table for AR/ARP register writes
 void (TeakInterp::*TeakInterp::writeArArp[])(uint16_t) = {
     &TeakInterp::writeAr<0>, &TeakInterp::writeAr<1>, &TeakInterp::writeArp<0>, &TeakInterp::writeArp<1>,
     &TeakInterp::writeArp<2>, &TeakInterp::writeArp<3>, &TeakInterp::writeNone, &TeakInterp::writeNone
 };
 
+// Lookup table for STT/MOD register writes
 void (TeakInterp::*TeakInterp::writeSttMod[])(uint16_t) = {
     &TeakInterp::writeStt0, &TeakInterp::writeStt1, &TeakInterp::writeStt2, &TeakInterp::writeNone,
     &TeakInterp::writeMod0, &TeakInterp::writeMod1, &TeakInterp::writeMod2, &TeakInterp::writeMod3
 };
 
+// Lookup table for 40-bit accumulator writes
 void (TeakInterp::*TeakInterp::writeAb[])(int64_t) = {
     &TeakInterp::writeB40<0>, &TeakInterp::writeB40<1>, &TeakInterp::writeA40<0>, &TeakInterp::writeA40<1>
 };
@@ -127,6 +173,21 @@ bool TeakInterp::checkCond(uint8_t cond) {
     }
 }
 
+int64_t TeakInterp::saturate(int64_t value) {
+    // Clamp an accumulator value within a signed 32-bit range
+    if (value > 0x7FFFFFFFLL)
+        value = 0x7FFFFFFF;
+    else if (value < -0x80000000LL)
+        value = -0x80000000;
+    else
+        return value;
+
+    // Set the limit flag if saturation occurred
+    regStt[0] |= BIT(0);
+    regSt[0] |= BIT(5);
+    return value;
+}
+
 uint16_t TeakInterp::calcZmne(int64_t res) {
     // Calculate the common ZMNE flags for an accumulator operation
     res = (res << 24) >> 24;
@@ -151,21 +212,77 @@ uint16_t TeakInterp::getRnStepZids(uint8_t rnStep) {
     }
 }
 
+template <int i> uint16_t TeakInterp::readAlS() {
+    // Read from the low part of an A accumulator and saturate if enabled
+    return (regMod[0] & BIT(0)) ? regA[i].l : saturate(regA[i].v);
+}
+
+template <int i> uint16_t TeakInterp::readAhS() {
+    // Read from the high part of an A accumulator and saturate if enabled
+    return (regMod[0] & BIT(0)) ? regA[i].h : (saturate(regA[i].v) >> 16);
+}
+
+template <int i> uint16_t TeakInterp::readBlS() {
+    // Read from the low part of a B accumulator and saturate if enabled
+    return (regMod[0] & BIT(0)) ? regB[i].l : saturate(regB[i].v);
+}
+
+template <int i> uint16_t TeakInterp::readBhS() {
+    // Read from the high part of a B accumulator and saturate if enabled
+    return (regMod[0] & BIT(0)) ? regB[i].h : (saturate(regB[i].v) >> 16);
+}
+
+// Define read functions for registers with no special cases
+#define READ_FUNC(id, reg) id() { return reg; }
+READ_FUNC(template <int i> uint16_t TeakInterp::readR, regR[i])
+READ_FUNC(template <int i> uint16_t TeakInterp::readExt, regExt[i])
+READ_FUNC(template <int i> uint16_t TeakInterp::readSt, regSt[i])
+READ_FUNC(template <int i> uint16_t TeakInterp::readCfg, regCfg[i])
+READ_FUNC(uint16_t TeakInterp::readP0, regP[0].l)
+READ_FUNC(uint16_t TeakInterp::readP0h, regP[0].h)
+READ_FUNC(uint16_t TeakInterp::readY0, regY[0])
+READ_FUNC(uint16_t TeakInterp::readPc, regPc)
+READ_FUNC(uint16_t TeakInterp::readSp, regSp)
+READ_FUNC(uint16_t TeakInterp::readSv, regSv)
+READ_FUNC(uint16_t TeakInterp::readLc, regLc)
+
 template <int i> void TeakInterp::writeA40(int64_t value) {
-    // Write a 40-bit value to one of the A accumulators and mirror extension bits to ST
-    regA[i].v = (value << 24) >> 24;
+    // Write a 40-bit value to an A accumulator, saturate if enabled, and mirror extension bits to ST
+    regA[i].v = (regMod[0] & BIT(1)) ? ((value << 24) >> 24) : saturate((value << 24) >> 24);
     regSt[i] = (regSt[i] & ~0xF000) | ((regA[i].v >> 20) & 0xF000);
 }
 
 template <int i> void TeakInterp::writeA16(uint16_t value) {
-    // Write a 16-bit value to one of the A accumulators and mirror extension bits to ST
+    // Write a 16-bit value to an A accumulator and mirror extension bits to ST
     regA[i].v = int16_t(value);
     regSt[i] = (regSt[i] & ~0xF000) | ((regA[i].v >> 20) & 0xF000);
 }
 
+template <int i> void TeakInterp::writeAle(uint16_t value) {
+    // Write a 16-bit value to the low part of an A accumulator, clearing high bits
+    regA[i].v = value;
+    regSt[i] &= ~0xF000;
+}
+
+template <int i> void TeakInterp::writeAhe(uint16_t value) {
+    // Write a 16-bit value to the high part of an A accumulator, sign-extending and clearing low bits
+    regA[i].v = int32_t(value << 16);
+    regSt[i] = (regSt[i] & ~0xF000) | ((regA[i].v >> 20) & 0xF000);
+}
+
 template <int i> void TeakInterp::writeB40(int64_t value) {
-    // Write a 40-bit value to one of the B accumulators
-    regB[i].v = (value << 24) >> 24;
+    // Write a 40-bit value to a B accumulator and saturate if enabled
+    regB[i].v = (regMod[0] & BIT(1)) ? ((value << 24) >> 24) : saturate((value << 24) >> 24);
+}
+
+template <int i> void TeakInterp::writeBle(uint16_t value) {
+    // Write a 16-bit value to the low part of a B accumulator, clearing high bits
+    regB[i].v = value;
+}
+
+template <int i> void TeakInterp::writeBhe(uint16_t value) {
+    // Write a 16-bit value to the high part of a B accumulator, sign-extending and clearing low bits
+    regB[i].v = int32_t(value << 16);
 }
 
 template <int i> void TeakInterp::writeArp(uint16_t value) {

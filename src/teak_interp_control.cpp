@@ -35,7 +35,7 @@
 }
 
 BKREP_FUNC(bkrepI8, (opcode & 0xFF), regPc) // BKREP Imm8u, Address16
-BKREP_FUNC(bkrepReg, *readRegister[opcode & 0x1F], (opcode << 11)) // BKREP Register, Address18
+BKREP_FUNC(bkrepReg, *readReg[opcode & 0x1F], (opcode << 11)) // BKREP Register, Address18
 BKREP_FUNC(bkrepR6, regR[6], (opcode << 16)) // BKREP R6, Address18
 
 int TeakInterp::br(uint16_t opcode) { // BR Address18, Cond
@@ -125,7 +125,7 @@ int TeakInterp::nop(uint16_t opcode) { // NOP
 }
 
 REP_FUNC(repI8, (opcode & 0xFF)) // REP Imm8u
-REP_FUNC(repReg, *readRegister[opcode & 0x1F]) // REP Register
+REP_FUNC(repReg, *readReg[opcode & 0x1F]) // REP Register
 REP_FUNC(repR6, regR[6]) // REP R6
 
 int TeakInterp::ret(uint16_t opcode) { // RET, Cond

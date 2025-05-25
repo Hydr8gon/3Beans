@@ -47,7 +47,7 @@ int TeakInterp::loadStep(uint16_t opcode) { // LOAD Imm7s, Step
 
 MOV_FUNC(movI16r6, readParam(), regR[6], 2) // MOV Imm16, R6
 MOV_FUNC(movI16stp, readParam(), regStep[(opcode >> 3) & 0x1], 2) // MOV Imm16, Step0
-MOV_FUNC(movRegr6, *readRegister[opcode & 0x1F], regR[6], 1) // MOV Register, R6
+MOV_FUNC(movRegr6, (this->*readRegS[opcode & 0x1F])(), regR[6], 1) // MOV Register, R6
 
 // Move a value to a register using a write handler
 #define MOVH_FUNC(name, op0, op1, cyc) int TeakInterp::name(uint16_t opcode) { \
@@ -56,10 +56,10 @@ MOV_FUNC(movRegr6, *readRegister[opcode & 0x1F], regR[6], 1) // MOV Register, R6
 }
 
 MOVH_FUNC(movI16arap, readParam(), writeArArp[opcode & 0x7], 2) // MOV Imm16, ArArp
-MOVH_FUNC(movI16reg, readParam(), writeRegister[opcode & 0x1F], 2) // MOV Imm16, Register
+MOVH_FUNC(movI16reg, readParam(), writeRegAe[opcode & 0x1F], 2) // MOV Imm16, Register
 MOVH_FUNC(movI16sm, readParam(), writeSttMod[opcode & 0x7], 2) // MOV Imm16, SttMod
 MOVH_FUNC(movMi16a, int16_t(core->dsp.readData(readParam())), writeAx[(opcode >> 8) & 0x1], 2) // MOV MemImm16, Ax
-MOVH_FUNC(movRegreg, *readRegisterP0[opcode & 0x1F], writeRegister[(opcode >> 5) & 0x1F], 1) // MOV RegisterP0, Register
+MOVH_FUNC(movRegreg, (this->*readRegP0S[opcode & 0x1F])(), writeRegAe[(opcode >> 5) & 0x1F], 1) // MOV RegisterP0, Register
 
 // Move a value to an address in data memory
 #define MOVM_FUNC(name, op0, op1a, cyc) int TeakInterp::name(uint16_t opcode) { \
@@ -67,25 +67,25 @@ MOVH_FUNC(movRegreg, *readRegisterP0[opcode & 0x1F], writeRegister[(opcode >> 5)
     return cyc; \
 }
 
-MOVM_FUNC(movAblhmi8, *readAblh[(opcode >> 9) & 0x7], (regMod[1] << 8) | (opcode & 0xFF), 1) // MOV Ablh, MemImm8
+MOVM_FUNC(movAblhmi8, (this->*readAblhS[(opcode >> 9) & 0x7])(), (regMod[1] << 8) | (opcode & 0xFF), 1) // MOV Ablh, MemImm8
 MOVM_FUNC(movAlmi16, regA[(opcode >> 8) & 0x1].l, readParam(), 2) // MOV Axl, MemImm16
-MOVM_FUNC(movRegmrn, *readRegister[(opcode >> 5) & 0x1F], getRnStepZids(opcode), 1) // MOV Register, MemRnStepZids
+MOVM_FUNC(movRegmrn, (this->*readRegS[(opcode >> 5) & 0x1F])(), getRnStepZids(opcode), 1) // MOV Register, MemRnStepZids
 
 int TeakInterp::movpPmareg(uint16_t opcode) { // MOVP ProgMemAx, Register
     // Move program memory addressed by an A accumulator to a register
     uint32_t address = 0x1FF00000 + ((regA[(opcode >> 5) & 0x1].v & 0x3FFFF) << 1);
-    (this->*writeRegister[opcode & 0x1F])(core->memory.read<uint16_t>(ARM11, address));
+    (this->*writeRegAe[opcode & 0x1F])(core->memory.read<uint16_t>(ARM11, address));
     return 1;
 }
 
 int TeakInterp::popReg(uint16_t opcode) { // POP Register
     // Pop a register from the stack
-    (this->*writeRegister[opcode & 0x1F])(core->dsp.readData(regSp++));
+    (this->*writeReg[opcode & 0x1F])(core->dsp.readData(regSp++));
     return 1;
 }
 
 int TeakInterp::pushReg(uint16_t opcode) { // PUSH Register
     // Push a register to the stack
-    core->dsp.writeData(--regSp, *readRegister[opcode & 0x1F]);
+    core->dsp.writeData(--regSp, (this->*readRegS[opcode & 0x1F])());
     return 1;
 }

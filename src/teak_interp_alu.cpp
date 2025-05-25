@@ -45,7 +45,7 @@ ADDVM_FUNC(addvMrn, getRnStepZids(opcode)) // ADDV Imm16, MemRnStepZids
     return 2; \
 }
 
-ADDVR_FUNC(addvReg, *readRegister[opcode & 0x1F], (this->*writeRegister[opcode & 0x1F])) // ADDV Imm16, Register
+ADDVR_FUNC(addvReg, *readReg[opcode & 0x1F], (this->*writeReg[opcode & 0x1F])) // ADDV Imm16, Register
 ADDVR_FUNC(addvR6, regR[6], regR[6]=) // ADDV Imm16, R6
 
 // Set an accumulator to zero and update flags if the condition is met
@@ -85,7 +85,7 @@ CLRR_FUNC(clrrB, writeBx) // CLRR Bx, Cond
 
 CMPU_FUNC(cmpuMi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 8) // CMPU MemImm8, Ax
 CMPU_FUNC(cmpuMrn, core->dsp.readData(getRnStepZids(opcode)), 8) // CMPU MemRnStepZids, Ax
-CMPU_FUNC(cmpuReg, *readRegister[opcode & 0x1F], 8) // CMPU Register, Ax
+CMPU_FUNC(cmpuReg, *readReg[opcode & 0x1F], 8) // CMPU Register, Ax
 CMPU_FUNC(cmpuR6, regR[6], 3) // CMPU R6, Ax
 
 int TeakInterp::dec(uint16_t opcode) { // DEC Ax, Cond
@@ -130,7 +130,7 @@ OR_FUNC(orI8, (opcode & 0xFF), regA, 8, 8, 1) // OR Imm8u, Ax
 OR_FUNC(orMi16, core->dsp.readData(readParam()), regA, 8, 8, 2) // OR MemImm16, Ax
 OR_FUNC(orMi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), regA, 8, 8, 1) // OR MemImm8, Ax
 OR_FUNC(orMrn, core->dsp.readData(getRnStepZids(opcode)), regA, 8, 8, 1) // OR MemRnStepZids, Ax
-OR_FUNC(orReg, *readRegisterP0[opcode & 0x1F], regA, 8, 8, 1) // OR RegisterP0, Ax
+OR_FUNC(orReg, *readRegP0[opcode & 0x1F], regA, 8, 8, 1) // OR RegisterP0, Ax
 OR_FUNC(orR6, regR[6], regA, 4, 4, 1) // OR R6, Ax
 
 // Clear bits in a memory value using a 16-bit immediate and set flags
@@ -157,7 +157,7 @@ RSTM_FUNC(rstMrn, getRnStepZids(opcode)) // RST Imm16, MemRnStepZids
     return 2; \
 }
 
-RSTR_FUNC(rstReg, *readRegister[opcode & 0x1F], (this->*writeRegister[opcode & 0x1F])) // RST Imm16, Register
+RSTR_FUNC(rstReg, *readReg[opcode & 0x1F], (this->*writeReg[opcode & 0x1F])) // RST Imm16, Register
 RSTR_FUNC(rstR6, regR[6], regR[6]=) // RST Imm16, R6
 RSTR_FUNC(rstSm, *readSttMod[opcode & 0x7], (this->*writeSttMod[opcode & 0x7])) // RST Imm16, SttMod
 
@@ -185,7 +185,7 @@ SETM_FUNC(setMrn, getRnStepZids(opcode)) // SET Imm16, MemRnStepZids
     return 2; \
 }
 
-SETR_FUNC(setReg, *readRegister[opcode & 0x1F], (this->*writeRegister[opcode & 0x1F])) // SET Imm16, Register
+SETR_FUNC(setReg, *readReg[opcode & 0x1F], (this->*writeReg[opcode & 0x1F])) // SET Imm16, Register
 SETR_FUNC(setR6, regR[6], regR[6]=) // SET Imm16, R6
 SETR_FUNC(setSm, *readSttMod[opcode & 0x7], (this->*writeSttMod[opcode & 0x7])) // SET Imm16, SttMod
 
@@ -240,5 +240,5 @@ SUB16_FUNC(subI8a, (opcode & 0xFF), 8, 1) // SUB Imm8u, Ax
 SUB16_FUNC(subMi16a, core->dsp.readData(readParam()), 8, 2) // SUB MemImm16, Ax
 SUB16_FUNC(subMi8a, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 8, 1) // SUB MemImm8, Ax
 SUB16_FUNC(subMrna, core->dsp.readData(getRnStepZids(opcode)), 8, 1) // SUB MemRnStepZids, Ax
-SUB16_FUNC(subRega, *readRegisterP0[opcode & 0x1F], 8, 1) // SUB RegisterP0, Ax
+SUB16_FUNC(subRega, *readRegP0[opcode & 0x1F], 8, 1) // SUB RegisterP0, Ax
 SUB16_FUNC(subR6a, regR[6], 4, 1) // SUB R6, Ax
