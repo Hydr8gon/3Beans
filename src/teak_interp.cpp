@@ -43,10 +43,15 @@ uint16_t (TeakInterp::*TeakInterp::readRegP0S[])() = {
     &TeakInterp::readAhS<0>, &TeakInterp::readAhS<1>, &TeakInterp::readLc, &TeakInterp::readSv
 };
 
-// Lookup table for 16-bit accumulator reads with saturation
+// Lookup table for partial accumulator reads with saturation
 uint16_t (TeakInterp::*TeakInterp::readAblhS[])()= {
     &TeakInterp::readBlS<0>, &TeakInterp::readBhS<0>, &TeakInterp::readBlS<1>, &TeakInterp::readBhS<1>,
     &TeakInterp::readAlS<0>, &TeakInterp::readAhS<0>, &TeakInterp::readAlS<1>, &TeakInterp::readAhS<1>
+};
+
+// Lookup table for lower accumulator reads with saturation
+uint16_t (TeakInterp::*TeakInterp::readAblS[])()= {
+    &TeakInterp::readBlS<0>, &TeakInterp::readBlS<1>, &TeakInterp::readAlS<0>, &TeakInterp::readAlS<1>
 };
 
 // Lookup table for general register writes
@@ -86,12 +91,20 @@ void (TeakInterp::*TeakInterp::writeSttMod[])(uint16_t) = {
 };
 
 // Lookup table for 40-bit accumulator writes
-void (TeakInterp::*TeakInterp::writeAb[])(int64_t) = {
+void (TeakInterp::*TeakInterp::writeAb40[])(int64_t) = {
     &TeakInterp::writeB40<0>, &TeakInterp::writeB40<1>, &TeakInterp::writeA40<0>, &TeakInterp::writeA40<1>
 };
 
-void (TeakInterp::**TeakInterp::writeAx)(int64_t) = &writeAb[2];
-void (TeakInterp::**TeakInterp::writeBx)(int64_t) = &writeAb[0];
+// Lookup table for 16-bit accumulator writes
+void (TeakInterp::*TeakInterp::writeAb16[])(uint16_t) = {
+    &TeakInterp::writeB16<0>, &TeakInterp::writeB16<1>, &TeakInterp::writeA16<0>, &TeakInterp::writeA16<1>
+};
+
+uint16_t (TeakInterp::**TeakInterp::readAxlS)() = &readAblS[2];
+void (TeakInterp::**TeakInterp::writeAx40)(int64_t) = &writeAb40[2];
+void (TeakInterp::**TeakInterp::writeAx16)(uint16_t) = &writeAb16[2];
+void (TeakInterp::**TeakInterp::writeBx40)(int64_t) = &writeAb40[0];
+void (TeakInterp::**TeakInterp::writeBx16)(uint16_t) = &writeAb16[0];
 
 TeakInterp::TeakInterp(Core *core): core(core) {
     // Initialize the lookup table if it hasn't been done
@@ -273,6 +286,11 @@ template <int i> void TeakInterp::writeAhe(uint16_t value) {
 template <int i> void TeakInterp::writeB40(int64_t value) {
     // Write a 40-bit value to a B accumulator and saturate if enabled
     regB[i].v = (regMod[0] & BIT(1)) ? ((value << 24) >> 24) : saturate((value << 24) >> 24);
+}
+
+template <int i> void TeakInterp::writeB16(uint16_t value) {
+    // Write a 16-bit value to a B accumulator
+    regB[i].v = int16_t(value);
 }
 
 template <int i> void TeakInterp::writeBle(uint16_t value) {

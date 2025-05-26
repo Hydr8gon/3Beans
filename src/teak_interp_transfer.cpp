@@ -39,37 +39,50 @@ int TeakInterp::loadStep(uint16_t opcode) { // LOAD Imm7s, Step
     return 1;
 }
 
-// Move a value to a register directly
+// Move a value generically
 #define MOV_FUNC(name, op0, op1, cyc) int TeakInterp::name(uint16_t opcode) { \
-    op1 = op0; \
+    op1(op0); \
     return cyc; \
 }
 
-MOV_FUNC(movI16r6, readParam(), regR[6], 2) // MOV Imm16, R6
-MOV_FUNC(movI16stp, readParam(), regStep[(opcode >> 3) & 0x1], 2) // MOV Imm16, Step0
-MOV_FUNC(movRegr6, (this->*readRegS[opcode & 0x1F])(), regR[6], 1) // MOV Register, R6
+MOV_FUNC(movI16arap, readParam(), (this->*writeArArp[opcode & 0x7]), 2) // MOV Imm16, ArArp
+MOV_FUNC(movI16reg, readParam(), (this->*writeRegAe[opcode & 0x1F]), 2) // MOV Imm16, Register
+MOV_FUNC(movI16r6, readParam(), regR[6]=, 2) // MOV Imm16, R6
+MOV_FUNC(movI16sm, readParam(), (this->*writeSttMod[opcode & 0x7]), 2) // MOV Imm16, SttMod
+MOV_FUNC(movI16stp, readParam(), regStep[(opcode >> 3) & 0x1]=, 2) // MOV Imm16, Step0
+MOV_FUNC(movI8al, (opcode & 0xFF), (this->*writeAx16[(opcode >> 12) & 0x1]), 1) // MOV Imm8u, Axl
+MOV_FUNC(movI8sv, int8_t(opcode), regSv=, 1) // MOV Imm8s, SV
+MOV_FUNC(movRegr6, (this->*readRegS[opcode & 0x1F])(), regR[6]=, 1) // MOV Register, R6
 
-// Move a value to a register using a write handler
-#define MOVH_FUNC(name, op0, op1, cyc) int TeakInterp::name(uint16_t opcode) { \
-    (this->*op1)(op0); \
+// Move a value from a read handler to a write handler
+#define MOVHH_FUNC(name, op0, op1) int TeakInterp::name(uint16_t opcode) { \
+    (this->*op1)((this->*op0)()); \
+    return 1; \
+}
+
+MOVHH_FUNC(movRegb, readRegP0S[opcode & 0x1F], writeBx16[(opcode >> 5) & 0x1]) // MOV RegisterP0, Bx
+MOVHH_FUNC(movRegreg, readRegP0S[opcode & 0x1F], writeRegAe[(opcode >> 5) & 0x1F]) // MOV RegisterP0, Register
+
+// Move a value from data memory to a write handler
+#define MOVMH_FUNC(name, op0a, op1, cyc) int TeakInterp::name(uint16_t opcode) { \
+    (this->*op1)(core->dsp.readData(op0a)); \
     return cyc; \
 }
 
-MOVH_FUNC(movI16arap, readParam(), writeArArp[opcode & 0x7], 2) // MOV Imm16, ArArp
-MOVH_FUNC(movI16reg, readParam(), writeRegAe[opcode & 0x1F], 2) // MOV Imm16, Register
-MOVH_FUNC(movI16sm, readParam(), writeSttMod[opcode & 0x7], 2) // MOV Imm16, SttMod
-MOVH_FUNC(movMi16a, int16_t(core->dsp.readData(readParam())), writeAx[(opcode >> 8) & 0x1], 2) // MOV MemImm16, Ax
-MOVH_FUNC(movRegreg, (this->*readRegP0S[opcode & 0x1F])(), writeRegAe[(opcode >> 5) & 0x1F], 1) // MOV RegisterP0, Register
+MOVMH_FUNC(movMi16a, readParam(), writeAx16[(opcode >> 8) & 0x1], 2) // MOV MemImm16, Ax
+MOVMH_FUNC(movMrnreg, getRnStepZids(opcode), writeRegAe[(opcode >> 5) & 0x1F], 1) // MOV MemRnStepZids, Register
 
-// Move a value to an address in data memory
-#define MOVM_FUNC(name, op0, op1a, cyc) int TeakInterp::name(uint16_t opcode) { \
-    core->dsp.writeData(op1a, op0); \
+// Move a value from a read handler to data memory
+#define MOVHM_FUNC(name, op0, op1a, cyc) int TeakInterp::name(uint16_t opcode) { \
+    core->dsp.writeData(op1a, (this->*op0)()); \
     return cyc; \
 }
 
-MOVM_FUNC(movAblhmi8, (this->*readAblhS[(opcode >> 9) & 0x7])(), (regMod[1] << 8) | (opcode & 0xFF), 1) // MOV Ablh, MemImm8
-MOVM_FUNC(movAlmi16, regA[(opcode >> 8) & 0x1].l, readParam(), 2) // MOV Axl, MemImm16
-MOVM_FUNC(movRegmrn, (this->*readRegS[(opcode >> 5) & 0x1F])(), getRnStepZids(opcode), 1) // MOV Register, MemRnStepZids
+MOVHM_FUNC(movAblhmi8, readAblhS[(opcode >> 9) & 0x7], (regMod[1] << 8) | (opcode & 0xFF), 1) // MOV Ablh, MemImm8
+MOVHM_FUNC(movAlmi16, readAxlS[(opcode >> 8) & 0x1], readParam(), 2) // MOV Axl, MemImm16
+MOVHM_FUNC(movAlm7i16, readAxlS[(opcode >> 8) & 0x1], regR[7] + readParam(), 2) // MOV Axl, MemR7Imm16
+MOVHM_FUNC(movAlm7i7, readAxlS[(opcode >> 8) & 0x1], regR[7] + (int8_t(opcode << 1) >> 1), 1) // MOV Axl, MemR7Imm7s
+MOVHM_FUNC(movRegmrn, readRegS[(opcode >> 5) & 0x1F], getRnStepZids(opcode), 1) // MOV Register, MemRnStepZids
 
 int TeakInterp::movpPmareg(uint16_t opcode) { // MOVP ProgMemAx, Register
     // Move program memory addressed by an A accumulator to a register

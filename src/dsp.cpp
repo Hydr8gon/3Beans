@@ -28,6 +28,7 @@ uint16_t Dsp::readData(uint16_t address) {
 
     // Read a value from a DSP I/O register
     switch (address - miuIoBase) {
+        case 0x01A: return 0xC902; // Chip ID
         case 0x11E: return miuIoBase;
 
     default:
@@ -47,7 +48,7 @@ void Dsp::writeData(uint16_t address, uint16_t value) {
         case 0x11E: return writeIoBase(value);
 
     default:
-        // Stub DSP I/O writes for now
+        // Catch writes to unknown I/O registers
         LOG_WARN("Unknown DSP I/O write: 0x%X\n", address);
         return;
     }
