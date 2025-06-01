@@ -64,6 +64,17 @@ int TeakInterp::call(uint16_t opcode) { // CALL Address18, Cond
     return 2;
 }
 
+// Branch to an A accumulator address and push PC to the stack
+#define CALLA_FUNC(name, op0) int TeakInterp::name(uint16_t opcode) { \
+    core->dsp.writeData(--regSp, regPc >> ((regMod[3] & BIT(14)) ? 16 : 0)); \
+    core->dsp.writeData(--regSp, regPc >> ((regMod[3] & BIT(14)) ? 0 : 16)); \
+    regPc = (op0) & 0x3FFFF; \
+    return 1; \
+}
+
+CALLA_FUNC(callaA, regA[(opcode >> 4) & 0x1].v) // CALLA Ax
+CALLA_FUNC(callaAl, ((regStt[2] << 10) & 0x30000) | regA[(opcode >> 8) & 0x1].l) // CALLA Axl
+
 int TeakInterp::cntxR(uint16_t opcode) { // CNTX R
     // Pop status bits from shadow registers and swap page bits
     uint8_t page = regSt[1];

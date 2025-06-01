@@ -214,6 +214,18 @@ int TeakInterp::inc(uint16_t opcode) { // INC Ax, Cond
     return 1;
 }
 
+// Modify an address register as if memory was accessed and set the R flag if zero
+#define MODR_FUNC(name, op0) int TeakInterp::name(uint16_t opcode) { \
+    op0; \
+    bool r = (regR[opcode & 0x7] == 0); \
+    writeStt1((regStt[1] & ~0x10) | (r << 4)); \
+    return 1; \
+}
+
+MODR_FUNC(modrD2, stepReg(opcode & 0x7, -2)) // MODR MemRnStepD2
+MODR_FUNC(modrI2, stepReg(opcode & 0x7, 2)) // MODR MemRnStepI2
+MODR_FUNC(modrZids, getRnStepZids(opcode)) // MODR MemRnStepZids
+
 // Bitwise or a value with an A accumulator and set flags
 #define OR_FUNC(name, op0, op1b, op1s, op2s, cyc) int TeakInterp::name(uint16_t opcode) { \
     int64_t res = op1b[(opcode >> op1s) & 0x1].v | (op0); \

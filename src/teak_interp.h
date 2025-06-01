@@ -21,6 +21,8 @@
 
 #include <cstdint>
 
+#define STEP_S 0x7FFFFFFF
+
 class Core;
 
 union SplitReg {
@@ -62,19 +64,26 @@ private:
     static uint16_t (TeakInterp::*readRegS[0x20])();
     static uint16_t (TeakInterp::*readRegP0S[0x20])();
     static uint16_t (TeakInterp::*readAblhS[0x8])();
-    static uint16_t (TeakInterp::*readAblS[0x4])();
+    static int64_t (TeakInterp::*readAbS[0x4])();
     static void (TeakInterp::*writeReg[0x20])(uint16_t);
-    static void (TeakInterp::*writeRegAe[0x20])(uint16_t);
+    static void (TeakInterp::*writeRegM[0x20])(uint16_t);
     static void (TeakInterp::*writeArArp[0x8])(uint16_t);
     static void (TeakInterp::*writeSttMod[0x8])(uint16_t);
     static void (TeakInterp::*writeAb40[0x4])(int64_t);
-    static void (TeakInterp::*writeAb16[0x4])(uint16_t);
+    static void (TeakInterp::*writeAb16M[0x4])(uint16_t);
+    static void (TeakInterp::*writeAblM[0x4])(uint16_t);
 
-    static uint16_t (TeakInterp::**readAxlS)();
+    static int64_t (TeakInterp::**readAxS)();
     static void (TeakInterp::**writeAx40)(int64_t);
     static void (TeakInterp::**writeBx40)(int64_t);
-    static void (TeakInterp::**writeAx16)(uint16_t);
-    static void (TeakInterp::**writeBx16)(uint16_t);
+    static void (TeakInterp::**writeAx16M)(uint16_t);
+    static void (TeakInterp::**writeBx16M)(uint16_t);
+
+    uint8_t arRn[0x4] = { 0, 4, 2, 5 };
+    int8_t arCs[0x4] = { 0, 1, -1, 0 };
+    int32_t arPm[0x4] = { 1, 2, -2, STEP_S };
+    static int8_t offsTable[0x4];
+    static int32_t stepTable[0x8];
 
     SplitReg regA[2] = {};
     SplitReg regB[2] = {};
@@ -90,8 +99,8 @@ private:
     uint16_t regStt[3] = {};
     uint16_t regMod[4] = { 0x4 };
     uint16_t regCfg[2] = {};
-    uint16_t regStep[2] = {};
-    uint16_t regAr[2] = {};
+    uint16_t regStep0[2] = {};
+    uint16_t regAr[2] = { 0x102C, 0x56A3 };
     uint16_t regArp[4] = {};
     uint16_t regNone = 0;
 
@@ -109,10 +118,18 @@ private:
     bool checkCond(uint8_t cond);
     int64_t saturate(int64_t value);
     static uint16_t calcZmne(int64_t res);
-    uint16_t getRnStepZids(uint8_t rnStep);
+    static uint16_t revBits(uint16_t value);
 
+    uint16_t offsReg(uint8_t reg, int8_t offs);
+    uint16_t stepReg(uint8_t reg, int32_t step);
+    uint16_t getRnStepZids(uint8_t rnStep);
+    uint16_t getRarOffsAr(uint8_t rarOffs);
+    uint16_t getRarStepAr(uint8_t rarStep);
+
+    template <int i> int64_t readAS();
     template <int i> uint16_t readAlS();
     template <int i> uint16_t readAhS();
+    template <int i> int64_t readBS();
     template <int i> uint16_t readBlS();
     template <int i> uint16_t readBhS();
     template <int i> uint16_t readR();
@@ -130,16 +147,17 @@ private:
 
     template <int i> void writeA40(int64_t value);
     template <int i> void writeA16(uint16_t value);
-    template <int i> void writeAle(uint16_t value);
-    template <int i> void writeAhe(uint16_t value);
     template <int i> void writeAl(uint16_t value);
     template <int i> void writeAh(uint16_t value);
+    template <int i> void writeA16M(uint16_t value);
+    template <int i> void writeAlM(uint16_t value);
+    template <int i> void writeAhM(uint16_t value);
     template <int i> void writeB40(int64_t value);
-    template <int i> void writeB16(uint16_t value);
-    template <int i> void writeBle(uint16_t value);
-    template <int i> void writeBhe(uint16_t value);
     template <int i> void writeBl(uint16_t value);
     template <int i> void writeBh(uint16_t value);
+    template <int i> void writeB16M(uint16_t value);
+    template <int i> void writeBlM(uint16_t value);
+    template <int i> void writeBhM(uint16_t value);
     template <int i> void writeR(uint16_t value);
     template <int i> void writeExt(uint16_t value);
     template <int i> void writeCfg(uint16_t value);
@@ -215,6 +233,9 @@ private:
     int cmpuR6(uint16_t opcode);
     int dec(uint16_t opcode);
     int inc(uint16_t opcode);
+    int modrD2(uint16_t opcode);
+    int modrI2(uint16_t opcode);
+    int modrZids(uint16_t opcode);
     int orAba(uint16_t opcode);
     int orAb(uint16_t opcode);
     int orBb(uint16_t opcode);
@@ -260,6 +281,8 @@ private:
     int br(uint16_t opcode);
     int brr(uint16_t opcode);
     int call(uint16_t opcode);
+    int callaA(uint16_t opcode);
+    int callaAl(uint16_t opcode);
     int cntxR(uint16_t opcode);
     int cntxS(uint16_t opcode);
     int dint(uint16_t opcode);
@@ -274,6 +297,7 @@ private:
     int loadPage(uint16_t opcode);
     int loadStep(uint16_t opcode);
     int movAblhmi8(uint16_t opcode);
+    int movAblsm(uint16_t opcode);
     int movAlmi16(uint16_t opcode);
     int movAlm7i16(uint16_t opcode);
     int movAlm7i7(uint16_t opcode);
@@ -283,13 +307,18 @@ private:
     int movI16sm(uint16_t opcode);
     int movI16stp(uint16_t opcode);
     int movI8al(uint16_t opcode);
+    int movI8ry(uint16_t opcode);
     int movI8sv(uint16_t opcode);
     int movMi16a(uint16_t opcode);
+    int movM7i16a(uint16_t opcode);
+    int movM7i7a(uint16_t opcode);
     int movMrnreg(uint16_t opcode);
     int movRegb(uint16_t opcode);
     int movRegmrn(uint16_t opcode);
     int movRegreg(uint16_t opcode);
     int movRegr6(uint16_t opcode);
+    int movSmabl(uint16_t opcode);
+    int movaAbrar(uint16_t opcode);
     int movpPmareg(uint16_t opcode);
     int popReg(uint16_t opcode);
     int pushReg(uint16_t opcode);
