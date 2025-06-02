@@ -69,6 +69,7 @@ private:
     static void (TeakInterp::*writeRegM[0x20])(uint16_t);
     static void (TeakInterp::*writeArArp[0x8])(uint16_t);
     static void (TeakInterp::*writeSttMod[0x8])(uint16_t);
+    static void (TeakInterp::*writeAblhM[0x8])(uint16_t);
     static void (TeakInterp::*writeAb40[0x4])(int64_t);
     static void (TeakInterp::*writeAb16M[0x4])(uint16_t);
     static void (TeakInterp::*writeAblM[0x4])(uint16_t);
@@ -196,6 +197,10 @@ private:
     int addMrna(uint16_t opcode);
     int addRega(uint16_t opcode);
     int addR6a(uint16_t opcode);
+    int addhMi8(uint16_t opcode);
+    int addhMrn(uint16_t opcode);
+    int addhReg(uint16_t opcode);
+    int addhR6(uint16_t opcode);
     int addvMi8(uint16_t opcode);
     int addvMrn(uint16_t opcode);
     int addvReg(uint16_t opcode);
@@ -231,11 +236,20 @@ private:
     int cmpuMrn(uint16_t opcode);
     int cmpuReg(uint16_t opcode);
     int cmpuR6(uint16_t opcode);
+    int cmpvMi8(uint16_t opcode);
+    int cmpvMrn(uint16_t opcode);
+    int cmpvReg(uint16_t opcode);
+    int cmpvR6(uint16_t opcode);
     int dec(uint16_t opcode);
     int inc(uint16_t opcode);
     int modrD2(uint16_t opcode);
     int modrI2(uint16_t opcode);
     int modrZids(uint16_t opcode);
+    int movsMi8ab(uint16_t opcode);
+    int movsMrnab(uint16_t opcode);
+    int movsRegab(uint16_t opcode);
+    int movsR6a(uint16_t opcode);
+    int movsi(uint16_t opcode);
     int orAba(uint16_t opcode);
     int orAb(uint16_t opcode);
     int orBb(uint16_t opcode);
@@ -274,6 +288,11 @@ private:
     int subhMrn(uint16_t opcode);
     int subhReg(uint16_t opcode);
     int subhR6(uint16_t opcode);
+    int tstbMi8(uint16_t opcode);
+    int tstbMrn(uint16_t opcode);
+    int tstbReg(uint16_t opcode);
+    int tstbR6(uint16_t opcode);
+    int tstbSm(uint16_t opcode);
 
     int bkrepI8(uint16_t opcode);
     int bkrepReg(uint16_t opcode);
@@ -310,6 +329,10 @@ private:
     int movI8ry(uint16_t opcode);
     int movI8sv(uint16_t opcode);
     int movMi16a(uint16_t opcode);
+    int movMi8ab(uint16_t opcode);
+    int movMi8ablh(uint16_t opcode);
+    int movMi8ry(uint16_t opcode);
+    int movMi8sv(uint16_t opcode);
     int movM7i16a(uint16_t opcode);
     int movM7i7a(uint16_t opcode);
     int movMrnreg(uint16_t opcode);
@@ -317,6 +340,7 @@ private:
     int movRegmrn(uint16_t opcode);
     int movRegreg(uint16_t opcode);
     int movRegr6(uint16_t opcode);
+    int movRymi8(uint16_t opcode);
     int movSmabl(uint16_t opcode);
     int movaAbrar(uint16_t opcode);
     int movpPmareg(uint16_t opcode);

@@ -53,6 +53,7 @@ MOV_FUNC(movI16stp, readParam(), regStep0[(opcode >> 3) & 0x1]=, 2) // MOV Imm16
 MOV_FUNC(movI8al, (opcode & 0xFF), (this->*writeAx16M[(opcode >> 12) & 0x1]), 1) // MOV Imm8u, Axl
 MOV_FUNC(movI8ry, int8_t(opcode), (this->*writeRegM[(opcode >> 10) & 0x7]), 1) // MOV Imm8s, R0123457y0
 MOV_FUNC(movI8sv, int8_t(opcode), regSv=, 1) // MOV Imm8s, SV
+MOV_FUNC(movMi8sv, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), regSv=, 1) // MOV MemImm8, SV
 MOV_FUNC(movRegr6, (this->*readRegS[opcode & 0x1F])(), regR[6]=, 1) // MOV Register, R6
 MOV_FUNC(movSmabl, *readSttMod[opcode & 0x7], (this->*writeAblM[(opcode >> 10) & 0x3]), 1) // MOV SttMod, Abl
 
@@ -73,6 +74,9 @@ MOVHH_FUNC(movRegreg, readRegP0S[opcode & 0x1F], writeRegM[(opcode >> 5) & 0x1F]
 }
 
 MOVMH_FUNC(movMi16a, readParam(), writeAx16M[(opcode >> 8) & 0x1], 2) // MOV MemImm16, Ax
+MOVMH_FUNC(movMi8ab, (regMod[1] << 8) | (opcode & 0xFF), writeAb16M[(opcode >> 11) & 0x3], 1) // MOV MemImm8, Ab
+MOVMH_FUNC(movMi8ablh, (regMod[1] << 8) | (opcode & 0xFF), writeAblhM[(opcode >> 10) & 0x7], 1) // MOV MemImm8, Ablh
+MOVMH_FUNC(movMi8ry, (regMod[1] << 8) | (opcode & 0xFF), writeRegM[(opcode >> 10) & 0x7], 1) // MOV MemImm8, R0123457y0
 MOVMH_FUNC(movM7i16a, regR[7] + readParam(), writeAx16M[(opcode >> 8) & 0x1], 2) // MOV MemR7Imm16, Ax
 MOVMH_FUNC(movM7i7a, regR[7] + (int8_t(opcode << 1) >> 1), writeAx16M[(opcode >> 8) & 0x1], 1) // MOV MemR7Imm7s, Ax
 MOVMH_FUNC(movMrnreg, getRnStepZids(opcode), writeRegM[(opcode >> 5) & 0x1F], 1) // MOV MemRnStepZids, Register
@@ -88,6 +92,7 @@ MOVHM_FUNC(movAlmi16, readAxS[(opcode >> 8) & 0x1], readParam(), 2) // MOV Axl, 
 MOVHM_FUNC(movAlm7i16, readAxS[(opcode >> 8) & 0x1], regR[7] + readParam(), 2) // MOV Axl, MemR7Imm16
 MOVHM_FUNC(movAlm7i7, readAxS[(opcode >> 8) & 0x1], regR[7] + (int8_t(opcode << 1) >> 1), 1) // MOV Axl, MemR7Imm7s
 MOVHM_FUNC(movRegmrn, readRegS[(opcode >> 5) & 0x1F], getRnStepZids(opcode), 1) // MOV Register, MemRnStepZids
+MOVHM_FUNC(movRymi8, readRegS[(opcode >> 9) & 0x7], (regMod[1] << 8) | (opcode & 0xFF), 1) // MOV R0123457y0, MemImm8
 
 int TeakInterp::movaAbrar(uint16_t opcode) { // MOVA Ab, MemRarOffsStep
     // Move the upper and lower parts of an accumulator to data memory

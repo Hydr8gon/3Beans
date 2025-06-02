@@ -90,6 +90,12 @@ void (TeakInterp::*TeakInterp::writeSttMod[])(uint16_t) = {
     &TeakInterp::writeMod0, &TeakInterp::writeMod1, &TeakInterp::writeMod2, &TeakInterp::writeMod3
 };
 
+// Lookup table for partial accumulator writes with MOV rules
+void (TeakInterp::*TeakInterp::writeAblhM[])(uint16_t) = {
+    &TeakInterp::writeBlM<0>, &TeakInterp::writeBhM<0>, &TeakInterp::writeBlM<1>, &TeakInterp::writeBhM<1>,
+    &TeakInterp::writeAlM<0>, &TeakInterp::writeAhM<0>, &TeakInterp::writeAlM<1>, &TeakInterp::writeAhM<1>
+};
+
 // Lookup table for 40-bit accumulator writes
 void (TeakInterp::*TeakInterp::writeAb40[])(int64_t) = {
     &TeakInterp::writeB40<0>, &TeakInterp::writeB40<1>, &TeakInterp::writeA40<0>, &TeakInterp::writeA40<1>

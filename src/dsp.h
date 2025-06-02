@@ -32,16 +32,39 @@ public:
 
     uint16_t readPcfg() { return dspPcfg; }
     uint16_t readPsts() { return dspPsts; }
+    uint16_t readPsem() { return dspPsem; }
+    uint16_t readPmask() { return dspPmask; }
+    uint16_t readSem() { return dspSem; }
+    uint16_t readCmd(int i) { return dspCmd[i]; }
+    uint16_t readRep(int i);
 
     void writePcfg(uint16_t mask, uint16_t value);
+    void writePsem(uint16_t mask, uint16_t value);
+    void writePmask(uint16_t mask, uint16_t value);
+    void writePclear(uint16_t mask, uint16_t value);
+    void writeCmd(int i, uint16_t mask, uint16_t value);
 
 private:
     Core *core;
 
     uint16_t dspPcfg = 0x1;
     uint16_t dspPsts = 0xE100;
+    uint16_t dspPsem = 0;
+    uint16_t dspPmask = 0xFFFF;
+    uint16_t dspSem = 0;
+    uint16_t dspCmd[3] = {};
+    uint16_t dspRep[3] = {};
 
+    uint16_t hpiMask = 0xFFFF;
+    uint16_t hpiCfg = 0;
+    uint16_t hpiSts = 0xE0;
     uint16_t miuIoBase = 0x8000;
 
+    uint16_t readHpiCmd(int i);
+    void writeHpiRep(int i, uint16_t value);
+    void writeHpiSem(uint16_t value);
+    void writeHpiMask(uint16_t value);
+    void writeHpiClear(uint16_t value);
+    void writeHpiCfg(uint16_t value);
     void writeIoBase(uint16_t value);
 };
