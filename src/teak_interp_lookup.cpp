@@ -42,6 +42,8 @@ void TeakInterp::initLookup() {
             teakInstrs[op] = &TeakInterp::addM7i7a;
         else if ((op & 0xFEE0) == 0x8680)
             teakInstrs[op] = &TeakInterp::addMrna;
+        else if ((op & 0xFFFC) == 0x5DF8)
+            teakInstrs[op] = &TeakInterp::addPb;
         else if ((op & 0xFEE0) == 0x86A0)
             teakInstrs[op] = &TeakInterp::addRega;
         else if ((op & 0xFFEF) == 0xD38B)
@@ -184,6 +186,8 @@ void TeakInterp::initLookup() {
             teakInstrs[op] = &TeakInterp::movAlm7i7;
         else if ((op & 0xFFF8) == 0x0008)
             teakInstrs[op] = &TeakInterp::movI16arap;
+        else if ((op & 0xFEFF) == 0x5E20)
+            teakInstrs[op] = &TeakInterp::movI16b;
         else if ((op & 0xFFE0) == 0x5E00)
             teakInstrs[op] = &TeakInterp::movI16reg;
         else if (op == 0x0023)
@@ -226,6 +230,8 @@ void TeakInterp::initLookup() {
             teakInstrs[op] = &TeakInterp::movRymi8;
         else if ((op & 0xF3F8) == 0xD2F8)
             teakInstrs[op] = &TeakInterp::movSmabl;
+        else if ((op & 0xFF00) == 0x7D00)
+            teakInstrs[op] = &TeakInterp::movSvmi8;
         else if ((op & 0xFFC0) == 0x4DC0)
             teakInstrs[op] = &TeakInterp::movaAbrar;
         else if ((op & 0xFFC0) == 0x0D40)
@@ -240,6 +246,8 @@ void TeakInterp::initLookup() {
             teakInstrs[op] = &TeakInterp::movsR6a;
         else if ((op & 0xF180) == 0x4080)
             teakInstrs[op] = &TeakInterp::movsi;
+        else if ((op & 0xFF00) == 0x0800)
+            teakInstrs[op] = &TeakInterp::mpyi;
         else if (op == 0x0000)
             teakInstrs[op] = &TeakInterp::nop;
         else if ((op & 0xF39F) == 0xD291)
@@ -268,6 +276,8 @@ void TeakInterp::initLookup() {
             teakInstrs[op] = &TeakInterp::orR6;
         else if ((op & 0xFFE0) == 0x5E60)
             teakInstrs[op] = &TeakInterp::popReg;
+        else if (op == 0x5F40)
+            teakInstrs[op] = &TeakInterp::pushI16;
         else if ((op & 0xFFE0) == 0x5E40)
             teakInstrs[op] = &TeakInterp::pushReg;
         else if ((op & 0xFF00) == 0x0C00)

@@ -73,6 +73,28 @@ void Dsp::writeData(uint16_t address, uint16_t value) {
     }
 }
 
+void Dsp::updateArmSemIrq() {
+    // Update the ARM-side semaphore IRQ flag and trigger an interrupt if set
+    if (!(dspSem & ~dspPmask)) {
+        dspPsts &= ~BIT(9);
+    }
+    else if (~dspPsts & BIT(9)) {
+        core->interrupts.sendInterrupt(ARM11, 0x4A);
+        dspPsts |= BIT(9);
+    }
+}
+
+void Dsp::updateDspSemIrq() {
+    // Update the DSP-side semaphore IRQ flag and trigger an interrupt if set
+    if (!(dspPsem & ~hpiMask)) {
+        hpiSts &= ~BIT(9);
+    }
+    else if (~hpiSts & BIT(9)) {
+        LOG_CRIT("Unhandled DSP semaphore interrupt triggered\n");
+        hpiSts |= BIT(9);
+    }
+}
+
 uint16_t Dsp::readHpiCmd(int i) {
     // Read from one of the DSP-side CMD registers and clear its update flags
     hpiSts &= ~BIT(i ? (11 + i) : 8);
@@ -95,31 +117,26 @@ void Dsp::writeHpiRep(int i, uint16_t value) {
 void Dsp::writeHpiSem(uint16_t value) {
     // Write to the DSP-side semaphore flag register
     dspSem = value;
-
-    // Trigger an ARM-side interrupt if an unmasked flag is set
-    if (!(dspSem & ~dspPmask)) return;
-    core->interrupts.sendInterrupt(ARM11, 0x4A);
-    dspPsts |= BIT(9);
+    updateArmSemIrq();
 }
 
 void Dsp::writeHpiMask(uint16_t value) {
     // Write to the DSP-side semaphore interrupt mask
     hpiMask = value;
+    updateDspSemIrq();
 }
 
 void Dsp::writeHpiClear(uint16_t value) {
     // Clear semaphore flags in the ARM-side register
     dspPsem &= ~value;
-
-    // Clear the DSP-side IRQ flag if no unmasked flags are set
-    if (!(dspPsem & ~hpiMask))
-        hpiSts &= ~BIT(9);
+    updateDspSemIrq();
 }
 
 void Dsp::writeHpiCfg(uint16_t value) {
     // Write to the HPI control register
-    // TODO: handle the register endianness bit
     hpiCfg = (value & 0x3104);
+    if (hpiCfg & BIT(2))
+        LOG_CRIT("Unhandled DSP big-endian I/O mode enabled\n");
 }
 
 void Dsp::writeIoBase(uint16_t value) {
@@ -153,25 +170,19 @@ void Dsp::writePcfg(uint16_t mask, uint16_t value) {
 void Dsp::writePsem(uint16_t mask, uint16_t value) {
     // Write to the ARM-side semaphore flag register
     dspPsem = (dspPsem & ~mask) | (value & mask);
-
-    // Trigger a DSP-side interrupt if an unmasked flag is set
-    if (!(dspPsem & ~hpiMask)) return;
-    LOG_CRIT("Unhandled DSP semaphore interrupt triggered\n");
-    hpiSts |= BIT(9);
+    updateDspSemIrq();
 }
 
 void Dsp::writePmask(uint16_t mask, uint16_t value) {
     // Write to the ARM-side semaphore interrupt mask
     dspPmask = (dspPmask & ~mask) | (value & mask);
+    updateArmSemIrq();
 }
 
 void Dsp::writePclear(uint16_t mask, uint16_t value) {
     // Clear semaphore flags in the DSP-side register
     dspSem &= ~(value & mask);
-
-    // Clear the ARM-side IRQ flag if no unmasked flags are set
-    if (!(dspSem & ~dspPmask))
-        dspPsts &= ~BIT(9);
+    updateArmSemIrq();
 }
 
 void Dsp::writeCmd(int i, uint16_t mask, uint16_t value) {

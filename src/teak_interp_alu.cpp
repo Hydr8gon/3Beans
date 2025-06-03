@@ -33,6 +33,7 @@
 
 ADD40_FUNC(addAbb, *readAb[(opcode >> 10) & 0x3], regB, writeBx40, 0) // ADD Ab, Bx
 ADD40_FUNC(addBa, regB[(opcode >> 1) & 0x1].v, regA, writeAx40, 0) // ADD Bx, Ax
+ADD40_FUNC(addPb, readP40S((opcode >> 1) & 0x1), regB, writeBx40, 0) // ADD Px, Bx
 
 // Add a 16-bit value to an accumulator and set flags
 #define ADD16_FUNC(name, op0, op1s, cyc) int TeakInterp::name(uint16_t opcode) { \
@@ -306,6 +307,13 @@ MOVS_FUNC(movsR6a, regR[6], (opcode & 0x1) + 2) // MOVS R6, Ax
 
 MOVSI_FUNC(movsi, int16_t(*readReg[(opcode >> 9) & 0x7]), 5, 3) // MOVSI R0123457y0, Ab, Imm5s
 MOVSI_FUNC(shfi, *readAb[(opcode >> 10) & 0x3], 7, 2) // SHFI Ab, Ab, Imm6s
+
+int TeakInterp::mpyi(uint16_t opcode) { // MPYI Y0, Imm8s
+    // Load an 8-bit signed immediate into X0 and multiply it with Y0
+    regX[0] = int8_t(opcode);
+    multiplyXY(false, false);
+    return 1;
+}
 
 // Bitwise or a value with an A accumulator and set flags
 #define OR_FUNC(name, op0, op1b, op1s, op2s, cyc) int TeakInterp::name(uint16_t opcode) { \

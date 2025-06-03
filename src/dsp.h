@@ -60,6 +60,9 @@ private:
     uint16_t hpiSts = 0xE0;
     uint16_t miuIoBase = 0x8000;
 
+    void updateArmSemIrq();
+    void updateDspSemIrq();
+
     uint16_t readHpiCmd(int i);
     void writeHpiRep(int i, uint16_t value);
     void writeHpiSem(uint16_t value);
