@@ -30,6 +30,7 @@ or a built-in package manager on Linux. Run `make -j$(nproc)` in the project roo
 ### Hardware References
 * [GBATEK](https://problemkaputt.de/gbatek.htm) - Incomplete but great reference for the 3DS hardware
 * [3DBrew](https://www.3dbrew.org) - Comprehensive wiki covering high- and low-level details
+* [Teakra](https://github.com/wwylele/teakra) - The only source for newer aspects of the Teak architecture
 
 ### Other Links
 * [Hydra's Lair](https://hydr8gon.github.io) - Blog where I may or may not write about things

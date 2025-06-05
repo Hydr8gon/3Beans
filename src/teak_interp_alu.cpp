@@ -33,7 +33,7 @@
 
 ADD40_FUNC(addAbb, *readAb[(opcode >> 10) & 0x3], regB, writeBx40, 0) // ADD Ab, Bx
 ADD40_FUNC(addBa, regB[(opcode >> 1) & 0x1].v, regA, writeAx40, 0) // ADD Bx, Ax
-ADD40_FUNC(addPb, readP40S((opcode >> 1) & 0x1), regB, writeBx40, 0) // ADD Px, Bx
+ADD40_FUNC(addPb, (this->*readPxS[(opcode >> 1) & 0x1])(), regB, writeBx40, 0) // ADD Px, Bx
 
 // Add a 16-bit value to an accumulator and set flags
 #define ADD16_FUNC(name, op0, op1s, cyc) int TeakInterp::name(uint16_t opcode) { \
@@ -223,6 +223,14 @@ CMPV_FUNC(cmpvMi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF))) // CM
 CMPV_FUNC(cmpvMrn, core->dsp.readData(getRnStepZids(opcode))) // CMPV Imm16, MemRnStepZids
 CMPV_FUNC(cmpvReg, *readReg[opcode & 0x1F]) // CMPV Imm16, Register
 CMPV_FUNC(cmpvR6, regR[6]) // CMPV Imm16, R6
+
+int TeakInterp::copy(uint16_t opcode) { // COPY Ax, Cond
+    // Copy a value from the other A accumulator and set flags
+    int64_t val = regA[(~opcode >> 12) & 0x1].v;
+    writeStt0((regStt[0] & ~0xE4) | calcZmne(val));
+    (this->*writeAx40[(opcode >> 12) & 0x1])(val);
+    return 1;
+}
 
 int TeakInterp::dec(uint16_t opcode) { // DEC Ax, Cond
     // Decrement an A accumulator by 1 and set flags if the condition is met

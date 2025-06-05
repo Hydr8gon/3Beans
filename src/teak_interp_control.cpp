@@ -19,6 +19,24 @@
 
 #include "core.h"
 
+int TeakInterp::banke(uint16_t opcode) { // BANKE BankFlags6
+    // Swap banked address registers if their bits are set
+    if (opcode & BIT(0)) SWAP(regR[0], shadR[0]);
+    if (opcode & BIT(1)) SWAP(regR[1], shadR[1]);
+    if (opcode & BIT(2)) SWAP(regR[4], shadR[2]);
+    if (opcode & BIT(4)) SWAP(regR[7], shadR[3]);
+
+    // Swap banked step/mod registers based on STP16 if their bits are set
+    for (int i = 0; i < 2; i++) {
+        if (opcode & BIT(3 + i * 2)) {
+            SWAP(regCfg[i], shadCfg[i]);
+            if (regMod[1] & BIT(12)) // STP16
+                SWAP(regStep0[i], shadStep0[i]);
+        }
+    }
+    return 1;
+}
+
 // Set up a block repeat with a loop count and end address
 #define BKREP_FUNC(name, op0, op1h) int TeakInterp::name(uint16_t opcode) { \
     uint16_t param = readParam(); \
@@ -37,6 +55,47 @@
 BKREP_FUNC(bkrepI8, (opcode & 0xFF), regPc) // BKREP Imm8u, Address16
 BKREP_FUNC(bkrepReg, *readReg[opcode & 0x1F], (opcode << 11)) // BKREP Register, Address18
 BKREP_FUNC(bkrepR6, regR[6], (opcode << 16)) // BKREP R6, Address18
+
+// Restore the current BKREP loop state from memory and push it
+#define BKREPRST_FUNC(name, op0) int TeakInterp::name(uint16_t opcode) { \
+    uint16_t &reg = op0; \
+    uint8_t count = (regStt[2] >> 12) & 0x7; \
+    uint16_t ext = core->dsp.readData(reg++); \
+    bkEnd[count] = ((ext << 8) & 0x30000) | core->dsp.readData(reg++); \
+    bkStart[count] = ((ext << 16) & 0x30000) | core->dsp.readData(reg++); \
+    regLc = core->dsp.readData(reg++); \
+    if ((ext & BIT(15)) && count < 4) { \
+        regStt[2] = (regStt[2] | BIT(15)) + BIT(12); \
+        regIcr = (regIcr | BIT(4)) + BIT(5); \
+    } \
+    return 1; \
+}
+
+BKREPRST_FUNC(bkreprstMrar, regR[arRn[opcode & 0x3]]) // BKREPRST MemRar
+BKREPRST_FUNC(bkreprstMsp, regSp) // BKREPRST MemSp
+
+// Store the current BKREP loop state to memory and pop it
+#define BKREPSTO_FUNC(name, op0) int TeakInterp::name(uint16_t opcode) { \
+    uint16_t &reg = op0; \
+    uint8_t count = std::max(0, int((regStt[2] >> 12) & 0x7) - 1); \
+    core->dsp.writeData(--reg, regLc); \
+    core->dsp.writeData(--reg, bkStart[count]); \
+    core->dsp.writeData(--reg, bkEnd[count]); \
+    uint16_t ext = (regStt[2] & BIT(15)) | ((bkEnd[count] >> 8) & 0x300) | ((bkStart[count] >> 16) & 0x3); \
+    core->dsp.writeData(--reg, ext); \
+    bkrepPop(count); \
+    return 1; \
+}
+
+BKREPSTO_FUNC(bkrepstoMrar, regR[arRn[opcode & 0x3]]) // BKREPSTO MemRar
+BKREPSTO_FUNC(bkrepstoMsp, regSp) // BKREPSTO MemSp
+
+int TeakInterp::_break(uint16_t opcode) { // BREAK
+    // Break out of the current BKREP loop
+    uint8_t count = std::max(0, int((regStt[2] >> 12) & 0x7) - 1);
+    bkrepPop(count);
+    return 1;
+}
 
 int TeakInterp::br(uint16_t opcode) { // BR Address18, Cond
     // Branch to an 18-bit address if the condition is met
@@ -130,7 +189,7 @@ int TeakInterp::nop(uint16_t opcode) { // NOP
 
 // Set up the next opcode to repeat with a count value
 #define REP_FUNC(name, op0) int TeakInterp::name(uint16_t opcode) { \
-    repCount = (op0) + 1; \
+    regRepc = op0; \
     repAddr = regPc; \
     return 1; \
 }
@@ -146,5 +205,14 @@ int TeakInterp::ret(uint16_t opcode) { // RET, Cond
         uint16_t l = core->dsp.readData(regSp++);
         regPc = ((regMod[3] & BIT(14)) ? ((l << 16) | h) : ((h << 16) | l)) & 0x3FFFF;
     }
+    return 1;
+}
+
+int TeakInterp::rets(uint16_t opcode) { // RETS, Imm8u
+    // Pop PC from the stack and add an 8-bit immediate to SP
+    uint16_t h = core->dsp.readData(regSp++);
+    uint16_t l = core->dsp.readData(regSp++);
+    regPc = ((regMod[3] & BIT(14)) ? ((l << 16) | h) : ((h << 16) | l)) & 0x3FFFF;
+    regSp += (opcode & 0xFF);
     return 1;
 }
