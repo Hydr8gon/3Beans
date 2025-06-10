@@ -213,7 +213,7 @@ void TeakInterp::interrupt(int i) {
 
     // Run until not repeating an opcode to avoid dealing with it
     while (repAddr != -1)
-        cycles = core->globalCycles + (runOpcode() << 1);
+        cycles += (runOpcode() << 1);
 
     // Push PC to the stack and clear the IE and IPx bits
     core->dsp.writeData(--regSp, regPc >> ((regMod[3] & BIT(14)) ? 16 : 0));

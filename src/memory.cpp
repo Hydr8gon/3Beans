@@ -421,6 +421,7 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x10200D00, data = core->cdmas[CDMA0].readDbgstatus()) // CDMA0_DBGSTATUS
                 DEF_IO32(0x10200D08, data = core->cdmas[CDMA0].readDbginst0()) // CDMA0_DBGINST0
                 DEF_IO32(0x10200D0C, data = core->cdmas[CDMA0].readDbginst1()) // CDMA0_DBGINST1
+                DEF_IO16(0x10203000, data = core->dsp.readPdata()) // DSP_PDATA
                 DEF_IO16(0x10203008, data = core->dsp.readPcfg()) // DSP_PCFG
                 DEF_IO16(0x1020300C, data = core->dsp.readPsts()) // DSP_PSTS
                 DEF_IO16(0x10203010, data = core->dsp.readPsem()) // DSP_PSEM
@@ -1470,6 +1471,8 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x10200D0C, core->cdmas[CDMA0].writeDbginst1(IO_PARAMS)) // CDMA0_DBGINST1
                 DEF_IO32(0x10200020, core->cdmas[CDMA0].writeInten(IO_PARAMS)) // CDMA0_INTEN
                 DEF_IO32(0x1020002C, core->cdmas[CDMA0].writeIntclr(IO_PARAMS)) // CDMA0_INTCLR
+                DEF_IO16(0x10203000, core->dsp.writePdata(IO_PARAMS)) // DSP_PDATA
+                DEF_IO16(0x10203004, core->dsp.writePadr(IO_PARAMS)) // DSP_PADR
                 DEF_IO16(0x10203008, core->dsp.writePcfg(IO_PARAMS)) // DSP_PCFG
                 DEF_IO16(0x10203010, core->dsp.writePsem(IO_PARAMS)) // DSP_PSEM
                 DEF_IO16(0x10203014, core->dsp.writePmask(IO_PARAMS)) // DSP_PMASK

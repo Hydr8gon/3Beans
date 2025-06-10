@@ -195,6 +195,41 @@ void Dsp::updateDspSemIrq() {
     updateIcuState();
 }
 
+void Dsp::updateReadFifo() {
+    // Fill the read FIFO until it's finished or full
+    uint8_t src = (dspPcfg >> 12);
+    while (readLength > 0 && readFifo.size() < 16) {
+        // Push a value from the selected source
+        switch (src) {
+        case 0: // Data
+            readFifo.push(core->memory.read<uint16_t>(ARM11, 0x1FF40000 + (dspPadr << 1)));
+            break;
+
+        case 1: // MMIO
+            readFifo.push(readData(miuIoBase + (dspPadr & 0x7FF)));
+            break;
+
+        case 5: // Code
+            readFifo.push(core->memory.read<uint16_t>(ARM11, 0x1FF00000 + (dspPadr << 1)));
+            break;
+
+        default:
+            LOG_CRIT("Attempted DSP read from unknown source: %d\n", src);
+            return;
+        }
+
+        // Adjust the address and transfer length
+        dspPadr += (dspPcfg >> 1) & 0x1;
+        readLength -= (readLength <= 16);
+    }
+
+    // Update read FIFO status and trigger an interrupt if an enabled condition is met
+    dspPsts &= ~(readLength == 0); // Active
+    dspPsts |= BIT(6) | ((readFifo.size() >= 16) << 5); // Not empty, full
+    if (dspPcfg & dspPsts & 0x60)
+        core->interrupts.sendInterrupt(ARM11, 0x4A);
+}
+
 uint16_t Dsp::readHpiCmd(int i) {
     // Read from one of the DSP-side CMD registers and clear its update flags
     hpiSts &= ~BIT(i ? (11 + i) : 8);
@@ -291,6 +326,15 @@ void Dsp::writeIcuDisable(uint16_t value) {
     updateIcuState();
 }
 
+uint16_t Dsp::readPdata() {
+    // Pop a value from the read FIFO and update it if necessary
+    uint16_t value = readFifo.front();
+    readFifo.pop();
+    dspPsts &= ~((readFifo.empty() << 6) | BIT(5)); // Not empty, full
+    if (readLength > 0) updateReadFifo();
+    return value;
+}
+
 uint16_t Dsp::readRep(int i) {
     // Read from one of the ARM-side REP registers and clear its update flags
     dspPsts &= ~BIT(10 + i);
@@ -298,9 +342,51 @@ uint16_t Dsp::readRep(int i) {
     return dspRep[i];
 }
 
+void Dsp::writePdata(uint16_t mask, uint16_t value) {
+    // Write a value directly to the selected source, as if the write FIFO is instant
+    switch (uint8_t src = dspPcfg >> 12) {
+    case 0: // Data
+        core->memory.write<uint16_t>(ARM11, 0x1FF40000 + (dspPadr << 1), value & mask);
+        break;
+
+    case 1: // MMIO
+        writeData(miuIoBase + (dspPadr & 0x7FF), value & mask);
+        break;
+
+    case 5: // Code
+        core->memory.write<uint16_t>(ARM11, 0x1FF00000 + (dspPadr << 1), value & mask);
+        break;
+
+    default:
+        LOG_CRIT("Attempted DSP write to unknown source: %d\n", src);
+        return;
+    }
+
+    // Adjust the address and trigger a FIFO empty interrupt if enabled
+    dspPadr += (dspPcfg >> 1) & 0x1;
+    if (dspPcfg & BIT(8))
+        core->interrupts.sendInterrupt(ARM11, 0x4A);
+}
+
+void Dsp::writePadr(uint16_t mask, uint16_t value) {
+    // Write to the DSP_PADR register
+    dspPadr = (dspPadr & ~mask) | (value & mask);
+}
+
 void Dsp::writePcfg(uint16_t mask, uint16_t value) {
     // Write to the DSP_PCFG register
     dspPcfg = (dspPcfg & ~mask) | (value & mask);
+
+    // Start or stop a read FIFO transfer based on its start bit
+    if (dspPcfg & BIT(4)) {
+        uint8_t len = (dspPcfg >> 2) & 0x3;
+        readLength = len ? (4 << len) : 1;
+        dspPsts |= BIT(0); // Active
+        updateReadFifo();
+    }
+    else {
+        readLength = 0;
+    }
 
     // Reset the DSP if the reset bit is set and unhalt on release
     if (dspPcfg & BIT(0)) {

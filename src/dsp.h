@@ -20,6 +20,7 @@
 #pragma once
 
 #include <cstdint>
+#include <queue>
 
 class Core;
 
@@ -31,6 +32,7 @@ public:
     void writeData(uint16_t address, uint16_t value);
     uint32_t getIcuVector();
 
+    uint16_t readPdata();
     uint16_t readPcfg() { return dspPcfg; }
     uint16_t readPsts() { return dspPsts; }
     uint16_t readPsem() { return dspPsem; }
@@ -39,6 +41,8 @@ public:
     uint16_t readCmd(int i) { return dspCmd[i]; }
     uint16_t readRep(int i);
 
+    void writePdata(uint16_t mask, uint16_t value);
+    void writePadr(uint16_t mask, uint16_t value);
     void writePcfg(uint16_t mask, uint16_t value);
     void writePsem(uint16_t mask, uint16_t value);
     void writePmask(uint16_t mask, uint16_t value);
@@ -47,10 +51,13 @@ public:
 
 private:
     Core *core;
+    std::queue<uint16_t> readFifo;
     uint16_t icuState = 0;
+    uint8_t readLength = 0;
 
+    uint16_t dspPadr = 0;
     uint16_t dspPcfg = 0x1;
-    uint16_t dspPsts = 0xE100;
+    uint16_t dspPsts = 0x100;
     uint16_t dspPsem = 0;
     uint16_t dspPmask = 0xFFFF;
     uint16_t dspSem = 0;
@@ -73,6 +80,7 @@ private:
     void updateIcuState();
     void updateArmSemIrq();
     void updateDspSemIrq();
+    void updateReadFifo();
 
     uint16_t readHpiCmd(int i);
     void writeHpiRep(int i, uint16_t value);
