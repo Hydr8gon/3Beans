@@ -194,6 +194,10 @@ void TeakInterp::initLookup() {
             teakInstrs[op] = &TeakInterp::modrI2;
         else if ((op & 0xFFE0) == 0x0080)
             teakInstrs[op] = &TeakInterp::modrZids;
+        else if ((op & 0xFEFF) == 0x886B)
+            teakInstrs[op] = &TeakInterp::movApc;
+        else if ((op & 0xFEFF) == 0xD49B)
+            teakInstrs[op] = &TeakInterp::movA0hstp;
         else if ((op & 0xF100) == 0x3000)
             teakInstrs[op] = &TeakInterp::movAblhmi8;
         else if ((op & 0xFFE0) == 0x9540)
@@ -240,14 +244,24 @@ void TeakInterp::initLookup() {
             teakInstrs[op] = &TeakInterp::movM7i16a;
         else if ((op & 0xFE80) == 0xD880)
             teakInstrs[op] = &TeakInterp::movM7i7a;
+        else if ((op & 0xFEE0) == 0x98C0)
+            teakInstrs[op] = &TeakInterp::movMrnb;
         else if ((op & 0xFC00) == 0x1C00)
             teakInstrs[op] = &TeakInterp::movMrnreg;
         else if ((op & 0xFFE0) == 0x47C0)
             teakInstrs[op] = &TeakInterp::movMxpreg;
+        else if ((op & 0xFCF1) == 0x88D0)
+            teakInstrs[op] = &TeakInterp::movPrar;
+        else if ((op & 0xFCF1) == 0x88D1)
+            teakInstrs[op] = &TeakInterp::movPrars;
+        else if ((op & 0xF39E) == 0xD292)
+            teakInstrs[op] = &TeakInterp::movRarp;
         else if ((op & 0xFFC0) == 0x5EC0)
             teakInstrs[op] = &TeakInterp::movRegb;
         else if ((op & 0xFC00) == 0x1800)
             teakInstrs[op] = &TeakInterp::movRegmrn;
+        else if ((op & 0xFFE0) == 0x5E80)
+            teakInstrs[op] = &TeakInterp::movRegmxp;
         else if ((op & 0xFC00) == 0x5800)
             teakInstrs[op] = &TeakInterp::movRegreg;
         else if ((op & 0xFFE0) == 0x5F60)
@@ -259,7 +273,7 @@ void TeakInterp::initLookup() {
         else if ((op & 0xF3F8) == 0xD2F8)
             teakInstrs[op] = &TeakInterp::movSmabl;
         else if ((op & 0xFEFF) == 0xD482)
-            teakInstrs[op] = &TeakInterp::movStpa0;
+            teakInstrs[op] = &TeakInterp::movStpa0h;
         else if ((op & 0xFF00) == 0x7D00)
             teakInstrs[op] = &TeakInterp::movSvmi8;
         else if ((op & 0xFFC0) == 0x4DC0)
@@ -356,6 +370,8 @@ void TeakInterp::initLookup() {
             teakInstrs[op] = &TeakInterp::repR6;
         else if ((op & 0xFFF0) == 0x4580)
             teakInstrs[op] = &TeakInterp::ret;
+        else if ((op & 0xFFEF) == 0x45C0)
+            teakInstrs[op] = &TeakInterp::reti;
         else if ((op & 0xFF00) == 0x0900)
             teakInstrs[op] = &TeakInterp::rets;
         else if ((op & 0xFF00) == 0xE300)

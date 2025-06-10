@@ -44,6 +44,10 @@ Core::Core(): aes(this), arms { ArmInterp(this, ARM11A), ArmInterp(this, ARM11B)
     tasks[ARM11C_INTERRUPT] = std::bind(&Interrupts::interrupt, &interrupts, ARM11C);
     tasks[ARM11D_INTERRUPT] = std::bind(&Interrupts::interrupt, &interrupts, ARM11D);
     tasks[ARM9_INTERRUPT] = std::bind(&Interrupts::interrupt, &interrupts, ARM9);
+    tasks[TEAK_INTERRUPT0] = std::bind(&TeakInterp::interrupt, &teak, 0);
+    tasks[TEAK_INTERRUPT1] = std::bind(&TeakInterp::interrupt, &teak, 1);
+    tasks[TEAK_INTERRUPT2] = std::bind(&TeakInterp::interrupt, &teak, 2);
+    tasks[TEAK_INTERRUPT3] = std::bind(&TeakInterp::interrupt, &teak, 3);
     tasks[ARM11A_OVERFLOW0] = std::bind(&Timers::overflowMp, &timers, ARM11A, 0);
     tasks[ARM11A_OVERFLOW1] = std::bind(&Timers::overflowMp, &timers, ARM11A, 1);
     tasks[ARM11B_OVERFLOW0] = std::bind(&Timers::overflowMp, &timers, ARM11B, 0);

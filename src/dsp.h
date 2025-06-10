@@ -29,6 +29,7 @@ public:
 
     uint16_t readData(uint16_t address);
     void writeData(uint16_t address, uint16_t value);
+    uint32_t getIcuVector();
 
     uint16_t readPcfg() { return dspPcfg; }
     uint16_t readPsts() { return dspPsts; }
@@ -46,6 +47,7 @@ public:
 
 private:
     Core *core;
+    uint16_t icuState = 0;
 
     uint16_t dspPcfg = 0x1;
     uint16_t dspPsts = 0xE100;
@@ -59,7 +61,16 @@ private:
     uint16_t hpiCfg = 0;
     uint16_t hpiSts = 0xE0;
     uint16_t miuIoBase = 0x8000;
+    uint16_t icuPending = 0;
+    uint16_t icuTrigger = 0;
+    uint16_t icuEnable[4] = {};
+    uint16_t icuMode = 0;
+    uint16_t icuInvert = 0;
+    uint32_t icuVector[16] = { 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00,
+        0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00 };
+    uint16_t icuDisable = 0;
 
+    void updateIcuState();
     void updateArmSemIrq();
     void updateDspSemIrq();
 
@@ -70,4 +81,12 @@ private:
     void writeHpiClear(uint16_t value);
     void writeHpiCfg(uint16_t value);
     void writeIoBase(uint16_t value);
+    void writeIcuAck(uint16_t value);
+    void writeIcuTrigger(uint16_t value);
+    void writeIcuEnable(int i, uint16_t value);
+    void writeIcuMode(uint16_t value);
+    void writeIcuInvert(uint16_t value);
+    void writeIcuVectorL(int i, uint16_t value);
+    void writeIcuVectorH(int i, uint16_t value);
+    void writeIcuDisable(uint16_t value);
 };

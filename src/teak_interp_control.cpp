@@ -179,6 +179,7 @@ int TeakInterp::eint(uint16_t opcode) { // EINT
     // Set the interrupt enable bit
     regSt[0] |= BIT(1);
     regMod[3] |= BIT(7);
+    updateInterrupts();
     return 1;
 }
 
@@ -204,6 +205,23 @@ int TeakInterp::ret(uint16_t opcode) { // RET, Cond
         uint16_t h = core->dsp.readData(regSp++);
         uint16_t l = core->dsp.readData(regSp++);
         regPc = ((regMod[3] & BIT(14)) ? ((l << 16) | h) : ((h << 16) | l)) & 0x3FFFF;
+    }
+    return 1;
+}
+
+int TeakInterp::reti(uint16_t opcode) { // RETI, Cond
+    // Return from an interrupt if the condition is met
+    if (checkCond(opcode)) {
+        // Pop PC from the stack
+        uint16_t h = core->dsp.readData(regSp++);
+        uint16_t l = core->dsp.readData(regSp++);
+        regPc = ((regMod[3] & BIT(14)) ? ((l << 16) | h) : ((h << 16) | l)) & 0x3FFFF;
+
+        // Set the IE bit and optionally restore context
+        if (opcode & BIT(4)) cntxR(0);
+        regSt[0] |= BIT(1);
+        regMod[3] |= BIT(7);
+        updateInterrupts();
     }
     return 1;
 }

@@ -165,7 +165,7 @@ void TeakInterp::incrementPc() {
 }
 
 int TeakInterp::runOpcode() {
-    // Reset the program counter and decrement the repeat counter if non-zero
+    // Reset the program counter and decrement the repeat counter if repeating
     if (repAddr != -1) {
         regPc = repAddr;
         if (regRepc-- == 0) {
@@ -185,6 +185,55 @@ uint16_t TeakInterp::readParam() {
     uint16_t param = core->memory.read<uint16_t>(ARM11, 0x1FF00000 + (regPc << 1));
     incrementPc();
     return param;
+}
+
+void TeakInterp::setPendingIrqs(uint8_t mask) {
+    // Set interrupt pending bits in the status registers
+    regStt[2] |= (mask & 0xF);
+    regSt[2] |= ((mask & 0x4) << 11) | ((mask & 0x3) << 14);
+    updateInterrupts();
+}
+
+void TeakInterp::updateInterrupts() {
+    // Schedule an interrupt if one is pending and enabled
+    if ((regMod[3] & 0xF80) <= 0x80 || scheduled) return;
+    for (int i = 0; i < 4; i++) {
+        if (!(regStt[2] & (regMod[3] >> 8) & BIT(i))) continue;
+        core->schedule(Task(TEAK_INTERRUPT0 + i), 1);
+        scheduled = true;
+        return;
+    }
+}
+
+void TeakInterp::interrupt(int i) {
+    // Ensure the interrupt condition still holds
+    scheduled = false;
+    if (!(regMod[3] & BIT(7)) || !(regStt[2] & (regMod[3] >> 8) & BIT(i))) return;
+    LOG_INFO("Triggering Teak DSP interrupt %d\n", i);
+
+    // Run until not repeating an opcode to avoid dealing with it
+    while (repAddr != -1)
+        cycles = core->globalCycles + (runOpcode() << 1);
+
+    // Push PC to the stack and clear the IE and IPx bits
+    core->dsp.writeData(--regSp, regPc >> ((regMod[3] & BIT(14)) ? 16 : 0));
+    core->dsp.writeData(--regSp, regPc >> ((regMod[3] & BIT(14)) ? 0 : 16));
+    regSt[0] &= ~BIT(1);
+    regMod[3] &= ~BIT(7);
+    regStt[2] &= ~BIT(i);
+
+    // Clear the IPx mirror and jump to an interrupt handler with optional context save
+    if (i < 3) {
+        regSt[2] &= ~BIT((i == 2) ? 13 : (14 + i));
+        if (regMod[3] & BIT(1 + i)) cntxS(0);
+        regPc = 0x6 + i * 8;
+        return;
+    }
+
+    // For vector interrupts, jump to a vector handler with optional context save
+    uint32_t vector = core->dsp.getIcuVector();
+    if (vector & BIT(31)) cntxS(0);
+    regPc = vector & 0x3FFFF;
 }
 
 void TeakInterp::bkrepPop(uint8_t count) {
@@ -482,6 +531,7 @@ void TeakInterp::writeSt0(uint16_t value) {
     regMod[0] = (regMod[0] & ~0x1) | (regSt[0] & 0x1);
     regMod[3] = (regMod[3] & ~0x380) | ((regSt[0] << 6) & 0x380);
     regA[0].e = int16_t(regSt[0]) >> 12;
+    updateInterrupts();
 }
 
 void TeakInterp::writeSt1(uint16_t value) {
@@ -498,6 +548,7 @@ void TeakInterp::writeSt2(uint16_t value) {
     regMod[0] = (regMod[0] & ~0x380) | (regSt[2] & 0x380);
     regMod[2] = (regMod[2] & ~0x3F) | (regSt[2] & 0x3F);
     regMod[3] = (regMod[3] & ~0x400) | ((regSt[2] << 4) & 0x400);
+    updateInterrupts();
 }
 
 void TeakInterp::writeStt0(uint16_t value) {
@@ -545,6 +596,7 @@ void TeakInterp::writeMod3(uint16_t value) {
     regSt[0] = (regSt[0] & ~0xE) | ((regMod[3] >> 6) & 0xE);
     regSt[2] = (regSt[2] & ~0x40) | ((regMod[3] >> 4) & 0x40);
     regIcr = (regIcr & ~0xF) | (regMod[3] & 0xF);
+    updateInterrupts();
 }
 
 void TeakInterp::writeNone(uint16_t value) {

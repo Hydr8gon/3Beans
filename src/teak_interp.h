@@ -40,12 +40,15 @@ public:
     uint32_t regPc = 0;
 
     TeakInterp(Core *core);
-
     void resetCycles();
+
     int runOpcode();
+    void setPendingIrqs(uint8_t mask);
+    void interrupt(int i);
 
 private:
     Core *core;
+    bool scheduled = false;
 
     uint16_t *readReg[0x20] = { &regR[0], &regR[1], &regR[2], &regR[3], &regR[4], &regR[5], &regR[7],
         &regY[0], &regSt[0], &regSt[1], &regSt[2], &regP[0].h, (uint16_t*)&regPc, &regSp, &regCfg[0],
@@ -130,6 +133,8 @@ private:
 
     void incrementPc();
     uint16_t readParam();
+    void updateInterrupts();
+
     void bkrepPop(uint8_t count);
     bool checkCond(uint8_t cond);
     int64_t saturate(int64_t value);
@@ -341,6 +346,7 @@ private:
     int repReg(uint16_t opcode);
     int repR6(uint16_t opcode);
     int ret(uint16_t opcode);
+    int reti(uint16_t opcode);
     int rets(uint16_t opcode);
 
     int loadMod(uint16_t opcode);
@@ -349,6 +355,8 @@ private:
     int loadPs(uint16_t opcode);
     int loadPs01(uint16_t opcode);
     int loadStep(uint16_t opcode);
+    int movApc(uint16_t opcode);
+    int movA0hstp(uint16_t opcode);
     int movAblarap(uint16_t opcode);
     int movAblsm(uint16_t opcode);
     int movAblhmi8(uint16_t opcode);
@@ -372,16 +380,21 @@ private:
     int movMi8sv(uint16_t opcode);
     int movM7i16a(uint16_t opcode);
     int movM7i7a(uint16_t opcode);
+    int movMrnb(uint16_t opcode);
     int movMrnreg(uint16_t opcode);
     int movMxpreg(uint16_t opcode);
+    int movPrar(uint16_t opcode);
+    int movPrars(uint16_t opcode);
+    int movRarp(uint16_t opcode);
     int movRegb(uint16_t opcode);
     int movRegmrn(uint16_t opcode);
+    int movRegmxp(uint16_t opcode);
     int movRegreg(uint16_t opcode);
     int movRegr6(uint16_t opcode);
     int movRymi8(uint16_t opcode);
     int movR6reg(uint16_t opcode);
     int movSmabl(uint16_t opcode);
-    int movStpa0(uint16_t opcode);
+    int movStpa0h(uint16_t opcode);
     int movSvmi8(uint16_t opcode);
     int movaAbrar(uint16_t opcode);
     int movaRarab(uint16_t opcode);
