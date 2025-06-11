@@ -24,7 +24,10 @@
 #include "path_dialog.h"
 
 enum FrameEvent {
-    PAUSE = 1,
+    INSERT_CART = 1,
+    EJECT_CART,
+    QUIT,
+    PAUSE,
     RESTART,
     STOP,
     FPS_LIMITER,
@@ -33,6 +36,9 @@ enum FrameEvent {
 };
 
 wxBEGIN_EVENT_TABLE(b3Frame, wxFrame)
+EVT_MENU(INSERT_CART, b3Frame::insertCart)
+EVT_MENU(EJECT_CART, b3Frame::ejectCart)
+EVT_MENU(QUIT, b3Frame::quit)
 EVT_MENU(PAUSE, b3Frame::pause)
 EVT_MENU(RESTART, b3Frame::restart)
 EVT_MENU(STOP, b3Frame::stop)
@@ -43,6 +49,14 @@ EVT_CLOSE(b3Frame::close)
 wxEND_EVENT_TABLE()
 
 b3Frame::b3Frame(): wxFrame(nullptr, wxID_ANY, "3Beans") {
+    // Set up the file menu
+    fileMenu = new wxMenu();
+    fileMenu->Append(INSERT_CART, "&Insert Cart ROM");
+    fileMenu->Append(EJECT_CART, "&Eject Cart ROM");
+    fileMenu->AppendSeparator();
+    fileMenu->Append(QUIT, "&Quit");
+    fileMenu->Enable(EJECT_CART, false);
+
     // Set up the system menu
     systemMenu = new wxMenu();
     systemMenu->Append(PAUSE, "&Pause");
@@ -61,6 +75,7 @@ b3Frame::b3Frame(): wxFrame(nullptr, wxID_ANY, "3Beans") {
 
     // Set up the menu bar
     wxMenuBar *menuBar = new wxMenuBar();
+    menuBar->Append(fileMenu, "&File");
     menuBar->Append(systemMenu, "&System");
     menuBar->Append(settingsMenu, "&Settings");
     SetMenuBar(menuBar);
@@ -77,9 +92,9 @@ b3Frame::b3Frame(): wxFrame(nullptr, wxID_ANY, "3Beans") {
     sizer->Add(canvas, 1, wxEXPAND);
     SetSizer(sizer);
 
-    // Start emulation automatically
+    // Put the core in stopped state at first
     running.store(false);
-    startCore(true);
+    stopCore(true);
 }
 
 void b3Frame::Refresh() {
@@ -105,7 +120,7 @@ void b3Frame::startCore(bool full) {
         stopCore(true);
         try {
             mutex.lock();
-            core = new Core();
+            core = new Core(cartPath);
             mutex.unlock();
         }
         catch (CoreError e) {
@@ -152,6 +167,30 @@ void b3Frame::stopCore(bool full) {
         core = nullptr;
     }
     mutex.unlock();
+}
+
+void b3Frame::insertCart(wxCommandEvent &event) {
+    // Open a file browser for cartridge ROMs
+    wxFileDialog romSelect(this, "Select Cart ROM", "", "",
+        "3DS Cart ROMs (*.3ds, *.cci)|*.3ds;*.cci", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+    if (romSelect.ShowModal() == wxID_CANCEL) return;
+
+    // Set the cartridge path and start or restart the core
+    cartPath = (const char*)romSelect.GetPath().mb_str(wxConvUTF8);
+    startCore(true);
+    fileMenu->Enable(EJECT_CART, true);
+}
+
+void b3Frame::ejectCart(wxCommandEvent &event) {
+    // Clear the cartridge path and restart the core if started
+    cartPath = "";
+    if (core) startCore(true);
+    fileMenu->Enable(EJECT_CART, false);
+}
+
+void b3Frame::quit(wxCommandEvent &event) {
+    // Close the program
+    Close(true);
 }
 
 void b3Frame::pause(wxCommandEvent &event) {

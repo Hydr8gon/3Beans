@@ -66,7 +66,7 @@ private:
 
     uint16_t hpiMask = 0xFFFF;
     uint16_t hpiCfg = 0;
-    uint16_t hpiSts = 0xE0;
+    uint16_t hpiSts = 0;
     uint16_t miuIoBase = 0x8000;
     uint16_t icuPending = 0;
     uint16_t icuTrigger = 0;

@@ -26,6 +26,7 @@
 
 #include "aes.h"
 #include "arm_interp.h"
+#include "cartridge.h"
 #include "cdma.h"
 #include "cp15.h"
 #include "csnd.h"
@@ -89,6 +90,7 @@ enum Task {
     SDMMC1_READ_BLOCK,
     SDMMC0_WRITE_BLOCK,
     SDMMC1_WRITE_BLOCK,
+    CART_WORD_READY,
     MAX_TASKS
 };
 
@@ -107,6 +109,7 @@ public:
 
     Aes aes;
     ArmInterp arms[MAX_CPUS];
+    Cartridge cartridge;
     Cdma cdmas[3];
     Cp15 cp15;
     Csnd csnd;
@@ -130,7 +133,7 @@ public:
     std::vector<Event> events;
     uint64_t globalCycles = 0;
 
-    Core();
+    Core(std::string &cartPath);
     void runFrame() { (*runFunc)(this); }
     void schedule(Task task, uint64_t cycles);
 

@@ -38,13 +38,17 @@ public:
 
 private:
     b3Canvas *canvas;
-    wxMenu *systemMenu;
+    wxMenu *fileMenu, *systemMenu;
     std::thread *thread;
+    std::string cartPath;
 
     void runCore();
     void startCore(bool full);
     void stopCore(bool full);
 
+    void insertCart(wxCommandEvent &event);
+    void ejectCart(wxCommandEvent &event);
+    void quit(wxCommandEvent &event);
     void pause(wxCommandEvent &event);
     void restart(wxCommandEvent &event);
     void stop(wxCommandEvent &event);

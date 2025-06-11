@@ -37,8 +37,9 @@ enum CpuId {
 // Macro to swap two values
 #define SWAP(a, b) { auto c = a; a = b; b = c; }
 
-// Macro to perform 32-bit byteswaps
+// Macros to perform byteswaps
 #define BSWAP32(v) __builtin_bswap32(v)
+#define BSWAP64(v) __builtin_bswap64(v)
 
 // Macros to perform bit rotations
 #define ROL8(v, s) ((v << s) | (v >> (8 - s)))

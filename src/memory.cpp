@@ -341,6 +341,9 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
             DEF_IO32(0x10163000, data = core->pxi.readSync(0)) // PXI_SYNC11
             DEF_IO32(0x10163004, data = core->pxi.readCnt(0)) // PXI_CNT11
             DEF_IO32(0x1016300C, data = core->pxi.readRecv(0)) // PXI_RECV11
+            DEF_IO16(0x10164000, data = core->cartridge.readNtrMcnt()) // NTRCARD_MCNT
+            DEF_IO32(0x10164004, data = core->cartridge.readNtrRomcnt()) // NTRCARD_ROMCNT
+            DEF_IO32(0x1016401C, data = core->cartridge.readNtrData()) // NTRCARD_DATA
         }
 
         // Check registers that are exclusive to one CPU
@@ -745,6 +748,7 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
             switch (base) {
                 DEF_IO08(0x10000000, data = readCfg9Sysprot9()) // CFG9_SYSPROT9
                 DEF_IO08(0x10000001, data = readCfg9Sysprot11()) // CFG9_SYSPROT11
+                DEF_IO16(0x10000010, data = core->cartridge.readCfg9CardPower()) // CFG9_CARD_POWER
                 DEF_IO32(0x10000200, data = readCfg9Extmemcnt9()) // CFG9_EXTMEMCNT9
                 DEF_IO16(0x10000FFC, data = core->interrupts.readCfg11Socinfo()) // CFG9_MPCORECFG
                 DEF_IO32(0x10001000, data = core->interrupts.readIrqIe()) // IRQ_IE
@@ -1461,6 +1465,10 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
             DEF_IO32(0x10163000, core->pxi.writeSync(0, IO_PARAMS)) // PXI_SYNC11
             DEF_IO32(0x10163004, core->pxi.writeCnt(0, IO_PARAMS)) // PXI_CNT11
             DEF_IO32(0x10163008, core->pxi.writeSend(0, IO_PARAMS)) // PXI_SEND11
+            DEF_IO16(0x10164000, core->cartridge.writeNtrMcnt(IO_PARAMS)) // NTRCARD_MCNT
+            DEF_IO32(0x10164004, core->cartridge.writeNtrRomcnt(IO_PARAMS)) // NTRCARD_ROMCNT
+            DEF_IO32(0x10164008, core->cartridge.writeNtrCmdL(IO_PARAMS)) // NTRCARD_CMD_L
+            DEF_IO32(0x1016400C, core->cartridge.writeNtrCmdH(IO_PARAMS)) // NTRCARD_CMD_H
         }
 
         // Check registers that are exclusive to one CPU
@@ -1716,6 +1724,7 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
             switch (base) {
                 DEF_IO08(0x10000000, writeCfg9Sysprot9(IO_PARAMS8)) // CFG9_SYSPROT9
                 DEF_IO08(0x10000001, writeCfg9Sysprot11(IO_PARAMS8)) // CFG9_SYSPROT11
+                DEF_IO16(0x10000010, core->cartridge.writeCfg9CardPower(IO_PARAMS)) // CFG9_CARD_POWER
                 DEF_IO32(0x10000200, writeCfg9Extmemcnt9(IO_PARAMS)) // CFG9_EXTMEMCNT9
                 DEF_IO32(0x10001000, core->interrupts.writeIrqIe(IO_PARAMS)) // IRQ_IE
                 DEF_IO32(0x10001004, core->interrupts.writeIrqIf(IO_PARAMS)) // IRQ_IF
