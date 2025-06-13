@@ -138,31 +138,40 @@ template <bool decrypt> void Aes::cryptBlock(uint32_t *src, uint32_t *dst) {
 }
 
 void Aes::initFifo() {
-    // Reload the internal block counter
-    curBlock = aesBlkcnt >> 16;
-
-    // Initialize encryption/decryption based on the selected mode
+    // Get the current AES mode and reload block counters
     uint8_t mode = (aesCnt >> 27) & 0x7;
+    curBlock = (aesBlkcnt >> 16);
+    curExtra = (mode < 2) ? (aesBlkcnt & 0xFFFF) : 0;
+    aesCnt &= ~BIT(21); // CCM verify
+    LOG_INFO("AES FIFO starting in mode %d\n", mode);
+
+    // Initialize encryption/decryption based on the mode
     switch (mode) {
+    case 0: case 1: // CCM
+        initKey(false);
+        ctr[0] = cbc[0] = (aesIv[0] << 24);
+        ctr[1] = cbc[1] = (aesIv[1] << 24) | (aesIv[0] >> 8);
+        ctr[2] = cbc[2] = (aesIv[2] << 24) | (aesIv[1] >> 8);
+        ctr[3] = cbc[3] = (0x2 << 24) | (aesIv[2] >> 8);
+        cbc[0] |= (curBlock << 4);
+        cbc[3] |= ((curExtra > 0) << 30) | ((aesCnt << 11) & 0x38000000);
+        cryptBlock<false>(cbc, cbc);
+        return;
+
     case 2: case 3: // CTR
         initKey(false);
         memcpy(ctr, aesIv, sizeof(ctr));
-        break;
+        return;
 
     case 4: case 5: // CBC decrypt/encrypt
         initKey(mode == 4);
         memcpy(cbc, aesIv, sizeof(cbc));
-        break;
+        return;
 
-    case 6: case 7: // ECB decrypt/encrypt
+    default: // ECB decrypt/encrypt
         initKey(mode == 6);
-        break;
-
-    default: // Unimplemented
-        LOG_CRIT("AES FIFO started in unimplemented mode: %d\n", mode);
         return;
     }
-    LOG_INFO("AES FIFO starting in mode %d\n", mode);
 }
 
 void Aes::triggerFifo() {
@@ -182,8 +191,39 @@ void Aes::update() {
             writeFifo.pop();
         }
 
+        // Process a CCM extra block and send it to the read FIFO if enabled
+        if (curExtra) {
+            for (int i = 0; i < 4; i++)
+                cbc[i] ^= src[i];
+            cryptBlock<false>(cbc, cbc);
+            if (aesCnt & BIT(19))
+                for (int i = 0; i < 4; i++)
+                    readFifo.push(src[(aesCnt & BIT(25)) ? (3 - i) : i]);
+            curExtra--;
+            continue;
+        }
+
         // Handle the block based on the selected mode
-        switch ((aesCnt >> 27) & 0x7) { // Mode
+        uint8_t mode = (aesCnt >> 27) & 0x7;
+        switch (mode) {
+        case 0: // CCM decrypt
+            for (int i = 0, c = 1; i < 4; i++)
+                ctr[i] += c, c = (ctr[i] == 0);
+            cryptBlock<false>(ctr, dst);
+            for (int i = 0; i < 4; i++)
+                cbc[i] ^= (dst[i] ^= src[i]);
+            cryptBlock<false>(cbc, cbc);
+            break;
+
+        case 1: // CCM encrypt
+            for (int i = 0, c = 1; i < 4; i++)
+                ctr[i] += c, c = (ctr[i] == 0);
+            cryptBlock<false>(ctr, dst);
+            for (int i = 0; i < 4; i++)
+                cbc[i] ^= src[i], dst[i] ^= src[i];
+            cryptBlock<false>(cbc, cbc);
+            break;
+
         case 2: case 3: // CTR
             cryptBlock<false>(ctr, dst);
             for (int i = 0, c = 1; i < 4; i++) {
@@ -211,12 +251,8 @@ void Aes::update() {
             cryptBlock<true>(src, dst);
             break;
 
-        case 7: // ECB encrypt
+        default: // ECB encrypt
             cryptBlock<false>(src, dst);
-            break;
-
-        default: // Unimplemented
-            memcpy(dst, src, sizeof(dst));
             break;
         }
 
@@ -230,10 +266,43 @@ void Aes::update() {
         if (aesCnt & BIT(30))
             core->interrupts.sendInterrupt(ARM9, 15);
         LOG_INFO("AES FIFO finished processing\n");
+
+        // Calculate a CCM MAC for applicable modes
+        if (mode > 1) continue;
+        ctr[0] &= ~0xFFFFFF;
+        cryptBlock<false>(ctr, ctr);
+        for (int i = 0; i < 4; i++)
+            cbc[i] ^= ctr[i];
+
+        // Create a mask based on the MAC length
+        uint32_t mask[4] = {};
+        uint8_t len = std::max(4U, ((aesCnt >> 15) & 0xE) + 2);
+        for (int i = 0; i < len; i += 2)
+            mask[i / 2] |= 0xFFFF << ((i << 4) & 0x10);
+
+        // Handle final verification steps for CCM modes
+        if (mode == 1) { // Encrypt
+            // Append the MAC to the output data (possibly overflowing the FIFO, but that's fine)
+            for (int i = 0; i < 4; i++) {
+                int j = (aesCnt & BIT(25)) ? (3 - i) : i;
+                readFifo.push(cbc[j] & mask[j]);
+            }
+        }
+        else if (~aesCnt & BIT(20)) {
+            // Catch unhandled verification using the write FIFO
+            LOG_CRIT("Unhandled AES-CCM MAC verification source used: FIFO\n");
+        }
+        else { // Decrypt
+            // Verify decryption by comparing the MAC with one provided via registers
+            bool fail = false;
+            for (int i = 0; i < 4; i++)
+                if ((fail = (cbc[i] ^ aesMac[i]) & mask[i])) break;
+            aesCnt |= (!fail << 21);
+        }
     }
 
     // Update FIFO sizes and check NDMA conditions
-    aesCnt = (aesCnt & ~0x3FF) | (readFifo.size() << 5) | writeFifo.size();
+    aesCnt = (aesCnt & ~0x3FF) | (std::min(16UL, readFifo.size()) << 5) | writeFifo.size();
     if (writeFifo.size() <= ((aesCnt >> 10) & 0xC))
         core->ndma.triggerMode(0x8); // AES in
     if (readFifo.size() >= ((aesCnt >> 12) & 0xC) + 4)
@@ -339,6 +408,12 @@ void Aes::writeIv(int i, uint32_t mask, uint32_t value) {
     // Write to part of the AES_IV value based on endian settings
     aesIv[i] = (aesCnt & BIT(23)) ? (aesIv[i] & ~BSWAP32(mask)) |
         BSWAP32(value & mask) : (aesIv[i] & ~mask) | (value & mask);
+}
+
+void Aes::writeMac(int i, uint32_t mask, uint32_t value) {
+    // Write to part of the AES_MAC value based on endian settings
+    aesMac[i] = (aesCnt & BIT(23)) ? (aesMac[i] & ~BSWAP32(mask)) |
+        BSWAP32(value & mask) : (aesMac[i] & ~mask) | (value & mask);
 }
 
 void Aes::writeKey(int i, int j, uint32_t mask, uint32_t value) {

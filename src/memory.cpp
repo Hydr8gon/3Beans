@@ -809,6 +809,10 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO16(0x1000300A, data = core->timers.readTmCntH(2)) // TM2CNT_H
                 DEF_IO16(0x1000300C, data = core->timers.readTmCntL(3)) // TM3CNT_L
                 DEF_IO16(0x1000300E, data = core->timers.readTmCntH(3)) // TM3CNT_H
+                DEF_IO32(0x10004000, data = core->cartridge.readCtrCnt()) // CTRCARD_CNT
+                DEF_IO32(0x10004004, data = core->cartridge.readCtrBlkcnt()) // CTRCARD_BLKCNT
+                DEF_IO32(0x10004008, data = core->cartridge.readCtrSeccnt()) // CTRCARD_SECCNT
+                DEF_IO32(0x10004030, data = core->cartridge.readCtrFifo()) // CTRCARD_FIFO
                 DEF_IO16(0x10006000, data = core->sdMmcs[0].readCmd()) // SD0_CMD
                 DEF_IO16(0x10006002, data = core->sdMmcs[0].readPortSelect()) // SD0_PORT_SELECT
                 DEF_IO32(0x10006004, data = core->sdMmcs[0].readCmdParam()) // SD0_CMD_PARAM
@@ -1467,8 +1471,8 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
             DEF_IO32(0x10163008, core->pxi.writeSend(0, IO_PARAMS)) // PXI_SEND11
             DEF_IO16(0x10164000, core->cartridge.writeNtrMcnt(IO_PARAMS)) // NTRCARD_MCNT
             DEF_IO32(0x10164004, core->cartridge.writeNtrRomcnt(IO_PARAMS)) // NTRCARD_ROMCNT
-            DEF_IO32(0x10164008, core->cartridge.writeNtrCmdL(IO_PARAMS)) // NTRCARD_CMD_L
-            DEF_IO32(0x1016400C, core->cartridge.writeNtrCmdH(IO_PARAMS)) // NTRCARD_CMD_H
+            DEF_IO32(0x10164008, core->cartridge.writeNtrCmd(0, IO_PARAMS)) // NTRCARD_CMD0
+            DEF_IO32(0x1016400C, core->cartridge.writeNtrCmd(1, IO_PARAMS)) // NTRCARD_CMD1
         }
 
         // Check registers that are exclusive to one CPU
@@ -1784,6 +1788,13 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO16(0x1000300A, core->timers.writeTmCntH(2, IO_PARAMS)) // TM2CNT_H
                 DEF_IO16(0x1000300C, core->timers.writeTmCntL(3, IO_PARAMS)) // TM3CNT_L
                 DEF_IO16(0x1000300E, core->timers.writeTmCntH(3, IO_PARAMS)) // TM3CNT_H
+                DEF_IO32(0x10004000, core->cartridge.writeCtrCnt(IO_PARAMS)) // CTRCARD_CNT
+                DEF_IO32(0x10004004, core->cartridge.writeCtrBlkcnt(IO_PARAMS)) // CTRCARD_BLKCNT
+                DEF_IO32(0x10004008, core->cartridge.writeCtrSeccnt(IO_PARAMS)) // CTRCARD_SECCNT
+                DEF_IO32(0x10004020, core->cartridge.writeCtrCmd(0, IO_PARAMS)) // CTRCARD_CMD0
+                DEF_IO32(0x10004024, core->cartridge.writeCtrCmd(1, IO_PARAMS)) // CTRCARD_CMD1
+                DEF_IO32(0x10004028, core->cartridge.writeCtrCmd(2, IO_PARAMS)) // CTRCARD_CMD2
+                DEF_IO32(0x1000402C, core->cartridge.writeCtrCmd(3, IO_PARAMS)) // CTRCARD_CMD3
                 DEF_IO16(0x10006000, core->sdMmcs[0].writeCmd(IO_PARAMS)) // SD0_CMD
                 DEF_IO16(0x10006002, core->sdMmcs[0].writePortSelect(IO_PARAMS)) // SD0_PORT_SELECT
                 DEF_IO32(0x10006004, core->sdMmcs[0].writeCmdParam(IO_PARAMS)) // SD0_CMD_PARAM
@@ -1820,6 +1831,10 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x10009024, core->aes.writeIv(1, IO_PARAMS)) // AES_IV1
                 DEF_IO32(0x10009028, core->aes.writeIv(2, IO_PARAMS)) // AES_IV2
                 DEF_IO32(0x1000902C, core->aes.writeIv(3, IO_PARAMS)) // AES_IV3
+                DEF_IO32(0x10009030, core->aes.writeMac(0, IO_PARAMS)) // AES_MAC0
+                DEF_IO32(0x10009034, core->aes.writeMac(1, IO_PARAMS)) // AES_MAC1
+                DEF_IO32(0x10009038, core->aes.writeMac(2, IO_PARAMS)) // AES_MAC2
+                DEF_IO32(0x1000903C, core->aes.writeMac(3, IO_PARAMS)) // AES_MAC3
                 DEF_IO32(0x10009040, core->aes.writeKey(0, 0, IO_PARAMS)) // AES_KEY0_0
                 DEF_IO32(0x10009044, core->aes.writeKey(0, 1, IO_PARAMS)) // AES_KEY0_1
                 DEF_IO32(0x10009048, core->aes.writeKey(0, 2, IO_PARAMS)) // AES_KEY0_2

@@ -20,43 +20,69 @@
 #pragma once
 
 #include <cstdint>
+#include <queue>
 #include <string>
 
 class Core;
 
-enum CartCmd {
-    CMD_NONE = 0,
-    CMD_CHIP
+enum ReplyCmd {
+    REPLY_NONE = 0,
+    REPLY_CHIP,
+    REPLY_HEADER,
+    REPLY_ROM,
+    REPLY_PROM
 };
 
 class Cartridge {
 public:
     Cartridge(Core *core, std::string &cartPath);
     ~Cartridge();
-    void wordReady();
+
+    void ntrWordReady();
+    void ctrWordReady();
 
     uint16_t readCfg9CardPower() { return cfg9CardPower; }
     uint16_t readNtrMcnt() { return ntrMcnt; }
     uint32_t readNtrRomcnt() { return ntrRomcnt; }
     uint32_t readNtrData();
+    uint32_t readCtrCnt() { return ctrCnt; }
+    uint32_t readCtrBlkcnt() { return ctrBlkcnt; }
+    uint32_t readCtrSeccnt() { return ctrSeccnt; }
+    uint32_t readCtrFifo();
 
     void writeCfg9CardPower(uint16_t mask, uint16_t value);
     void writeNtrMcnt(uint16_t mask, uint16_t value);
     void writeNtrRomcnt(uint32_t mask, uint32_t value);
-    void writeNtrCmdL(uint32_t mask, uint32_t value);
-    void writeNtrCmdH(uint32_t mask, uint32_t value);
+    void writeNtrCmd(int i, uint32_t mask, uint32_t value);
+    void writeCtrCnt(uint32_t mask, uint32_t value);
+    void writeCtrBlkcnt(uint32_t mask, uint32_t value);
+    void writeCtrSeccnt(uint32_t mask, uint32_t value);
+    void writeCtrCmd(int i, uint32_t mask, uint32_t value);
 
 private:
     Core *core;
     FILE *cartFile;
+    static const uint16_t ctrClocks[8];
 
-    CartCmd cartCmd = CMD_NONE;
-    uint16_t blockSize = 0;
-    uint16_t readCount = 0;
+    uint32_t cartBase = -1;
+    uint32_t cartBlock[0x200] = {};
+    std::queue<uint32_t> ctrFifo;
     bool ctrMode = false;
+
+    ReplyCmd ntrReply = REPLY_NONE;
+    ReplyCmd ctrReply = REPLY_NONE;
+    uint16_t ntrCount = 0;
+    uint32_t ctrCount = 0;
+    uint32_t ctrAddress = 0;
 
     uint16_t cfg9CardPower = 0x1;
     uint16_t ntrMcnt = 0;
     uint32_t ntrRomcnt = 0;
-    uint64_t ntrCmd = 0;
+    uint32_t ntrCmd[2] = {};
+    uint32_t ctrCnt = 0;
+    uint32_t ctrBlkcnt = 0;
+    uint32_t ctrSeccnt = 0;
+    uint32_t ctrCmd[4] = {};
+
+    uint32_t readCart(uint32_t address);
 };

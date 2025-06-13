@@ -40,6 +40,7 @@ public:
     void writeKeysel(uint8_t value);
     void writeKeycnt(uint8_t value);
     void writeIv(int i, uint32_t mask, uint32_t value);
+    void writeMac(int i, uint32_t mask, uint32_t value);
     void writeKey(int i, int j, uint32_t mask, uint32_t value);
     void writeKeyx(int i, int j, uint32_t mask, uint32_t value);
     void writeKeyy(int i, int j, uint32_t mask, uint32_t value);
@@ -63,6 +64,7 @@ private:
     uint32_t ctr[4] = {};
     uint32_t cbc[4] = {};
     uint16_t curBlock = 0;
+    uint16_t curExtra = 0;
     uint8_t curKey = 0;
 
     std::queue<uint32_t> writeFifo;
@@ -77,6 +79,7 @@ private:
     uint8_t aesKeysel = 0;
     uint8_t aesKeycnt = 0;
     uint32_t aesIv[4] = {};
+    uint32_t aesMac[4] = {};
 
     static uint32_t scatter8(uint8_t *t, uint32_t a, uint32_t b, uint32_t c, uint32_t d);
     static uint32_t scatter32(uint32_t *t, uint32_t a, uint32_t b, uint32_t c, uint32_t d);

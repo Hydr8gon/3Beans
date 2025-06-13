@@ -72,7 +72,8 @@ Core::Core(std::string &cartPath): aes(this), arms { ArmInterp(this, ARM11A), Ar
     tasks[SDMMC1_READ_BLOCK] = std::bind(&SdMmc::readBlock, &sdMmcs[1]);
     tasks[SDMMC0_WRITE_BLOCK] = std::bind(&SdMmc::writeBlock, &sdMmcs[0]);
     tasks[SDMMC1_WRITE_BLOCK] = std::bind(&SdMmc::writeBlock, &sdMmcs[1]);
-    tasks[CART_WORD_READY] = std::bind(&Cartridge::wordReady, &cartridge);
+    tasks[NTR_WORD_READY] = std::bind(&Cartridge::ntrWordReady, &cartridge);
+    tasks[CTR_WORD_READY] = std::bind(&Cartridge::ctrWordReady, &cartridge);
 
     // Schedule the initial tasks
     schedule(RESET_CYCLES, 0x7FFFFFFFFFFFFFFF);

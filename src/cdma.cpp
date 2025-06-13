@@ -312,7 +312,7 @@ void Cdma::dmaWfp(int i, uint16_t burst) { // DMAWFP periph,type
         LOG_CRIT("XDMA channel %d waiting for unimplemented DRQ type: 0x%X\n", i, periph);
     }
     else {
-        LOG_CRIT("Starting CDMA%d channel %d waiting for unimplemented DRQ type: 0x%X\n", id, i, periph);
+        LOG_CRIT("CDMA%d channel %d waiting for unimplemented DRQ type: 0x%X\n", id, i, periph);
     }
 }
 
