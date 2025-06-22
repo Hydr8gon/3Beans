@@ -21,6 +21,13 @@
 
 #include "core.h"
 
+void Dsp::resetCycles() {
+    // Adjust timer end cycles for a global cycle reset
+    for (int i = 0; i < 2; i++)
+        if (tmrCycles[i] != -1)
+            tmrCycles[i] -= core->globalCycles;
+}
+
 uint16_t Dsp::readData(uint16_t address) {
     // Read a value from DSP data memory if not within the I/O area
     if (address < miuIoBase || address >= miuIoBase + 0x800)
@@ -29,6 +36,16 @@ uint16_t Dsp::readData(uint16_t address) {
     // Read a value from a DSP I/O register
     switch (address - miuIoBase) {
         case 0x01A: return 0xC902; // Chip ID
+        case 0x020: return tmrCtrl[0];
+        case 0x024: return tmrReload[0] >> 0;
+        case 0x026: return tmrReload[0] >> 16;
+        case 0x028: return readTmrCount(0) >> 0;
+        case 0x02A: return readTmrCount(0) >> 16;
+        case 0x030: return tmrCtrl[1];
+        case 0x034: return tmrReload[1] >> 0;
+        case 0x036: return tmrReload[1] >> 16;
+        case 0x038: return readTmrCount(1) >> 0;
+        case 0x03A: return readTmrCount(1) >> 16;
         case 0x0C0: return dspRep[0];
         case 0x0C2: return readHpiCmd(0);
         case 0x0C4: return dspRep[1];
@@ -98,6 +115,14 @@ void Dsp::writeData(uint16_t address, uint16_t value) {
 
     // Write a value to a DSP I/O register
     switch (address - miuIoBase) {
+        case 0x020: return writeTmrCtrl(0, value);
+        case 0x022: return writeTmrEvent(0, value);
+        case 0x024: return writeTmrReloadL(0, value);
+        case 0x026: return writeTmrReloadH(0, value);
+        case 0x030: return writeTmrCtrl(1, value);
+        case 0x032: return writeTmrEvent(1, value);
+        case 0x034: return writeTmrReloadL(1, value);
+        case 0x036: return writeTmrReloadH(1, value);
         case 0x0C0: return writeHpiRep(0, value);
         case 0x0C4: return writeHpiRep(1, value);
         case 0x0C8: return writeHpiRep(2, value);
@@ -155,6 +180,58 @@ void Dsp::writeData(uint16_t address, uint16_t value) {
     }
 }
 
+void Dsp::underflowTmr(int i) {
+    // Ensure underflow should still occur at the current timestamp
+    if (tmrCycles[i] != core->globalCycles)
+        return;
+
+    // Set a timer's signal and schedule a clear if enabled
+    tmrSignals[i] = true;
+    updateIcuState();
+    if (uint8_t clr = tmrCtrl[i] >> 14)
+        core->schedule(Task(DSP_UNSIGNAL0 + i), 2 << clr);
+
+    // Stop or reload the timer based on its mode
+    switch (uint8_t mode = (tmrCtrl[i] >> 2) & 0x7) {
+    default: // Watchdog modes
+        LOG_CRIT("Unhandled DSP timer %d underflow in watchdog mode %d\n", i, mode - 3);
+    case 0x0: case 0x3: case 0x7: // Stop at zero
+        tmrCount[i] = 0;
+        tmrCycles[i] = -1;
+        return;
+
+    case 0x1: // Wrap to reload
+        tmrCount[i] = tmrReload[i];
+        return scheduleTmr(i);
+
+    case 0x2: // Wrap to max
+        tmrCount[i] = 0xFFFFFFFF;
+        return scheduleTmr(i);
+    }
+}
+
+void Dsp::unsignalTmr(int i) {
+    // Clear a timer's output signal automatically
+    tmrSignals[i] = false;
+    updateIcuState();
+}
+
+void Dsp::scheduleTmr(int i) {
+    // Unschedule the timer if stopped, using external clock, or in event mode
+    if ((tmrCtrl[i] & 0x1100) || !tmrCount[i] || ((tmrCtrl[i] >> 2) & 0x7) == 0x3) {
+        tmrCycles[i] = -1;
+        return;
+    }
+
+    // Schedule a timer underflow using its current counter and prescaler
+    // TODO: handle timer 1's slower clock speed
+    uint8_t shift = (tmrCtrl[i] & 0x3);
+    shift += 1 + (shift == 3);
+    tmrCycles[i] = uint64_t(tmrCount[i]) << shift;
+    core->schedule(Task(DSP_UNDERFLOW0 + i), tmrCycles[i]);
+    tmrCycles[i] += core->globalCycles;
+}
+
 uint32_t Dsp::getIcuVector() {
     // Get the ICU vector for the lowest pending and enabled vector bit
     if (!(icuEnable[3] & icuPending)) return 0;
@@ -166,7 +243,9 @@ uint32_t Dsp::getIcuVector() {
 void Dsp::updateIcuState() {
     // Update ICU state bits and set pending for newly-enabled bits
     bool hpi = (hpiSts & BIT(9)) || (hpiSts & hpiCfg & 0x3100);
-    uint16_t state = (((hpi << 14) ^ icuInvert) | icuTrigger) & ~icuDisable;
+    bool tmr0 = tmrSignals[0] ^ ((tmrCtrl[0] >> 6) & 0x1);
+    bool tmr1 = tmrSignals[1] ^ ((tmrCtrl[1] >> 6) & 0x1);
+    uint16_t state = ((((hpi << 14) | (tmr0 << 10) | (tmr1 << 9)) ^ icuInvert) | icuTrigger) & ~icuDisable;
     icuPending |= (state & ~icuState);
     icuState = state;
 
@@ -230,12 +309,81 @@ void Dsp::updateReadFifo() {
         core->interrupts.sendInterrupt(ARM11, 0x4A);
 }
 
+uint32_t Dsp::readTmrCount(int i) {
+    // Update the counter based on its underflow timestamp if scheduled
+    if (tmrCycles[i] != -1) {
+        uint8_t shift = (tmrCtrl[i] & 0x3);
+        shift += 1 + (shift == 3);
+        tmrCount[i] = (tmrCycles[i] - core->globalCycles) >> shift;
+    }
+
+    // Read the current counter if updating, or the latched counter if frozen
+    return (tmrCtrl[i] & BIT(9)) ? tmrCount[i] : tmrLatches[i];
+}
+
 uint16_t Dsp::readHpiCmd(int i) {
     // Read from one of the DSP-side CMD registers and clear its update flags
     hpiSts &= ~BIT(i ? (11 + i) : 8);
     dspPsts &= ~BIT(13 + i);
     updateIcuState();
     return dspCmd[i];
+}
+
+void Dsp::writeTmrCtrl(int i, uint16_t value) {
+    // Update the timer before changing things
+    readTmrCount(i);
+
+    // Write to one of the timer control registers, with bit 8/9 optionally force set
+    // TODO: handle the breakpoint request bit
+    uint16_t old = tmrCtrl[i];
+    tmrCtrl[i] = (value & 0xFB5F) | ((tmrCtrl[!i] & BIT(13)) >> (5 - i));
+
+    // Update the other control register if its forced bit was newly set
+    if (~old & tmrCtrl[i] & BIT(13))
+        writeTmrCtrl(!i, tmrCtrl[!i]);
+
+    // Latch the timer's counter if its update bit was newly cleared
+    if (old & ~tmrCtrl[i] & BIT(9))
+        tmrLatches[i] = tmrCount[i];
+
+    // Reload the timer's counter if requested
+    if (value & BIT(10))
+        tmrCount[i] = tmrReload[i];
+
+    // Clear the timer's signal if requested
+    if (value & BIT(7))
+        tmrSignals[i] = false;
+
+    // Reschedule the timer after changing things
+    updateIcuState();
+    scheduleTmr(i);
+}
+
+void Dsp::writeTmrEvent(int i, uint16_t value) {
+    // Trigger a timer event for certain modes if bit 0 is set
+    if (~value & BIT(0)) return;
+    uint8_t mode = (tmrCtrl[i] >> 2) & 0x7;
+    if (mode == 3) { // Event count
+        // Decrement the counter until it hits zero, and signal when it does
+        if (!tmrCount[i] || --tmrCount[i]) return;
+        tmrCycles[i] = core->globalCycles;
+        underflowTmr(i);
+    }
+    else if (mode >= 4 && mode <= 6) { // Watchdog
+        // Reload the counter and reschedule the timer
+        tmrCount[i] = tmrReload[i];
+        scheduleTmr(i);
+    }
+}
+
+void Dsp::writeTmrReloadL(int i, uint16_t value) {
+    // Write to the low part of a timer reload value
+    tmrReload[i] = (tmrReload[i] & ~0xFFFF) | value;
+}
+
+void Dsp::writeTmrReloadH(int i, uint16_t value) {
+    // Write to the high part of a timer reload value
+    tmrReload[i] = (tmrReload[i] & 0xFFFF) | ((value & 0x8003) << 16);
 }
 
 void Dsp::writeHpiRep(int i, uint16_t value) {

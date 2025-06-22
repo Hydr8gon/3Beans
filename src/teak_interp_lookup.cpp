@@ -294,6 +294,8 @@ void TeakInterp::initLookup() {
             teakInstrs[op] = &TeakInterp::movsi;
         else if ((op & 0xFF00) == 0x0800)
             teakInstrs[op] = &TeakInterp::mpyi;
+        else if ((op & 0xEFF0) == 0x6790)
+            teakInstrs[op] = &TeakInterp::neg;
         else if (op == 0x0000)
             teakInstrs[op] = &TeakInterp::nop;
         else if ((op & 0xF39F) == 0xD291)
@@ -394,6 +396,8 @@ void TeakInterp::initLookup() {
             teakInstrs[op] = &TeakInterp::setR6;
         else if ((op & 0xFFF8) == 0x43C8)
             teakInstrs[op] = &TeakInterp::setSm;
+        else if ((op & 0xF390) == 0xD280)
+            teakInstrs[op] = &TeakInterp::shfc;
         else if ((op & 0xF240) == 0x9240)
             teakInstrs[op] = &TeakInterp::shfi;
         else if ((op & 0xFEE7) == 0x8A61)

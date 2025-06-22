@@ -279,6 +279,7 @@ private:
     int movsR6a(uint16_t opcode);
     int movsi(uint16_t opcode);
     int mpyi(uint16_t opcode);
+    int neg(uint16_t opcode);
     int orAba(uint16_t opcode);
     int orAb(uint16_t opcode);
     int orBb(uint16_t opcode);
@@ -301,6 +302,7 @@ private:
     int setReg(uint16_t opcode);
     int setR6(uint16_t opcode);
     int setSm(uint16_t opcode);
+    int shfc(uint16_t opcode);
     int shfi(uint16_t opcode);
     int subAbb(uint16_t opcode);
     int subBa(uint16_t opcode);

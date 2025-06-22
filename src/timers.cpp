@@ -32,12 +32,12 @@ void Timers::scheduleMp(CpuId id, int i) {
     // Schedule a timer underflow using its prescaler, with half the ARM11 frequency as a base
     if (~mpTmcnt[id][i] & BIT(0)) return;
     uint64_t cycles = uint64_t(mpCounter[id][i]) * (((mpTmcnt[id][i]) >> 8) + 1) * 2;
-    core->schedule(Task(ARM11A_OVERFLOW0 + id * 2 + i), cycles);
+    core->schedule(Task(TMR11A_UNDERFLOW0 + id * 2 + i), cycles);
     endCyclesMp[id][i] = core->globalCycles + cycles;
 }
 
-void Timers::overflowMp(CpuId id, int i) {
-    // Ensure the timer is still meant to overflow at the current timestamp
+void Timers::underflowMp(CpuId id, int i) {
+    // Ensure underflow should still occur at the current timestamp
     if (!(mpTmcnt[id][i] & BIT(0)) || endCyclesMp[id][i] != core->globalCycles)
         return;
 
@@ -58,7 +58,7 @@ void Timers::overflowMp(CpuId id, int i) {
 }
 
 void Timers::overflowTm(int i) {
-    // Ensure the timer is still meant to overflow at the current timestamp
+    // Ensure overflow should still occur at the current timestamp
     if (!(tmCntH[i] & BIT(7)) || (!countUp[i] && endCyclesTm[i] != core->globalCycles))
         return;
 
@@ -70,7 +70,7 @@ void Timers::overflowTm(int i) {
     // Schedule the next timer overflow if not in count-up mode
     if (!countUp[i]) {
         uint64_t cycles = (0x10000 - timers[i]) << shifts[i];
-        core->schedule(Task(ARM9_OVERFLOW0 + i), cycles);
+        core->schedule(Task(TMR9_OVERFLOW0 + i), cycles);
         endCyclesTm[i] = core->globalCycles + cycles;
     }
 
@@ -173,7 +173,7 @@ void Timers::writeTmCntH(int i, uint16_t mask, uint16_t value) {
     // Schedule a timer overflow if the timer changed and isn't in count-up mode
     if (dirty && (tmCntH[i] & BIT(7)) && !countUp[i]) {
         uint64_t cycles = (0x10000 - timers[i]) << shifts[i];
-        core->schedule(Task(ARM9_OVERFLOW0 + i), cycles);
+        core->schedule(Task(TMR9_OVERFLOW0 + i), cycles);
         endCyclesTm[i] = core->globalCycles + cycles;
     }
 }

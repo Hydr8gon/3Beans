@@ -27,9 +27,13 @@ class Core;
 class Dsp {
 public:
     Dsp(Core *core): core(core) {}
+    void resetCycles();
 
     uint16_t readData(uint16_t address);
     void writeData(uint16_t address, uint16_t value);
+
+    void underflowTmr(int i);
+    void unsignalTmr(int i);
     uint32_t getIcuVector();
 
     uint16_t readPdata();
@@ -51,9 +55,14 @@ public:
 
 private:
     Core *core;
+
     std::queue<uint16_t> readFifo;
     uint16_t icuState = 0;
     uint8_t readLength = 0;
+
+    uint64_t tmrCycles[2] = { -1UL, -1UL };
+    uint32_t tmrLatches[2] = {};
+    bool tmrSignals[2] = {};
 
     uint16_t dspPadr = 0;
     uint16_t dspPcfg = 0x1;
@@ -64,6 +73,9 @@ private:
     uint16_t dspCmd[3] = {};
     uint16_t dspRep[3] = {};
 
+    uint16_t tmrCtrl[2] = {};
+    uint32_t tmrReload[2] = {};
+    uint32_t tmrCount[2] = {};
     uint16_t hpiMask = 0xFFFF;
     uint16_t hpiCfg = 0;
     uint16_t hpiSts = 0;
@@ -77,12 +89,19 @@ private:
         0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00 };
     uint16_t icuDisable = 0;
 
+    void scheduleTmr(int i);
     void updateIcuState();
     void updateArmSemIrq();
     void updateDspSemIrq();
     void updateReadFifo();
 
+    uint32_t readTmrCount(int i);
     uint16_t readHpiCmd(int i);
+
+    void writeTmrCtrl(int i, uint16_t value);
+    void writeTmrEvent(int i, uint16_t value);
+    void writeTmrReloadL(int i, uint16_t value);
+    void writeTmrReloadH(int i, uint16_t value);
     void writeHpiRep(int i, uint16_t value);
     void writeHpiSem(uint16_t value);
     void writeHpiMask(uint16_t value);

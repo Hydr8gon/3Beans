@@ -28,7 +28,7 @@ public:
     Timers(Core *core): core(core) {}
 
     void resetCycles();
-    void overflowMp(CpuId id, int i);
+    void underflowMp(CpuId id, int i);
     void overflowTm(int i);
 
     uint32_t readMpReload(CpuId id, int i) { return mpReload[id][i]; }
