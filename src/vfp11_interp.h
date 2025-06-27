@@ -50,9 +50,17 @@ private:
     Core *core;
     CpuId id;
 
-    uint32_t registers[32] = {};
+    union {
+        uint32_t u32[32] = {};
+        int32_t i32[32];
+        float flt[32];
+    } regs;
+
     uint32_t fpscr = 0;
     uint32_t fpexc = 0;
+
+    uint8_t vecLength = 1;
+    bool vecStride = false;
 
     bool checkEnable();
 
@@ -76,4 +84,25 @@ private:
     void fstmia(uint8_t fd, uint32_t rn, uint8_t ofs);
     void fstmiaW(uint8_t fd, uint32_t *rn, uint8_t ofs);
     void fstmdbW(uint8_t fd, uint32_t *rn, uint8_t ofs);
+
+    void fadds(uint8_t fd, uint8_t fn, uint8_t fm);
+    void fsubs(uint8_t fd, uint8_t fn, uint8_t fm);
+    void fdivs(uint8_t fd, uint8_t fn, uint8_t fm);
+    void fmuls(uint8_t fd, uint8_t fn, uint8_t fm);
+    void fnmuls(uint8_t fd, uint8_t fn, uint8_t fm);
+    void fmacs(uint8_t fd, uint8_t fn, uint8_t fm);
+    void fnmacs(uint8_t fd, uint8_t fn, uint8_t fm);
+    void fmscs(uint8_t fd, uint8_t fn, uint8_t fm);
+    void fnmscs(uint8_t fd, uint8_t fn, uint8_t fm);
+
+    void fcpys(uint8_t fd, uint8_t fm);
+    void fabss(uint8_t fd, uint8_t fm);
+    void fnegs(uint8_t fd, uint8_t fm);
+    void fsqrts(uint8_t fd, uint8_t fm);
+    void fcmps(uint8_t fd, uint8_t fm);
+    void fcmpzs(uint8_t fd, uint8_t fm);
+    void fuitos(uint8_t fd, uint8_t fm);
+    void fsitos(uint8_t fd, uint8_t fm);
+    void ftouis(uint8_t fd, uint8_t fm);
+    void ftosis(uint8_t fd, uint8_t fm);
 };

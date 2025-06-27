@@ -35,7 +35,7 @@ void Pdc::drawScreen(bool bot, uint32_t *buffer) {
     // Draw a screen's framebuffer in the selected format if enabled
     if (~pdcInterruptType[bot] & BIT(0)) return;
     int width = (bot ? 320 : 400);
-    switch (uint8_t fmt = pdcFramebufFormat[bot] & 0x7) {
+    switch (pdcFramebufFormat[bot] & 0x7) {
     case 0: // RGBA8
         for (int y = 0; y < 240; y++) {
             for (int x = 0; x < width; x++) {
@@ -72,8 +72,28 @@ void Pdc::drawScreen(bool bot, uint32_t *buffer) {
         }
         return;
 
-    default:
-        LOG_CRIT("Unimplemented framebuffer format: %d\n", fmt);
+    case 3: // RGBA5551
+        for (int y = 0; y < 240; y++) {
+            for (int x = 0; x < width; x++) {
+                uint16_t color = core->memory.read<uint16_t>(ARM11, pdcFramebufLt0[bot] + (x * 240 + 239 - y) * 2);
+                uint8_t r = ((color >> 11) & 0x1F) * 255 / 31;
+                uint8_t g = ((color >> 6) & 0x1F) * 255 / 31;
+                uint8_t b = ((color >> 1) & 0x1F) * 255 / 31;
+                buffer[y * 400 + x] = (0xFF << 24) | (b << 16) | (g << 8) | r;
+            }
+        }
+        return;
+
+    default: // RGBA4444
+        for (int y = 0; y < 240; y++) {
+            for (int x = 0; x < width; x++) {
+                uint16_t color = core->memory.read<uint16_t>(ARM11, pdcFramebufLt0[bot] + (x * 240 + 239 - y) * 2);
+                uint8_t r = ((color >> 12) & 0xF) * 255 / 15;
+                uint8_t g = ((color >> 8) & 0xF) * 255 / 15;
+                uint8_t b = ((color >> 4) & 0xF) * 255 / 15;
+                buffer[y * 400 + x] = (0xFF << 24) | (b << 16) | (g << 8) | r;
+            }
+        }
         return;
     }
 }
