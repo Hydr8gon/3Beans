@@ -302,7 +302,7 @@ void Aes::update() {
     }
 
     // Update FIFO sizes and check NDMA conditions
-    aesCnt = (aesCnt & ~0x3FF) | (std::min(16UL, readFifo.size()) << 5) | writeFifo.size();
+    aesCnt = (aesCnt & ~0x3FF) | (std::min<uint8_t>(16, readFifo.size()) << 5) | writeFifo.size();
     if (writeFifo.size() <= ((aesCnt >> 10) & 0xC))
         core->ndma.triggerMode(0x8); // AES in
     if (readFifo.size() >= ((aesCnt >> 12) & 0xC) + 4)

@@ -52,6 +52,7 @@ public:
     void writeMemcopyTexSize(uint32_t mask, uint32_t value);
     void writeMemcopyTexSrcWidth(uint32_t mask, uint32_t value);
     void writeMemcopyTexDstWidth(uint32_t mask, uint32_t value);
+    void writeCmdbufJump(int i, uint32_t mask, uint32_t value);
 
 private:
     Core *core;

@@ -144,3 +144,8 @@ void Gpu::writeMemcopyTexDstWidth(uint32_t mask, uint32_t value) {
     // Write to the GPU_MEMCOPY_TEX_DST_WIDTH register
     gpuMemcopyTexDstWidth = (gpuMemcopyTexDstWidth & ~mask) | (value & mask);
 }
+
+void Gpu::writeCmdbufJump(int i, uint32_t mask, uint32_t value) {
+    // Stub command list execution by triggering an interrupt
+    core->interrupts.sendInterrupt(ARM11, 0x2D);
+}

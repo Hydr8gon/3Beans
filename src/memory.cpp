@@ -1543,6 +1543,8 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x10400C20, core->gpu.writeMemcopyTexSize(IO_PARAMS)) // GPU_MEMCOPY_TEX_SIZE
                 DEF_IO32(0x10400C24, core->gpu.writeMemcopyTexSrcWidth(IO_PARAMS)) // GPU_MEMCOPY_TEX_SRC_WIDTH
                 DEF_IO32(0x10400C28, core->gpu.writeMemcopyTexDstWidth(IO_PARAMS)) // GPU_MEMCOPY_TEX_DST_WIDTH
+                DEF_IO32(0x104018F0, core->gpu.writeCmdbufJump(0, IO_PARAMS)) // GPU_CMDBUF_JUMP0
+                DEF_IO32(0x104018F4, core->gpu.writeCmdbufJump(1, IO_PARAMS)) // GPU_CMDBUF_JUMP1
                 DEF_IO32(0x17E00100, core->interrupts.writeMpIle(id, IO_PARAMS)) // MP_ILE
                 DEF_IO32(0x17E00110, core->interrupts.writeMpEoi(id, IO_PARAMS)) // MP_EOI
                 DEF_IO32(0x17E00600, core->timers.writeMpReload(id, 0, IO_PARAMS)) // MP_RELOAD0
