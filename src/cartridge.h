@@ -49,6 +49,12 @@ public:
     uint32_t readCtrBlkcnt() { return ctrBlkcnt; }
     uint32_t readCtrSeccnt() { return ctrSeccnt; }
     uint32_t readCtrFifo();
+    uint32_t readSpiFifoCnt() { return spiFifoCnt; }
+    uint32_t readSpiFifoSelect() { return spiFifoSelect; }
+    uint32_t readSpiFifoBlklen() { return spiFifoBlklen; }
+    uint32_t readSpiFifoData();
+    uint32_t readSpiFifoIntMask() { return spiFifoIntMask; }
+    uint32_t readSpiFifoIntStat() { return spiFifoIntStat; }
 
     void writeCfg9CardPower(uint16_t mask, uint16_t value);
     void writeNtrMcnt(uint16_t mask, uint16_t value);
@@ -58,11 +64,21 @@ public:
     void writeCtrBlkcnt(uint32_t mask, uint32_t value);
     void writeCtrSeccnt(uint32_t mask, uint32_t value);
     void writeCtrCmd(int i, uint32_t mask, uint32_t value);
+    void writeSpiFifoCnt(uint32_t mask, uint32_t value);
+    void writeSpiFifoSelect(uint32_t mask, uint32_t value);
+    void writeSpiFifoBlklen(uint32_t mask, uint32_t value);
+    void writeSpiFifoData(uint32_t mask, uint32_t value);
+    void writeSpiFifoIntMask(uint32_t mask, uint32_t value);
+    void writeSpiFifoIntStat(uint32_t mask, uint32_t value);
 
 private:
     Core *core;
-    FILE *cartFile;
     static const uint16_t ctrClocks[8];
+
+    FILE *cartFile = nullptr;
+    uint8_t *saveData = nullptr;
+    uint32_t saveSize = 0;
+    std::string savePath;
 
     uint32_t cartBase = -1;
     uint32_t cartBlock[0x200] = {};
@@ -73,7 +89,11 @@ private:
     ReplyCmd ctrReply = REPLY_NONE;
     uint16_t ntrCount = 0;
     uint32_t ctrCount = 0;
+    uint32_t spiCount = 0;
+    uint32_t spiTotal = 0;
     uint32_t ctrAddress = 0;
+    uint32_t spiAddress = 0;
+    uint8_t spiCommand = 0;
 
     uint16_t cfg9CardPower = 0x1;
     uint16_t ntrMcnt = 0;
@@ -83,6 +103,12 @@ private:
     uint32_t ctrBlkcnt = 0;
     uint32_t ctrSeccnt = 0;
     uint32_t ctrCmd[4] = {};
+    uint32_t spiFifoCnt = 0;
+    uint32_t spiFifoSelect = 0;
+    uint32_t spiFifoBlklen = 0;
+    uint32_t spiFifoIntMask = 0;
+    uint32_t spiFifoIntStat = 0;
 
     uint32_t readCart(uint32_t address);
+    uint8_t spiTransfer(uint8_t value);
 };

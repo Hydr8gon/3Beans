@@ -18,6 +18,7 @@
 */
 
 #include "core.h"
+#include <cstring>
 
 const uint16_t Cartridge::ctrClocks[] = { 64, 80, 96, 128, 160, 256, 256, 256 };
 
@@ -26,12 +27,22 @@ Cartridge::Cartridge(Core *core, std::string &cartPath): core(core) {
     if (cartPath.empty()) return;
     cartFile = fopen(cartPath.c_str(), "rb");
     cfg9CardPower &= ~BIT(0); // Inserted
+
+    // Create a 512KB save and try to load data from a file
+    // TODO: support other sizes and add some sort of detection
+    saveData = new uint8_t[saveSize = 0x80000];
+    memset(saveData, 0xFF, saveSize);
+    savePath = cartPath.substr(0, cartPath.rfind('.')) + ".sav";
+    if (FILE *file = fopen(savePath.c_str(), "rb")) {
+        fread(saveData, sizeof(uint8_t), saveSize, file);
+        fclose(file);
+    }
 }
 
 Cartridge::~Cartridge() {
-    // Close the cartridge file if it was opened
-    if (cartFile)
-        fclose(cartFile);
+    // Clean up the cartridge file and save data
+    if (cartFile) fclose(cartFile);
+    if (saveData) delete[] saveData;
 }
 
 uint32_t Cartridge::readCart(uint32_t address) {
@@ -39,7 +50,7 @@ uint32_t Cartridge::readCart(uint32_t address) {
     if (((address ^ cartBase) >> 11) != 0) {
         cartBase = (address & ~0x7FF);
         fseek(cartFile, cartBase, SEEK_SET);
-        fread(cartBlock, 0x200, sizeof(uint32_t), cartFile);
+        fread(cartBlock, sizeof(uint32_t), 0x200, cartFile);
     }
     return cartBlock[(address >> 2) & 0x1FF];
 }
@@ -67,7 +78,7 @@ void Cartridge::ctrWordReady() {
     switch (ctrReply) {
     case REPLY_CHIP:
         // Reply with a standard 3DS cartridge chip ID
-        return ctrFifo.push(0x9000FEC2);
+        return ctrFifo.push(0x9000E2C2);
 
     case REPLY_HEADER:
         // Reply with data from the initial cartridge header
@@ -84,6 +95,52 @@ void Cartridge::ctrWordReady() {
     default:
         // Reply with all high bits when there's no data
         return ctrFifo.push(0xFFFFFFFF);
+    }
+}
+
+uint8_t Cartridge::spiTransfer(uint8_t value) {
+    // End an SPICARD transfer and trigger an interrupt when its length is reached
+    if (--spiCount == 0) {
+        spiFifoCnt &= ~BIT(15);
+        if (spiFifoIntMask & BIT(0)) {
+            spiFifoIntStat |= BIT(0);
+            core->interrupts.sendInterrupt(ARM9, 23);
+        }
+    }
+
+    // Set the command byte on the first write
+    if (++spiTotal == 1) {
+        spiCommand = value;
+        spiAddress = 0;
+    }
+
+    // Handle SPICARD accesses based on the command byte
+    switch (spiCommand) {
+    case 0x03: // Read byte data
+    case 0xEB: // Read quad data
+        // Set the 3-byte address to read from and handle dummy bytes
+        if (spiTotal <= (spiCommand == 0xEB ? 7 : 4)) {
+            if (spiTotal >= 2 && spiTotal <= 4)
+                spiAddress |= value << ((4 - spiTotal) * 8);
+            return 0;
+        }
+
+        // Read save data and increment the address once it's set
+        return (spiAddress < saveSize) ? saveData[spiAddress++] : 0xFF;
+
+    case 0x9F: // Read ID
+        // Return the ID of a 512KB Macronix FLASH chip
+        switch (spiTotal) {
+            case 2: return 0xC2;
+            case 3: return 0x22;
+            case 4: return 0x13;
+            default: return 0xFF;
+        }
+
+    default:
+        // Catch SPICARD accesses with unknown commands
+        LOG_CRIT("Accessing SPICARD with unknown command: 0x%X\n", spiCommand);
+        return 0;
     }
 }
 
@@ -110,7 +167,7 @@ uint32_t Cartridge::readNtrData() {
     switch (ntrReply) {
     case REPLY_CHIP:
         // Reply with a standard 3DS cartridge chip ID
-        return 0x9000FEC2;
+        return 0x9000E2C2;
 
     default:
         // Reply with all high bits when there's no data
@@ -130,6 +187,15 @@ uint32_t Cartridge::readCtrFifo() {
     uint32_t value = ctrFifo.front();
     ctrFifo.pop();
     ctrCnt &= ~(ctrFifo.empty() << 27);
+    return value;
+}
+
+uint32_t Cartridge::readSpiFifoData() {
+    // Read up to 4 bytes from SPICARD if transferring in the read direction
+    uint32_t value = 0;
+    if ((spiFifoCnt & 0xA000) == 0x8000 && spiFifoSelect)
+        for (int i = 0; i < 32 && spiCount; i += 8)
+            value |= (spiTransfer(0) << i);
     return value;
 }
 
@@ -297,4 +363,50 @@ void Cartridge::writeCtrSeccnt(uint32_t mask, uint32_t value) {
 void Cartridge::writeCtrCmd(int i, uint32_t mask, uint32_t value) {
     // Write to a 32-bit part of the CTRCARD_CMD register
     ctrCmd[i] = (ctrCmd[i] & ~mask) | (value & mask);
+}
+
+void Cartridge::writeSpiFifoCnt(uint32_t mask, uint32_t value) {
+    // Write to the SPICARD_FIFO_CNT register
+    mask &= 0xB007;
+    uint32_t old = spiFifoCnt;
+    spiFifoCnt = (spiFifoCnt & ~mask) | (value & mask);
+
+    // Reload SPICARD transfer length and chip select if the start bit was newly set
+    if (!(~old & spiFifoCnt & BIT(15))) return;
+    spiCount = spiFifoBlklen;
+    spiFifoSelect |= BIT(0);
+}
+
+void Cartridge::writeSpiFifoSelect(uint32_t mask, uint32_t value) {
+    // Write to the SPICARD_FIFO_SELECT register
+    mask &= 0x1;
+    spiFifoSelect = (spiFifoSelect & ~mask) | (value & mask);
+
+    // Reset SPICARD transfer state when the chip is deselected
+    if (!spiFifoSelect)
+        spiTotal = 0;
+}
+
+void Cartridge::writeSpiFifoBlklen(uint32_t mask, uint32_t value) {
+    // Write to the SPICARD_FIFO_BLKLEN register
+    mask &= 0x1FFFFF;
+    spiFifoBlklen = (spiFifoBlklen & ~mask) | (value & mask);
+}
+
+void Cartridge::writeSpiFifoData(uint32_t mask, uint32_t value) {
+    // Write up to 4 bytes to SPICARD if transferring in the write direction
+    if ((spiFifoCnt & 0xA000) == 0xA000 && spiFifoSelect)
+        for (int i = 0; i < 32 && spiCount; i += 8)
+            spiTransfer((value & mask) >> i);
+}
+
+void Cartridge::writeSpiFifoIntMask(uint32_t mask, uint32_t value) {
+    // Write to the SPICARD_FIFO_INT_MASK register
+    mask &= 0xF;
+    spiFifoIntMask = (spiFifoIntMask & ~mask) | (value & mask);
+}
+
+void Cartridge::writeSpiFifoIntStat(uint32_t mask, uint32_t value) {
+    // Acknowledge bits in the SPICARD_FIFO_INT_STAT register
+    spiFifoIntStat &= ~(value & mask);
 }

@@ -47,6 +47,7 @@
 #include "teak_interp.h"
 #include "timers.h"
 #include "vfp11_interp.h"
+#include "wifi.h"
 
 enum CoreError {
     ERROR_BOOTROM
@@ -133,6 +134,7 @@ public:
     TeakInterp teak;
     Timers timers;
     Vfp11Interp vfp11s[MAX_CPUS - 1];
+    Wifi wifi;
 
     std::atomic<bool> running;
     std::vector<Event> events;

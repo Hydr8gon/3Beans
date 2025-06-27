@@ -321,6 +321,8 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
             DEF_IO16(0x101037E4, data = core->csnd.readChanRvol(31)) // CSND_CHAN31_RVOL
             DEF_IO16(0x101037E6, data = core->csnd.readChanLvol(31)) // CSND_CHAN31_LVOL
             DEF_IO32(0x101037EC, data = core->csnd.readChanStart(31)) // CSND_CHAN31_START
+            DEF_IO32(0x1012201C, data = core->wifi.readIrqStatus()) // WIFI_IRQ_STATUS
+            DEF_IO32(0x1012202C, data = core->wifi.readErrDetail()) // WIFI_ERR_DETAIL
             DEF_IO32(0x10140420, data = readCfg11BrOverlayCnt()) // CFG11_BR_OVERLAY_CNT
             DEF_IO32(0x10140424, data = readCfg11BrOverlayVal()) // CFG11_BR_OVERLAY_VAL
             DEF_IO16(0x10140FFC, data = core->interrupts.readCfg11Socinfo()) // CFG11_SOCINFO
@@ -1058,6 +1060,12 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x1000CD00, data = core->cdmas[XDMA].readDbgstatus()) // XDMA_DBGSTATUS
                 DEF_IO32(0x1000CD08, data = core->cdmas[XDMA].readDbginst0()) // XDMA_DBGINST0
                 DEF_IO32(0x1000CD0C, data = core->cdmas[XDMA].readDbginst1()) // XDMA_DBGINST1
+                DEF_IO32(0x1000D800, data = core->cartridge.readSpiFifoCnt()) // SPICARD_FIFO_CNT
+                DEF_IO32(0x1000D804, data = core->cartridge.readSpiFifoSelect()) // SPICARD_FIFO_SELECT
+                DEF_IO32(0x1000D808, data = core->cartridge.readSpiFifoBlklen()) // SPICARD_FIFO_BLKLEN
+                DEF_IO32(0x1000D80C, data = core->cartridge.readSpiFifoData()) // SPICARD_FIFO_DATA
+                DEF_IO32(0x1000D818, data = core->cartridge.readSpiFifoIntMask()) // SPICARD_FIFO_INT_MASK
+                DEF_IO32(0x1000D81C, data = core->cartridge.readSpiFifoIntStat()) // SPICARD_FIFO_INT_STAT
                 DEF_IO32(0x10012000, data = readOtpEncrypted(0)) // OTP_ENCRYPTED0
                 DEF_IO32(0x10012004, data = readOtpEncrypted(1)) // OTP_ENCRYPTED1
                 DEF_IO32(0x10012008, data = readOtpEncrypted(2)) // OTP_ENCRYPTED2
@@ -1453,6 +1461,7 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
             DEF_IO32(0x101037F4, core->csnd.writeChanLoop(31, IO_PARAMS)) // CSND_CHAN31_LOOP
             DEF_IO32(0x101037F8, core->csnd.writeAdpcmStart(31, IO_PARAMS)) // CSND_ADPCM31_START
             DEF_IO32(0x101037FC, core->csnd.writeAdpcmLoop(31, IO_PARAMS)) // CSND_ADPCM31_LOOP
+            DEF_IO32(0x1012201C, core->wifi.writeIrqStatus(IO_PARAMS)) // WIFI_IRQ_STATUS
             DEF_IO32(0x10140420, writeCfg11BrOverlayCnt(IO_PARAMS)) // CFG11_BR_OVERLAY_CNT
             DEF_IO32(0x10140424, writeCfg11BrOverlayVal(IO_PARAMS)) // CFG11_BR_OVERLAY_VAL
             DEF_IO32(0x10141200, core->gpu.writeCfg11GpuCnt(IO_PARAMS)) // CFG11_GPU_CNT
@@ -2114,6 +2123,12 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x1000CD04, core->cdmas[XDMA].writeDbgcmd(IO_PARAMS)) // XDMA_DBGCMD
                 DEF_IO32(0x1000CD08, core->cdmas[XDMA].writeDbginst0(IO_PARAMS)) // XDMA_DBGINST0
                 DEF_IO32(0x1000CD0C, core->cdmas[XDMA].writeDbginst1(IO_PARAMS)) // XDMA_DBGINST1
+                DEF_IO32(0x1000D800, core->cartridge.writeSpiFifoCnt(IO_PARAMS)) // SPICARD_FIFO_CNT
+                DEF_IO32(0x1000D804, core->cartridge.writeSpiFifoSelect(IO_PARAMS)) // SPICARD_FIFO_SELECT
+                DEF_IO32(0x1000D808, core->cartridge.writeSpiFifoBlklen(IO_PARAMS)) // SPICARD_FIFO_BLKLEN
+                DEF_IO32(0x1000D80C, core->cartridge.writeSpiFifoData(IO_PARAMS)) // SPICARD_FIFO_DATA
+                DEF_IO32(0x1000D818, core->cartridge.writeSpiFifoIntMask(IO_PARAMS)) // SPICARD_FIFO_INT_MASK
+                DEF_IO32(0x1000D81C, core->cartridge.writeSpiFifoIntStat(IO_PARAMS)) // SPICARD_FIFO_INT_STAT
             }
         }
 
