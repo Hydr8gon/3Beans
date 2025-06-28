@@ -19,6 +19,13 @@
 
 #include "core.h"
 
+template uint8_t Cp15::read(CpuId, uint32_t);
+template uint16_t Cp15::read(CpuId, uint32_t);
+template uint32_t Cp15::read(CpuId, uint32_t);
+template void Cp15::write(CpuId, uint32_t, uint8_t);
+template void Cp15::write(CpuId, uint32_t, uint16_t);
+template void Cp15::write(CpuId, uint32_t, uint32_t);
+
 uint32_t Cp15::mmuTranslate(CpuId id, uint32_t address) {
     // Check control value X to determine the table base address
     uint32_t base;
@@ -54,13 +61,10 @@ uint32_t Cp15::mmuTranslate(CpuId id, uint32_t address) {
     }
 
     // Catch unhandled translation table entries
-    LOG_CRIT("Unhandled ARM11 core %d MMU translation fault at 0x%08X\n", id, address);
+    LOG_CRIT("Unhandled ARM11 core %d MMU translation fault at 0x%X\n", id, address);
     return address;
 }
 
-template uint8_t Cp15::read(CpuId id, uint32_t address);
-template uint16_t Cp15::read(CpuId id, uint32_t address);
-template uint32_t Cp15::read(CpuId id, uint32_t address);
 template <typename T> T Cp15::read(CpuId id, uint32_t address) {
     // Handle special cases that only apply to CPU memory reads
     if (id == ARM9) {
@@ -91,9 +95,6 @@ template <typename T> T Cp15::read(CpuId id, uint32_t address) {
     return core->memory.read<T>(id, address);
 }
 
-template void Cp15::write(CpuId id, uint32_t address, uint8_t value);
-template void Cp15::write(CpuId id, uint32_t address, uint16_t value);
-template void Cp15::write(CpuId id, uint32_t address, uint32_t value);
 template <typename T> void Cp15::write(CpuId id, uint32_t address, T value) {
     // Handle special cases that only apply to CPU memory writes
     if (id == ARM9) {
@@ -227,13 +228,13 @@ void Cp15::writeCtrl9(CpuId id, uint32_t value) {
 void Cp15::writeTlbBase0(CpuId id, uint32_t value) {
     // Set a core's translation table base 0 register
     tlbBase0Regs[id] = value;
-    LOG_INFO("Changing ARM11 core %d translation table base 0 to 0x%08X\n", id, tlbBase0Regs[id] & 0xFFFFFF80);
+    LOG_INFO("Changing ARM11 core %d translation table base 0 to 0x%X\n", id, tlbBase0Regs[id] & 0xFFFFFF80);
 }
 
 void Cp15::writeTlbBase1(CpuId id, uint32_t value) {
     // Set a core's translation table base 1 register
     tlbBase1Regs[id] = value;
-    LOG_INFO("Changing ARM11 core %d translation table base 1 to 0x%08X\n", id, tlbBase1Regs[id] & 0xFFFFC000);
+    LOG_INFO("Changing ARM11 core %d translation table base 1 to 0x%X\n", id, tlbBase1Regs[id] & 0xFFFFC000);
 }
 
 void Cp15::writeTlbCtrl(CpuId id, uint32_t value) {
@@ -264,7 +265,7 @@ void Cp15::writeDtcm(CpuId id, uint32_t value) {
     dtcmReg = value;
     dtcmAddr = dtcmReg & 0xFFFFF000;
     dtcmSize = std::max(0x1000, 0x200 << ((dtcmReg >> 1) & 0x1F));
-    LOG_INFO("Remapping ARM9 DTCM to 0x%08X with size 0x%X\n", dtcmAddr, dtcmSize);
+    LOG_INFO("Remapping ARM9 DTCM to 0x%X with size 0x%X\n", dtcmAddr, dtcmSize);
 }
 
 void Cp15::writeItcm(CpuId id, uint32_t value) {

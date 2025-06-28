@@ -139,7 +139,7 @@ void SdMmc::readBlock() {
     }
 
     // Push data to a FIFO and change state based on blocks left
-    LOG_INFO("Reading %s block from 0x%08X with size 0x%X\n",
+    LOG_INFO("Reading %s block from 0x%X with size 0x%X\n",
         (sdPortSelect & BIT(0)) ? "MMC" : "SD", curAddress, blockLen << 2);
     for (int i = 0; i < blockLen; i++) pushFifo(data[i]);
     cardStatus = (cardStatus & ~0x1E00) | ((curBlock ? 0x5 : 0x4) << 9);
@@ -150,7 +150,7 @@ void SdMmc::readBlock() {
 void SdMmc::writeBlock() {
     // Pop data from a FIFO and change state based on blocks left
     uint32_t data[0x80];
-    LOG_INFO("Writing %s block to 0x%08X with size 0x%X\n",
+    LOG_INFO("Writing %s block to 0x%X with size 0x%X\n",
         (sdPortSelect & BIT(0)) ? "MMC" : "SD", curAddress, blockLen << 2);
     for (int i = 0; i < blockLen; i++) data[i] = popFifo();
     cardStatus = (cardStatus & ~0x1E00) | ((curBlock ? 0x6 : 0x4) << 9);

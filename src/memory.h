@@ -84,9 +84,6 @@ private:
     void writeCfg9Extmemcnt9(uint32_t mask, uint32_t value);
 };
 
-template uint8_t Memory::read(CpuId id, uint32_t address);
-template uint16_t Memory::read(CpuId id, uint32_t address);
-template uint32_t Memory::read(CpuId id, uint32_t address);
 template <typename T> FORCE_INLINE T Memory::read(CpuId id, uint32_t address) {
     // Look up a readable memory pointer and load an LSB-first value if it exists
     if (uint8_t *data = (id == ARM9 ? readMap9 : readMap11)[address >> 12]) {
@@ -99,9 +96,6 @@ template <typename T> FORCE_INLINE T Memory::read(CpuId id, uint32_t address) {
     return readFallback<T>(id, address);
 }
 
-template void Memory::write(CpuId id, uint32_t address, uint8_t value);
-template void Memory::write(CpuId id, uint32_t address, uint16_t value);
-template void Memory::write(CpuId id, uint32_t address, uint32_t value);
 template <typename T> FORCE_INLINE void Memory::write(CpuId id, uint32_t address, T value) {
     // Look up a writable memory pointer and store an LSB-first value if it exists
     if (uint8_t *data = (id == ARM9 ? writeMap9 : writeMap11)[address >> 12]) {

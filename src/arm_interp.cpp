@@ -20,6 +20,9 @@
 #include "arm_interp.h"
 #include "core.h"
 
+template void ArmInterp::runFrame<false>(Core*);
+template void ArmInterp::runFrame<true>(Core*);
+
 ArmInterp::ArmInterp(Core *core, CpuId id): core(core), id(id) {
     // Initialize the registers for user mode
     for (int i = 0; i < 32; i++)
@@ -50,8 +53,6 @@ void ArmInterp::stopCycles(Core *core) {
             core->arms[i].cycles = -1;
 }
 
-template void ArmInterp::runFrame<false>(Core *core);
-template void ArmInterp::runFrame<true>(Core *core);
 template <bool extra> void ArmInterp::runFrame(Core *core) {
     // Run a frame of CPU instructions and events
     while (core->running.exchange(true)) {

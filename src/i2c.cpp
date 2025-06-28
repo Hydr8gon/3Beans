@@ -59,7 +59,7 @@ void I2c::writeBusCnt(int i, uint8_t value) {
             case 0x14B1B: i2cBusData[i] = readMcuIrqMask(3); return;
 
         default:
-            LOG_WARN("Unknown I2C bus %d read from device 0x%02X, register 0x%02X\n", i, devAddr, regAddr);
+            LOG_WARN("Unknown I2C bus %d read from device 0x%X, register 0x%X\n", i, devAddr, regAddr);
             i2cBusData[i] = 0;
             return;
         }
@@ -87,7 +87,7 @@ void I2c::writeBusCnt(int i, uint8_t value) {
         case 0x14A22: return writeMcuLcdPower(i2cBusData[i]);
 
     default:
-        LOG_WARN("Unknown I2C bus %d write to device 0x%02X, register 0x%02X\n", i, devAddr, regAddr);
+        LOG_WARN("Unknown I2C bus %d write to device 0x%X, register 0x%X\n", i, devAddr, regAddr);
         return;
     }
 }

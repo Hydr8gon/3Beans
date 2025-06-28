@@ -31,8 +31,9 @@ enum CpuId {
     ARM11 = ARM11A
 };
 
-// Simple bit macro
-#define BIT(i) (1 << (i))
+// Simple bit macros
+#define BIT(i) (1U << (i))
+#define BITL(i) (1ULL << (i))
 
 // Macro to swap two values
 #define SWAP(a, b) { auto c = a; a = b; b = c; }
@@ -55,6 +56,24 @@ enum CpuId {
 
 // Macro to force inlining
 #define FORCE_INLINE inline __attribute__((always_inline))
+
+// Macro to explicitly define 2 integer templates at once
+#define TEMPLATE2(id, i, ...) \
+    template id<i + 0>(__VA_ARGS__); \
+    template id<i + 1>(__VA_ARGS__);
+
+// Macro to explicitly define 3 integer templates at once
+#define TEMPLATE3(id, i, ...) \
+    template id<i + 0>(__VA_ARGS__); \
+    template id<i + 1>(__VA_ARGS__); \
+    template id<i + 2>(__VA_ARGS__);
+
+// Macro to explicitly define 4 integer templates at once
+#define TEMPLATE4(id, i, ...) \
+    template id<i + 0>(__VA_ARGS__); \
+    template id<i + 1>(__VA_ARGS__); \
+    template id<i + 2>(__VA_ARGS__); \
+    template id<i + 3>(__VA_ARGS__);
 
 // If enabled, print critical logs in red
 #if LOG_LEVEL > 0

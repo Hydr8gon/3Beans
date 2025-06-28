@@ -86,9 +86,9 @@ void Cdma::runOpcodes(int i) {
         default:
             // Catch unknown CDMA opcodes
             if (id == XDMA)
-                LOG_CRIT("Unknown XDMA channel %d opcode: 0x%02X\n", i, op);
+                LOG_CRIT("Unknown XDMA channel %d opcode: 0x%X\n", i, op);
             else
-                LOG_CRIT("Unknown CDMA%d channel %d opcode: 0x%02X\n", id, i, op);
+                LOG_CRIT("Unknown CDMA%d channel %d opcode: 0x%X\n", id, i, op);
             csrs[i] &= ~0xC1FF; // Stopped
             return;
         }
@@ -132,10 +132,10 @@ void Cdma::dmaLd(int i) { // DMALD
     uint8_t size = 1 << ((ccrs[i] >> 1) & 0x7);
     uint8_t len = burstReq ? (((ccrs[i] >> 4) & 0xF) + 1) : 1;
     if (id == XDMA)
-        LOG_INFO("XDMA channel %d loading from 0x%08X with size 0x%X in 0x%X units\n",
+        LOG_INFO("XDMA channel %d loading from 0x%X with size 0x%X in 0x%X units\n",
             i, sars[i], size * len, size);
     else
-        LOG_INFO("CDMA%d channel %d loading from 0x%08X with size 0x%X in 0x%X units\n",
+        LOG_INFO("CDMA%d channel %d loading from 0x%X with size 0x%X in 0x%X units\n",
             id, i, sars[i], size * len, size);
 
     // Load values depending on size and increment the address if enabled
@@ -191,10 +191,10 @@ void Cdma::dmaSt(int i) { // DMAST
     uint8_t size = 1 << ((ccrs[i] >> 15) & 0x7);
     uint8_t len = burstReq ? (((ccrs[i] >> 18) & 0xF) + 1) : 1;
     if (id == XDMA)
-        LOG_INFO("XDMA channel %d storing to 0x%08X with size 0x%X in 0x%X units\n",
+        LOG_INFO("XDMA channel %d storing to 0x%X with size 0x%X in 0x%X units\n",
             i, dars[i], size * len, size);
     else
-        LOG_INFO("CDMA%d channel %d storing to 0x%08X with size 0x%X in 0x%X units\n",
+        LOG_INFO("CDMA%d channel %d storing to 0x%X with size 0x%X in 0x%X units\n",
             id, i, dars[i], size * len, size);
 
     // Store values depending on size and increment the address if enabled
@@ -358,9 +358,9 @@ void Cdma::dmaGoNs(int i) { // DMAGO chan,imm32,ns
 
     // Log the start of a channel's execution
     if (id == XDMA)
-        LOG_INFO("Starting XDMA channel %d execution at 0x%08X\n", chan, cpcs[chan]);
+        LOG_INFO("Starting XDMA channel %d execution at 0x%X\n", chan, cpcs[chan]);
     else
-        LOG_INFO("Starting CDMA%d channel %d execution at 0x%08X\n", id, chan, cpcs[chan]);
+        LOG_INFO("Starting CDMA%d channel %d execution at 0x%X\n", id, chan, cpcs[chan]);
 }
 
 void Cdma::dmaMov(int i) { // DMAMOV reg,imm32

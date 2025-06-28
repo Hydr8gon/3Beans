@@ -19,6 +19,15 @@
 
 #include "core.h"
 
+bool Gpu::checkInterrupt(int i) {
+    // Trigger a GPU interrupt if enabled and its request/compare bytes match
+    if ((gpuIrqMask & BITL(i)) || ((gpuIrqCmp[i >> 2] ^ gpuIrqReq[i >> 2]) & (0xFF << ((i & 0x3) * 8))))
+        return false;
+    gpuIrqStat |= BITL(i);
+    core->interrupts.sendInterrupt(ARM11, 0x2D);
+    return true;
+}
+
 void Gpu::writeCfg11GpuCnt(uint32_t mask, uint32_t value) {
     // Write to the CFG11_GPU_CNT register
     mask &= 0x1007F;
@@ -58,7 +67,7 @@ void Gpu::writeMemfillCnt(int i, uint32_t mask, uint32_t value) {
 
     // Perform a memory fill with the selected data width
     uint32_t start = (gpuMemfillDstAddr[i] << 3), end = (gpuMemfillDstEnd[i] << 3);
-    LOG_INFO("Performing GPU memory fill between 0x%08X and 0x%08X\n", start, end);
+    LOG_INFO("Performing GPU memory fill between 0x%X and 0x%X\n", start, end);
     switch ((gpuMemfillCnt[i] >> 8) & 0x3) {
     case 0: // 16-bit
         for (uint32_t addr = start; addr < end; addr += 2)
@@ -121,7 +130,7 @@ void Gpu::writeMemcopyCnt(uint32_t mask, uint32_t value) {
     uint32_t dstGap = (gpuMemcopyTexDstWidth >> 12) & 0xFFFF0;
 
     // Perform a texture copy, applying address gaps when widths are reached
-    LOG_INFO("Performing GPU texture copy from 0x%08X to 0x%08X with size 0x%X\n", srcAddr, dstAddr, gpuMemcopyTexSize);
+    LOG_INFO("Performing GPU texture copy from 0x%X to 0x%X with size 0x%X\n", srcAddr, dstAddr, gpuMemcopyTexSize);
     for (uint32_t i = 0; i < gpuMemcopyTexSize; i += 4) {
         core->memory.write<uint32_t>(ARM11, dstAddr + i, core->memory.read<uint32_t>(ARM11, srcAddr + i));
         if (srcWidth && !((i + 4) % srcWidth)) srcAddr += srcGap;
@@ -145,7 +154,34 @@ void Gpu::writeMemcopyTexDstWidth(uint32_t mask, uint32_t value) {
     gpuMemcopyTexDstWidth = (gpuMemcopyTexDstWidth & ~mask) | (value & mask);
 }
 
-void Gpu::writeCmdbufJump(int i, uint32_t mask, uint32_t value) {
-    // Stub command list execution by triggering an interrupt
-    core->interrupts.sendInterrupt(ARM11, 0x2D);
+void Gpu::writeIrqAck(int i, uint32_t mask, uint32_t value) {
+    // Write to some of the GPU_IRQ_REQ registers and acknowledge if they don't match
+    gpuIrqReq[i] = (gpuIrqReq[i] & ~mask) | (value & mask);
+    for (int j = 0; j < 4; j++)
+        if ((mask & (0xFF << (j * 8))) && !checkInterrupt((i << 2) + j))
+            gpuIrqStat &= ~BITL((i << 2) + j);
+}
+
+void Gpu::writeIrqCmp(int i, uint32_t mask, uint32_t value) {
+    // Write to some of the GPU_IRQ_CMP registers and check if they match
+    gpuIrqCmp[i] = (gpuIrqCmp[i] & ~mask) | (value & mask);
+    for (int j = 0; j < 4; j++)
+        if (mask & (0xFF << (j * 8)))
+            checkInterrupt((i << 2) + j);
+}
+
+void Gpu::writeIrqMaskL(uint32_t mask, uint32_t value) {
+    // Write to the low part of the GPU_IRQ_MASK register
+    gpuIrqMask = (gpuIrqMask & ~mask) | (value & mask);
+}
+
+void Gpu::writeIrqMaskH(uint32_t mask, uint32_t value) {
+    // Write to the high part of the GPU_IRQ_MASK register
+    gpuIrqMask = (gpuIrqMask & ~(uint64_t(mask) << 32)) | (uint64_t(value & mask) << 32);
+}
+
+void Gpu::writeIrqAutostop(uint32_t mask, uint32_t value) {
+    // Write to the GPU_IRQ_AUTOSTOP register
+    mask &= 0x1;
+    gpuIrqAutostop = (gpuIrqAutostop & ~mask) | (value & mask);
 }

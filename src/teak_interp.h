@@ -65,7 +65,6 @@ private:
     uint16_t **readArArp = &readArpMod[0];
     uint16_t **readSttMod = &readArpMod[8];
 
-    static int (TeakInterp::*teakInstrs[0x10000])(uint16_t);
     static uint16_t (TeakInterp::*readRegS[0x20])();
     static uint16_t (TeakInterp::*readRegP0S[0x20])();
     static uint16_t (TeakInterp::*readAblhS[0x8])();
@@ -82,6 +81,7 @@ private:
     static void (TeakInterp::*writeAblM[0x4])(uint16_t);
     static void (TeakInterp::*writePx33[0x2])(int64_t);
 
+    static int (TeakInterp::*teakInstrs[0x10000])(uint16_t);
     static int64_t (TeakInterp::**readAxS)();
     static int64_t (TeakInterp::**readBxS)();
     static void (TeakInterp::**writeArArp)(uint16_t);

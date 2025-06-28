@@ -39,6 +39,17 @@ public:
     uint32_t readMemcopyTexSize() { return gpuMemcopyTexSize; }
     uint32_t readMemcopyTexSrcWidth() { return gpuMemcopyTexSrcWidth; }
     uint32_t readMemcopyTexDstWidth() { return gpuMemcopyTexDstWidth; }
+    uint32_t readIrqAck(int i) { return gpuIrqReq[i]; }
+    uint32_t readIrqCmp(int i) { return gpuIrqCmp[i]; }
+    uint32_t readIrqMaskL() { return gpuIrqMask >> 0; }
+    uint32_t readIrqMaskH() { return gpuIrqMask >> 32; }
+    uint32_t readIrqStatL() { return gpuIrqStat >> 0; }
+    uint32_t readIrqStatH() { return gpuIrqStat >> 32; }
+    uint32_t readIrqAutostop() { return gpuIrqAutostop; }
+
+    uint32_t readIrqReq(int i) { return gpuIrqReq[i]; }
+    uint32_t readCmdbufSize(int i) { return gpuCmdbufSize[i]; }
+    uint32_t readCmdbufAddr(int i) { return gpuCmdbufAddr[i]; }
 
     void writeCfg11GpuCnt(uint32_t mask, uint32_t value);
     void writeMemfillDstAddr(int i, uint32_t mask, uint32_t value);
@@ -52,10 +63,27 @@ public:
     void writeMemcopyTexSize(uint32_t mask, uint32_t value);
     void writeMemcopyTexSrcWidth(uint32_t mask, uint32_t value);
     void writeMemcopyTexDstWidth(uint32_t mask, uint32_t value);
-    void writeCmdbufJump(int i, uint32_t mask, uint32_t value);
+    void writeIrqAck(int i, uint32_t mask, uint32_t value);
+    void writeIrqCmp(int i, uint32_t mask, uint32_t value);
+    void writeIrqMaskL(uint32_t mask, uint32_t value);
+    void writeIrqMaskH(uint32_t mask, uint32_t value);
+    void writeIrqAutostop(uint32_t mask, uint32_t value);
+
+    template <int i> void writeIrqReq(uint32_t mask, uint32_t value);
+    template <int i> void writeCmdbufSize(uint32_t mask, uint32_t value);
+    template <int i> void writeCmdbufAddr(uint32_t mask, uint32_t value);
+    template <int i> void writeCmdbufJump(uint32_t mask, uint32_t value);
+    void writeUnkCmd(uint32_t mask, uint32_t value);
 
 private:
     Core *core;
+
+    static void (Gpu::*cmdWrites[0x400])(uint32_t, uint32_t);
+    static uint32_t maskTable[0x10];
+
+    uint32_t cmdAddr = -1;
+    uint32_t cmdEnd = 0;
+    uint16_t curCmd = 0;
 
     uint32_t cfg11GpuCnt = 0;
     uint32_t gpuMemfillDstAddr[2] = {};
@@ -69,4 +97,15 @@ private:
     uint32_t gpuMemcopyTexSize = 0;
     uint32_t gpuMemcopyTexSrcWidth = 0;
     uint32_t gpuMemcopyTexDstWidth = 0;
+    uint32_t gpuIrqCmp[16] = {};
+    uint64_t gpuIrqMask = 0;
+    uint64_t gpuIrqStat = 0;
+    uint32_t gpuIrqAutostop = 0;
+
+    uint32_t gpuIrqReq[16] = {};
+    uint32_t gpuCmdbufSize[2] = {};
+    uint32_t gpuCmdbufAddr[2] = {};
+
+    void runCommands();
+    bool checkInterrupt(int i);
 };

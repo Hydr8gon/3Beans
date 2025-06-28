@@ -66,7 +66,7 @@ void Ndma::transferBlock(int i) {
 
     // Get the number of words to transfer per block
     uint32_t count = ndmaWcnt[i] ? ndmaWcnt[i] : 0x1000000;
-    LOG_INFO("NDMA channel %d transferring from 0x%08X to 0x%08X with size 0x%X\n",
+    LOG_INFO("NDMA channel %d transferring from 0x%X to 0x%X with size 0x%X\n",
         i, srcAddrs[i], dstAddrs[i], count << 2);
 
     // Perform an NDMA transfer based on the repeat mode
