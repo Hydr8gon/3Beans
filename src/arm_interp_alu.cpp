@@ -1125,6 +1125,26 @@ int ArmInterp::sel(uint32_t opcode) { // SEL Rd,Rn,Rm
     return 1;
 }
 
+int ArmInterp::pkhbt(uint32_t opcode) { // PKHBT Rd,Rn,Rm,LSL #i
+    // Combine a register's low half with a shifted register's high half
+    if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    uint32_t op1 = *registers[(opcode >> 16) & 0xF];
+    uint32_t op2 = lli(opcode);
+    *op0 = (op2 & 0xFFFF0000) | (op1 & 0xFFFF);
+    return 1;
+}
+
+int ArmInterp::pkhtb(uint32_t opcode) { // PKHTB Rd,Rn,Rm,ASR #i
+    // Combine a register's high half with a shifted register's low half
+    if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    uint32_t op1 = *registers[(opcode >> 16) & 0xF];
+    uint32_t op2 = ari(opcode);
+    *op0 = (op1 & 0xFFFF0000) | (op2 & 0xFFFF);
+    return 1;
+}
+
 int ArmInterp::addRegT(uint16_t opcode) { // ADD Rd,Rs,Rn
     // Addition and set flags (THUMB)
     uint32_t *op0 = registers[opcode & 0x7];

@@ -237,6 +237,8 @@ int ArmInterp::handleReserved(uint32_t opcode) {
     // Check for special opcodes that use the reserved condition code
     if ((opcode & 0xE000000) == 0xA000000)
         return blx(opcode); // BLX label
+    else if ((opcode & 0xC100000) == 0x4100000)
+        return pld(opcode); // PLD address
     else if ((opcode & 0xFF1FE00) == 0x1000000 && id != ARM9)
         return cps(opcode); // CPS[IE/ID] AIF,#mode
     else if ((opcode & 0xE5FFFE0) == 0x84D0500 && id != ARM9)

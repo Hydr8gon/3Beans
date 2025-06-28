@@ -438,10 +438,10 @@ int (ArmInterp::*ArmInterp::armInstrs[])(uint32_t) = {
     &ArmInterp::ldrbPtrmar, &ArmInterp::unkArm, &ArmInterp::ldrbPtrmrr, &ArmInterp::unkArm, // 0x674-0x677
     &ArmInterp::ldrbPtrmll, &ArmInterp::unkArm, &ArmInterp::ldrbPtrmlr, &ArmInterp::unkArm, // 0x678-0x67B
     &ArmInterp::ldrbPtrmar, &ArmInterp::unkArm, &ArmInterp::ldrbPtrmrr, &ArmInterp::unkArm, // 0x67C-0x67F
-    &ArmInterp::strPtrpll, &ArmInterp::unkArm, &ArmInterp::strPtrplr, &ArmInterp::unkArm, // 0x680-0x683
-    &ArmInterp::strPtrpar, &ArmInterp::unkArm, &ArmInterp::strPtrprr, &ArmInterp::sxtab16, // 0x684-0x687
-    &ArmInterp::strPtrpll, &ArmInterp::unkArm, &ArmInterp::strPtrplr, &ArmInterp::sel, // 0x688-0x68B
-    &ArmInterp::strPtrpar, &ArmInterp::unkArm, &ArmInterp::strPtrprr, &ArmInterp::unkArm, // 0x68C-0x68F
+    &ArmInterp::strPtrpll, &ArmInterp::pkhbt, &ArmInterp::strPtrplr, &ArmInterp::unkArm, // 0x680-0x683
+    &ArmInterp::strPtrpar, &ArmInterp::pkhtb, &ArmInterp::strPtrprr, &ArmInterp::sxtab16, // 0x684-0x687
+    &ArmInterp::strPtrpll, &ArmInterp::pkhbt, &ArmInterp::strPtrplr, &ArmInterp::sel, // 0x688-0x68B
+    &ArmInterp::strPtrpar, &ArmInterp::pkhtb, &ArmInterp::strPtrprr, &ArmInterp::unkArm, // 0x68C-0x68F
     &ArmInterp::ldrPtrpll, &ArmInterp::unkArm, &ArmInterp::ldrPtrplr, &ArmInterp::unkArm, // 0x690-0x693
     &ArmInterp::ldrPtrpar, &ArmInterp::unkArm, &ArmInterp::ldrPtrprr, &ArmInterp::unkArm, // 0x694-0x697
     &ArmInterp::ldrPtrpll, &ArmInterp::unkArm, &ArmInterp::ldrPtrplr, &ArmInterp::unkArm, // 0x698-0x69B

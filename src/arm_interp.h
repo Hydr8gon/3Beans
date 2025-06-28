@@ -443,6 +443,8 @@ private:
     int uadd8(uint32_t opcode);
     int uadd16(uint32_t opcode);
     int sel(uint32_t opcode);
+    int pkhbt(uint32_t opcode);
+    int pkhtb(uint32_t opcode);
 
     int addRegT(uint16_t opcode);
     int subRegT(uint16_t opcode);
@@ -812,6 +814,7 @@ private:
     int blx(uint32_t opcode);
     int swi(uint32_t opcode);
     int bkpt(uint32_t opcode);
+    int pld(uint32_t opcode);
     int cps(uint32_t opcode);
     int srs(uint32_t opcode);
     int rfe(uint32_t opcode);

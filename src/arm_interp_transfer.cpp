@@ -1037,6 +1037,7 @@ int ArmInterp::msrIc(uint32_t opcode) { // MSR CPSR,#i
     if (id != ARM9 && !(opcode & 0xF0000)) {
         switch (opcode & 0xFF) {
             case 0x00: return 1; // NOP
+            case 0x01: return 1; // YIELD (stub)
             case 0x02: return wfe(opcode); // WFE
             case 0x03: return wfi(opcode); // WFI
             case 0x04: return sev(opcode); // SEV

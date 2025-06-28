@@ -86,6 +86,11 @@ int ArmInterp::bkpt(uint32_t opcode) { // BKPT
     return exception(0x0C);
 }
 
+int ArmInterp::pld(uint32_t opcode) { // PLD address
+    // Ignore hints that an address will be accessed soon
+    return 1;
+}
+
 int ArmInterp::cps(uint32_t opcode) { // CPS[IE/ID] AIF,#mode
     // Optionally enable or disable interrupt flags
     if (opcode & BIT(19)) {
