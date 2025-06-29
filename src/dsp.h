@@ -57,12 +57,15 @@ private:
     Core *core;
 
     std::queue<uint16_t> readFifo;
-    uint16_t icuState = 0;
     uint8_t readLength = 0;
 
     uint64_t tmrCycles[2] = { -1UL, -1UL };
     uint32_t tmrLatches[2] = {};
     bool tmrSignals[2] = {};
+    uint32_t miuBoundX = 0x8000;
+    uint32_t miuBoundY = 0x10000;
+    bool dmaSignals[3] = {};
+    uint16_t icuState = 0;
 
     uint16_t dspPadr = 0;
     uint16_t dspPcfg = 0x1;
@@ -79,7 +82,20 @@ private:
     uint16_t hpiMask = 0xFFFF;
     uint16_t hpiCfg = 0;
     uint16_t hpiSts = 0;
+    uint16_t miuPageX = 0;
+    uint16_t miuPageY = 0;
+    uint16_t miuPageZ = 0;
+    uint16_t miuSize0 = 0x2020;
+    uint16_t miuMisc = 0x14;
     uint16_t miuIoBase = 0x8000;
+    uint16_t dmaStart = 0x1;
+    uint16_t dmaEnd[3] = {};
+    uint16_t dmaSelect = 0;
+    uint32_t dmaSrcAddr[8] = {};
+    uint32_t dmaDstAddr[8] = {};
+    uint16_t dmaSize[3][8] = { {1,1,1,1,1,1,1,1}, {1,1,1,1,1,1,1,1}, {1,1,1,1,1,1,1,1} };
+    uint16_t dmaAreaCfg[8] = {};
+    uint16_t dmaCtrl[8] = {};
     uint16_t icuPending = 0;
     uint16_t icuTrigger = 0;
     uint16_t icuEnable[4] = {};
@@ -89,7 +105,13 @@ private:
         0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00 };
     uint16_t icuDisable = 0;
 
+    uint32_t getMiuAddr(uint16_t address);
     void scheduleTmr(int i);
+
+    uint16_t dmaRead(uint8_t area, uint32_t address);
+    void dmaWrite(uint8_t area, uint32_t address, uint16_t value);
+    void dmaTransfer(int i);
+
     void updateIcuState();
     void updateArmSemIrq();
     void updateDspSemIrq();
@@ -97,6 +119,7 @@ private:
 
     uint32_t readTmrCount(int i);
     uint16_t readHpiCmd(int i);
+    uint16_t readDmaEnd(int i);
 
     void writeTmrCtrl(int i, uint16_t value);
     void writeTmrEvent(int i, uint16_t value);
@@ -107,7 +130,21 @@ private:
     void writeHpiMask(uint16_t value);
     void writeHpiClear(uint16_t value);
     void writeHpiCfg(uint16_t value);
-    void writeIoBase(uint16_t value);
+    void writeMiuPageX(uint16_t value);
+    void writeMiuPageY(uint16_t value);
+    void writeMiuPageZ(uint16_t value);
+    void writeMiuSize0(uint16_t value);
+    void writeMiuMisc(uint16_t value);
+    void writeMiuIoBase(uint16_t value);
+    void writeDmaStart(uint16_t value);
+    void writeDmaSelect(uint16_t value);
+    void writeDmaSrcAddrL(uint16_t value);
+    void writeDmaSrcAddrH(uint16_t value);
+    void writeDmaDstAddrL(uint16_t value);
+    void writeDmaDstAddrH(uint16_t value);
+    void writeDmaSize(int i, uint16_t value);
+    void writeDmaAreaCfg(uint16_t value);
+    void writeDmaCtrl(uint16_t value);
     void writeIcuAck(uint16_t value);
     void writeIcuTrigger(uint16_t value);
     void writeIcuEnable(int i, uint16_t value);

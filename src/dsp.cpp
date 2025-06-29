@@ -28,10 +28,22 @@ void Dsp::resetCycles() {
             tmrCycles[i] -= core->globalCycles;
 }
 
+uint32_t Dsp::getMiuAddr(uint16_t address) {
+    // Convert a DSP word address to an ARM byte address using MIU data pages
+    uint16_t page = miuPageZ;
+    if (miuMisc & BIT(6)) { // PGM
+        if (address < miuBoundX)
+            page = miuPageX;
+        else if (address < miuBoundY)
+            page = miuPageY;
+    }
+    return 0x1FF40000 + ((page << 17) & 0x20000) + (address << 1);
+}
+
 uint16_t Dsp::readData(uint16_t address) {
     // Read a value from DSP data memory if not within the I/O area
     if (address < miuIoBase || address >= miuIoBase + 0x800)
-        return core->memory.read<uint16_t>(ARM11, 0x1FF40000 + (address << 1));
+        return core->memory.read<uint16_t>(ARM11, getMiuAddr(address));
 
     // Read a value from a DSP I/O register
     switch (address - miuIoBase) {
@@ -58,7 +70,26 @@ uint16_t Dsp::readData(uint16_t address) {
         case 0x0D4: return hpiCfg;
         case 0x0D6: return hpiSts;
         case 0x0D8: return dspPsts;
+        case 0x10E: return miuPageX;
+        case 0x110: return miuPageY;
+        case 0x112: return miuPageZ;
+        case 0x114: return miuSize0;
+        case 0x11A: return miuMisc;
         case 0x11E: return miuIoBase;
+        case 0x184: return dmaStart;
+        case 0x188: return readDmaEnd(0);
+        case 0x18A: return readDmaEnd(1);
+        case 0x18C: return readDmaEnd(2);
+        case 0x1BE: return dmaSelect;
+        case 0x1C0: return dmaSrcAddr[dmaSelect] >> 0;
+        case 0x1C2: return dmaSrcAddr[dmaSelect] >> 16;
+        case 0x1C4: return dmaDstAddr[dmaSelect] >> 0;
+        case 0x1C6: return dmaDstAddr[dmaSelect] >> 16;
+        case 0x1C8: return dmaSize[0][dmaSelect];
+        case 0x1CA: return dmaSize[1][dmaSelect];
+        case 0x1CC: return dmaSize[2][dmaSelect];
+        case 0x1DA: return dmaAreaCfg[dmaSelect];
+        case 0x1DE: return dmaCtrl[dmaSelect];
         case 0x200: return icuPending;
         case 0x204: return icuTrigger;
         case 0x206: return icuEnable[0];
@@ -103,7 +134,7 @@ uint16_t Dsp::readData(uint16_t address) {
 
     default:
         // Catch reads from unknown I/O registers
-        LOG_WARN("Unknown DSP I/O read: 0x%X\n", address);
+        LOG_WARN("Unknown DSP I/O read: 0x%X\n", address - miuIoBase);
         return 0;
     }
 }
@@ -111,7 +142,7 @@ uint16_t Dsp::readData(uint16_t address) {
 void Dsp::writeData(uint16_t address, uint16_t value) {
     // Write a value to DSP data memory if not within the I/O area
     if (address < miuIoBase || address >= miuIoBase + 0x800)
-        return core->memory.write<uint16_t>(ARM11, 0x1FF40000 + (address << 1), value);
+        return core->memory.write<uint16_t>(ARM11, getMiuAddr(address), value);
 
     // Write a value to a DSP I/O register
     switch (address - miuIoBase) {
@@ -130,7 +161,23 @@ void Dsp::writeData(uint16_t address, uint16_t value) {
         case 0x0CE: return writeHpiMask(value);
         case 0x0D0: return writeHpiClear(value);
         case 0x0D4: return writeHpiCfg(value);
-        case 0x11E: return writeIoBase(value);
+        case 0x10E: return writeMiuPageX(value);
+        case 0x110: return writeMiuPageY(value);
+        case 0x112: return writeMiuPageZ(value);
+        case 0x114: return writeMiuSize0(value);
+        case 0x11A: return writeMiuMisc(value);
+        case 0x11E: return writeMiuIoBase(value);
+        case 0x184: return writeDmaStart(value);
+        case 0x1BE: return writeDmaSelect(value);
+        case 0x1C0: return writeDmaSrcAddrL(value);
+        case 0x1C2: return writeDmaSrcAddrH(value);
+        case 0x1C4: return writeDmaDstAddrL(value);
+        case 0x1C6: return writeDmaDstAddrH(value);
+        case 0x1C8: return writeDmaSize(0, value);
+        case 0x1CA: return writeDmaSize(1, value);
+        case 0x1CC: return writeDmaSize(2, value);
+        case 0x1DA: return writeDmaAreaCfg(value);
+        case 0x1DE: return writeDmaCtrl(value);
         case 0x202: return writeIcuAck(value);
         case 0x204: return writeIcuTrigger(value);
         case 0x206: return writeIcuEnable(0, value);
@@ -175,7 +222,7 @@ void Dsp::writeData(uint16_t address, uint16_t value) {
 
     default:
         // Catch writes to unknown I/O registers
-        LOG_WARN("Unknown DSP I/O write: 0x%X\n", address);
+        LOG_WARN("Unknown DSP I/O write: 0x%X\n", address - miuIoBase);
         return;
     }
 }
@@ -240,12 +287,63 @@ uint32_t Dsp::getIcuVector() {
     return icuVector[v];
 }
 
+uint16_t Dsp::dmaRead(uint8_t area, uint32_t address) {
+    // Read a 16-bit value from a DMA area if it exists
+    switch (area) {
+        case 5: return core->memory.read<uint16_t>(ARM11, 0x1FF00000 + ((address << 1) & 0x3FFFE)); // Code
+        case 0: return core->memory.read<uint16_t>(ARM11, 0x1FF40000 + ((address << 1) & 0x3FFFE)); // Data
+        case 1: return readData(miuIoBase + (address & 0x7FF)); // MMIO
+
+    default:
+        // Catch DMA reads from unknown areas
+        LOG_CRIT("Attempted DSP DMA read from unknown area: %d\n", area);
+        return 0;
+    }
+}
+
+void Dsp::dmaWrite(uint8_t area, uint32_t address, uint16_t value) {
+    // Write a 16-bit value to a DMA area if it exists
+    switch (area) {
+        case 5: return core->memory.write<uint16_t>(ARM11, 0x1FF00000 + ((address << 1) & 0x3FFFE), value); // Code
+        case 0: return core->memory.write<uint16_t>(ARM11, 0x1FF40000 + ((address << 1) & 0x3FFFE), value); // Data
+        case 1: return writeData(miuIoBase + (address & 0x7FF), value); // MMIO
+
+    default:
+        // Catch DMA writes to unknown areas
+        LOG_CRIT("Attempted DSP DMA read from unknown area: %d\n", area);
+        return;
+    }
+}
+
+void Dsp::dmaTransfer(int i) {
+    // Get the source and destination parameters
+    uint8_t srcArea = (dmaAreaCfg[i] >> 0) & 0xF;
+    uint8_t dstArea = (dmaAreaCfg[i] >> 4) & 0xF;
+    LOG_INFO("Performing DSP DMA%d transfer from 0x%X in area 0x%X to 0x%X in area 0x%X with size 0x%X * 0x%X * 0x%X\n",
+        i, dmaSrcAddr[i], srcArea, dmaDstAddr[i], dstArea, dmaSize[0][i], dmaSize[1][i], dmaSize[2][i]);
+
+    // Perform a DSP DMA transfer all at once using its 3D size
+    uint32_t size = dmaSize[0][i] * dmaSize[1][i] * dmaSize[2][i];
+    for (uint32_t j = 0; j < size; j++)
+        dmaWrite(dstArea, dmaDstAddr[i] + j, dmaRead(srcArea, dmaSrcAddr[i] + j));
+
+    // Set end bits for each size and signal interrupts if enabled
+    for (int j = 0; j < 3; j++) {
+        dmaEnd[i] |= BIT(i);
+        if (dmaCtrl[i] & BIT(j))
+            dmaSignals[j] = true;
+    }
+    updateIcuState();
+}
+
 void Dsp::updateIcuState() {
     // Update ICU state bits and set pending for newly-enabled bits
+    bool dma = (dmaSignals[0] || dmaSignals[1] || dmaSignals[2]);
     bool hpi = (hpiSts & BIT(9)) || (hpiSts & hpiCfg & 0x3100);
     bool tmr0 = tmrSignals[0] ^ ((tmrCtrl[0] >> 6) & 0x1);
     bool tmr1 = tmrSignals[1] ^ ((tmrCtrl[1] >> 6) & 0x1);
-    uint16_t state = ((((hpi << 14) | (tmr0 << 10) | (tmr1 << 9)) ^ icuInvert) | icuTrigger) & ~icuDisable;
+    uint16_t state = (dma << 15) | (hpi << 14) | (tmr0 << 10) | (tmr1 << 9);
+    state = ((state ^ icuInvert) | icuTrigger) & ~icuDisable;
     icuPending |= (state & ~icuState);
     icuState = state;
 
@@ -276,28 +374,10 @@ void Dsp::updateDspSemIrq() {
 
 void Dsp::updateReadFifo() {
     // Fill the read FIFO until it's finished or full
-    uint8_t src = (dspPcfg >> 12);
+    uint8_t area = (dspPcfg >> 12);
     while (readLength > 0 && readFifo.size() < 16) {
-        // Push a value from the selected source
-        switch (src) {
-        case 0: // Data
-            readFifo.push(core->memory.read<uint16_t>(ARM11, 0x1FF40000 + (dspPadr << 1)));
-            break;
-
-        case 1: // MMIO
-            readFifo.push(readData(miuIoBase + (dspPadr & 0x7FF)));
-            break;
-
-        case 5: // Code
-            readFifo.push(core->memory.read<uint16_t>(ARM11, 0x1FF00000 + (dspPadr << 1)));
-            break;
-
-        default:
-            LOG_CRIT("Attempted DSP read from unknown source: %d\n", src);
-            return;
-        }
-
-        // Adjust the address and transfer length
+        // Read a value from DMA and adjust the address and length
+        readFifo.push(dmaRead(area, (dmaSrcAddr[0] & ~0xFFFF) | dspPadr));
         dspPadr += (dspPcfg >> 1) & 0x1;
         readLength -= (readLength <= 16);
     }
@@ -327,6 +407,15 @@ uint16_t Dsp::readHpiCmd(int i) {
     dspPsts &= ~BIT(13 + i);
     updateIcuState();
     return dspCmd[i];
+}
+
+uint16_t Dsp::readDmaEnd(int i) {
+    // Read from one of the DMA end flag registers and clear it
+    uint16_t value = dmaEnd[i];
+    dmaEnd[i] = 0;
+    dmaSignals[i] = false;
+    updateIcuState();
+    return value;
 }
 
 void Dsp::writeTmrCtrl(int i, uint16_t value) {
@@ -423,10 +512,87 @@ void Dsp::writeHpiCfg(uint16_t value) {
         LOG_CRIT("Unhandled DSP big-endian I/O mode enabled\n");
 }
 
-void Dsp::writeIoBase(uint16_t value) {
-    // Write to the DSP I/O base address register
+void Dsp::writeMiuPageX(uint16_t value) {
+    // Write to the MIU page X register
+    miuPageX = value;
+}
+
+void Dsp::writeMiuPageY(uint16_t value) {
+    // Write to the MIU page Y register
+    miuPageY = (value & 0xFF);
+}
+
+void Dsp::writeMiuPageZ(uint16_t value) {
+    // Write to the MIU page Z register
+    miuPageZ = value;
+}
+
+void Dsp::writeMiuSize0(uint16_t value) {
+    // Write to the MIU page 0 size register and auto-adjust page Y
+    miuSize0 = std::min(0x4000, std::max(0x100, value & 0x7F00)) | (value & 0x3F);
+    miuBoundX = ((miuSize0 << 10) & 0xFC00);
+    miuBoundY = ((miuSize0 << 2) & 0x1FC00) + miuBoundX;
+}
+
+void Dsp::writeMiuMisc(uint16_t value) {
+    // Write to the MIU miscellaneous config register
+    // TODO: handle bits other than PGM?
+    miuMisc = (value & 0x79) | 0x4;
+}
+
+void Dsp::writeMiuIoBase(uint16_t value) {
+    // Write to the MIU I/O base address register
     miuIoBase = (value & 0xFC00);
     LOG_INFO("Remapping DSP I/O registers to 0x%X\n", miuIoBase);
+}
+
+void Dsp::writeDmaStart(uint16_t value) {
+    // Perform DMA transfers for any started channels (except 0 for PDATA)
+    for (int i = 1; i < 8; i++)
+        if (value & BIT(i)) dmaTransfer(i);
+}
+
+void Dsp::writeDmaSelect(uint16_t value) {
+    // Write to the DMA channel select register
+    dmaSelect = (value & 0x7);
+}
+
+void Dsp::writeDmaSrcAddrL(uint16_t value) {
+    // Write to the low part of the selected DMA source address
+    dmaSrcAddr[dmaSelect] = (dmaSrcAddr[dmaSelect] & ~0xFFFF) | value;
+}
+
+void Dsp::writeDmaSrcAddrH(uint16_t value) {
+    // Write to the high part of the selected DMA source address
+    dmaSrcAddr[dmaSelect] = (dmaSrcAddr[dmaSelect] & 0xFFFF) | (value << 16);
+}
+
+void Dsp::writeDmaDstAddrL(uint16_t value) {
+    // Write to the low part of the selected DMA destination address
+    dmaDstAddr[dmaSelect] = (dmaDstAddr[dmaSelect] & ~0xFFFF) | value;
+}
+
+void Dsp::writeDmaDstAddrH(uint16_t value) {
+    // Write to the high part of the selected DMA destination address
+    dmaDstAddr[dmaSelect] = (dmaDstAddr[dmaSelect] & 0xFFFF) | (value << 16);
+}
+
+void Dsp::writeDmaSize(int i, uint16_t value) {
+    // Write to one of the selected DMA size registers with a minimum of 1
+    dmaSize[i][dmaSelect] = std::max<uint16_t>(0x1, value);
+}
+
+void Dsp::writeDmaAreaCfg(uint16_t value) {
+    // Write to the selected DMA area config register
+    // TODO: handle bits other than area selection?
+    dmaAreaCfg[dmaSelect] = (value & 0xF7FF);
+}
+
+void Dsp::writeDmaCtrl(uint16_t value) {
+    // Write to the selected DMA control register and transfer if started
+    // TODO: handle bits other than interrupt enable?
+    dmaCtrl[dmaSelect] = (value & 0xFF);
+    if (value & BIT(14)) dmaTransfer(dmaSelect);
 }
 
 void Dsp::writeIcuAck(uint16_t value) {
@@ -491,27 +657,11 @@ uint16_t Dsp::readRep(int i) {
 }
 
 void Dsp::writePdata(uint16_t mask, uint16_t value) {
-    // Write a value directly to the selected source, as if the write FIFO is instant
-    switch (uint8_t src = dspPcfg >> 12) {
-    case 0: // Data
-        core->memory.write<uint16_t>(ARM11, 0x1FF40000 + (dspPadr << 1), value & mask);
-        break;
-
-    case 1: // MMIO
-        writeData(miuIoBase + (dspPadr & 0x7FF), value & mask);
-        break;
-
-    case 5: // Code
-        core->memory.write<uint16_t>(ARM11, 0x1FF00000 + (dspPadr << 1), value & mask);
-        break;
-
-    default:
-        LOG_CRIT("Attempted DSP write to unknown source: %d\n", src);
-        return;
-    }
-
-    // Adjust the address and trigger a FIFO empty interrupt if enabled
+    // Write a value to DMA instantly and adjust the address
+    dmaWrite(dspPcfg >> 12, (dmaDstAddr[0] & ~0xFFFF) | dspPadr, value & mask);
     dspPadr += (dspPcfg >> 1) & 0x1;
+
+    // Trigger a FIFO empty interrupt if enabled
     if (dspPcfg & BIT(8))
         core->interrupts.sendInterrupt(ARM11, 0x4A);
 }
