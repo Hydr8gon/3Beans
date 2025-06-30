@@ -227,6 +227,8 @@ void TeakInterp::initLookup() {
             teakInstrs[op] = &TeakInterp::callaA;
         else if ((op & 0xFEFF) == 0xD480)
             teakInstrs[op] = &TeakInterp::callaAl;
+        else if ((op & 0xF800) == 0x1000)
+            teakInstrs[op] = &TeakInterp::callr;
         else if ((op & 0xEFF0) == 0x6760)
             teakInstrs[op] = &TeakInterp::clrA;
         else if ((op & 0xEFF0) == 0x6F60)
@@ -413,6 +415,8 @@ void TeakInterp::initLookup() {
             teakInstrs[op] = &TeakInterp::neg;
         else if (op == 0x0000)
             teakInstrs[op] = &TeakInterp::nop;
+        else if ((op & 0xEFF0) == 0x6780)
+            teakInstrs[op] = &TeakInterp::_not;
         else if ((op & 0xF39F) == 0xD291)
             teakInstrs[op] = &TeakInterp::orAba;
         else if ((op & 0xFEFC) == 0xD4A4)
@@ -555,6 +559,42 @@ void TeakInterp::initLookup() {
             teakInstrs[op] = &TeakInterp::tstbReg;
         else if ((op & 0xFFF8) == 0x0028)
             teakInstrs[op] = &TeakInterp::tstbSm;
+        else if ((op & 0xFE00) == 0xA800)
+            teakInstrs[op] = &TeakInterp::tst0Almi8;
+        else if ((op & 0xFEE0) == 0x8880)
+            teakInstrs[op] = &TeakInterp::tst0Almrn;
+        else if ((op & 0xFEE0) == 0x88A0)
+            teakInstrs[op] = &TeakInterp::tst0Alreg;
+        else if ((op & 0xFFEF) == 0xD38C)
+            teakInstrs[op] = &TeakInterp::tst0Alr6;
+        else if ((op & 0xFF00) == 0xE900)
+            teakInstrs[op] = &TeakInterp::tst0I16mi8;
+        else if ((op & 0xFFE0) == 0x88E0)
+            teakInstrs[op] = &TeakInterp::tst0I16mrn;
+        else if ((op & 0xFFE0) == 0x89E0)
+            teakInstrs[op] = &TeakInterp::tst0I16reg;
+        else if (op == 0x47BC)
+            teakInstrs[op] = &TeakInterp::tst0I16r6;
+        else if ((op & 0xFFF8) == 0x9470)
+            teakInstrs[op] = &TeakInterp::tst0I16sm;
+        else if ((op & 0xFEFF) == 0x84C0)
+            teakInstrs[op] = &TeakInterp::xorI16;
+        else if ((op & 0xFE00) == 0xC400)
+            teakInstrs[op] = &TeakInterp::xorI8;
+        else if ((op & 0xFEFF) == 0xD4FA)
+            teakInstrs[op] = &TeakInterp::xorMi16;
+        else if ((op & 0xFE00) == 0xA400)
+            teakInstrs[op] = &TeakInterp::xorMi8;
+        else if ((op & 0xFEFF) == 0xD4DA)
+            teakInstrs[op] = &TeakInterp::xorM7i16;
+        else if ((op & 0xFE80) == 0x4400)
+            teakInstrs[op] = &TeakInterp::xorM7i7;
+        else if ((op & 0xFEE0) == 0x8480)
+            teakInstrs[op] = &TeakInterp::xorMrn;
+        else if ((op & 0xFEE0) == 0x84A0)
+            teakInstrs[op] = &TeakInterp::xorReg;
+        else if ((op & 0xFFEF) == 0xD38A)
+            teakInstrs[op] = &TeakInterp::xorR6;
         else
             teakInstrs[op] = &TeakInterp::unkOp;
     }

@@ -35,6 +35,7 @@ public:
     void underflowTmr(int i);
     void unsignalTmr(int i);
     uint32_t getIcuVector();
+    void updateIcuState();
 
     uint16_t readPdata();
     uint16_t readPcfg() { return dspPcfg; }
@@ -71,7 +72,7 @@ private:
     uint16_t dspPcfg = 0x1;
     uint16_t dspPsts = 0x100;
     uint16_t dspPsem = 0;
-    uint16_t dspPmask = 0xFFFF;
+    uint16_t dspPmask = 0;
     uint16_t dspSem = 0;
     uint16_t dspCmd[3] = {};
     uint16_t dspRep[3] = {};
@@ -79,7 +80,7 @@ private:
     uint16_t tmrCtrl[2] = {};
     uint32_t tmrReload[2] = {};
     uint32_t tmrCount[2] = {};
-    uint16_t hpiMask = 0xFFFF;
+    uint16_t hpiMask = 0;
     uint16_t hpiCfg = 0;
     uint16_t hpiSts = 0;
     uint16_t miuPageX = 0;
@@ -100,7 +101,6 @@ private:
     uint16_t icuTrigger = 0;
     uint16_t icuEnable[4] = {};
     uint16_t icuMode = 0;
-    uint16_t icuInvert = 0;
     uint32_t icuVector[16] = { 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00,
         0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00 };
     uint16_t icuDisable = 0;
@@ -112,7 +112,6 @@ private:
     void dmaWrite(uint8_t area, uint32_t address, uint16_t value);
     void dmaTransfer(int i);
 
-    void updateIcuState();
     void updateArmSemIrq();
     void updateDspSemIrq();
     void updateReadFifo();
@@ -149,7 +148,6 @@ private:
     void writeIcuTrigger(uint16_t value);
     void writeIcuEnable(int i, uint16_t value);
     void writeIcuMode(uint16_t value);
-    void writeIcuInvert(uint16_t value);
     void writeIcuVectorL(int i, uint16_t value);
     void writeIcuVectorH(int i, uint16_t value);
     void writeIcuDisable(uint16_t value);

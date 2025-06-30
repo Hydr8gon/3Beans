@@ -133,7 +133,6 @@ private:
 
     void incrementPc();
     uint16_t readParam();
-    void updateInterrupts();
 
     void bkrepPop(uint8_t count);
     bool checkCond(uint8_t cond);
@@ -280,6 +279,7 @@ private:
     int movsi(uint16_t opcode);
     int mpyi(uint16_t opcode);
     int neg(uint16_t opcode);
+    int _not(uint16_t opcode);
     int orAba(uint16_t opcode);
     int orAb(uint16_t opcode);
     int orBb(uint16_t opcode);
@@ -324,6 +324,24 @@ private:
     int tstbReg(uint16_t opcode);
     int tstbR6(uint16_t opcode);
     int tstbSm(uint16_t opcode);
+    int tst0Almi8(uint16_t opcode);
+    int tst0Almrn(uint16_t opcode);
+    int tst0Alreg(uint16_t opcode);
+    int tst0Alr6(uint16_t opcode);
+    int tst0I16mi8(uint16_t opcode);
+    int tst0I16mrn(uint16_t opcode);
+    int tst0I16reg(uint16_t opcode);
+    int tst0I16r6(uint16_t opcode);
+    int tst0I16sm(uint16_t opcode);
+    int xorI16(uint16_t opcode);
+    int xorI8(uint16_t opcode);
+    int xorMi16(uint16_t opcode);
+    int xorMi8(uint16_t opcode);
+    int xorM7i16(uint16_t opcode);
+    int xorM7i7(uint16_t opcode);
+    int xorMrn(uint16_t opcode);
+    int xorReg(uint16_t opcode);
+    int xorR6(uint16_t opcode);
 
     int banke(uint16_t opcode);
     int bkrepI8(uint16_t opcode);
@@ -339,6 +357,7 @@ private:
     int call(uint16_t opcode);
     int callaA(uint16_t opcode);
     int callaAl(uint16_t opcode);
+    int callr(uint16_t opcode);
     int cntxR(uint16_t opcode);
     int cntxS(uint16_t opcode);
     int dint(uint16_t opcode);

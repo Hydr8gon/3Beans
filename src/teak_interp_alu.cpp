@@ -302,14 +302,26 @@ int TeakInterp::mpyi(uint16_t opcode) { // MPYI Y0, Imm8s
 }
 
 int TeakInterp::neg(uint16_t opcode) { // NEG Ax, Cond
-    // Negate an A accumulator by subtracting it from zero and set flags
-    int64_t val1 = 0;
-    int64_t val2 = regA[(opcode >> 12) & 0x1].v;
-    int64_t res = ((val1 - val2) << 24) >> 24;
-    bool v = ((val2 ^ val1) & ~(res ^ val2)) >> 39;
-    bool c = (uint64_t(val1) >= uint64_t(res));
-    writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1));
-    (this->*writeAx40[(opcode >> 12) & 0x1])(res);
+    // Negate an A accumulator by subtracting it from 0 and set flags if the condition is met
+    if (checkCond(opcode)) {
+        int64_t val1 = 0;
+        int64_t val2 = regA[(opcode >> 12) & 0x1].v;
+        int64_t res = ((val1 - val2) << 24) >> 24;
+        bool v = ((val2 ^ val1) & ~(res ^ val2)) >> 39;
+        bool c = (uint64_t(val1) >= uint64_t(res));
+        writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1));
+        (this->*writeAx40[(opcode >> 12) & 0x1])(res);
+    }
+    return 1;
+}
+
+int TeakInterp::_not(uint16_t opcode) { // NOT Ax, Cond
+    // Invert the bits of an A accumulator and set flags if the condition is met
+    if (checkCond(opcode)) {
+        int64_t res = ~regA[(opcode >> 12) & 0x1].v;
+        writeStt0((regStt[0] & ~0xE4) | calcZmne(res));
+        (this->*writeAx40[(opcode >> 12) & 0x1])(res);
+    }
     return 1;
 }
 
@@ -499,3 +511,46 @@ TSTB_FUNC(tstbMrn, core->dsp.readData(getRnStepZids(opcode)), opcode >> 8, 1) //
 TSTB_FUNC(tstbReg, *readReg[opcode & 0x1F], opcode >> 8, 1) // TSTB Register, Imm4
 TSTB_FUNC(tstbR6, regR[6], opcode >> 8, 1) // TSTB R6, Imm4
 TSTB_FUNC(tstbSm, *readSttMod[opcode & 0x7], readParam(), 2) // TSTB SttMod, Imm4
+
+// Set the Z flag if the bits in a value masked by an A accumulator are 0
+#define TST0A_FUNC(name, op0s, op1) int TeakInterp::name(uint16_t opcode) { \
+    bool z = !((op1) & regA[(opcode >> op0s) & 0x1].l); \
+    writeStt0((regStt[0] & ~0x80) | (z << 7)); \
+    return 1; \
+}
+
+TST0A_FUNC(tst0Almi8, 8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF))) // TST0 Axl, MemImm8
+TST0A_FUNC(tst0Almrn, 8, getRnStepZids(opcode)) // TST0 Axl, MemRnStepZids
+TST0A_FUNC(tst0Alreg, 8, *readReg[opcode & 0x1F]) // TST0 Axl, Register
+TST0A_FUNC(tst0Alr6, 4, regR[6]) // TST0 Axl, R6
+
+// Set the Z flag if the bits in a value masked by a 16-bit immediate are 0
+#define TST0I_FUNC(name, op1) int TeakInterp::name(uint16_t opcode) { \
+    bool z = !((op1) & readParam()); \
+    writeStt0((regStt[0] & ~0x80) | (z << 7)); \
+    return 2; \
+}
+
+TST0I_FUNC(tst0I16mi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF))) // TST0 Imm16, MemImm8
+TST0I_FUNC(tst0I16mrn, getRnStepZids(opcode)) // TST0 Imm16, MemRnStepZids
+TST0I_FUNC(tst0I16reg, *readReg[opcode & 0x1F]) // TST0 Imm16, Register
+TST0I_FUNC(tst0I16r6, regR[6]) // TST0 Imm16, R6
+TST0I_FUNC(tst0I16sm, *readSttMod[opcode & 0x7]) // TST0 Imm16, SttMod
+
+// Bitwise exclusive or a value with an A accumulator and set flags
+#define XOR_FUNC(name, op0, op1s, cyc) int TeakInterp::name(uint16_t opcode) { \
+    int64_t res = regA[(opcode >> op1s) & 0x1].v ^ (op0); \
+    writeStt0((regStt[0] & ~0xE4) | calcZmne(res)); \
+    (this->*writeAx40[(opcode >> op1s) & 0x1])(res); \
+    return cyc; \
+}
+
+XOR_FUNC(xorI16, readParam(), 8, 2) // XOR Imm16, Ax
+XOR_FUNC(xorI8, (opcode & 0xFF), 8, 1) // XOR Imm8u, Ax
+XOR_FUNC(xorMi16, core->dsp.readData(readParam()), 8, 2) // XOR MemImm16, Ax
+XOR_FUNC(xorMi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 8, 1) // XOR MemImm8, Ax
+XOR_FUNC(xorM7i16, core->dsp.readData(regR[7] + readParam()), 8, 2) // XOR MemR7Imm16, Ax
+XOR_FUNC(xorM7i7, core->dsp.readData(regR[7] + (int8_t(opcode << 1) >> 1)), 8, 1) // XOR MemR7Imm7s, Ax
+XOR_FUNC(xorMrn, core->dsp.readData(getRnStepZids(opcode)), 8, 1) // XOR MemRnStepZids, Ax
+XOR_FUNC(xorReg, *readRegP0[opcode & 0x1F], 8, 1) // XOR RegisterP0, Ax
+XOR_FUNC(xorR6, regR[6], 4, 1) // XOR R6, Ax

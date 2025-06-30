@@ -108,17 +108,16 @@ uint16_t TeakInterp::readParam() {
 }
 
 void TeakInterp::setPendingIrqs(uint8_t mask) {
-    // Set interrupt pending bits in the status registers
+    // Set interrupt pending bits in the status registers if enabled
+    if (~regMod[3] & BIT(7)) return;
+    mask &= (regMod[3] >> 8);
     regStt[2] |= (mask & 0xF);
     regSt[2] |= ((mask & 0x4) << 11) | ((mask & 0x3) << 14);
-    updateInterrupts();
-}
 
-void TeakInterp::updateInterrupts() {
-    // Schedule an interrupt if one is pending and enabled
-    if ((regMod[3] & 0xF80) <= 0x80 || scheduled) return;
+    // Schedule an interrupt if one is pending
+    if (scheduled) return;
     for (int i = 0; i < 4; i++) {
-        if (!(regStt[2] & (regMod[3] >> 8) & BIT(i))) continue;
+        if (~regStt[2] & BIT(i)) continue;
         core->schedule(Task(TEAK_INTERRUPT0 + i), 1);
         scheduled = true;
         return;
@@ -128,7 +127,7 @@ void TeakInterp::updateInterrupts() {
 void TeakInterp::interrupt(int i) {
     // Ensure the interrupt condition still holds
     scheduled = false;
-    if (!(regMod[3] & BIT(7)) || !(regStt[2] & (regMod[3] >> 8) & BIT(i))) return;
+    if (!(regMod[3] & BIT(7)) || !(regStt[2] & BIT(i))) return;
     LOG_INFO("Triggering Teak DSP interrupt %d\n", i);
 
     // Run until not repeating an opcode to avoid dealing with it
@@ -451,7 +450,7 @@ void TeakInterp::writeSt0(uint16_t value) {
     regMod[0] = (regMod[0] & ~0x1) | (regSt[0] & 0x1);
     regMod[3] = (regMod[3] & ~0x380) | ((regSt[0] << 6) & 0x380);
     regA[0].e = int16_t(regSt[0]) >> 12;
-    updateInterrupts();
+    core->dsp.updateIcuState();
 }
 
 void TeakInterp::writeSt1(uint16_t value) {
@@ -468,7 +467,7 @@ void TeakInterp::writeSt2(uint16_t value) {
     regMod[0] = (regMod[0] & ~0x380) | (regSt[2] & 0x380);
     regMod[2] = (regMod[2] & ~0x3F) | (regSt[2] & 0x3F);
     regMod[3] = (regMod[3] & ~0x400) | ((regSt[2] << 4) & 0x400);
-    updateInterrupts();
+    core->dsp.updateIcuState();
 }
 
 void TeakInterp::writeStt0(uint16_t value) {
@@ -516,7 +515,7 @@ void TeakInterp::writeMod3(uint16_t value) {
     regSt[0] = (regSt[0] & ~0xE) | ((regMod[3] >> 6) & 0xE);
     regSt[2] = (regSt[2] & ~0x40) | ((regMod[3] >> 4) & 0x40);
     regIcr = (regIcr & ~0xF) | (regMod[3] & 0xF);
-    updateInterrupts();
+    core->dsp.updateIcuState();
 }
 
 void TeakInterp::writeNone(uint16_t value) {

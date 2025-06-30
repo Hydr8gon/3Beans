@@ -134,6 +134,16 @@ int TeakInterp::call(uint16_t opcode) { // CALL Address18, Cond
 CALLA_FUNC(callaA, regA[(opcode >> 4) & 0x1].v) // CALLA Ax
 CALLA_FUNC(callaAl, ((regStt[2] << 10) & 0x30000) | regA[(opcode >> 8) & 0x1].l) // CALLA Axl
 
+int TeakInterp::callr(uint16_t opcode) { // CALLR RelAddr7, Cond
+    // Branch to a relative 7-bit signed offset and push PC to the stack if the condition is met
+    if (checkCond(opcode)) {
+        core->dsp.writeData(--regSp, regPc >> ((regMod[3] & BIT(14)) ? 16 : 0));
+        core->dsp.writeData(--regSp, regPc >> ((regMod[3] & BIT(14)) ? 0 : 16));
+        regPc += int8_t(opcode >> 3) >> 1;
+    }
+    return 1;
+}
+
 int TeakInterp::cntxR(uint16_t opcode) { // CNTX R
     // Pop status bits from shadow registers and swap page bits
     uint8_t page = regSt[1];
@@ -179,7 +189,7 @@ int TeakInterp::eint(uint16_t opcode) { // EINT
     // Set the interrupt enable bit
     regSt[0] |= BIT(1);
     regMod[3] |= BIT(7);
-    updateInterrupts();
+    core->dsp.updateIcuState();
     return 1;
 }
 
@@ -221,7 +231,7 @@ int TeakInterp::reti(uint16_t opcode) { // RETI, Cond
         if (opcode & BIT(4)) cntxR(0);
         regSt[0] |= BIT(1);
         regMod[3] |= BIT(7);
-        updateInterrupts();
+        core->dsp.updateIcuState();
     }
     return 1;
 }

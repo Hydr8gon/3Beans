@@ -97,7 +97,6 @@ uint16_t Dsp::readData(uint16_t address) {
         case 0x20A: return icuEnable[2];
         case 0x20C: return icuEnable[3];
         case 0x20E: return icuMode;
-        case 0x210: return icuInvert;
         case 0x212: return icuVector[0] >> 16;
         case 0x214: return icuVector[0] >> 0;
         case 0x216: return icuVector[1] >> 16;
@@ -185,7 +184,6 @@ void Dsp::writeData(uint16_t address, uint16_t value) {
         case 0x20A: return writeIcuEnable(2, value);
         case 0x20C: return writeIcuEnable(3, value);
         case 0x20E: return writeIcuMode(value);
-        case 0x210: return writeIcuInvert(value);
         case 0x212: return writeIcuVectorH(0, value);
         case 0x214: return writeIcuVectorL(0, value);
         case 0x216: return writeIcuVectorH(1, value);
@@ -339,11 +337,10 @@ void Dsp::dmaTransfer(int i) {
 void Dsp::updateIcuState() {
     // Update ICU state bits and set pending for newly-enabled bits
     bool dma = (dmaSignals[0] || dmaSignals[1] || dmaSignals[2]);
-    bool hpi = (hpiSts & BIT(9)) || (hpiSts & hpiCfg & 0x3100);
+    bool hpi = (hpiSts & BIT(9)) || (hpiSts & ~hpiCfg & 0x3100);
     bool tmr0 = tmrSignals[0] ^ ((tmrCtrl[0] >> 6) & 0x1);
     bool tmr1 = tmrSignals[1] ^ ((tmrCtrl[1] >> 6) & 0x1);
-    uint16_t state = (dma << 15) | (hpi << 14) | (tmr0 << 10) | (tmr1 << 9);
-    state = ((state ^ icuInvert) | icuTrigger) & ~icuDisable;
+    uint16_t state = ((dma << 15) | (hpi << 14) | (tmr0 << 10) | (tmr1 << 9) | icuTrigger) & ~icuDisable;
     icuPending |= (state & ~icuState);
     icuState = state;
 
@@ -616,12 +613,6 @@ void Dsp::writeIcuEnable(int i, uint16_t value) {
 void Dsp::writeIcuMode(uint16_t value) {
     // Write to the ICU trigger mode mask
     icuMode = value;
-}
-
-void Dsp::writeIcuInvert(uint16_t value) {
-    // Write to the ICU polarity inversion mask
-    icuInvert = value;
-    updateIcuState();
 }
 
 void Dsp::writeIcuVectorL(int i, uint16_t value) {
