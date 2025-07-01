@@ -33,6 +33,7 @@
 #include "defines.h"
 #include "dsp.h"
 #include "gpu.h"
+#include "gpu_render_soft.h"
 #include "i2c.h"
 #include "input.h"
 #include "interrupts.h"
@@ -121,6 +122,7 @@ public:
     Csnd csnd;
     Dsp dsp;
     Gpu gpu;
+    GpuRenderSoft gpuRender;
     I2c i2c;
     Input input;
     Interrupts interrupts;

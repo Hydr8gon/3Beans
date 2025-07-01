@@ -48,8 +48,22 @@ public:
     uint32_t readIrqAutostop() { return gpuIrqAutostop; }
 
     uint32_t readIrqReq(int i) { return gpuIrqReq[i]; }
-    uint32_t readCmdbufSize(int i) { return gpuCmdbufSize[i]; }
-    uint32_t readCmdbufAddr(int i) { return gpuCmdbufAddr[i]; }
+    uint32_t readAttrBase() { return gpuAttrBase; }
+    uint32_t readAttrFmtL() { return gpuAttrFmt >> 0; }
+    uint32_t readAttrFmtH() { return gpuAttrFmt >> 32; }
+    uint32_t readAttrOfs(int i) { return gpuAttrOfs[i]; }
+    uint32_t readAttrCfgL(int i) { return gpuAttrCfg[i] >> 0; }
+    uint32_t readAttrCfgH(int i) { return gpuAttrCfg[i] >> 32; }
+    uint32_t readAttrIdxList() { return gpuAttrIdxList; }
+    uint32_t readAttrNumVerts() { return gpuAttrNumVerts; }
+    uint32_t readAttrFirstIdx() { return gpuAttrFirstIdx; }
+    uint32_t readCmdSize(int i) { return gpuCmdSize[i]; }
+    uint32_t readCmdAddr(int i) { return gpuCmdAddr[i]; }
+    uint32_t readVshBools() { return gpuVshBools; }
+    uint32_t readVshInts(int i) { return gpuVshInts[i]; }
+    uint32_t readVshEntry() { return gpuVshEntry; }
+    uint32_t readVshAttrIdsL() { return gpuVshAttrIds >> 0; }
+    uint32_t readVshAttrIdsH() { return gpuVshAttrIds >> 32; }
 
     void writeCfg11GpuCnt(uint32_t mask, uint32_t value);
     void writeMemfillDstAddr(int i, uint32_t mask, uint32_t value);
@@ -70,9 +84,31 @@ public:
     void writeIrqAutostop(uint32_t mask, uint32_t value);
 
     template <int i> void writeIrqReq(uint32_t mask, uint32_t value);
-    template <int i> void writeCmdbufSize(uint32_t mask, uint32_t value);
-    template <int i> void writeCmdbufAddr(uint32_t mask, uint32_t value);
-    template <int i> void writeCmdbufJump(uint32_t mask, uint32_t value);
+    void writeAttrBase(uint32_t mask, uint32_t value);
+    void writeAttrFmtL(uint32_t mask, uint32_t value);
+    void writeAttrFmtH(uint32_t mask, uint32_t value);
+    template <int i> void writeAttrOfs(uint32_t mask, uint32_t value);
+    template <int i> void writeAttrCfgL(uint32_t mask, uint32_t value);
+    template <int i> void writeAttrCfgH(uint32_t mask, uint32_t value);
+    void writeAttrIdxList(uint32_t mask, uint32_t value);
+    void writeAttrNumVerts(uint32_t mask, uint32_t value);
+    void writeAttrFirstIdx(uint32_t mask, uint32_t value);
+    void writeAttrDrawArrays(uint32_t mask, uint32_t value);
+    void writeAttrDrawElems(uint32_t mask, uint32_t value);
+    template <int i> void writeCmdSize(uint32_t mask, uint32_t value);
+    template <int i> void writeCmdAddr(uint32_t mask, uint32_t value);
+    template <int i> void writeCmdJump(uint32_t mask, uint32_t value);
+    void writeVshBools(uint32_t mask, uint32_t value);
+    template <int i> void writeVshInts(uint32_t mask, uint32_t value);
+    void writeVshEntry(uint32_t mask, uint32_t value);
+    void writeVshAttrIdsL(uint32_t mask, uint32_t value);
+    void writeVshAttrIdsH(uint32_t mask, uint32_t value);
+    void writeVshFloatIdx(uint32_t mask, uint32_t value);
+    void writeVshFloatData(uint32_t mask, uint32_t value);
+    void writeVshCodeIdx(uint32_t mask, uint32_t value);
+    void writeVshCodeData(uint32_t mask, uint32_t value);
+    void writeVshDescIdx(uint32_t mask, uint32_t value);
+    void writeVshDescData(uint32_t mask, uint32_t value);
     void writeUnkCmd(uint32_t mask, uint32_t value);
 
 private:
@@ -84,6 +120,8 @@ private:
     uint32_t cmdAddr = -1;
     uint32_t cmdEnd = 0;
     uint16_t curCmd = 0;
+    uint16_t vshFloatIdx = 0;
+    bool vshFloat32 = false;
 
     uint32_t cfg11GpuCnt = 0;
     uint32_t gpuMemfillDstAddr[2] = {};
@@ -103,9 +141,23 @@ private:
     uint32_t gpuIrqAutostop = 0;
 
     uint32_t gpuIrqReq[16] = {};
-    uint32_t gpuCmdbufSize[2] = {};
-    uint32_t gpuCmdbufAddr[2] = {};
+    uint32_t gpuAttrBase = 0;
+    uint64_t gpuAttrFmt = 0;
+    uint32_t gpuAttrOfs[12] = {};
+    uint64_t gpuAttrCfg[12] = {};
+    uint32_t gpuAttrIdxList = 0;
+    uint32_t gpuAttrNumVerts = 0;
+    uint32_t gpuAttrFirstIdx = 0;
+    uint32_t gpuCmdSize[2] = {};
+    uint32_t gpuCmdAddr[2] = {};
+    uint32_t gpuVshBools = 0;
+    uint32_t gpuVshInts[4] = {};
+    uint32_t gpuVshEntry = 0;
+    uint64_t gpuVshAttrIds = 0;
+    uint32_t gpuVshCodeIdx = 0;
+    uint32_t gpuVshDescIdx = 0;
 
-    void runCommands();
     bool checkInterrupt(int i);
+    void runCommands();
+    void drawAttrIdx(uint32_t idx);
 };

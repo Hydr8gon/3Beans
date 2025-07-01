@@ -21,8 +21,8 @@
 #include "core.h"
 
 Core::Core(std::string &cartPath): aes(this), arms { ArmInterp(this, ARM11A), ArmInterp(this, ARM11B), ArmInterp(this,
-        ARM11C), ArmInterp(this, ARM11D), ArmInterp(this, ARM9) }, cartridge(this, cartPath), cdmas { Cdma(this,
-        CDMA0), Cdma(this, CDMA1), Cdma(this, XDMA) }, cp15(this), csnd(this), dsp(this), gpu(this), i2c(this),
+        ARM11C), ArmInterp(this, ARM11D), ArmInterp(this, ARM9) }, cartridge(this, cartPath), cdmas { Cdma(this, CDMA0),
+        Cdma(this, CDMA1), Cdma(this, XDMA) }, cp15(this), csnd(this), dsp(this), gpu(this), gpuRender(this), i2c(this),
         input(this), interrupts(this), memory(this), ndma(this), pdc(this), pxi(this), rsa(this), sdMmcs { SdMmc(this),
         SdMmc(this) }, shas { Sha(this, false), Sha(this, true) }, teak(this), timers(this), vfp11s { Vfp11Interp(this,
         ARM11A), Vfp11Interp(this, ARM11B), Vfp11Interp(this, ARM11C), Vfp11Interp(this, ARM11D) }, wifi(this) {

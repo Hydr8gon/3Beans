@@ -604,10 +604,60 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x104010C8, data = core->gpu.readIrqStatL()) // GPU_IRQ_STAT_L
                 DEF_IO32(0x104010CC, data = core->gpu.readIrqStatH()) // GPU_IRQ_STAT_H
                 DEF_IO32(0x104010D0, data = core->gpu.readIrqAutostop()) // GPU_IRQ_AUTOSTOP
-                DEF_IO32(0x104018E0, data = core->gpu.readCmdbufSize(0)) // GPU_CMDBUF_SIZE0
-                DEF_IO32(0x104018E4, data = core->gpu.readCmdbufSize(1)) // GPU_CMDBUF_SIZE1
-                DEF_IO32(0x104018E8, data = core->gpu.readCmdbufAddr(0)) // GPU_CMDBUF_ADDR0
-                DEF_IO32(0x104018EC, data = core->gpu.readCmdbufAddr(1)) // GPU_CMDBUF_ADDR1
+                DEF_IO32(0x10401800, data = core->gpu.readAttrBase()) // GPU_ATTR_BASE
+                DEF_IO32(0x10401804, data = core->gpu.readAttrFmtL()) // GPU_ATTR_FMT_L
+                DEF_IO32(0x10401808, data = core->gpu.readAttrFmtH()) // GPU_ATTR_FMT_H
+                DEF_IO32(0x1040180C, data = core->gpu.readAttrOfs(0)) // GPU_ATTR_OFS0
+                DEF_IO32(0x10401810, data = core->gpu.readAttrCfgL(0)) // GPU_ATTR_CFG0_L
+                DEF_IO32(0x10401814, data = core->gpu.readAttrCfgH(0)) // GPU_ATTR_CFG0_H
+                DEF_IO32(0x10401818, data = core->gpu.readAttrOfs(1)) // GPU_ATTR_OFS1
+                DEF_IO32(0x1040181C, data = core->gpu.readAttrCfgL(1)) // GPU_ATTR_CFG1_L
+                DEF_IO32(0x10401820, data = core->gpu.readAttrCfgH(1)) // GPU_ATTR_CFG1_H
+                DEF_IO32(0x10401824, data = core->gpu.readAttrOfs(2)) // GPU_ATTR_OFS2
+                DEF_IO32(0x10401828, data = core->gpu.readAttrCfgL(2)) // GPU_ATTR_CFG2_L
+                DEF_IO32(0x1040182C, data = core->gpu.readAttrCfgH(2)) // GPU_ATTR_CFG2_H
+                DEF_IO32(0x10401830, data = core->gpu.readAttrOfs(3)) // GPU_ATTR_OFS3
+                DEF_IO32(0x10401834, data = core->gpu.readAttrCfgL(3)) // GPU_ATTR_CFG3_L
+                DEF_IO32(0x10401838, data = core->gpu.readAttrCfgH(3)) // GPU_ATTR_CFG3_H
+                DEF_IO32(0x1040183C, data = core->gpu.readAttrOfs(4)) // GPU_ATTR_OFS4
+                DEF_IO32(0x10401840, data = core->gpu.readAttrCfgL(4)) // GPU_ATTR_CFG4_L
+                DEF_IO32(0x10401844, data = core->gpu.readAttrCfgH(4)) // GPU_ATTR_CFG4_H
+                DEF_IO32(0x10401848, data = core->gpu.readAttrOfs(5)) // GPU_ATTR_OFS5
+                DEF_IO32(0x1040184C, data = core->gpu.readAttrCfgL(5)) // GPU_ATTR_CFG5_L
+                DEF_IO32(0x10401850, data = core->gpu.readAttrCfgH(5)) // GPU_ATTR_CFG5_H
+                DEF_IO32(0x10401854, data = core->gpu.readAttrOfs(6)) // GPU_ATTR_OFS6
+                DEF_IO32(0x10401858, data = core->gpu.readAttrCfgL(6)) // GPU_ATTR_CFG6_L
+                DEF_IO32(0x1040185C, data = core->gpu.readAttrCfgH(6)) // GPU_ATTR_CFG6_H
+                DEF_IO32(0x10401860, data = core->gpu.readAttrOfs(7)) // GPU_ATTR_OFS7
+                DEF_IO32(0x10401864, data = core->gpu.readAttrCfgL(7)) // GPU_ATTR_CFG7_L
+                DEF_IO32(0x10401868, data = core->gpu.readAttrCfgH(7)) // GPU_ATTR_CFG7_H
+                DEF_IO32(0x1040186C, data = core->gpu.readAttrOfs(8)) // GPU_ATTR_OFS8
+                DEF_IO32(0x10401870, data = core->gpu.readAttrCfgL(8)) // GPU_ATTR_CFG8_L
+                DEF_IO32(0x10401874, data = core->gpu.readAttrCfgH(8)) // GPU_ATTR_CFG8_H
+                DEF_IO32(0x10401878, data = core->gpu.readAttrOfs(9)) // GPU_ATTR_OFS9
+                DEF_IO32(0x1040187C, data = core->gpu.readAttrCfgL(9)) // GPU_ATTR_CFG9_L
+                DEF_IO32(0x10401880, data = core->gpu.readAttrCfgH(9)) // GPU_ATTR_CFG9_H
+                DEF_IO32(0x10401884, data = core->gpu.readAttrOfs(10)) // GPU_ATTR_OFS10
+                DEF_IO32(0x10401888, data = core->gpu.readAttrCfgL(10)) // GPU_ATTR_CFG10_L
+                DEF_IO32(0x1040188C, data = core->gpu.readAttrCfgH(10)) // GPU_ATTR_CFG10_H
+                DEF_IO32(0x10401890, data = core->gpu.readAttrOfs(11)) // GPU_ATTR_OFS11
+                DEF_IO32(0x10401894, data = core->gpu.readAttrCfgL(11)) // GPU_ATTR_CFG11_L
+                DEF_IO32(0x10401898, data = core->gpu.readAttrCfgH(11)) // GPU_ATTR_CFG11_H
+                DEF_IO32(0x1040189C, data = core->gpu.readAttrIdxList()) // GPU_ATTR_IDX_LIST
+                DEF_IO32(0x104018A0, data = core->gpu.readAttrNumVerts()) // GPU_ATTR_NUM_VERTS
+                DEF_IO32(0x104018A8, data = core->gpu.readAttrFirstIdx()) // GPU_ATTR_FIRST_IDX
+                DEF_IO32(0x104018E0, data = core->gpu.readCmdSize(0)) // GPU_CMD_SIZE0
+                DEF_IO32(0x104018E4, data = core->gpu.readCmdSize(1)) // GPU_CMD_SIZE1
+                DEF_IO32(0x104018E8, data = core->gpu.readCmdAddr(0)) // GPU_CMD_ADDR0
+                DEF_IO32(0x104018EC, data = core->gpu.readCmdAddr(1)) // GPU_CMD_ADDR1
+                DEF_IO32(0x10401AC0, data = core->gpu.readVshBools()) // GPU_VSH_BOOLS
+                DEF_IO32(0x10401AC4, data = core->gpu.readVshInts(0)) // GPU_VSH_INTS0
+                DEF_IO32(0x10401AC8, data = core->gpu.readVshInts(1)) // GPU_VSH_INTS1
+                DEF_IO32(0x10401ACC, data = core->gpu.readVshInts(2)) // GPU_VSH_INTS2
+                DEF_IO32(0x10401AD0, data = core->gpu.readVshInts(3)) // GPU_VSH_INTS3
+                DEF_IO32(0x10401AE8, data = core->gpu.readVshEntry()) // GPU_VSH_ENTRY
+                DEF_IO32(0x10401AEC, data = core->gpu.readVshAttrIdsL()) // GPU_VSH_ATTR_IDS_L
+                DEF_IO32(0x10401AF0, data = core->gpu.readVshAttrIdsH()) // GPU_VSH_ATTR_IDS_H
                 DEF_IO32(0x17E00004, data = core->interrupts.readMpScuConfig()) // MP_SCU_CONFIG
                 DEF_IO32(0x17E00100, data = core->interrupts.readMpIle(id)) // MP_ILE
                 DEF_IO32(0x17E0010C, data = core->interrupts.readMpAck(id)) // MP_ACK
@@ -1652,12 +1702,91 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x104010C0, core->gpu.writeIrqMaskL(IO_PARAMS)) // GPU_IRQ_MASK_L
                 DEF_IO32(0x104010C4, core->gpu.writeIrqMaskH(IO_PARAMS)) // GPU_IRQ_MASK_H
                 DEF_IO32(0x104010D0, core->gpu.writeIrqAutostop(IO_PARAMS)) // GPU_IRQ_AUTOSTOP
-                DEF_IO32(0x104018E0, core->gpu.writeCmdbufSize<0>(IO_PARAMS)) // GPU_CMDBUF_SIZE0
-                DEF_IO32(0x104018E4, core->gpu.writeCmdbufSize<1>(IO_PARAMS)) // GPU_CMDBUF_SIZE1
-                DEF_IO32(0x104018E8, core->gpu.writeCmdbufAddr<0>(IO_PARAMS)) // GPU_CMDBUF_ADDR0
-                DEF_IO32(0x104018EC, core->gpu.writeCmdbufAddr<1>(IO_PARAMS)) // GPU_CMDBUF_ADDR1
-                DEF_IO32(0x104018F0, core->gpu.writeCmdbufJump<0>(IO_PARAMS)) // GPU_CMDBUF_JUMP0
-                DEF_IO32(0x104018F4, core->gpu.writeCmdbufJump<1>(IO_PARAMS)) // GPU_CMDBUF_JUMP1
+                DEF_IO32(0x10401800, core->gpu.writeAttrBase(IO_PARAMS)) // GPU_ATTR_BASE
+                DEF_IO32(0x10401804, core->gpu.writeAttrFmtL(IO_PARAMS)) // GPU_ATTR_FMT_L
+                DEF_IO32(0x10401808, core->gpu.writeAttrFmtH(IO_PARAMS)) // GPU_ATTR_FMT_H
+                DEF_IO32(0x1040180C, core->gpu.writeAttrOfs<0>(IO_PARAMS)) // GPU_ATTR_OFS0
+                DEF_IO32(0x10401810, core->gpu.writeAttrCfgL<0>(IO_PARAMS)) // GPU_ATTR_CFG0_L
+                DEF_IO32(0x10401814, core->gpu.writeAttrCfgH<0>(IO_PARAMS)) // GPU_ATTR_CFG0_H
+                DEF_IO32(0x10401818, core->gpu.writeAttrOfs<1>(IO_PARAMS)) // GPU_ATTR_OFS1
+                DEF_IO32(0x1040181C, core->gpu.writeAttrCfgL<1>(IO_PARAMS)) // GPU_ATTR_CFG1_L
+                DEF_IO32(0x10401820, core->gpu.writeAttrCfgH<1>(IO_PARAMS)) // GPU_ATTR_CFG1_H
+                DEF_IO32(0x10401824, core->gpu.writeAttrOfs<2>(IO_PARAMS)) // GPU_ATTR_OFS2
+                DEF_IO32(0x10401828, core->gpu.writeAttrCfgL<2>(IO_PARAMS)) // GPU_ATTR_CFG2_L
+                DEF_IO32(0x1040182C, core->gpu.writeAttrCfgH<2>(IO_PARAMS)) // GPU_ATTR_CFG2_H
+                DEF_IO32(0x10401830, core->gpu.writeAttrOfs<3>(IO_PARAMS)) // GPU_ATTR_OFS3
+                DEF_IO32(0x10401834, core->gpu.writeAttrCfgL<3>(IO_PARAMS)) // GPU_ATTR_CFG3_L
+                DEF_IO32(0x10401838, core->gpu.writeAttrCfgH<3>(IO_PARAMS)) // GPU_ATTR_CFG3_H
+                DEF_IO32(0x1040183C, core->gpu.writeAttrOfs<4>(IO_PARAMS)) // GPU_ATTR_OFS4
+                DEF_IO32(0x10401840, core->gpu.writeAttrCfgL<4>(IO_PARAMS)) // GPU_ATTR_CFG4_L
+                DEF_IO32(0x10401844, core->gpu.writeAttrCfgH<4>(IO_PARAMS)) // GPU_ATTR_CFG4_H
+                DEF_IO32(0x10401848, core->gpu.writeAttrOfs<5>(IO_PARAMS)) // GPU_ATTR_OFS5
+                DEF_IO32(0x1040184C, core->gpu.writeAttrCfgL<5>(IO_PARAMS)) // GPU_ATTR_CFG5_L
+                DEF_IO32(0x10401850, core->gpu.writeAttrCfgH<5>(IO_PARAMS)) // GPU_ATTR_CFG5_H
+                DEF_IO32(0x10401854, core->gpu.writeAttrOfs<6>(IO_PARAMS)) // GPU_ATTR_OFS6
+                DEF_IO32(0x10401858, core->gpu.writeAttrCfgL<6>(IO_PARAMS)) // GPU_ATTR_CFG6_L
+                DEF_IO32(0x1040185C, core->gpu.writeAttrCfgH<6>(IO_PARAMS)) // GPU_ATTR_CFG6_H
+                DEF_IO32(0x10401860, core->gpu.writeAttrOfs<7>(IO_PARAMS)) // GPU_ATTR_OFS7
+                DEF_IO32(0x10401864, core->gpu.writeAttrCfgL<7>(IO_PARAMS)) // GPU_ATTR_CFG7_L
+                DEF_IO32(0x10401868, core->gpu.writeAttrCfgH<7>(IO_PARAMS)) // GPU_ATTR_CFG7_H
+                DEF_IO32(0x1040186C, core->gpu.writeAttrOfs<8>(IO_PARAMS)) // GPU_ATTR_OFS8
+                DEF_IO32(0x10401870, core->gpu.writeAttrCfgL<8>(IO_PARAMS)) // GPU_ATTR_CFG8_L
+                DEF_IO32(0x10401874, core->gpu.writeAttrCfgH<8>(IO_PARAMS)) // GPU_ATTR_CFG8_H
+                DEF_IO32(0x10401878, core->gpu.writeAttrOfs<9>(IO_PARAMS)) // GPU_ATTR_OFS9
+                DEF_IO32(0x1040187C, core->gpu.writeAttrCfgL<9>(IO_PARAMS)) // GPU_ATTR_CFG9_L
+                DEF_IO32(0x10401880, core->gpu.writeAttrCfgH<9>(IO_PARAMS)) // GPU_ATTR_CFG9_H
+                DEF_IO32(0x10401884, core->gpu.writeAttrOfs<10>(IO_PARAMS)) // GPU_ATTR_OFS10
+                DEF_IO32(0x10401888, core->gpu.writeAttrCfgL<10>(IO_PARAMS)) // GPU_ATTR_CFG10_L
+                DEF_IO32(0x1040188C, core->gpu.writeAttrCfgH<10>(IO_PARAMS)) // GPU_ATTR_CFG10_H
+                DEF_IO32(0x10401890, core->gpu.writeAttrOfs<11>(IO_PARAMS)) // GPU_ATTR_OFS11
+                DEF_IO32(0x10401894, core->gpu.writeAttrCfgL<11>(IO_PARAMS)) // GPU_ATTR_CFG11_L
+                DEF_IO32(0x10401898, core->gpu.writeAttrCfgH<11>(IO_PARAMS)) // GPU_ATTR_CFG11_H
+                DEF_IO32(0x1040189C, core->gpu.writeAttrIdxList(IO_PARAMS)) // GPU_ATTR_IDX_LIST
+                DEF_IO32(0x104018A0, core->gpu.writeAttrNumVerts(IO_PARAMS)) // GPU_ATTR_NUM_VERTS
+                DEF_IO32(0x104018A8, core->gpu.writeAttrFirstIdx(IO_PARAMS)) // GPU_ATTR_FIRST_IDX
+                DEF_IO32(0x104018B8, core->gpu.writeAttrDrawArrays(IO_PARAMS)) // GPU_ATTR_DRAW_ARRAYS
+                DEF_IO32(0x104018BC, core->gpu.writeAttrDrawElems(IO_PARAMS)) // GPU_ATTR_DRAW_ELEMS
+                DEF_IO32(0x104018E0, core->gpu.writeCmdSize<0>(IO_PARAMS)) // GPU_CMD_SIZE0
+                DEF_IO32(0x104018E4, core->gpu.writeCmdSize<1>(IO_PARAMS)) // GPU_CMD_SIZE1
+                DEF_IO32(0x104018E8, core->gpu.writeCmdAddr<0>(IO_PARAMS)) // GPU_CMD_ADDR0
+                DEF_IO32(0x104018EC, core->gpu.writeCmdAddr<1>(IO_PARAMS)) // GPU_CMD_ADDR1
+                DEF_IO32(0x104018F0, core->gpu.writeCmdJump<0>(IO_PARAMS)) // GPU_CMD_JUMP0
+                DEF_IO32(0x104018F4, core->gpu.writeCmdJump<1>(IO_PARAMS)) // GPU_CMD_JUMP1
+                DEF_IO32(0x10401AC0, core->gpu.writeVshBools(IO_PARAMS)) // GPU_VSH_BOOLS
+                DEF_IO32(0x10401AC4, core->gpu.writeVshInts<0>(IO_PARAMS)) // GPU_VSH_INTS0
+                DEF_IO32(0x10401AC8, core->gpu.writeVshInts<1>(IO_PARAMS)) // GPU_VSH_INTS1
+                DEF_IO32(0x10401ACC, core->gpu.writeVshInts<2>(IO_PARAMS)) // GPU_VSH_INTS2
+                DEF_IO32(0x10401AD0, core->gpu.writeVshInts<3>(IO_PARAMS)) // GPU_VSH_INTS3
+                DEF_IO32(0x10401AE8, core->gpu.writeVshEntry(IO_PARAMS)) // GPU_VSH_ENTRY
+                DEF_IO32(0x10401AEC, core->gpu.writeVshAttrIdsL(IO_PARAMS)) // GPU_VSH_ATTR_IDS_L
+                DEF_IO32(0x10401AF0, core->gpu.writeVshAttrIdsH(IO_PARAMS)) // GPU_VSH_ATTR_IDS_H
+                DEF_IO32(0x10401B00, core->gpu.writeVshFloatIdx(IO_PARAMS)) // GPU_VSH_FLOAT_IDX
+                DEF_IO32(0x10401B04, core->gpu.writeVshFloatData(IO_PARAMS)) // GPU_VSH_FLOAT_DATA
+                DEF_IO32(0x10401B08, core->gpu.writeVshFloatData(IO_PARAMS)) // GPU_VSH_FLOAT_DATA
+                DEF_IO32(0x10401B0C, core->gpu.writeVshFloatData(IO_PARAMS)) // GPU_VSH_FLOAT_DATA
+                DEF_IO32(0x10401B10, core->gpu.writeVshFloatData(IO_PARAMS)) // GPU_VSH_FLOAT_DATA
+                DEF_IO32(0x10401B14, core->gpu.writeVshFloatData(IO_PARAMS)) // GPU_VSH_FLOAT_DATA
+                DEF_IO32(0x10401B18, core->gpu.writeVshFloatData(IO_PARAMS)) // GPU_VSH_FLOAT_DATA
+                DEF_IO32(0x10401B1C, core->gpu.writeVshFloatData(IO_PARAMS)) // GPU_VSH_FLOAT_DATA
+                DEF_IO32(0x10401B20, core->gpu.writeVshFloatData(IO_PARAMS)) // GPU_VSH_FLOAT_DATA
+                DEF_IO32(0x10401B2C, core->gpu.writeVshCodeIdx(IO_PARAMS)) // GPU_VSH_CODE_IDX
+                DEF_IO32(0x10401B30, core->gpu.writeVshCodeData(IO_PARAMS)) // GPU_VSH_CODE_DATA
+                DEF_IO32(0x10401B34, core->gpu.writeVshCodeData(IO_PARAMS)) // GPU_VSH_CODE_DATA
+                DEF_IO32(0x10401B38, core->gpu.writeVshCodeData(IO_PARAMS)) // GPU_VSH_CODE_DATA
+                DEF_IO32(0x10401B3C, core->gpu.writeVshCodeData(IO_PARAMS)) // GPU_VSH_CODE_DATA
+                DEF_IO32(0x10401B40, core->gpu.writeVshCodeData(IO_PARAMS)) // GPU_VSH_CODE_DATA
+                DEF_IO32(0x10401B44, core->gpu.writeVshCodeData(IO_PARAMS)) // GPU_VSH_CODE_DATA
+                DEF_IO32(0x10401B48, core->gpu.writeVshCodeData(IO_PARAMS)) // GPU_VSH_CODE_DATA
+                DEF_IO32(0x10401B4C, core->gpu.writeVshCodeData(IO_PARAMS)) // GPU_VSH_CODE_DATA
+                DEF_IO32(0x10401B54, core->gpu.writeVshDescIdx(IO_PARAMS)) // GPU_VSH_DESC_IDX
+                DEF_IO32(0x10401B58, core->gpu.writeVshDescData(IO_PARAMS)) // GPU_VSH_DESC_DATA
+                DEF_IO32(0x10401B5C, core->gpu.writeVshDescData(IO_PARAMS)) // GPU_VSH_DESC_DATA
+                DEF_IO32(0x10401B60, core->gpu.writeVshDescData(IO_PARAMS)) // GPU_VSH_DESC_DATA
+                DEF_IO32(0x10401B64, core->gpu.writeVshDescData(IO_PARAMS)) // GPU_VSH_DESC_DATA
+                DEF_IO32(0x10401B68, core->gpu.writeVshDescData(IO_PARAMS)) // GPU_VSH_DESC_DATA
+                DEF_IO32(0x10401B6C, core->gpu.writeVshDescData(IO_PARAMS)) // GPU_VSH_DESC_DATA
+                DEF_IO32(0x10401B70, core->gpu.writeVshDescData(IO_PARAMS)) // GPU_VSH_DESC_DATA
+                DEF_IO32(0x10401B74, core->gpu.writeVshDescData(IO_PARAMS)) // GPU_VSH_DESC_DATA
                 DEF_IO32(0x17E00100, core->interrupts.writeMpIle(id, IO_PARAMS)) // MP_ILE
                 DEF_IO32(0x17E00110, core->interrupts.writeMpEoi(id, IO_PARAMS)) // MP_EOI
                 DEF_IO32(0x17E00600, core->timers.writeMpReload(id, 0, IO_PARAMS)) // MP_RELOAD0

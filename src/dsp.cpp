@@ -17,8 +17,6 @@
     along with 3Beans. If not, see <https://www.gnu.org/licenses/>.
 */
 
-#pragma once
-
 #include "core.h"
 
 void Dsp::resetCycles() {

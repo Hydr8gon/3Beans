@@ -121,7 +121,7 @@ template <typename T> void Cp15::write(CpuId id, uint32_t address, T value) {
         if (address == 0xFFFF9004 && value) {
             // Log process names when the active 3DS kernel process struct changes
             uint32_t kCodeSet = read<uint32_t>(id, value + 0xB0 + core->n3dsMode * 8);
-            uint8_t procName[9];
+            uint8_t procName[9] = {};
             for (int i = 0; i < 8; i++)
                 procName[i] = read<uint8_t>(id, kCodeSet + 0x50 + i);
             LOG_OS("ARM11 core %d kernel switching to process '%s'\n", id, procName);
