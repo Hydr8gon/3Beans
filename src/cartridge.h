@@ -79,6 +79,7 @@ private:
     uint8_t *saveData = nullptr;
     uint32_t saveSize = 0;
     std::string savePath;
+    bool saveDirty = false;
 
     uint32_t cartBase = -1;
     uint32_t cartBlock[0x200] = {};
@@ -94,6 +95,7 @@ private:
     uint32_t ctrAddress = 0;
     uint32_t spiAddress = 0;
     uint8_t spiCommand = 0;
+    uint8_t spiStatus = 0;
 
     uint16_t cfg9CardPower = 0x1;
     uint16_t ntrMcnt = 0;
@@ -110,5 +112,6 @@ private:
     uint32_t spiFifoIntStat = 0;
 
     uint32_t readCart(uint32_t address);
+    void updateSave();
     uint8_t spiTransfer(uint8_t value);
 };

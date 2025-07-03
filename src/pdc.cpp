@@ -72,7 +72,7 @@ void Pdc::drawScreen(bool bot, uint32_t *buffer) {
         }
         return;
 
-    case 3: // RGBA5551
+    case 3: // RGB5A1
         for (int y = 0; y < 240; y++) {
             for (int x = 0; x < width; x++) {
                 uint16_t color = core->memory.read<uint16_t>(ARM11, pdcFramebufLt0[bot] + (x * 240 + 239 - y) * 2);
@@ -84,7 +84,7 @@ void Pdc::drawScreen(bool bot, uint32_t *buffer) {
         }
         return;
 
-    default: // RGBA4444
+    default: // RGBA4
         for (int y = 0; y < 240; y++) {
             for (int x = 0; x < width; x++) {
                 uint16_t color = core->memory.read<uint16_t>(ARM11, pdcFramebufLt0[bot] + (x * 240 + 239 - y) * 2);

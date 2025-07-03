@@ -55,6 +55,17 @@ uint32_t Cartridge::readCart(uint32_t address) {
     return cartBlock[(address >> 2) & 0x1FF];
 }
 
+void Cartridge::updateSave() {
+    // Update the save file if its data changed
+    if (!saveDirty) return;
+    if (FILE *file = fopen(savePath.c_str(), "wb")) {
+        LOG_INFO("Writing updated save file to disk\n");
+        fwrite(saveData, sizeof(uint8_t), saveSize, file);
+        fclose(file);
+        saveDirty = false;
+    }
+}
+
 void Cartridge::ntrWordReady() {
     // Indicate that a NTRCARD word is ready and trigger DMAs
     ntrRomcnt |= BIT(23);
@@ -116,6 +127,19 @@ uint8_t Cartridge::spiTransfer(uint8_t value) {
 
     // Handle SPICARD accesses based on the command byte
     switch (spiCommand) {
+    case 0x02: // Write byte data
+        // Set the 3-byte address to write to and handle dummy bytes
+        if (spiTotal <= 4) {
+            if (spiTotal >= 2)
+                spiAddress |= value << ((4 - spiTotal) * 8);
+            return 0;
+        }
+
+        // Write save data and increment the address if enabled
+        if ((spiStatus & BIT(1)) && spiAddress < saveSize)
+            saveData[spiAddress++] = value, saveDirty = true;
+        return 0;
+
     case 0x03: // Read byte data
     case 0xEB: // Read quad data
         // Set the 3-byte address to read from and handle dummy bytes
@@ -127,6 +151,20 @@ uint8_t Cartridge::spiTransfer(uint8_t value) {
 
         // Read save data and increment the address once it's set
         return (spiAddress < saveSize) ? saveData[spiAddress++] : 0xFF;
+
+    case 0x04: // Disable writes
+        // Clear the write enable bit in the status register
+        spiStatus &= ~BIT(1);
+        return 0;
+
+    case 0x05: // Read status
+        // Read the FLASH status register
+        return spiStatus;
+
+    case 0x06: // Enable writes
+        // Set the write enable bit in the status register
+        spiStatus |= BIT(1);
+        return 0;
 
     case 0x9F: // Read ID
         // Return the ID of a 512KB Macronix FLASH chip
@@ -383,8 +421,9 @@ void Cartridge::writeSpiFifoSelect(uint32_t mask, uint32_t value) {
     spiFifoSelect = (spiFifoSelect & ~mask) | (value & mask);
 
     // Reset SPICARD transfer state when the chip is deselected
-    if (!spiFifoSelect)
-        spiTotal = 0;
+    if (spiFifoSelect) return;
+    spiTotal = 0;
+    updateSave();
 }
 
 void Cartridge::writeSpiFifoBlklen(uint32_t mask, uint32_t value) {

@@ -159,6 +159,17 @@ void Gpu::writeMemcopyCnt(uint32_t mask, uint32_t value) {
     switch (srcFmt) {
     case 0x0: // RGBA8
         switch (dstFmt) {
+        case 0x0: // RGBA8
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    uint32_t pixelAddr = dstAddr + (y * width + x) * 4;
+                    uint32_t tileAddr = srcAddr + (((y >> 3) * (width >> 3) + (x >> 3)) << 8);
+                    uint32_t color = core->memory.read<uint32_t>(ARM11, tileAddr + ((y & 0x7) << 5) + ((x & 0x7) << 2));
+                    core->memory.write<uint32_t>(ARM11, pixelAddr, color);
+                }
+            }
+            return;
+
         case 0x1: // RGB8
             for (int y = 0; y < height; y++) {
                 for (int x = 0; x < width; x++) {
@@ -172,8 +183,48 @@ void Gpu::writeMemcopyCnt(uint32_t mask, uint32_t value) {
             }
             return;
 
-        default:
-            LOG_CRIT("Unimplemented display copy RGBA8 destination format: 0x%X\n", dstFmt);
+        case 0x2: // RGB565
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    uint32_t pixelAddr = dstAddr + (y * width + x) * 2;
+                    uint32_t tileAddr = srcAddr + (((y >> 3) * (width >> 3) + (x >> 3)) << 8);
+                    uint32_t color = core->memory.read<uint32_t>(ARM11, tileAddr + ((y & 0x7) << 5) + ((x & 0x7) << 2));
+                    uint8_t r = ((color >> 24) & 0xFF) * 31 / 255;
+                    uint8_t g = ((color >> 16) & 0xFF) * 63 / 255;
+                    uint8_t b = ((color >> 8) & 0xFF) * 31 / 255;
+                    core->memory.write<uint16_t>(ARM11, pixelAddr, (r << 11) | (g << 5) | b);
+                }
+            }
+            return;
+
+        case 0x3: // RGB5A1
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    uint32_t pixelAddr = dstAddr + (y * width + x) * 2;
+                    uint32_t tileAddr = srcAddr + (((y >> 3) * (width >> 3) + (x >> 3)) << 8);
+                    uint32_t color = core->memory.read<uint32_t>(ARM11, tileAddr + ((y & 0x7) << 5) + ((x & 0x7) << 2));
+                    uint8_t r = ((color >> 24) & 0xFF) * 31 / 255;
+                    uint8_t g = ((color >> 16) & 0xFF) * 31 / 255;
+                    uint8_t b = ((color >> 8) & 0xFF) * 31 / 255;
+                    uint8_t a = ((color >> 0) & 0xFF) ? 1 : 0;
+                    core->memory.write<uint16_t>(ARM11, pixelAddr, (r << 11) | (g << 6) | (b << 1) | a);
+                }
+            }
+            return;
+
+        default: // RGBA4
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    uint32_t pixelAddr = dstAddr + (y * width + x) * 2;
+                    uint32_t tileAddr = srcAddr + (((y >> 3) * (width >> 3) + (x >> 3)) << 8);
+                    uint32_t color = core->memory.read<uint32_t>(ARM11, tileAddr + ((y & 0x7) << 5) + ((x & 0x7) << 2));
+                    uint8_t r = ((color >> 24) & 0xFF) * 15 / 255;
+                    uint8_t g = ((color >> 16) & 0xFF) * 15 / 255;
+                    uint8_t b = ((color >> 8) & 0xFF) * 15 / 255;
+                    uint8_t a = ((color >> 0) & 0xFF) * 15 / 255;
+                    core->memory.write<uint16_t>(ARM11, pixelAddr, (r << 12) | (g << 8) | (b << 4) | a);
+                }
+            }
             return;
         }
 
