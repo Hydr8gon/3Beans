@@ -176,9 +176,9 @@ void Gpu::writeMemcopyCnt(uint32_t mask, uint32_t value) {
                     uint32_t pixelAddr = dstAddr + (y * width + x) * 3;
                     uint32_t tileAddr = srcAddr + (((y >> 3) * (width >> 3) + (x >> 3)) << 8);
                     uint32_t color = core->memory.read<uint32_t>(ARM11, tileAddr + ((y & 0x7) << 5) + ((x & 0x7) << 2));
-                    core->memory.write<uint8_t>(ARM11, pixelAddr + 0, (color >> 24) & 0xFF);
+                    core->memory.write<uint8_t>(ARM11, pixelAddr + 2, (color >> 24) & 0xFF);
                     core->memory.write<uint8_t>(ARM11, pixelAddr + 1, (color >> 16) & 0xFF);
-                    core->memory.write<uint8_t>(ARM11, pixelAddr + 2, (color >> 8) & 0xFF);
+                    core->memory.write<uint8_t>(ARM11, pixelAddr + 0, (color >> 8) & 0xFF);
                 }
             }
             return;

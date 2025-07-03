@@ -25,8 +25,8 @@ class Core;
 
 enum ColbufFmt {
     RGBA8 = 0,
-    RGB5A1,
     RGB565,
+    RGB5A1,
     RGBA4,
     UNK_FMT
 };
