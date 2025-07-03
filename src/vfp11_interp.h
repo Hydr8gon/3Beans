@@ -54,6 +54,7 @@ private:
         uint32_t u32[32] = {};
         int32_t i32[32];
         float flt[32];
+        double dbl[16];
     } regs;
 
     uint32_t fpscr = 0;
@@ -95,14 +96,37 @@ private:
     void fmscs(uint8_t fd, uint8_t fn, uint8_t fm);
     void fnmscs(uint8_t fd, uint8_t fn, uint8_t fm);
 
+    void faddd(uint8_t fd, uint8_t fn, uint8_t fm);
+    void fsubd(uint8_t fd, uint8_t fn, uint8_t fm);
+    void fdivd(uint8_t fd, uint8_t fn, uint8_t fm);
+    void fmuld(uint8_t fd, uint8_t fn, uint8_t fm);
+    void fnmuld(uint8_t fd, uint8_t fn, uint8_t fm);
+    void fmacd(uint8_t fd, uint8_t fn, uint8_t fm);
+    void fnmacd(uint8_t fd, uint8_t fn, uint8_t fm);
+    void fmscd(uint8_t fd, uint8_t fn, uint8_t fm);
+    void fnmscd(uint8_t fd, uint8_t fn, uint8_t fm);
+
     void fcpys(uint8_t fd, uint8_t fm);
     void fabss(uint8_t fd, uint8_t fm);
     void fnegs(uint8_t fd, uint8_t fm);
     void fsqrts(uint8_t fd, uint8_t fm);
     void fcmps(uint8_t fd, uint8_t fm);
     void fcmpzs(uint8_t fd, uint8_t fm);
+    void fcvtds(uint8_t fd, uint8_t fm);
     void fuitos(uint8_t fd, uint8_t fm);
     void fsitos(uint8_t fd, uint8_t fm);
     void ftouis(uint8_t fd, uint8_t fm);
     void ftosis(uint8_t fd, uint8_t fm);
+
+    void fcpyd(uint8_t fd, uint8_t fm);
+    void fabsd(uint8_t fd, uint8_t fm);
+    void fnegd(uint8_t fd, uint8_t fm);
+    void fsqrtd(uint8_t fd, uint8_t fm);
+    void fcmpd(uint8_t fd, uint8_t fm);
+    void fcmpzd(uint8_t fd, uint8_t fm);
+    void fcvtsd(uint8_t fd, uint8_t fm);
+    void fuitod(uint8_t fd, uint8_t fm);
+    void fsitod(uint8_t fd, uint8_t fm);
+    void ftouid(uint8_t fd, uint8_t fm);
+    void ftosid(uint8_t fd, uint8_t fm);
 };

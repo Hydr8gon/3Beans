@@ -17,8 +17,8 @@
     along with 3Beans. If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "core.h"
 #include <cmath>
+#include "core.h"
 
 void Vfp11Interp::readSingleS(uint8_t cpopc, uint32_t *rd, uint8_t cn, uint8_t cm, uint8_t cp) {
     // Execute a VFP10 single read instruction
@@ -183,6 +183,7 @@ void Vfp11Interp::dataOperS(uint8_t cpopc, uint8_t cd, uint8_t cn, uint8_t cm, u
             case 0x09: return fcmps(fd, fm); // TODO: E-variant
             case 0x0A: return fcmpzs(fd, fm);
             case 0x0B: return fcmpzs(fd, fm); // TODO: E-variant
+            case 0x0F: return fcvtds(fd, fm);
             case 0x10: return fuitos(fd, fm);
             case 0x11: return fsitos(fd, fm);
             case 0x18: return ftouis(fd, fm);
@@ -205,10 +206,39 @@ void Vfp11Interp::dataOperS(uint8_t cpopc, uint8_t cd, uint8_t cn, uint8_t cm, u
 
 void Vfp11Interp::dataOperD(uint8_t cpopc, uint8_t cd, uint8_t cn, uint8_t cm, uint8_t cp) {
     // Execute a VFP11 data operation instruction
+    uint8_t fd = (cd << 1) | ((cpopc >> 2) & 0x1);
+    uint8_t fn = (cn << 1) | ((cp >> 2) & 0x1);
+    uint8_t fm = (cm << 1) | ((cp >> 0) & 0x1);
     switch (uint8_t pqrs = (cpopc & 0x8) | ((cpopc << 1) & 0x6) | ((cp >> 1) & 0x1)) {
+        case 0x0: return fmacd(fd, fn, fm);
+        case 0x1: return fnmacd(fd, fn, fm);
+        case 0x2: return fmscd(fd, fn, fm);
+        case 0x3: return fnmscd(fd, fn, fm);
+        case 0x4: return fmuld(fd, fn, fm);
+        case 0x5: return fnmuld(fd, fn, fm);
+        case 0x6: return faddd(fd, fn, fm);
+        case 0x7: return fsubd(fd, fn, fm);
+        case 0x8: return fdivd(fd, fn, fm);
+
     case 0xF:
         // Execute a VFP11 data operation extension instruction
         switch (uint8_t ext = (cn << 1) | (cp >> 2)) {
+            case 0x00: return fcpyd(fd, fm);
+            case 0x01: return fabsd(fd, fm);
+            case 0x02: return fnegd(fd, fm);
+            case 0x03: return fsqrtd(fd, fm);
+            case 0x08: return fcmpd(fd, fm);
+            case 0x09: return fcmpd(fd, fm); // TODO: E-variant
+            case 0x0A: return fcmpzd(fd, fm);
+            case 0x0B: return fcmpzd(fd, fm); // TODO: E-variant
+            case 0x0F: return fcvtsd(fd, fm);
+            case 0x10: return fuitod(fd, fm);
+            case 0x11: return fsitod(fd, fm);
+            case 0x18: return ftouid(fd, fm);
+            case 0x19: return ftouid(fd, fm); // TODO: Z-variant
+            case 0x1A: return ftosid(fd, fm);
+            case 0x1B: return ftosid(fd, fm); // TODO: Z-variant
+
         default:
             // Catch unknown VFP11 data operation extension bits
             LOG_CRIT("Unknown ARM11 core %d VFP11 data operation extension bits: 0x%X\n", id, ext);
@@ -432,6 +462,55 @@ FDOCS_FUNC(fnmacs, -, *, +) // FNMACS Fd,Fn,Fm
 FDOCS_FUNC(fmscs, +, *, -) // FMSCS Fd,Fn,Fm
 FDOCS_FUNC(fnmscs, -, *, -) // FNMSCS Fd,Fn,Fm
 
+// Perform a double data operation in scalar, mixed, or vector mode if enabled
+#define FDOPD_FUNC(name, sign, op0) void Vfp11Interp::name(uint8_t fd, uint8_t fn, uint8_t fm) { \
+    if (!checkEnable()) return; \
+    if (vecLength == 1 || fd < 8) { \
+        regs.dbl[fd >> 1] = sign(regs.dbl[fn >> 1] op0 regs.dbl[fm >> 1]); \
+    } \
+    else if (fm < 8) { \
+        double *bd = &regs.dbl[(fd >> 1) & 0xC], *bn = &regs.dbl[(fn >> 1) & 0xC]; \
+        for (int i = 0; i < (vecLength << vecStride); i += (1 << vecStride)) \
+            bd[((fd >> 1) + i) & 0x3] = sign(bn[((fn >> 1) + i) & 0x3] op0 regs.dbl[fm]); \
+    } \
+    else { \
+        double *bd = &regs.dbl[(fd >> 1) & 0xC], *bn = &regs.dbl[(fn >> 1) & 0xC], *bm = &regs.dbl[(fm >> 1) & 0xC]; \
+        for (int i = 0; i < (vecLength << vecStride); i += (1 << vecStride)) \
+            bd[((fd >> 1) + i) & 0x3] = sign(bn[((fn >> 1) + i) & 0x3] op0 bm[((fm >> 1) + i) & 0x3]); \
+    } \
+}
+
+FDOPD_FUNC(faddd, +, +) // FADDD Fd,Fn,Fm
+FDOPD_FUNC(fsubd, +, -) // FSUBD Fd,Fn,Fm
+FDOPD_FUNC(fdivd, +, /) // FDIVD Fd,Fn,Fm
+FDOPD_FUNC(fmuld, +, *) // FMULD Fd,Fn,Fm
+FDOPD_FUNC(fnmuld, -, *) // FNMULD Fd,Fn,Fm
+
+// Perform a double accumulative data operation in scalar, mixed, or vector mode if enabled
+#define FDOCD_FUNC(name, sign, op0, op1) void Vfp11Interp::name(uint8_t fd, uint8_t fn, uint8_t fm) { \
+    if (!checkEnable()) return; \
+    if (vecLength == 1 || fd < 8) { \
+        regs.dbl[fd >> 1] = sign(regs.dbl[fn >> 1] op0 regs.dbl[fm >> 1]) op1 regs.dbl[fd >> 1]; \
+    } \
+    else if (fm < 8) { \
+        double *bd = &regs.dbl[(fd >> 1) & 0xC], *bn = &regs.dbl[(fn >> 1) & 0xC]; \
+        for (int i = 0; i < (vecLength << vecStride); i += (1 << vecStride)) \
+            bd[((fd >> 1) + i) & 0x3] = sign(bn[((fn >> 1) + i) & 0x3] \
+                op0 regs.dbl[fm >> 1]) op1 bd[((fd >> 1) + i) & 0x3]; \
+    } \
+    else { \
+        double *bd = &regs.dbl[(fd >> 1) & 0xC], *bn = &regs.dbl[(fn >> 1) & 0xC], *bm = &regs.dbl[(fm >> 1) & 0xC]; \
+        for (int i = 0; i < (vecLength << vecStride); i += (1 << vecStride)) \
+            bd[((fd >> 1) + i) & 0x3] = sign(bn[((fn >> 1) + i) & 0x3] op0 \
+                bm[((fm >> 1) + i) & 0x3]) op1 bd[((fd >> 1) + i) & 0x3]; \
+    } \
+}
+
+FDOCD_FUNC(fmacd, +, *, +) // FMACD Fd,Fn,Fm
+FDOCD_FUNC(fnmacd, -, *, +) // FNMACD Fd,Fn,Fm
+FDOCD_FUNC(fmscd, +, *, -) // FMSCD Fd,Fn,Fm
+FDOCD_FUNC(fnmscd, -, *, -) // FNMSCD Fd,Fn,Fm
+
 // Perform a single extended data operation in scalar, mixed, or vector mode if enabled
 #define FDOES_FUNC(name, op0) void Vfp11Interp::name(uint8_t fd, uint8_t fm) { \
     if (!checkEnable()) return; \
@@ -476,26 +555,106 @@ void Vfp11Interp::fcmpzs(uint8_t fd, uint8_t fm) { // FCMPZS Fd
     fpscr = (fpscr & ~0xF0000000) | (n << 31) | (z << 30) | (c << 29) | (v << 28);
 }
 
+void Vfp11Interp::fcvtds(uint8_t fd, uint8_t fm) { // FCVTDS Dd,Sm
+    // Convert a single float to a double float if enabled
+    if (!checkEnable()) return;
+    regs.dbl[fd >> 1] = double(regs.flt[fm]);
+}
+
 void Vfp11Interp::fuitos(uint8_t fd, uint8_t fm) { // FUITOS Fd,Im
-    // Convert an unsigned integer to a float if enabled
+    // Convert an unsigned integer to a single float if enabled
     if (!checkEnable()) return;
     regs.flt[fd] = float(regs.u32[fm]);
 }
 
 void Vfp11Interp::fsitos(uint8_t fd, uint8_t fm) { // FSITOS Fd,Im
-    // Convert a signed integer to a float if enabled
+    // Convert a signed integer to a single float if enabled
     if (!checkEnable()) return;
     regs.flt[fd] = float(regs.i32[fm]);
 }
 
 void Vfp11Interp::ftouis(uint8_t fd, uint8_t fm) { // FTOUIS Id,Fm
-    // Convert a float to an unsigned integer if enabled
+    // Convert a single float to an unsigned integer if enabled
     if (!checkEnable()) return;
     regs.u32[fd] = uint32_t(regs.flt[fm]);
 }
 
 void Vfp11Interp::ftosis(uint8_t fd, uint8_t fm) { // FTOSIS Id,Fm
-    // Convert a float to a signed integer if enabled
+    // Convert a single float to a signed integer if enabled
     if (!checkEnable()) return;
     regs.i32[fd] = int32_t(regs.flt[fm]);
+}
+
+// Perform a double extended data operation in scalar, mixed, or vector mode if enabled
+#define FDOED_FUNC(name, op0) void Vfp11Interp::name(uint8_t fd, uint8_t fm) { \
+    if (!checkEnable()) return; \
+    if (vecLength == 1 || fd < 8) { \
+        regs.dbl[fd >> 1] = op0(regs.dbl[fm >> 1]); \
+    } \
+    else if (fm < 8) { \
+        double *bd = &regs.dbl[(fd >> 1) & 0xC]; \
+        for (int i = 0; i < (vecLength << vecStride); i += (1 << vecStride)) \
+            bd[((fd >> 1) + i) & 0x3] = op0(regs.dbl[fm >> 1]); \
+    } \
+    else { \
+        double *bd = &regs.dbl[(fd >> 1) & 0xC], *bm = &regs.dbl[(fm >> 1) & 0xC]; \
+        for (int i = 0; i < (vecLength << vecStride); i += (1 << vecStride)) \
+            bd[((fd >> 1) + i) & 0x3] = op0(bm[((fm >> 1) + i) & 0x3]); \
+    } \
+}
+
+FDOED_FUNC(fcpyd, +) // FCPYD Fd,Fm
+FDOED_FUNC(fabsd, fabs) // FABSD Fd,Fm
+FDOED_FUNC(fnegd, -) // FNEGD Fd,Fm
+FDOED_FUNC(fsqrtd, sqrt) // FSQRTD Fd,Fm
+
+void Vfp11Interp::fcmpd(uint8_t fd, uint8_t fm) { // FCMPD Fd,Fm
+    // Compare a double register with another and set flags if enabled
+    if (!checkEnable()) return;
+    double res = regs.dbl[fd >> 1] - regs.dbl[fm >> 1];
+    bool n = (res < 0);
+    bool z = (res == 0);
+    bool c = (res >= 0 || std::isnan(res));
+    bool v = std::isnan(res);
+    fpscr = (fpscr & ~0xF0000000) | (n << 31) | (z << 30) | (c << 29) | (v << 28);
+}
+
+void Vfp11Interp::fcmpzd(uint8_t fd, uint8_t fm) { // FCMPZD Fd
+    // Compare a double register with zero and set flags if enabled
+    if (!checkEnable()) return;
+    bool n = (regs.dbl[fd >> 1] < 0);
+    bool z = (regs.dbl[fd >> 1] == 0);
+    bool c = (regs.dbl[fd >> 1] >= 0 || std::isnan(regs.dbl[fd >> 1]));
+    bool v = std::isnan(regs.dbl[fd >> 1]);
+    fpscr = (fpscr & ~0xF0000000) | (n << 31) | (z << 30) | (c << 29) | (v << 28);
+}
+
+void Vfp11Interp::fcvtsd(uint8_t fd, uint8_t fm) { // FCVTSD Dd,Sm
+    // Convert a double float to a single float if enabled
+    if (!checkEnable()) return;
+    regs.flt[fd] = float(regs.dbl[fm >> 1]);
+}
+
+void Vfp11Interp::fuitod(uint8_t fd, uint8_t fm) { // FUITOD Fd,Im
+    // Convert an unsigned integer to a double float if enabled
+    if (!checkEnable()) return;
+    regs.dbl[fd >> 1] = double(regs.u32[fm]);
+}
+
+void Vfp11Interp::fsitod(uint8_t fd, uint8_t fm) { // FSITOD Fd,Im
+    // Convert a signed integer to a double float if enabled
+    if (!checkEnable()) return;
+    regs.dbl[fd >> 1] = double(regs.i32[fm]);
+}
+
+void Vfp11Interp::ftouid(uint8_t fd, uint8_t fm) { // FTOUID Id,Fm
+    // Convert a double float to an unsigned integer if enabled
+    if (!checkEnable()) return;
+    regs.u32[fd] = uint32_t(regs.dbl[fm >> 1]);
+}
+
+void Vfp11Interp::ftosid(uint8_t fd, uint8_t fm) { // FTOSID Id,Fm
+    // Convert a double float to a signed integer if enabled
+    if (!checkEnable()) return;
+    regs.i32[fd] = int32_t(regs.dbl[fm >> 1]);
 }

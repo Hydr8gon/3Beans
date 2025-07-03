@@ -99,6 +99,12 @@ void Gpu::writeMemcopyDstAddr(uint32_t mask, uint32_t value) {
     gpuMemcopyDstAddr = (gpuMemcopyDstAddr & ~mask) | (value & mask);
 }
 
+void Gpu::writeMemcopyDispSize(uint32_t mask, uint32_t value) {
+    // Write to the GPU_MEMCOPY_DISP_SIZE register
+    mask &= 0xFFF8FFF8;
+    gpuMemcopyDispSize = (gpuMemcopyDispSize & ~mask) | (value & mask);
+}
+
 void Gpu::writeMemcopyFlags(uint32_t mask, uint32_t value) {
     // Write to the GPU_MEMCOPY_FLAGS register
     mask &= 0x301772F;
@@ -115,26 +121,65 @@ void Gpu::writeMemcopyCnt(uint32_t mask, uint32_t value) {
     gpuMemcopyCnt |= BIT(8);
     core->interrupts.sendInterrupt(ARM11, 0x2C);
 
-    // Check the copy mode and ignore display copies for now
-    if (~gpuMemcopyFlags & BIT(3)) {
-        LOG_CRIT("GPU memory copy started with unimplemented display mode\n");
+    // Get the common parameters for texture copy and display copy
+    uint32_t srcAddr = (gpuMemcopySrcAddr << 3);
+    uint32_t dstAddr = (gpuMemcopyDstAddr << 3);
+
+    // Perform a texture copy if enabled, which ignores most settings
+    if (gpuMemcopyFlags & BIT(3)) {
+        // Get the source and destination parameters for a texture copy
+        uint32_t srcWidth = (gpuMemcopyTexSrcWidth << 4) & 0xFFFF0;
+        uint32_t srcGap = (gpuMemcopyTexSrcWidth >> 12) & 0xFFFF0;
+        uint32_t dstWidth = (gpuMemcopyTexDstWidth << 4) & 0xFFFF0;
+        uint32_t dstGap = (gpuMemcopyTexDstWidth >> 12) & 0xFFFF0;
+
+        // Perform a texture copy, applying address gaps when widths are reached
+        LOG_INFO("Performing GPU texture copy from 0x%X to 0x%X with size 0x%X\n", srcAddr, dstAddr, gpuMemcopyTexSize);
+        for (uint32_t i = 0; i < gpuMemcopyTexSize; i += 4) {
+            core->memory.write<uint32_t>(ARM11, dstAddr + i, core->memory.read<uint32_t>(ARM11, srcAddr + i));
+            if (srcWidth && !((i + 4) % srcWidth)) srcAddr += srcGap;
+            if (dstWidth && !((i + 4) % dstWidth)) dstAddr += dstGap;
+        }
         return;
     }
 
-    // Get the source and destination parameters for a texture copy
-    uint32_t srcAddr = (gpuMemcopySrcAddr << 3);
-    uint32_t srcWidth = (gpuMemcopyTexSrcWidth << 4) & 0xFFFF0;
-    uint32_t srcGap = (gpuMemcopyTexSrcWidth >> 12) & 0xFFFF0;
-    uint32_t dstAddr = (gpuMemcopyDstAddr << 3);
-    uint32_t dstWidth = (gpuMemcopyTexDstWidth << 4) & 0xFFFF0;
-    uint32_t dstGap = (gpuMemcopyTexDstWidth >> 12) & 0xFFFF0;
+    // Get the source and destination parameters for a display copy
+    uint8_t srcFmt = (gpuMemcopyFlags >> 8) & 0x7;
+    uint8_t dstFmt = (gpuMemcopyFlags >> 12) & 0x7;
+    uint16_t width = (gpuMemcopyDispSize >> 0);
+    uint16_t height = (gpuMemcopyDispSize >> 16);
 
-    // Perform a texture copy, applying address gaps when widths are reached
-    LOG_INFO("Performing GPU texture copy from 0x%X to 0x%X with size 0x%X\n", srcAddr, dstAddr, gpuMemcopyTexSize);
-    for (uint32_t i = 0; i < gpuMemcopyTexSize; i += 4) {
-        core->memory.write<uint32_t>(ARM11, dstAddr + i, core->memory.read<uint32_t>(ARM11, srcAddr + i));
-        if (srcWidth && !((i + 4) % srcWidth)) srcAddr += srcGap;
-        if (dstWidth && !((i + 4) % dstWidth)) dstAddr += dstGap;
+    // Check for unimplemented display copy flags
+    LOG_INFO("Performing GPU display copy from 0x%X to 0x%X with width %d and height %d\n",
+        srcAddr, dstAddr, width, height);
+    if (uint32_t flags = gpuMemcopyFlags & 0x3010027)
+        LOG_CRIT("Unhandled GPU display copy flags set: 0x%X\n", flags);
+
+    // Perform an 8x8 tiled to linear display copy based on format settings
+    switch (srcFmt) {
+    case 0x0: // RGBA8
+        switch (dstFmt) {
+        case 0x1: // RGB8
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    uint32_t pixelAddr = dstAddr + (y * width + x) * 3;
+                    uint32_t tileAddr = srcAddr + (((y >> 3) * (width >> 3) + (x >> 3)) << 8);
+                    uint32_t color = core->memory.read<uint32_t>(ARM11, tileAddr + ((y & 0x7) << 5) + ((x & 0x7) << 2));
+                    core->memory.write<uint8_t>(ARM11, pixelAddr + 0, (color >> 24) & 0xFF);
+                    core->memory.write<uint8_t>(ARM11, pixelAddr + 1, (color >> 16) & 0xFF);
+                    core->memory.write<uint8_t>(ARM11, pixelAddr + 2, (color >> 8) & 0xFF);
+                }
+            }
+            return;
+
+        default:
+            LOG_CRIT("Unimplemented display copy RGBA8 destination format: 0x%X\n", dstFmt);
+            return;
+        }
+
+    default:
+        LOG_CRIT("Unimplemented display copy source format: 0x%X\n", srcFmt);
+        return;
     }
 }
 

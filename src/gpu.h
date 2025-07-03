@@ -23,6 +23,14 @@
 
 class Core;
 
+enum ColbufFmt {
+    RGBA8 = 0,
+    RGB5A1,
+    RGB565,
+    RGBA4,
+    UNK_FMT
+};
+
 class Gpu {
 public:
     Gpu(Core *core): core(core) {}
@@ -34,6 +42,7 @@ public:
     uint32_t readMemfillCnt(int i) { return gpuMemfillCnt[i]; }
     uint32_t readMemcopySrcAddr() { return gpuMemcopySrcAddr; }
     uint32_t readMemcopyDstAddr() { return gpuMemcopyDstAddr; }
+    uint32_t readMemcopyDispSize() { return gpuMemcopyDispSize; }
     uint32_t readMemcopyFlags() { return gpuMemcopyFlags; }
     uint32_t readMemcopyCnt() { return gpuMemcopyCnt; }
     uint32_t readMemcopyTexSize() { return gpuMemcopyTexSize; }
@@ -48,6 +57,13 @@ public:
     uint32_t readIrqAutostop() { return gpuIrqAutostop; }
 
     uint32_t readIrqReq(int i) { return gpuIrqReq[i]; }
+    uint32_t readViewScaleH() { return gpuViewScaleH; }
+    uint32_t readViewScaleV() { return gpuViewScaleV; }
+    uint32_t readShdOutTotal() { return gpuShdOutTotal; }
+    uint32_t readShdOutMap(int i) { return gpuShdOutMap[i]; }
+    uint32_t readColbufFmt() { return gpuColbufFmt; }
+    uint32_t readColbufLoc() { return gpuColbufLoc; }
+    uint32_t readBufferDim() { return gpuBufferDim; }
     uint32_t readAttrBase() { return gpuAttrBase; }
     uint32_t readAttrFmtL() { return gpuAttrFmt >> 0; }
     uint32_t readAttrFmtH() { return gpuAttrFmt >> 32; }
@@ -72,6 +88,7 @@ public:
     void writeMemfillCnt(int i, uint32_t mask, uint32_t value);
     void writeMemcopySrcAddr(uint32_t mask, uint32_t value);
     void writeMemcopyDstAddr(uint32_t mask, uint32_t value);
+    void writeMemcopyDispSize(uint32_t mask, uint32_t value);
     void writeMemcopyFlags(uint32_t mask, uint32_t value);
     void writeMemcopyCnt(uint32_t mask, uint32_t value);
     void writeMemcopyTexSize(uint32_t mask, uint32_t value);
@@ -84,6 +101,13 @@ public:
     void writeIrqAutostop(uint32_t mask, uint32_t value);
 
     template <int i> void writeIrqReq(uint32_t mask, uint32_t value);
+    void writeViewScaleH(uint32_t mask, uint32_t value);
+    void writeViewScaleV(uint32_t mask, uint32_t value);
+    void writeShdOutTotal(uint32_t mask, uint32_t value);
+    template <int i> void writeShdOutMap(uint32_t mask, uint32_t value);
+    void writeColbufFmt(uint32_t mask, uint32_t value);
+    void writeColbufLoc(uint32_t mask, uint32_t value);
+    void writeBufferDim(uint32_t mask, uint32_t value);
     void writeAttrBase(uint32_t mask, uint32_t value);
     void writeAttrFmtL(uint32_t mask, uint32_t value);
     void writeAttrFmtH(uint32_t mask, uint32_t value);
@@ -120,6 +144,8 @@ private:
     uint32_t cmdAddr = -1;
     uint32_t cmdEnd = 0;
     uint16_t curCmd = 0;
+
+    uint32_t vshFloatData[4] = {};
     uint16_t vshFloatIdx = 0;
     bool vshFloat32 = false;
 
@@ -130,6 +156,7 @@ private:
     uint32_t gpuMemfillCnt[2] = {};
     uint32_t gpuMemcopySrcAddr = 0;
     uint32_t gpuMemcopyDstAddr = 0;
+    uint32_t gpuMemcopyDispSize = 0;
     uint32_t gpuMemcopyFlags = 0;
     uint32_t gpuMemcopyCnt = 0;
     uint32_t gpuMemcopyTexSize = 0;
@@ -141,6 +168,13 @@ private:
     uint32_t gpuIrqAutostop = 0;
 
     uint32_t gpuIrqReq[16] = {};
+    uint32_t gpuViewScaleH = 0;
+    uint32_t gpuViewScaleV = 0;
+    uint32_t gpuShdOutTotal = 0;
+    uint32_t gpuShdOutMap[7] = {};
+    uint32_t gpuColbufFmt = 0;
+    uint32_t gpuColbufLoc = 0;
+    uint32_t gpuBufferDim = 0;
     uint32_t gpuAttrBase = 0;
     uint64_t gpuAttrFmt = 0;
     uint32_t gpuAttrOfs[12] = {};
@@ -158,6 +192,9 @@ private:
     uint32_t gpuVshDescIdx = 0;
 
     bool checkInterrupt(int i);
+    static uint32_t float24To32(uint32_t value);
+
     void runCommands();
     void drawAttrIdx(uint32_t idx);
+    void updateOutMap();
 };

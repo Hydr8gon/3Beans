@@ -17,8 +17,8 @@
     along with 3Beans. If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "core.h"
 #include <cstring>
+#include "core.h"
 
 const uint16_t Cartridge::ctrClocks[] = { 64, 80, 96, 128, 160, 256, 256, 256 };
 
