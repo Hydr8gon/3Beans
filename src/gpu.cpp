@@ -34,108 +34,114 @@ void Gpu::writeCfg11GpuCnt(uint32_t mask, uint32_t value) {
     cfg11GpuCnt = (cfg11GpuCnt & ~mask) | (value & mask);
 }
 
-void Gpu::writeMemfillDstAddr(int i, uint32_t mask, uint32_t value) {
-    // Write to one of the GPU_MEMFILL_DST_ADDR registers
+void Gpu::writeMemsetDstAddr(int i, uint32_t mask, uint32_t value) {
+    // Write to one of the GPU_MEMSET_DST_ADDR registers
     mask &= 0x1FFFFFFE;
-    gpuMemfillDstAddr[i] = (gpuMemfillDstAddr[i] & ~mask) | (value & mask);
+    gpuMemsetDstAddr[i] = (gpuMemsetDstAddr[i] & ~mask) | (value & mask);
 }
 
-void Gpu::writeMemfillDstEnd(int i, uint32_t mask, uint32_t value) {
-    // Write to one of the GPU_MEMFILL_DST_END registers
+void Gpu::writeMemsetDstEnd(int i, uint32_t mask, uint32_t value) {
+    // Write to one of the GPU_MEMSET_DST_END registers
     mask &= 0x1FFFFFFE;
-    gpuMemfillDstEnd[i] = (gpuMemfillDstEnd[i] & ~mask) | (value & mask);
+    gpuMemsetDstEnd[i] = (gpuMemsetDstEnd[i] & ~mask) | (value & mask);
 }
 
-void Gpu::writeMemfillData(int i, uint32_t mask, uint32_t value) {
-    // Write to one of the GPU_MEMFILL_DATA registers
-    gpuMemfillData[i] = (gpuMemfillData[i] & ~mask) | (value & mask);
+void Gpu::writeMemsetData(int i, uint32_t mask, uint32_t value) {
+    // Write to one of the GPU_MEMSET_DATA registers
+    gpuMemsetData[i] = (gpuMemsetData[i] & ~mask) | (value & mask);
 }
 
-void Gpu::writeMemfillCnt(int i, uint32_t mask, uint32_t value) {
-    // Write to one of the GPU_MEMFILL_CNT registers
+void Gpu::writeMemsetCnt(int i, uint32_t mask, uint32_t value) {
+    // Write to one of the GPU_MEMSET_CNT registers
     uint32_t mask2 = (mask & 0x1F0300);
-    gpuMemfillCnt[i] = (gpuMemfillCnt[i] & ~mask2) | (value & mask2);
+    gpuMemsetCnt[i] = (gpuMemsetCnt[i] & ~mask2) | (value & mask2);
 
     // Allow clearing the interrupt bit but not setting it
     if ((mask & BIT(1)) && !(value & BIT(1)))
-        gpuMemfillCnt[i] &= ~BIT(1);
+        gpuMemsetCnt[i] &= ~BIT(1);
 
     // Check the start and enable bits and trigger an interrupt if running
     if (!(value & mask & BIT(0)) || !(cfg11GpuCnt & BIT(1))) return;
-    gpuMemfillCnt[i] |= BIT(1);
+    gpuMemsetCnt[i] |= BIT(1);
     core->interrupts.sendInterrupt(ARM11, 0x28 + i);
 
-    // Perform a memory fill with the selected data width
-    uint32_t start = (gpuMemfillDstAddr[i] << 3), end = (gpuMemfillDstEnd[i] << 3);
-    LOG_INFO("Performing GPU memory fill between 0x%X and 0x%X\n", start, end);
-    switch ((gpuMemfillCnt[i] >> 8) & 0x3) {
+    // Perform a memory set with the selected data width
+    uint32_t start = (gpuMemsetDstAddr[i] << 3), end = (gpuMemsetDstEnd[i] << 3);
+    LOG_INFO("Performing GPU memory set at 0x%X with size 0x%X\n", start, end - start);
+    switch ((gpuMemsetCnt[i] >> 8) & 0x3) {
     case 0: // 16-bit
         for (uint32_t addr = start; addr < end; addr += 2)
-            core->memory.write<uint16_t>(ARM11, addr, gpuMemfillData[i]);
+            core->memory.write<uint16_t>(ARM11, addr, gpuMemsetData[i]);
         return;
 
     case 1: case 3: // 24-bit
-        value = (gpuMemfillData[i] & 0xFFFFFF) | (gpuMemfillData[i] << 24);
+        value = (gpuMemsetData[i] & 0xFFFFFF) | (gpuMemsetData[i] << 24);
         for (uint32_t addr = start; addr < end; addr += 2)
             core->memory.write<uint16_t>(ARM11, addr, value >> (((addr - start) * 8) % 24));
         return;
 
     case 2: // 32-bit
         for (uint32_t addr = start; addr < end; addr += 4)
-            core->memory.write<uint32_t>(ARM11, addr, gpuMemfillData[i]);
+            core->memory.write<uint32_t>(ARM11, addr, gpuMemsetData[i]);
         return;
     }
 }
 
-void Gpu::writeMemcopySrcAddr(uint32_t mask, uint32_t value) {
-    // Write to the GPU_MEMCOPY_SRC_ADDR register
+void Gpu::writeMemcpySrcAddr(uint32_t mask, uint32_t value) {
+    // Write to the GPU_MEMCPY_SRC_ADDR register
     mask &= 0x1FFFFFFE;
-    gpuMemcopySrcAddr = (gpuMemcopySrcAddr & ~mask) | (value & mask);
+    gpuMemcpySrcAddr = (gpuMemcpySrcAddr & ~mask) | (value & mask);
 }
 
-void Gpu::writeMemcopyDstAddr(uint32_t mask, uint32_t value) {
-    // Write to the GPU_MEMCOPY_DST_ADDR register
+void Gpu::writeMemcpyDstAddr(uint32_t mask, uint32_t value) {
+    // Write to the GPU_MEMCPY_DST_ADDR register
     mask &= 0x1FFFFFFE;
-    gpuMemcopyDstAddr = (gpuMemcopyDstAddr & ~mask) | (value & mask);
+    gpuMemcpyDstAddr = (gpuMemcpyDstAddr & ~mask) | (value & mask);
 }
 
-void Gpu::writeMemcopyDispSize(uint32_t mask, uint32_t value) {
-    // Write to the GPU_MEMCOPY_DISP_SIZE register
+void Gpu::writeMemcpyDispDstSize(uint32_t mask, uint32_t value) {
+    // Write to the GPU_MEMCPY_DISP_DST_SIZE register
     mask &= 0xFFF8FFF8;
-    gpuMemcopyDispSize = (gpuMemcopyDispSize & ~mask) | (value & mask);
+    gpuMemcpyDispDstSize = (gpuMemcpyDispDstSize & ~mask) | (value & mask);
 }
 
-void Gpu::writeMemcopyFlags(uint32_t mask, uint32_t value) {
-    // Write to the GPU_MEMCOPY_FLAGS register
+void Gpu::writeMemcpyDispSrcSize(uint32_t mask, uint32_t value) {
+    // Write to the GPU_MEMCPY_DISP_SRC_SIZE register
+    mask &= 0xFFF8FFF8;
+    gpuMemcpyDispSrcSize = (gpuMemcpyDispSrcSize & ~mask) | (value & mask);
+}
+
+void Gpu::writeMemcpyFlags(uint32_t mask, uint32_t value) {
+    // Write to the GPU_MEMCPY_FLAGS register
     mask &= 0x301772F;
-    gpuMemcopyFlags = (gpuMemcopyFlags & ~mask) | (value & mask);
+    gpuMemcpyFlags = (gpuMemcpyFlags & ~mask) | (value & mask);
 }
 
-void Gpu::writeMemcopyCnt(uint32_t mask, uint32_t value) {
+void Gpu::writeMemcpyCnt(uint32_t mask, uint32_t value) {
     // Allow clearing the interrupt bit but not setting it
     if ((mask & BIT(8)) && !(value & BIT(8)))
-        gpuMemcopyCnt &= ~BIT(8);
+        gpuMemcpyCnt &= ~BIT(8);
 
     // Check the start and enable bits and trigger an interrupt if running
     if (!(value & mask & BIT(0)) || !(cfg11GpuCnt & BIT(4))) return;
-    gpuMemcopyCnt |= BIT(8);
+    gpuMemcpyCnt |= BIT(8);
     core->interrupts.sendInterrupt(ARM11, 0x2C);
 
     // Get the common parameters for texture copy and display copy
-    uint32_t srcAddr = (gpuMemcopySrcAddr << 3);
-    uint32_t dstAddr = (gpuMemcopyDstAddr << 3);
+    uint32_t srcAddr = (gpuMemcpySrcAddr << 3);
+    uint32_t dstAddr = (gpuMemcpyDstAddr << 3);
 
     // Perform a texture copy if enabled, which ignores most settings
-    if (gpuMemcopyFlags & BIT(3)) {
+    if (gpuMemcpyFlags & BIT(3)) {
         // Get the source and destination parameters for a texture copy
-        uint32_t srcWidth = (gpuMemcopyTexSrcWidth << 4) & 0xFFFF0;
-        uint32_t srcGap = (gpuMemcopyTexSrcWidth >> 12) & 0xFFFF0;
-        uint32_t dstWidth = (gpuMemcopyTexDstWidth << 4) & 0xFFFF0;
-        uint32_t dstGap = (gpuMemcopyTexDstWidth >> 12) & 0xFFFF0;
+        uint32_t srcWidth = (gpuMemcpyTexSrcWidth << 4) & 0xFFFF0;
+        uint32_t srcGap = (gpuMemcpyTexSrcWidth >> 12) & 0xFFFF0;
+        uint32_t dstWidth = (gpuMemcpyTexDstWidth << 4) & 0xFFFF0;
+        uint32_t dstGap = (gpuMemcpyTexDstWidth >> 12) & 0xFFFF0;
 
         // Perform a texture copy, applying address gaps when widths are reached
-        LOG_INFO("Performing GPU texture copy from 0x%X to 0x%X with size 0x%X\n", srcAddr, dstAddr, gpuMemcopyTexSize);
-        for (uint32_t i = 0; i < gpuMemcopyTexSize; i += 4) {
+        LOG_INFO("Performing GPU texture copy from 0x%X to 0x%X with size 0x%X\n", srcAddr, dstAddr, gpuMemcpyTexSize);
+        for (uint32_t i = 0; i < gpuMemcpyTexSize; i += 4) {
             core->memory.write<uint32_t>(ARM11, dstAddr + i, core->memory.read<uint32_t>(ARM11, srcAddr + i));
             if (srcWidth && !((i + 4) % srcWidth)) srcAddr += srcGap;
             if (dstWidth && !((i + 4) % dstWidth)) dstAddr += dstGap;
@@ -144,110 +150,126 @@ void Gpu::writeMemcopyCnt(uint32_t mask, uint32_t value) {
     }
 
     // Get the source and destination parameters for a display copy
-    uint8_t srcFmt = (gpuMemcopyFlags >> 8) & 0x7;
-    uint8_t dstFmt = (gpuMemcopyFlags >> 12) & 0x7;
-    uint16_t width = (gpuMemcopyDispSize >> 0);
-    uint16_t height = (gpuMemcopyDispSize >> 16);
+    uint8_t srcFmt = (gpuMemcpyFlags >> 8) & 0x7;
+    uint16_t srcWidth = (gpuMemcpyFlags & BIT(2)) ? gpuMemcpyDispSrcSize : gpuMemcpyDispDstSize;
+    uint8_t dstFmt = (gpuMemcpyFlags >> 12) & 0x7;
+    uint16_t dstWidth = (gpuMemcpyDispDstSize >> 0);
+    uint16_t dstHeight = (gpuMemcpyDispDstSize >> 16);
+    uint8_t scaleType = (gpuMemcpyFlags >> 24) & 0x3;
+
+    // Adjust the Y order based on the vertical flip bit
+    int yStart, yEnd, yInc;
+    if (gpuMemcpyFlags & BIT(0)) // Flipped
+        yStart = dstHeight - 1, yEnd = -1, yInc = -1;
+    else // Normal
+        yStart = 0, yEnd = dstHeight, yInc = 1;
 
     // Check for unimplemented display copy flags
     LOG_INFO("Performing GPU display copy from 0x%X to 0x%X with width %d and height %d\n",
-        srcAddr, dstAddr, width, height);
-    if (uint32_t flags = gpuMemcopyFlags & 0x3010027)
-        LOG_CRIT("Unhandled GPU display copy flags set: 0x%X\n", flags);
+        srcAddr, dstAddr, dstWidth, dstHeight);
+    if (gpuMemcpyFlags & BIT(5))
+        LOG_CRIT("Unhandled GPU display copy mode: tiled to tiled\n");
+    else if (gpuMemcpyFlags & BIT(1))
+        LOG_CRIT("Unhandled GPU display copy mode: linear to tiled\n");
+    if (gpuMemcpyFlags & BIT(16))
+        LOG_CRIT("Unhandled GPU display copy tile size: 32x32\n");
 
-    // Perform an 8x8 tiled to linear display copy based on format settings
+    // Perform an 8x8 tiled to linear display copy based on format and scale settings
+    uint8_t r, g, b, a;
+    uint32_t ofs, c0, c1, c2, c3;
     switch (srcFmt) {
     case 0x0: // RGBA8
-        switch (dstFmt) {
-        case 0x0: // RGBA8
-            for (int y = 0; y < height; y++) {
-                for (int x = 0; x < width; x++) {
-                    uint32_t pixelAddr = dstAddr + (y * width + x) * 4;
-                    uint32_t tileAddr = srcAddr + (((y >> 3) * (width >> 3) + (x >> 3)) << 8);
-                    uint32_t color = core->memory.read<uint32_t>(ARM11, tileAddr + ((y & 0x7) << 5) + ((x & 0x7) << 2));
-                    core->memory.write<uint32_t>(ARM11, pixelAddr, color);
-                }
-            }
-            return;
+        for (int y0 = yStart, y1 = 0; y0 != yEnd; y0 += yInc, y1++) {
+            for (int x = 0; x < dstWidth; x++) {
+                switch (scaleType) {
+                default: // No downscale
+                    ofs = (((y0 >> 3) * (srcWidth >> 3) + (x >> 3)) << 8) + ((y0 & 0x7) << 5) + ((x & 0x7) << 2);
+                    c0 = core->memory.read<uint32_t>(ARM11, srcAddr + ofs);
+                    r = ((c0 >> 24) & 0xFF);
+                    g = ((c0 >> 16) & 0xFF);
+                    b = ((c0 >> 8) & 0xFF);
+                    a = ((c0 >> 0) & 0xFF);
+                    break;
 
-        case 0x1: // RGB8
-            for (int y = 0; y < height; y++) {
-                for (int x = 0; x < width; x++) {
-                    uint32_t pixelAddr = dstAddr + (y * width + x) * 3;
-                    uint32_t tileAddr = srcAddr + (((y >> 3) * (width >> 3) + (x >> 3)) << 8);
-                    uint32_t color = core->memory.read<uint32_t>(ARM11, tileAddr + ((y & 0x7) << 5) + ((x & 0x7) << 2));
-                    core->memory.write<uint8_t>(ARM11, pixelAddr + 2, (color >> 24) & 0xFF);
-                    core->memory.write<uint8_t>(ARM11, pixelAddr + 1, (color >> 16) & 0xFF);
-                    core->memory.write<uint8_t>(ARM11, pixelAddr + 0, (color >> 8) & 0xFF);
-                }
-            }
-            return;
+                case 0x1: // 2x1 downscale
+                    ofs = (((y0 >> 3) * (srcWidth >> 3) + (x >> 2)) << 8) + ((y0 & 0x7) << 5) + ((x & 0x3) << 3);
+                    c0 = core->memory.read<uint32_t>(ARM11, srcAddr + ofs + 0 * 4);
+                    c1 = core->memory.read<uint32_t>(ARM11, srcAddr + ofs + 1 * 4);
+                    r = (((c0 >> 24) & 0xFF) + ((c1 >> 24) & 0xFF)) / 2;
+                    g = (((c0 >> 16) & 0xFF) + ((c1 >> 16) & 0xFF)) / 2;
+                    b = (((c0 >> 8) & 0xFF) + ((c1 >> 8) & 0xFF)) / 2;
+                    a = (((c0 >> 0) & 0xFF) + ((c1 >> 0) & 0xFF)) / 2;
+                    break;
 
-        case 0x2: // RGB565
-            for (int y = 0; y < height; y++) {
-                for (int x = 0; x < width; x++) {
-                    uint32_t pixelAddr = dstAddr + (y * width + x) * 2;
-                    uint32_t tileAddr = srcAddr + (((y >> 3) * (width >> 3) + (x >> 3)) << 8);
-                    uint32_t color = core->memory.read<uint32_t>(ARM11, tileAddr + ((y & 0x7) << 5) + ((x & 0x7) << 2));
-                    uint8_t r = ((color >> 24) & 0xFF) * 31 / 255;
-                    uint8_t g = ((color >> 16) & 0xFF) * 63 / 255;
-                    uint8_t b = ((color >> 8) & 0xFF) * 31 / 255;
-                    core->memory.write<uint16_t>(ARM11, pixelAddr, (r << 11) | (g << 5) | b);
+                case 0x2: // 2x2 downscale
+                    ofs = (((y0 >> 2) * (srcWidth >> 3) + (x >> 2)) << 8) + ((y0 & 0x3) << 6) + ((x & 0x3) << 3);
+                    c0 = core->memory.read<uint32_t>(ARM11, srcAddr + ofs + 0 * 4);
+                    c1 = core->memory.read<uint32_t>(ARM11, srcAddr + ofs + 1 * 4);
+                    c2 = core->memory.read<uint32_t>(ARM11, srcAddr + ofs + 8 * 4);
+                    c3 = core->memory.read<uint32_t>(ARM11, srcAddr + ofs + 9 * 4);
+                    r = (((c0 >> 24) & 0xFF) + ((c1 >> 24) & 0xFF) + ((c2 >> 24) & 0xFF) + ((c3 >> 24) & 0xFF)) / 4;
+                    g = (((c0 >> 16) & 0xFF) + ((c1 >> 16) & 0xFF) + ((c2 >> 16) & 0xFF) + ((c3 >> 16) & 0xFF)) / 4;
+                    b = (((c0 >> 8) & 0xFF) + ((c1 >> 8) & 0xFF) + ((c2 >> 8) & 0xFF) + ((c3 >> 8) & 0xFF)) / 4;
+                    a = (((c0 >> 0) & 0xFF) + ((c1 >> 0) & 0xFF) + ((c2 >> 0) & 0xFF) + ((c3 >> 0) & 0xFF)) / 4;
+                    break;
                 }
-            }
-            return;
 
-        case 0x3: // RGB5A1
-            for (int y = 0; y < height; y++) {
-                for (int x = 0; x < width; x++) {
-                    uint32_t pixelAddr = dstAddr + (y * width + x) * 2;
-                    uint32_t tileAddr = srcAddr + (((y >> 3) * (width >> 3) + (x >> 3)) << 8);
-                    uint32_t color = core->memory.read<uint32_t>(ARM11, tileAddr + ((y & 0x7) << 5) + ((x & 0x7) << 2));
-                    uint8_t r = ((color >> 24) & 0xFF) * 31 / 255;
-                    uint8_t g = ((color >> 16) & 0xFF) * 31 / 255;
-                    uint8_t b = ((color >> 8) & 0xFF) * 31 / 255;
-                    uint8_t a = ((color >> 0) & 0xFF) ? 1 : 0;
-                    core->memory.write<uint16_t>(ARM11, pixelAddr, (r << 11) | (g << 6) | (b << 1) | a);
-                }
-            }
-            return;
+                switch (dstFmt) {
+                case 0x0: // RGBA8
+                    ofs = (y1 * dstWidth + x) * 4;
+                    c0 = (r << 24) | (g << 16) | (b << 8) | a;
+                    core->memory.write<uint32_t>(ARM11, dstAddr + ofs, c0);
+                    continue;
 
-        default: // RGBA4
-            for (int y = 0; y < height; y++) {
-                for (int x = 0; x < width; x++) {
-                    uint32_t pixelAddr = dstAddr + (y * width + x) * 2;
-                    uint32_t tileAddr = srcAddr + (((y >> 3) * (width >> 3) + (x >> 3)) << 8);
-                    uint32_t color = core->memory.read<uint32_t>(ARM11, tileAddr + ((y & 0x7) << 5) + ((x & 0x7) << 2));
-                    uint8_t r = ((color >> 24) & 0xFF) * 15 / 255;
-                    uint8_t g = ((color >> 16) & 0xFF) * 15 / 255;
-                    uint8_t b = ((color >> 8) & 0xFF) * 15 / 255;
-                    uint8_t a = ((color >> 0) & 0xFF) * 15 / 255;
-                    core->memory.write<uint16_t>(ARM11, pixelAddr, (r << 12) | (g << 8) | (b << 4) | a);
+                case 0x1: // RGB8
+                    ofs = (y1 * dstWidth + x) * 3;
+                    core->memory.write<uint8_t>(ARM11, dstAddr + ofs + 2, r);
+                    core->memory.write<uint8_t>(ARM11, dstAddr + ofs + 1, g);
+                    core->memory.write<uint8_t>(ARM11, dstAddr + ofs + 0, b);
+                    continue;
+
+                case 0x2: // RGB565
+                    ofs = (y1 * dstWidth + x) * 2;
+                    c0 = ((r * 31 / 255) << 11) | ((g * 63 / 255) << 5) | (b * 31 / 255);
+                    core->memory.write<uint16_t>(ARM11, dstAddr + ofs, c0);
+                    continue;
+
+                case 0x3: // RGB5A1
+                    ofs = (y1 * dstWidth + x) * 2;
+                    c0 = ((r * 31 / 255) << 11) | ((g * 31 / 255) << 6) | ((b * 31 / 255) << 1) | bool(a);
+                    core->memory.write<uint16_t>(ARM11, dstAddr + ofs, c0);
+                    continue;
+
+                default: // RGBA4
+                    ofs = (y1 * dstWidth + x) * 2;
+                    c0 = ((r * 15 / 255) << 12) | ((g * 15 / 255) << 8) | ((b * 15 / 255) << 4) | (a * 15 / 255);
+                    core->memory.write<uint16_t>(ARM11, dstAddr + ofs, c0);
+                    continue;
                 }
             }
-            return;
         }
+        return;
 
     default:
-        LOG_CRIT("Unimplemented display copy source format: 0x%X\n", srcFmt);
+        LOG_CRIT("Unimplemented GPU display copy source format: 0x%X\n", srcFmt);
         return;
     }
 }
 
-void Gpu::writeMemcopyTexSize(uint32_t mask, uint32_t value) {
-    // Write to the GPU_MEMCOPY_TEX_SIZE register
+void Gpu::writeMemcpyTexSize(uint32_t mask, uint32_t value) {
+    // Write to the GPU_MEMCPY_TEX_SIZE register
     mask &= 0xFFFFFFF0;
-    gpuMemcopyTexSize = (gpuMemcopyTexSize & ~mask) | (value & mask);
+    gpuMemcpyTexSize = (gpuMemcpyTexSize & ~mask) | (value & mask);
 }
 
-void Gpu::writeMemcopyTexSrcWidth(uint32_t mask, uint32_t value) {
-    // Write to the GPU_MEMCOPY_TEX_SRC_WIDTH register
-    gpuMemcopyTexSrcWidth = (gpuMemcopyTexSrcWidth & ~mask) | (value & mask);
+void Gpu::writeMemcpyTexSrcWidth(uint32_t mask, uint32_t value) {
+    // Write to the GPU_MEMCPY_TEX_SRC_WIDTH register
+    gpuMemcpyTexSrcWidth = (gpuMemcpyTexSrcWidth & ~mask) | (value & mask);
 }
 
-void Gpu::writeMemcopyTexDstWidth(uint32_t mask, uint32_t value) {
-    // Write to the GPU_MEMCOPY_TEX_DST_WIDTH register
-    gpuMemcopyTexDstWidth = (gpuMemcopyTexDstWidth & ~mask) | (value & mask);
+void Gpu::writeMemcpyTexDstWidth(uint32_t mask, uint32_t value) {
+    // Write to the GPU_MEMCPY_TEX_DST_WIDTH register
+    gpuMemcpyTexDstWidth = (gpuMemcpyTexDstWidth & ~mask) | (value & mask);
 }
 
 void Gpu::writeIrqAck(int i, uint32_t mask, uint32_t value) {

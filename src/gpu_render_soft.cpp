@@ -97,7 +97,7 @@ void GpuRenderSoft::runShader(uint16_t entry, float (*input)[4]) {
     float w = shdOut[outMap[0x3][0]][outMap[0x3][1]];
     if (w == 0) return;
     int x = shdOut[outMap[0x0][0]][outMap[0x0][1]] / w * viewScaleH + viewScaleH;
-    int y = shdOut[outMap[0x1][0]][outMap[0x1][1]] / w * viewScaleV + viewScaleV;
+    int y = shdOut[outMap[0x1][0]][outMap[0x1][1]] / w * signY * viewScaleV + viewScaleV;
     if (x < 0 || x >= bufWidth || y < 0 || y >= bufHeight) return;
 
     // Get output color components and ensure they're within range
@@ -548,8 +548,9 @@ void GpuRenderSoft::setColbufFmt(ColbufFmt format) {
     colbufFmt = format;
 }
 
-void GpuRenderSoft::setBufferSize(uint16_t width, uint16_t height) {
-    // Set the render buffer width and height
+void GpuRenderSoft::setBufferDims(uint16_t width, uint16_t height, bool mirror) {
+    // Set the render buffer width, height, and Y-mirror
     bufWidth = width;
     bufHeight = height;
+    signY = (mirror ? -1.0f : 1.0f);
 }

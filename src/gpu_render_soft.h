@@ -38,7 +38,7 @@ public:
     void setOutMap(uint8_t (*map)[2]);
     void setViewScaleH(float scale);
     void setViewScaleV(float scale);
-    void setBufferSize(uint16_t width, uint16_t height);
+    void setBufferDims(uint16_t width, uint16_t height, bool mirror);
     void setColbufAddr(uint32_t address);
     void setColbufFmt(ColbufFmt format);
 
@@ -74,6 +74,7 @@ private:
     uint8_t outMap[0x18][2] = {};
     float viewScaleV = 0;
     float viewScaleH = 0;
+    float signY = 0;
     uint16_t bufWidth = 0;
     uint16_t bufHeight = 0;
     uint32_t colbufAddr = 0;

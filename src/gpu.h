@@ -36,18 +36,19 @@ public:
     Gpu(Core *core): core(core) {}
 
     uint32_t readCfg11GpuCnt() { return cfg11GpuCnt; }
-    uint32_t readMemfillDstAddr(int i) { return gpuMemfillDstAddr[i]; }
-    uint32_t readMemfillDstEnd(int i) { return gpuMemfillDstEnd[i]; }
-    uint32_t readMemfillData(int i) { return gpuMemfillData[i]; }
-    uint32_t readMemfillCnt(int i) { return gpuMemfillCnt[i]; }
-    uint32_t readMemcopySrcAddr() { return gpuMemcopySrcAddr; }
-    uint32_t readMemcopyDstAddr() { return gpuMemcopyDstAddr; }
-    uint32_t readMemcopyDispSize() { return gpuMemcopyDispSize; }
-    uint32_t readMemcopyFlags() { return gpuMemcopyFlags; }
-    uint32_t readMemcopyCnt() { return gpuMemcopyCnt; }
-    uint32_t readMemcopyTexSize() { return gpuMemcopyTexSize; }
-    uint32_t readMemcopyTexSrcWidth() { return gpuMemcopyTexSrcWidth; }
-    uint32_t readMemcopyTexDstWidth() { return gpuMemcopyTexDstWidth; }
+    uint32_t readMemsetDstAddr(int i) { return gpuMemsetDstAddr[i]; }
+    uint32_t readMemsetDstEnd(int i) { return gpuMemsetDstEnd[i]; }
+    uint32_t readMemsetData(int i) { return gpuMemsetData[i]; }
+    uint32_t readMemsetCnt(int i) { return gpuMemsetCnt[i]; }
+    uint32_t readMemcpySrcAddr() { return gpuMemcpySrcAddr; }
+    uint32_t readMemcpyDstAddr() { return gpuMemcpyDstAddr; }
+    uint32_t readMemcpyDispDstSize() { return gpuMemcpyDispDstSize; }
+    uint32_t readMemcpyDispSrcSize() { return gpuMemcpyDispSrcSize; }
+    uint32_t readMemcpyFlags() { return gpuMemcpyFlags; }
+    uint32_t readMemcpyCnt() { return gpuMemcpyCnt; }
+    uint32_t readMemcpyTexSize() { return gpuMemcpyTexSize; }
+    uint32_t readMemcpyTexSrcWidth() { return gpuMemcpyTexSrcWidth; }
+    uint32_t readMemcpyTexDstWidth() { return gpuMemcpyTexDstWidth; }
     uint32_t readIrqAck(int i) { return gpuIrqReq[i]; }
     uint32_t readIrqCmp(int i) { return gpuIrqCmp[i]; }
     uint32_t readIrqMaskL() { return gpuIrqMask >> 0; }
@@ -82,18 +83,19 @@ public:
     uint32_t readVshAttrIdsH() { return gpuVshAttrIds >> 32; }
 
     void writeCfg11GpuCnt(uint32_t mask, uint32_t value);
-    void writeMemfillDstAddr(int i, uint32_t mask, uint32_t value);
-    void writeMemfillDstEnd(int i, uint32_t mask, uint32_t value);
-    void writeMemfillData(int i, uint32_t mask, uint32_t value);
-    void writeMemfillCnt(int i, uint32_t mask, uint32_t value);
-    void writeMemcopySrcAddr(uint32_t mask, uint32_t value);
-    void writeMemcopyDstAddr(uint32_t mask, uint32_t value);
-    void writeMemcopyDispSize(uint32_t mask, uint32_t value);
-    void writeMemcopyFlags(uint32_t mask, uint32_t value);
-    void writeMemcopyCnt(uint32_t mask, uint32_t value);
-    void writeMemcopyTexSize(uint32_t mask, uint32_t value);
-    void writeMemcopyTexSrcWidth(uint32_t mask, uint32_t value);
-    void writeMemcopyTexDstWidth(uint32_t mask, uint32_t value);
+    void writeMemsetDstAddr(int i, uint32_t mask, uint32_t value);
+    void writeMemsetDstEnd(int i, uint32_t mask, uint32_t value);
+    void writeMemsetData(int i, uint32_t mask, uint32_t value);
+    void writeMemsetCnt(int i, uint32_t mask, uint32_t value);
+    void writeMemcpySrcAddr(uint32_t mask, uint32_t value);
+    void writeMemcpyDstAddr(uint32_t mask, uint32_t value);
+    void writeMemcpyDispDstSize(uint32_t mask, uint32_t value);
+    void writeMemcpyDispSrcSize(uint32_t mask, uint32_t value);
+    void writeMemcpyFlags(uint32_t mask, uint32_t value);
+    void writeMemcpyCnt(uint32_t mask, uint32_t value);
+    void writeMemcpyTexSize(uint32_t mask, uint32_t value);
+    void writeMemcpyTexSrcWidth(uint32_t mask, uint32_t value);
+    void writeMemcpyTexDstWidth(uint32_t mask, uint32_t value);
     void writeIrqAck(int i, uint32_t mask, uint32_t value);
     void writeIrqCmp(int i, uint32_t mask, uint32_t value);
     void writeIrqMaskL(uint32_t mask, uint32_t value);
@@ -150,18 +152,19 @@ private:
     bool vshFloat32 = false;
 
     uint32_t cfg11GpuCnt = 0;
-    uint32_t gpuMemfillDstAddr[2] = {};
-    uint32_t gpuMemfillDstEnd[2] = {};
-    uint32_t gpuMemfillData[2] = {};
-    uint32_t gpuMemfillCnt[2] = {};
-    uint32_t gpuMemcopySrcAddr = 0;
-    uint32_t gpuMemcopyDstAddr = 0;
-    uint32_t gpuMemcopyDispSize = 0;
-    uint32_t gpuMemcopyFlags = 0;
-    uint32_t gpuMemcopyCnt = 0;
-    uint32_t gpuMemcopyTexSize = 0;
-    uint32_t gpuMemcopyTexSrcWidth = 0;
-    uint32_t gpuMemcopyTexDstWidth = 0;
+    uint32_t gpuMemsetDstAddr[2] = {};
+    uint32_t gpuMemsetDstEnd[2] = {};
+    uint32_t gpuMemsetData[2] = {};
+    uint32_t gpuMemsetCnt[2] = {};
+    uint32_t gpuMemcpySrcAddr = 0;
+    uint32_t gpuMemcpyDstAddr = 0;
+    uint32_t gpuMemcpyDispDstSize = 0;
+    uint32_t gpuMemcpyDispSrcSize = 0;
+    uint32_t gpuMemcpyFlags = 0;
+    uint32_t gpuMemcpyCnt = 0;
+    uint32_t gpuMemcpyTexSize = 0;
+    uint32_t gpuMemcpyTexSrcWidth = 0;
+    uint32_t gpuMemcpyTexDstWidth = 0;
     uint32_t gpuIrqCmp[16] = {};
     uint64_t gpuIrqMask = 0;
     uint64_t gpuIrqStat = 0;

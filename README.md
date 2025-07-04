@@ -2,9 +2,9 @@
 A low-level 3DS emulator (maybe).
 
 ### Overview
-3Beans is an experimental low-level 3DS emulator. It's a while away from booting the home menu or playing games, but it
-can run custom FIRMs like [GodMode9](https://github.com/d0k3/GodMode9) using a NAND hacked with
-[boot9strap](https://github.com/SciresM/boot9strap). If it ever matures enough, I might experiment with writing a JIT or
+3Beans is an experimental low-level 3DS emulator. It's in the early stages of running games, but the home menu still
+doesn't fully boot. Unless you're looking to run bare-metal FIRMs like [GodMode9](https://github.com/d0k3/GodMode9), you
+probably won't get much out of this yet. If the project ever matures enough, I might experiment with writing a JIT or
 incorporating HLE elements to achieve playable speeds.
 
 ### Usage
