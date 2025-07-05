@@ -32,13 +32,17 @@ public:
     uint32_t *getFrame();
     void drawFrame();
 
-    uint32_t readFramebufLt0(bool bot) { return pdcFramebufLt0[bot]; }
-    uint32_t readFramebufFormat(bool bot) { return pdcFramebufFormat[bot]; }
-    uint32_t readInterruptType(bool bot) { return pdcInterruptType[bot]; }
+    uint32_t readFramebufLt0(int i) { return pdcFramebufLt0[i]; }
+    uint32_t readFramebufLt1(int i) { return pdcFramebufLt1[i]; }
+    uint32_t readFramebufFormat(int i) { return pdcFramebufFormat[i]; }
+    uint32_t readInterruptType(int i) { return pdcInterruptType[i]; }
+    uint32_t readFramebufSelAck(int i) { return pdcFramebufSelAck[i]; }
 
-    void writeFramebufLt0(bool bot, uint32_t mask, uint32_t value);
-    void writeFramebufFormat(bool bot, uint32_t mask, uint32_t value);
-    void writeInterruptType(bool bot, uint32_t mask, uint32_t value);
+    void writeFramebufLt0(int i, uint32_t mask, uint32_t value);
+    void writeFramebufLt1(int i, uint32_t mask, uint32_t value);
+    void writeFramebufFormat(int i, uint32_t mask, uint32_t value);
+    void writeInterruptType(int i, uint32_t mask, uint32_t value);
+    void writeFramebufSelAck(int i, uint32_t mask, uint32_t value);
 
 private:
     Core *core;
@@ -48,8 +52,10 @@ private:
     std::mutex mutex;
 
     uint32_t pdcFramebufLt0[2] = {};
+    uint32_t pdcFramebufLt1[2] = {};
     uint32_t pdcFramebufFormat[2] = {};
     uint32_t pdcInterruptType[2] = {};
+    uint32_t pdcFramebufSelAck[2] = {};
 
-    void drawScreen(bool bot, uint32_t *buffer);
+    void drawScreen(int i, uint32_t *buffer);
 };

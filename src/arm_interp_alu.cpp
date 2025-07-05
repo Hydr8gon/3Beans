@@ -1145,6 +1145,55 @@ int ArmInterp::pkhtb(uint32_t opcode) { // PKHTB Rd,Rn,Rm,ASR #i
     return 1;
 }
 
+FORCE_INLINE int ArmInterp::ssat(uint32_t opcode, uint32_t op2) { // SSAT Rd,#sat,op2
+    // Saturate a signed 32-bit value within a bit range and set Q flag
+    if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    int32_t op1 = (1 << ((opcode >> 16) & 0x1F)) - 1;
+    *op0 = std::max<int32_t>(-op1 - 1, std::min<int32_t>(op1, op2));
+    cpsr |= (*op0 != op2) << 27; // Q
+    return 1;
+}
+
+FORCE_INLINE int ArmInterp::usat(uint32_t opcode, uint32_t op2) { // USAT Rd,#sat,op2
+    // Saturate an unsigned 32-bit value within a bit range and set Q flag
+    if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    uint32_t op1 = (2 << ((opcode >> 16) & 0x1F)) - 1;
+    *op0 = std::max<uint32_t>(0, std::min<uint32_t>(op1, op2));
+    cpsr |= (*op0 != op2) << 27; // Q
+    return 1;
+}
+
+int ArmInterp::ssatLli(uint32_t opcode) { return ssat(opcode, lli(opcode)); } // SSAT Rd,#sat,Rm,LSL #i
+int ArmInterp::ssatAri(uint32_t opcode) { return ssat(opcode, ari(opcode)); } // SSAT Rd,#sat,Rm,ASR #i
+int ArmInterp::usatLli(uint32_t opcode) { return usat(opcode, lli(opcode)); } // USAT Rd,#sat,Rm,LSL #i
+int ArmInterp::usatAri(uint32_t opcode) { return usat(opcode, ari(opcode)); } // USAT Rd,#sat,Rm,ASR #i
+
+int ArmInterp::ssat16(uint32_t opcode) { // SSAT16 Rd,#sat,Rm
+    // Saturate two signed 16-bit values within a bit range and set Q flag
+    if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    int16_t op1 = (1 << ((opcode >> 16) & 0xF)) - 1;
+    uint32_t op2 = *registers[opcode & 0xF];
+    *op0 = std::max<int16_t>(-op1 - 1, std::min<int16_t>(op1, op2 >> 0)) << 0;
+    *op0 |= std::max<int16_t>(-op1 - 1, std::min<int16_t>(op1, op2 >> 16)) << 16;
+    cpsr |= (*op0 != op2) << 27; // Q
+    return 1;
+}
+
+int ArmInterp::usat16(uint32_t opcode) { // USAT16 Rd,#sat,Rm
+    // Saturate two unsigned 16-bit values within a bit range and set Q flag
+    if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    uint16_t op1 = (2 << ((opcode >> 16) & 0xF)) - 1;
+    uint32_t op2 = *registers[opcode & 0xF];
+    *op0 = std::max<uint16_t>(0, std::min<uint16_t>(op1, op2 >> 0)) << 0;
+    *op0 |= std::max<uint16_t>(0, std::min<uint16_t>(op1, op2 >> 16)) << 16;
+    cpsr |= (*op0 != op2) << 27; // Q
+    return 1;
+}
+
 int ArmInterp::addRegT(uint16_t opcode) { // ADD Rd,Rs,Rn
     // Addition and set flags (THUMB)
     uint32_t *op0 = registers[opcode & 0x7];

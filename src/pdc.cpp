@@ -31,15 +31,16 @@ uint32_t *Pdc::getFrame() {
     return fb;
 }
 
-void Pdc::drawScreen(bool bot, uint32_t *buffer) {
+void Pdc::drawScreen(int i, uint32_t *buffer) {
     // Draw a screen's framebuffer in the selected format if enabled
-    if (~pdcInterruptType[bot] & BIT(0)) return;
-    int width = (bot ? 320 : 400);
-    switch (pdcFramebufFormat[bot] & 0x7) {
+    if (~pdcInterruptType[i] & BIT(0)) return;
+    int width = (i ? 320 : 400);
+    uint32_t base = (pdcFramebufSelAck[i] & BIT(0)) ? pdcFramebufLt1[i] : pdcFramebufLt0[i];
+    switch (pdcFramebufFormat[i] & 0x7) {
     case 0: // RGBA8
         for (int y = 0; y < 240; y++) {
             for (int x = 0; x < width; x++) {
-                uint32_t color = core->memory.read<uint32_t>(ARM11A, pdcFramebufLt0[bot] + (x * 240 + 239 - y) * 4);
+                uint32_t color = core->memory.read<uint32_t>(ARM11A, base + (x * 240 + 239 - y) * 4);
                 uint8_t r = (color >> 24) & 0xFF;
                 uint8_t g = (color >> 16) & 0xFF;
                 uint8_t b = (color >> 8) & 0xFF;
@@ -51,7 +52,7 @@ void Pdc::drawScreen(bool bot, uint32_t *buffer) {
     case 1: // RGB8
         for (int y = 0; y < 240; y++) {
             for (int x = 0; x < width; x++) {
-                uint32_t address = pdcFramebufLt0[bot] + (x * 240 + 239 - y) * 3;
+                uint32_t address = base + (x * 240 + 239 - y) * 3;
                 uint8_t r = core->memory.read<uint8_t>(ARM11, address + 2);
                 uint8_t g = core->memory.read<uint8_t>(ARM11, address + 1);
                 uint8_t b = core->memory.read<uint8_t>(ARM11, address + 0);
@@ -63,7 +64,7 @@ void Pdc::drawScreen(bool bot, uint32_t *buffer) {
     case 2: // RGB565
         for (int y = 0; y < 240; y++) {
             for (int x = 0; x < width; x++) {
-                uint16_t color = core->memory.read<uint16_t>(ARM11, pdcFramebufLt0[bot] + (x * 240 + 239 - y) * 2);
+                uint16_t color = core->memory.read<uint16_t>(ARM11, base + (x * 240 + 239 - y) * 2);
                 uint8_t r = ((color >> 11) & 0x1F) * 255 / 31;
                 uint8_t g = ((color >> 5) & 0x3F) * 255 / 63;
                 uint8_t b = ((color >> 0) & 0x1F) * 255 / 31;
@@ -75,7 +76,7 @@ void Pdc::drawScreen(bool bot, uint32_t *buffer) {
     case 3: // RGB5A1
         for (int y = 0; y < 240; y++) {
             for (int x = 0; x < width; x++) {
-                uint16_t color = core->memory.read<uint16_t>(ARM11, pdcFramebufLt0[bot] + (x * 240 + 239 - y) * 2);
+                uint16_t color = core->memory.read<uint16_t>(ARM11, base + (x * 240 + 239 - y) * 2);
                 uint8_t r = ((color >> 11) & 0x1F) * 255 / 31;
                 uint8_t g = ((color >> 6) & 0x1F) * 255 / 31;
                 uint8_t b = ((color >> 1) & 0x1F) * 255 / 31;
@@ -87,7 +88,7 @@ void Pdc::drawScreen(bool bot, uint32_t *buffer) {
     default: // RGBA4
         for (int y = 0; y < 240; y++) {
             for (int x = 0; x < width; x++) {
-                uint16_t color = core->memory.read<uint16_t>(ARM11, pdcFramebufLt0[bot] + (x * 240 + 239 - y) * 2);
+                uint16_t color = core->memory.read<uint16_t>(ARM11, base + (x * 240 + 239 - y) * 2);
                 uint8_t r = ((color >> 12) & 0xF) * 255 / 15;
                 uint8_t g = ((color >> 8) & 0xF) * 255 / 15;
                 uint8_t b = ((color >> 4) & 0xF) * 255 / 15;
@@ -105,8 +106,8 @@ void Pdc::drawFrame() {
     memset(buffer, 0, 400 * 480 * sizeof(uint32_t));
 
     // Draw the top and bottom screens
-    drawScreen(false, &buffer[0]);
-    drawScreen(true, &buffer[240 * 400 + 40]);
+    drawScreen(0, &buffer[0]);
+    drawScreen(1, &buffer[240 * 400 + 40]);
 
     // Add the frame to the queue
     mutex.lock();
@@ -122,18 +123,34 @@ void Pdc::drawFrame() {
         core->interrupts.sendInterrupt(ARM11, 0x2B);
 }
 
-void Pdc::writeFramebufLt0(bool bot, uint32_t mask, uint32_t value) {
+void Pdc::writeFramebufLt0(int i, uint32_t mask, uint32_t value) {
     // Write to a screen's PDC_FRAMEBUF_LT0 register
-    pdcFramebufLt0[bot] = (pdcFramebufLt0[bot] & ~mask) | (value & mask);
+    mask &= 0xFFFFFFF0;
+    pdcFramebufLt0[i] = (pdcFramebufLt0[i] & ~mask) | (value & mask);
 }
 
-void Pdc::writeFramebufFormat(bool bot, uint32_t mask, uint32_t value) {
+void Pdc::writeFramebufLt1(int i, uint32_t mask, uint32_t value) {
+    // Write to a screen's PDC_FRAMEBUF_LT1 register
+    mask &= 0xFFFFFFF0;
+    pdcFramebufLt1[i] = (pdcFramebufLt1[i] & ~mask) | (value & mask);
+}
+
+void Pdc::writeFramebufFormat(int i, uint32_t mask, uint32_t value) {
     // Write to a screen's PDC_FRAMEBUF_FORMAT register
     // TODO: handle zoom bits and maybe others?
-    pdcFramebufFormat[bot] = (pdcFramebufFormat[bot] & ~mask) | (value & mask);
+    mask &= 0xFFFF0377;
+    pdcFramebufFormat[i] = (pdcFramebufFormat[i] & ~mask) | (value & mask);
 }
 
-void Pdc::writeInterruptType(bool bot, uint32_t mask, uint32_t value) {
+void Pdc::writeInterruptType(int i, uint32_t mask, uint32_t value) {
     // Write to a screen's PDC_INTERRUPT_TYPE register
-    pdcInterruptType[bot] = (pdcInterruptType[bot] & ~mask) | (value & mask);
+    mask &= 0x10701;
+    pdcInterruptType[i] = (pdcInterruptType[i] & ~mask) | (value & mask);
+}
+
+void Pdc::writeFramebufSelAck(int i, uint32_t mask, uint32_t value) {
+    // Write to a screen's PDC_FRAMEBUF_SEL_ACK register
+    // TODO: handle bits other than buffer select?
+    mask &= 0x1;
+    pdcFramebufSelAck[i] = (pdcFramebufSelAck[i] & ~mask) | (value & mask);
 }

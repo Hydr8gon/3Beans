@@ -73,9 +73,11 @@ void Vfp11Interp::readDoubleS(uint8_t cpopc, uint32_t *rd, uint32_t *rn, uint8_t
     LOG_CRIT("Unhandled ARM11 core %d VFP10 double read opcode\n", id);
 }
 
-void Vfp11Interp::readDoubleD(uint8_t cpopc, uint32_t *rd, uint32_t *rn, uint8_t cm) {
-    // Stub VFP11 double reads for now
-    LOG_CRIT("Unhandled ARM11 core %d VFP11 double read opcode\n", id);
+void Vfp11Interp::readDoubleD(uint8_t cpopc, uint32_t *rd, uint32_t *rn, uint8_t cm) { // FMRRD Rd,Rn,Dm
+    // Read from a double register if enabled
+    if (!checkEnable()) return;
+    *rd = regs.u32[(cm << 1) + 0];
+    *rn = regs.u32[(cm << 1) + 1];
 }
 
 void Vfp11Interp::writeDoubleS(uint8_t cpopc, uint32_t rd, uint32_t rn, uint8_t cm) {
@@ -83,9 +85,11 @@ void Vfp11Interp::writeDoubleS(uint8_t cpopc, uint32_t rd, uint32_t rn, uint8_t 
     LOG_CRIT("Unhandled ARM11 core %d VFP10 double write opcode\n", id);
 }
 
-void Vfp11Interp::writeDoubleD(uint8_t cpopc, uint32_t rd, uint32_t rn, uint8_t cm) {
-    // Stub VFP11 double writes for now
-    LOG_CRIT("Unhandled ARM11 core %d VFP11 double write opcode\n", id);
+void Vfp11Interp::writeDoubleD(uint8_t cpopc, uint32_t rd, uint32_t rn, uint8_t cm) { // FMDRR Dm,Rd,Rn
+    // Write to a double register if enabled
+    if (!checkEnable()) return;
+    regs.u32[(cm << 1) + 0] = rd;
+    regs.u32[(cm << 1) + 1] = rn;
 }
 
 void Vfp11Interp::loadMemoryS(uint8_t cpopc, uint8_t cd, uint32_t *rn, uint8_t ofs) {

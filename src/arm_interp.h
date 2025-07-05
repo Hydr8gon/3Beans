@@ -446,6 +446,15 @@ private:
     int pkhbt(uint32_t opcode);
     int pkhtb(uint32_t opcode);
 
+    int ssat(uint32_t opcode, uint32_t op2);
+    int usat(uint32_t opcode, uint32_t op2);
+    int ssatLli(uint32_t opcode);
+    int ssatAri(uint32_t opcode);
+    int usatLli(uint32_t opcode);
+    int usatAri(uint32_t opcode);
+    int ssat16(uint32_t opcode);
+    int usat16(uint32_t opcode);
+
     int addRegT(uint16_t opcode);
     int subRegT(uint16_t opcode);
     int addHT(uint16_t opcode);

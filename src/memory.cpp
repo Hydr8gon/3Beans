@@ -539,11 +539,15 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x10400028, data = core->gpu.readMemsetData(1)) // GPU_MEMSET_DATA1
                 DEF_IO32(0x1040002C, data = core->gpu.readMemsetCnt(1)) // GPU_MEMSET_CNT1
                 DEF_IO32(0x10400468, data = core->pdc.readFramebufLt0(0)) // PDC0_FRAMEBUF_LT0
+                DEF_IO32(0x1040046C, data = core->pdc.readFramebufLt1(0)) // PDC0_FRAMEBUF_LT1
                 DEF_IO32(0x10400470, data = core->pdc.readFramebufFormat(0)) // PDC0_FRAMEBUF_FORMAT
                 DEF_IO32(0x10400474, data = core->pdc.readInterruptType(0)) // PDC0_INTERRUPT_TYPE
+                DEF_IO32(0x10400478, data = core->pdc.readFramebufSelAck(0)) // PDC0_FRAMEBUF_SEL_ACK
                 DEF_IO32(0x10400568, data = core->pdc.readFramebufLt0(1)) // PDC1_FRAMEBUF_LT0
+                DEF_IO32(0x1040056C, data = core->pdc.readFramebufLt1(1)) // PDC1_FRAMEBUF_LT1
                 DEF_IO32(0x10400570, data = core->pdc.readFramebufFormat(1)) // PDC1_FRAMEBUF_FORMAT
                 DEF_IO32(0x10400574, data = core->pdc.readInterruptType(1)) // PDC1_INTERRUPT_TYPE
+                DEF_IO32(0x10400578, data = core->pdc.readFramebufSelAck(1)) // PDC1_FRAMEBUF_SEL_ACK
                 DEF_IO32(0x10400C00, data = core->gpu.readMemcpySrcAddr()) // GPU_MEMCPY_SRC_ADDR
                 DEF_IO32(0x10400C04, data = core->gpu.readMemcpyDstAddr()) // GPU_MEMCPY_DST_ADDR
                 DEF_IO32(0x10400C08, data = core->gpu.readMemcpyDispDstSize()) // GPU_MEMCPY_DISP_DST_SIZE
@@ -1654,11 +1658,15 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x10400028, core->gpu.writeMemsetData(1, IO_PARAMS)) // GPU_MEMSET_DATA1
                 DEF_IO32(0x1040002C, core->gpu.writeMemsetCnt(1, IO_PARAMS)) // GPU_MEMSET_CNT1
                 DEF_IO32(0x10400468, core->pdc.writeFramebufLt0(0, IO_PARAMS)) // PDC0_FRAMEBUF_LT0
+                DEF_IO32(0x1040046C, core->pdc.writeFramebufLt1(0, IO_PARAMS)) // PDC0_FRAMEBUF_LT1
                 DEF_IO32(0x10400470, core->pdc.writeFramebufFormat(0, IO_PARAMS)) // PDC0_FRAMEBUF_FORMAT
                 DEF_IO32(0x10400474, core->pdc.writeInterruptType(0, IO_PARAMS)) // PDC0_INTERRUPT_TYPE
+                DEF_IO32(0x10400478, core->pdc.writeFramebufSelAck(0, IO_PARAMS)) // PDC0_FRAMEBUF_SEL_ACK
                 DEF_IO32(0x10400568, core->pdc.writeFramebufLt0(1, IO_PARAMS)) // PDC1_FRAMEBUF_LT0
+                DEF_IO32(0x1040056C, core->pdc.writeFramebufLt1(1, IO_PARAMS)) // PDC1_FRAMEBUF_LT1
                 DEF_IO32(0x10400570, core->pdc.writeFramebufFormat(1, IO_PARAMS)) // PDC1_FRAMEBUF_FORMAT
                 DEF_IO32(0x10400574, core->pdc.writeInterruptType(1, IO_PARAMS)) // PDC1_INTERRUPT_TYPE
+                DEF_IO32(0x10400578, core->pdc.writeFramebufSelAck(1, IO_PARAMS)) // PDC1_FRAMEBUF_SEL_ACK
                 DEF_IO32(0x10400C00, core->gpu.writeMemcpySrcAddr(IO_PARAMS)) // GPU_MEMCPY_SRC_ADDR
                 DEF_IO32(0x10400C04, core->gpu.writeMemcpyDstAddr(IO_PARAMS)) // GPU_MEMCPY_DST_ADDR
                 DEF_IO32(0x10400C08, core->gpu.writeMemcpyDispDstSize(IO_PARAMS)) // GPU_MEMCPY_DISP_DST_SIZE

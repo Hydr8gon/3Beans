@@ -182,10 +182,16 @@ void Cp15::writeReg(CpuId id, uint8_t cn, uint8_t cm, uint8_t cp, uint32_t value
             case 0x020001: return writeTlbBase1(id, value); // TLB base 1
             case 0x020002: return writeTlbCtrl(id, value); // TLB control
             case 0x070004: return writeWfi(id, value); // Wait for interrupt
+            case 0x070501: return; // Invalidate i-cache line (stub)
+            case 0x070601: return; // Invalidate d-cache line (stub)
             case 0x070800: return writeAddrTrans(id, value); // Privileged read address translation
             case 0x070801: return writeAddrTrans(id, value); // Privileged write address translation
             case 0x070802: return writeAddrTrans(id, value); // User read address translation
             case 0x070803: return writeAddrTrans(id, value); // User write address translation
+            case 0x070A01: return; // Clean d-cache line (stub)
+            case 0x070A04: return; // Data sync barrier (stub)
+            case 0x070A05: return; // Data memory barrier (stub)
+            case 0x070E01: return; // Clean+invalidate d-cache line (stub)
             case 0x0D0002: return writeThreadId(id, 0, value); // Thread ID 0
             case 0x0D0003: return writeThreadId(id, 1, value); // Thread ID 1
             case 0x0D0004: return writeThreadId(id, 2, value); // Thread ID 2
@@ -195,7 +201,12 @@ void Cp15::writeReg(CpuId id, uint8_t cn, uint8_t cm, uint8_t cp, uint32_t value
         switch ((cn << 16) | (cm << 8) | cp) {
             case 0x010000: return writeCtrl9(id, value); // Control
             case 0x070004: return writeWfi(id, value); // Wait for interrupt
+            case 0x070501: return; // Invalidate i-cache line (stub)
+            case 0x070601: return; // Invalidate d-cache line (stub)
             case 0x070802: return writeWfi(id, value); // Wait for interrupt
+            case 0x070A01: return; // Clean d-cache line (stub)
+            case 0x070A04: return; // Drain write buffer (stub)
+            case 0x070E01: return; // Clean+invalidate d-cache line (stub)
             case 0x090100: return writeDtcm(id, value); // DTCM base/size
             case 0x090101: return writeItcm(id, value); // ITCM size
         }

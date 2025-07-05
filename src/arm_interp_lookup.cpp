@@ -446,14 +446,14 @@ int (ArmInterp::*ArmInterp::armInstrs[])(uint32_t) = {
     &ArmInterp::ldrPtrpar, &ArmInterp::unkArm, &ArmInterp::ldrPtrprr, &ArmInterp::unkArm, // 0x694-0x697
     &ArmInterp::ldrPtrpll, &ArmInterp::unkArm, &ArmInterp::ldrPtrplr, &ArmInterp::unkArm, // 0x698-0x69B
     &ArmInterp::ldrPtrpar, &ArmInterp::unkArm, &ArmInterp::ldrPtrprr, &ArmInterp::unkArm, // 0x69C-0x69F
-    &ArmInterp::strPtrpll, &ArmInterp::unkArm, &ArmInterp::strPtrplr, &ArmInterp::unkArm, // 0x6A0-0x6A3
-    &ArmInterp::strPtrpar, &ArmInterp::unkArm, &ArmInterp::strPtrprr, &ArmInterp::sxtab, // 0x6A4-0x6A7
-    &ArmInterp::strPtrpll, &ArmInterp::unkArm, &ArmInterp::strPtrplr, &ArmInterp::unkArm, // 0x6A8-0x6AB
-    &ArmInterp::strPtrpar, &ArmInterp::unkArm, &ArmInterp::strPtrprr, &ArmInterp::unkArm, // 0x6AC-0x6AF
-    &ArmInterp::ldrPtrpll, &ArmInterp::unkArm, &ArmInterp::ldrPtrplr, &ArmInterp::rev, // 0x6B0-0x6B3
-    &ArmInterp::ldrPtrpar, &ArmInterp::unkArm, &ArmInterp::ldrPtrprr, &ArmInterp::sxtah, // 0x6B4-0x6B7
-    &ArmInterp::ldrPtrpll, &ArmInterp::unkArm, &ArmInterp::ldrPtrplr, &ArmInterp::rev16, // 0x6B8-0x6BB
-    &ArmInterp::ldrPtrpar, &ArmInterp::unkArm, &ArmInterp::ldrPtrprr, &ArmInterp::unkArm, // 0x6BC-0x6BF
+    &ArmInterp::strPtrpll, &ArmInterp::ssatLli, &ArmInterp::strPtrplr, &ArmInterp::ssat16, // 0x6A0-0x6A3
+    &ArmInterp::strPtrpar, &ArmInterp::ssatAri, &ArmInterp::strPtrprr, &ArmInterp::sxtab, // 0x6A4-0x6A7
+    &ArmInterp::strPtrpll, &ArmInterp::ssatLli, &ArmInterp::strPtrplr, &ArmInterp::unkArm, // 0x6A8-0x6AB
+    &ArmInterp::strPtrpar, &ArmInterp::ssatAri, &ArmInterp::strPtrprr, &ArmInterp::unkArm, // 0x6AC-0x6AF
+    &ArmInterp::ldrPtrpll, &ArmInterp::ssatLli, &ArmInterp::ldrPtrplr, &ArmInterp::rev, // 0x6B0-0x6B3
+    &ArmInterp::ldrPtrpar, &ArmInterp::ssatAri, &ArmInterp::ldrPtrprr, &ArmInterp::sxtah, // 0x6B4-0x6B7
+    &ArmInterp::ldrPtrpll, &ArmInterp::ssatLli, &ArmInterp::ldrPtrplr, &ArmInterp::rev16, // 0x6B8-0x6BB
+    &ArmInterp::ldrPtrpar, &ArmInterp::ssatAri, &ArmInterp::ldrPtrprr, &ArmInterp::unkArm, // 0x6BC-0x6BF
     &ArmInterp::strbPtrpll, &ArmInterp::unkArm, &ArmInterp::strbPtrplr, &ArmInterp::unkArm, // 0x6C0-0x6C3
     &ArmInterp::strbPtrpar, &ArmInterp::unkArm, &ArmInterp::strbPtrprr, &ArmInterp::uxtab16, // 0x6C4-0x6C7
     &ArmInterp::strbPtrpll, &ArmInterp::unkArm, &ArmInterp::strbPtrplr, &ArmInterp::unkArm, // 0x6C8-0x6CB
@@ -462,14 +462,14 @@ int (ArmInterp::*ArmInterp::armInstrs[])(uint32_t) = {
     &ArmInterp::ldrbPtrpar, &ArmInterp::unkArm, &ArmInterp::ldrbPtrprr, &ArmInterp::unkArm, // 0x6D4-0x6D7
     &ArmInterp::ldrbPtrpll, &ArmInterp::unkArm, &ArmInterp::ldrbPtrplr, &ArmInterp::unkArm, // 0x6D8-0x6DB
     &ArmInterp::ldrbPtrpar, &ArmInterp::unkArm, &ArmInterp::ldrbPtrprr, &ArmInterp::unkArm, // 0x6DC-0x6DF
-    &ArmInterp::strbPtrpll, &ArmInterp::unkArm, &ArmInterp::strbPtrplr, &ArmInterp::unkArm, // 0x6E0-0x6E3
-    &ArmInterp::strbPtrpar, &ArmInterp::unkArm, &ArmInterp::strbPtrprr, &ArmInterp::uxtab, // 0x6E4-0x6E7
-    &ArmInterp::strbPtrpll, &ArmInterp::unkArm, &ArmInterp::strbPtrplr, &ArmInterp::unkArm, // 0x6E8-0x6EB
-    &ArmInterp::strbPtrpar, &ArmInterp::unkArm, &ArmInterp::strbPtrprr, &ArmInterp::unkArm, // 0x6EC-0x6EF
-    &ArmInterp::ldrbPtrpll, &ArmInterp::unkArm, &ArmInterp::ldrbPtrplr, &ArmInterp::unkArm, // 0x6F0-0x6F3
-    &ArmInterp::ldrbPtrpar, &ArmInterp::unkArm, &ArmInterp::ldrbPtrprr, &ArmInterp::uxtah, // 0x6F4-0x6F7
-    &ArmInterp::ldrbPtrpll, &ArmInterp::unkArm, &ArmInterp::ldrbPtrplr, &ArmInterp::revsh, // 0x6F8-0x6FB
-    &ArmInterp::ldrbPtrpar, &ArmInterp::unkArm, &ArmInterp::ldrbPtrprr, &ArmInterp::unkArm, // 0x6FC-0x6FF
+    &ArmInterp::strbPtrpll, &ArmInterp::usatLli, &ArmInterp::strbPtrplr, &ArmInterp::usat16, // 0x6E0-0x6E3
+    &ArmInterp::strbPtrpar, &ArmInterp::usatAri, &ArmInterp::strbPtrprr, &ArmInterp::uxtab, // 0x6E4-0x6E7
+    &ArmInterp::strbPtrpll, &ArmInterp::usatLli, &ArmInterp::strbPtrplr, &ArmInterp::unkArm, // 0x6E8-0x6EB
+    &ArmInterp::strbPtrpar, &ArmInterp::usatAri, &ArmInterp::strbPtrprr, &ArmInterp::unkArm, // 0x6EC-0x6EF
+    &ArmInterp::ldrbPtrpll, &ArmInterp::usatLli, &ArmInterp::ldrbPtrplr, &ArmInterp::unkArm, // 0x6F0-0x6F3
+    &ArmInterp::ldrbPtrpar, &ArmInterp::usatAri, &ArmInterp::ldrbPtrprr, &ArmInterp::uxtah, // 0x6F4-0x6F7
+    &ArmInterp::ldrbPtrpll, &ArmInterp::usatLli, &ArmInterp::ldrbPtrplr, &ArmInterp::revsh, // 0x6F8-0x6FB
+    &ArmInterp::ldrbPtrpar, &ArmInterp::usatAri, &ArmInterp::ldrbPtrprr, &ArmInterp::unkArm, // 0x6FC-0x6FF
     &ArmInterp::strOfrmll, &ArmInterp::unkArm, &ArmInterp::strOfrmlr, &ArmInterp::unkArm, // 0x700-0x703
     &ArmInterp::strOfrmar, &ArmInterp::unkArm, &ArmInterp::strOfrmrr, &ArmInterp::unkArm, // 0x704-0x707
     &ArmInterp::strOfrmll, &ArmInterp::unkArm, &ArmInterp::strOfrmlr, &ArmInterp::unkArm, // 0x708-0x70B

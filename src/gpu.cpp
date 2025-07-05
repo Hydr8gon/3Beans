@@ -157,6 +157,10 @@ void Gpu::writeMemcpyCnt(uint32_t mask, uint32_t value) {
     uint16_t dstHeight = (gpuMemcpyDispDstSize >> 16);
     uint8_t scaleType = (gpuMemcpyFlags >> 24) & 0x3;
 
+    // Scale the destination dimensions based on scale type
+    dstWidth >>= (scaleType == 0x1 || scaleType == 0x2);
+    dstHeight >>= (scaleType == 0x2);
+
     // Adjust the Y order based on the vertical flip bit
     int yStart, yEnd, yInc;
     if (gpuMemcpyFlags & BIT(0)) // Flipped
