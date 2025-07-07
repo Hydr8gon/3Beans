@@ -76,6 +76,8 @@ Core::Core(std::string &cartPath): aes(this), arms { ArmInterp(this, ARM11A), Ar
     tasks[SDMMC1_READ_BLOCK] = std::bind(&SdMmc::readBlock, &sdMmcs[1]);
     tasks[SDMMC0_WRITE_BLOCK] = std::bind(&SdMmc::writeBlock, &sdMmcs[0]);
     tasks[SDMMC1_WRITE_BLOCK] = std::bind(&SdMmc::writeBlock, &sdMmcs[1]);
+    tasks[WIFI_READ_BLOCK] = std::bind(&Wifi::readBlock, &wifi);
+    tasks[WIFI_WRITE_BLOCK] = std::bind(&Wifi::writeBlock, &wifi);
     tasks[NTR_WORD_READY] = std::bind(&Cartridge::ntrWordReady, &cartridge);
     tasks[CTR_WORD_READY] = std::bind(&Cartridge::ctrWordReady, &cartridge);
 

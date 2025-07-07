@@ -41,6 +41,7 @@ public:
     uint32_t readIrqStatus();
     uint32_t readIrqMask() { return sdIrqMask; }
     uint16_t readData16Blklen() { return sdData16Blklen; }
+    uint32_t readErrDetail() { return sdErrDetail; }
     uint16_t readData16Fifo();
     uint16_t readDataCtl() { return sdDataCtl; }
     uint16_t readData32Irq() { return sdData32Irq; }
@@ -84,6 +85,7 @@ private:
     uint32_t sdIrqStatus = 0;
     uint32_t sdIrqMask = 0;
     uint16_t sdData16Blklen = 0;
+    uint32_t sdErrDetail = 0;
     uint16_t sdData16Fifo = 0;
     uint32_t sdDataCtl = 0x1010;
     uint16_t sdData32Irq = 0;
@@ -91,6 +93,7 @@ private:
     uint32_t sdData32Fifo = 0;
 
     void sendInterrupt(int bit);
+    void startWrite();
     uint32_t popFifo();
     void pushFifo(uint32_t value);
     void pushResponse(uint32_t value);

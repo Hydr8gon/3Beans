@@ -308,10 +308,11 @@ void Cdma::dmaWfp(int i, uint16_t burst) { // DMAWFP periph,type
 
     // Log unimplemented peripheral interrupts
     if (id == XDMA) {
-        if (periph >= 6) return;
+        if (periph >= 0x6) return;
         LOG_CRIT("XDMA channel %d waiting for unimplemented DRQ type: 0x%X\n", i, periph);
     }
     else {
+        if (periph == 0x4) return;
         LOG_CRIT("CDMA%d channel %d waiting for unimplemented DRQ type: 0x%X\n", id, i, periph);
     }
 }

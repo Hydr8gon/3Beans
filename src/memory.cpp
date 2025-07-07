@@ -322,8 +322,20 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
             DEF_IO16(0x101037E4, data = core->csnd.readChanRvol(31)) // CSND_CHAN31_RVOL
             DEF_IO16(0x101037E6, data = core->csnd.readChanLvol(31)) // CSND_CHAN31_LVOL
             DEF_IO32(0x101037EC, data = core->csnd.readChanStart(31)) // CSND_CHAN31_START
+            DEF_IO16(0x10122000, data = core->wifi.readCmd()) // WIFI_CMD
+            DEF_IO32(0x10122004, data = core->wifi.readCmdParam()) // WIFI_CMD_PARAM
+            DEF_IO32(0x1012200C, data = core->wifi.readResponse(0)) // WIFI_RESPONSE0
+            DEF_IO32(0x10122010, data = core->wifi.readResponse(1)) // WIFI_RESPONSE1
+            DEF_IO32(0x10122014, data = core->wifi.readResponse(2)) // WIFI_RESPONSE2
+            DEF_IO32(0x10122018, data = core->wifi.readResponse(3)) // WIFI_RESPONSE3
             DEF_IO32(0x1012201C, data = core->wifi.readIrqStatus()) // WIFI_IRQ_STATUS
+            DEF_IO32(0x10122020, data = core->wifi.readIrqMask()) // WIFI_IRQ_MASK
+            DEF_IO16(0x10122026, data = core->wifi.readData16Blklen()) // WIFI_DATA16_BLKLEN
             DEF_IO32(0x1012202C, data = core->wifi.readErrDetail()) // WIFI_ERR_DETAIL
+            DEF_IO16(0x10122030, data = core->wifi.readData16Fifo()) // WIFI_DATA16_FIFO
+            DEF_IO16(0x101220D8, data = core->wifi.readDataCtl()) // WIFI_DATA_CTL
+            DEF_IO16(0x10122100, data = core->wifi.readData32Irq()) // WIFI_DATA32_IRQ
+            DEF_IO16(0x10122104, data = core->wifi.readData32Blklen()) // WIFI_DATA32_BLKLEN
             DEF_IO32(0x10140420, data = readCfg11BrOverlayCnt()) // CFG11_BR_OVERLAY_CNT
             DEF_IO32(0x10140424, data = readCfg11BrOverlayVal()) // CFG11_BR_OVERLAY_VAL
             DEF_IO16(0x10140FFC, data = core->interrupts.readCfg11Socinfo()) // CFG11_SOCINFO
@@ -530,6 +542,7 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x10301034, data = core->shas[0].readFifo()) // SHA_FIFO11
                 DEF_IO32(0x10301038, data = core->shas[0].readFifo()) // SHA_FIFO11
                 DEF_IO32(0x1030103C, data = core->shas[0].readFifo()) // SHA_FIFO11
+                DEF_IO32(0x10322000, data = core->wifi.readData32Fifo()) // WIFI_DATA32_FIFO
                 DEF_IO32(0x10400010, data = core->gpu.readMemsetDstAddr(0)) // GPU_MEMSET_DST_ADDR0
                 DEF_IO32(0x10400014, data = core->gpu.readMemsetDstEnd(0)) // GPU_MEMSET_DST_END0
                 DEF_IO32(0x10400018, data = core->gpu.readMemsetData(0)) // GPU_MEMSET_DATA0
@@ -953,6 +966,7 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x1000601C, data = core->sdMmcs[0].readIrqStatus()) // SD0_IRQ_STATUS
                 DEF_IO32(0x10006020, data = core->sdMmcs[0].readIrqMask()) // SD0_IRQ_MASK
                 DEF_IO16(0x10006026, data = core->sdMmcs[0].readData16Blklen()) // SD0_DATA16_BLKLEN
+                DEF_IO32(0x1000602C, data = core->sdMmcs[0].readErrDetail()) // SD0_ERR_DETAIL
                 DEF_IO16(0x10006030, data = core->sdMmcs[0].readData16Fifo()) // SD0_DATA16_FIFO
                 DEF_IO16(0x100060D8, data = core->sdMmcs[0].readDataCtl()) // SD0_DATA_CTL
                 DEF_IO16(0x10006100, data = core->sdMmcs[0].readData32Irq()) // SD0_DATA32_IRQ
@@ -969,6 +983,7 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x1000701C, data = core->sdMmcs[1].readIrqStatus()) // SD1_IRQ_STATUS
                 DEF_IO32(0x10007020, data = core->sdMmcs[1].readIrqMask()) // SD1_IRQ_MASK
                 DEF_IO16(0x10007026, data = core->sdMmcs[1].readData16Blklen()) // SD1_DATA16_BLKLEN
+                DEF_IO32(0x1000702C, data = core->sdMmcs[1].readErrDetail()) // SD1_ERR_DETAIL
                 DEF_IO16(0x10007030, data = core->sdMmcs[1].readData16Fifo()) // SD1_DATA16_FIFO
                 DEF_IO16(0x100070D8, data = core->sdMmcs[1].readDataCtl()) // SD1_DATA_CTL
                 DEF_IO16(0x10007100, data = core->sdMmcs[1].readData32Irq()) // SD1_DATA32_IRQ
@@ -1588,7 +1603,15 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
             DEF_IO32(0x101037F4, core->csnd.writeChanLoop(31, IO_PARAMS)) // CSND_CHAN31_LOOP
             DEF_IO32(0x101037F8, core->csnd.writeAdpcmStart(31, IO_PARAMS)) // CSND_ADPCM31_START
             DEF_IO32(0x101037FC, core->csnd.writeAdpcmLoop(31, IO_PARAMS)) // CSND_ADPCM31_LOOP
+            DEF_IO16(0x10122000, core->wifi.writeCmd(IO_PARAMS)) // WIFI_CMD
+            DEF_IO32(0x10122004, core->wifi.writeCmdParam(IO_PARAMS)) // WIFI_CMD_PARAM
             DEF_IO32(0x1012201C, core->wifi.writeIrqStatus(IO_PARAMS)) // WIFI_IRQ_STATUS
+            DEF_IO32(0x10122020, core->wifi.writeIrqMask(IO_PARAMS)) // WIFI_IRQ_MASK
+            DEF_IO16(0x10122026, core->wifi.writeData16Blklen(IO_PARAMS)) // WIFI_DATA16_BLKLEN
+            DEF_IO16(0x10122030, core->wifi.writeData16Fifo(IO_PARAMS)) // WIFI_DATA16_FIFO
+            DEF_IO16(0x101220D8, core->wifi.writeDataCtl(IO_PARAMS)) // WIFI_DATA_CTL
+            DEF_IO16(0x10122100, core->wifi.writeData32Irq(IO_PARAMS)) // WIFI_DATA32_IRQ
+            DEF_IO16(0x10122104, core->wifi.writeData32Blklen(IO_PARAMS)) // WIFI_DATA32_BLKLEN
             DEF_IO32(0x10140420, writeCfg11BrOverlayCnt(IO_PARAMS)) // CFG11_BR_OVERLAY_CNT
             DEF_IO32(0x10140424, writeCfg11BrOverlayVal(IO_PARAMS)) // CFG11_BR_OVERLAY_VAL
             DEF_IO32(0x10141200, core->gpu.writeCfg11GpuCnt(IO_PARAMS)) // CFG11_GPU_CNT
@@ -1649,6 +1672,7 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x10301034, core->shas[0].writeFifo(IO_PARAMS)) // SHA_FIFO11
                 DEF_IO32(0x10301038, core->shas[0].writeFifo(IO_PARAMS)) // SHA_FIFO11
                 DEF_IO32(0x1030103C, core->shas[0].writeFifo(IO_PARAMS)) // SHA_FIFO11
+                DEF_IO32(0x10322000, core->wifi.writeData32Fifo(IO_PARAMS)) // WIFI_DATA32_FIFO
                 DEF_IO32(0x10400010, core->gpu.writeMemsetDstAddr(0, IO_PARAMS)) // GPU_MEMSET_DST_ADDR0
                 DEF_IO32(0x10400014, core->gpu.writeMemsetDstEnd(0, IO_PARAMS)) // GPU_MEMSET_DST_END0
                 DEF_IO32(0x10400018, core->gpu.writeMemsetData(0, IO_PARAMS)) // GPU_MEMSET_DATA0
