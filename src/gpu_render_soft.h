@@ -109,9 +109,11 @@ private:
 
     static float interpolate(float v1, float v2, float x1, float x, float x2);
     static SoftVertex interpolate(SoftVertex &v1, SoftVertex &v2, float x1, float x, float x2);
+    static SoftVertex intersect(SoftVertex &v1, SoftVertex &v2, float x1, float x2);
 
     void drawPixel(SoftVertex &p);
     void drawTriangle(SoftVertex &a, SoftVertex &b, SoftVertex &c);
+    void clipTriangle(SoftVertex &a, SoftVertex &b, SoftVertex &c);
 
     float *getSrc(uint8_t src, uint32_t desc, uint8_t idx);
     void setDst(uint8_t dst, uint32_t desc, float *value);

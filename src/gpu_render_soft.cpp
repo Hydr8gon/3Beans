@@ -66,12 +66,27 @@ SoftVertex GpuRenderSoft::interpolate(SoftVertex &v1, SoftVertex &v2, float x1, 
     SoftVertex v;
     v.x = interpolate(v1.x, v2.x, x1, x, x2);
     v.y = interpolate(v1.y, v2.y, x1, x, x2);
-    v.z = interpolate(v1.z, v2.z, x1, x, x2);
     v.w = interpolate(v1.w, v2.w, x1, x, x2);
+    v.z = interpolate(v1.z * v1.w, v2.z * v2.w, x1, x, x2) / v.w;
     v.r = interpolate(v1.r * v1.w, v2.r * v2.w, x1, x, x2) / v.w;
     v.g = interpolate(v1.g * v1.w, v2.g * v2.w, x1, x, x2) / v.w;
     v.b = interpolate(v1.b * v1.w, v2.b * v2.w, x1, x, x2) / v.w;
     v.a = interpolate(v1.a * v1.w, v2.a * v2.w, x1, x, x2) / v.w;
+    return v;
+}
+
+SoftVertex GpuRenderSoft::intersect(SoftVertex &v1, SoftVertex &v2, float x1, float x2) {
+    // Calculate the intersection of two vertices at a clipping bound
+    SoftVertex v;
+    float s1 = x1 + v1.w, s2 = x2 + v2.w;
+    v.x = ((v1.x * s2) - (v2.x * s1)) / (s2 - s1);
+    v.y = ((v1.y * s2) - (v2.y * s1)) / (s2 - s1);
+    v.z = ((v1.z * s2) - (v2.z * s1)) / (s2 - s1);
+    v.w = ((v1.w * s2) - (v2.w * s1)) / (s2 - s1);
+    v.r = ((v1.r * s2) - (v2.r * s1)) / (s2 - s1);
+    v.g = ((v1.g * s2) - (v2.g * s1)) / (s2 - s1);
+    v.b = ((v1.b * s2) - (v2.b * s1)) / (s2 - s1);
+    v.a = ((v1.a * s2) - (v2.a * s1)) / (s2 - s1);
     return v;
 }
 
@@ -134,20 +149,26 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
         }
     }
 
+    // Ensure the incoming color values stay within bounds
+    float r = std::min(1.0f, std::max(0.0f, p.r));
+    float g = std::min(1.0f, std::max(0.0f, p.g));
+    float b = std::min(1.0f, std::max(0.0f, p.b));
+    float a = std::min(1.0f, std::max(0.0f, p.a));
+
     // Store the incoming color values based on buffer format if enabled
     if (!colbufMask) return; // TODO: use individual components
     switch (colbufFmt) {
     case RGBA8:
-        val = (int(p.r * 255) << 24) | (int(p.g * 255) << 16) | (int(p.b * 255) << 8) | int(p.a * 255);
+        val = (int(r * 255) << 24) | (int(g * 255) << 16) | (int(b * 255) << 8) | int(a * 255);
         return core->memory.write<uint32_t>(ARM11, colbufAddr + ofs * 4, val);
     case RGB565:
-        val = (int(p.r * 31) << 11) | (int(p.g * 63) << 5) | int(p.b * 31);
+        val = (int(r * 31) << 11) | (int(g * 63) << 5) | int(b * 31);
         return core->memory.write<uint16_t>(ARM11, colbufAddr + ofs * 2, val);
     case RGB5A1:
-        val = (int(p.r * 31) << 11) | (int(p.g * 31) << 6) | (int(p.b * 31) << 1) | (p.a > 0);
+        val = (int(r * 31) << 11) | (int(g * 31) << 6) | (int(b * 31) << 1) | (a > 0);
         return core->memory.write<uint16_t>(ARM11, colbufAddr + ofs * 2, val);
     case RGBA4:
-        val = (int(p.r * 15) << 12) | (int(p.g * 15) << 8) | (int(p.b * 15) << 4) | int(p.a * 15);
+        val = (int(r * 15) << 12) | (int(g * 15) << 8) | (int(b * 15) << 4) | int(a * 15);
         return core->memory.write<uint16_t>(ARM11, colbufAddr + ofs * 2, val);
     }
 }
@@ -164,10 +185,16 @@ void GpuRenderSoft::drawTriangle(SoftVertex &a, SoftVertex &b, SoftVertex &c) {
     if (v[0]->y > v[2]->y) std::swap(v[0], v[2]);
     if (v[1]->y > v[2]->y) std::swap(v[1], v[2]);
 
-    // Ignore triangles that have out-of-bounds vertices
-    // TODO: actually implement clipping
-    for (int i = 0; i < 3; i++)
-        if (fabsf(v[i]->x) >= 1.0f || fabsf(v[i]->y) >= 1.0f) return;
+    // Hack to skip an annoying polygon in Super Mario 3D Land
+    // TODO: remove this
+    bool hack = true;
+    for (int i = 0; i < 3; i++) {
+        if (fabsf(v[i]->x) != 1.0f || fabsf(v[i]->y) != 1.0f || v[i]->r != 1.0f || v[i]->g != 1.0f || v[i]->b != 1.0f) {
+            hack = false;
+            break;
+        }
+    }
+    if (hack) return;
 
     // Draw the pixels of a triangle by interpolating between X and Y bounds
     if (viewStepH <= 0 || viewStepV <= 0) return;
@@ -182,6 +209,58 @@ void GpuRenderSoft::drawTriangle(SoftVertex &a, SoftVertex &b, SoftVertex &c) {
             SoftVertex vm = interpolate(vl, vr, vl.x, x, vr.x);
             drawPixel(vm);
         }
+    }
+}
+
+void GpuRenderSoft::clipTriangle(SoftVertex &a, SoftVertex &b, SoftVertex &c) {
+    // Copy the vertices to an initial working buffer
+    SoftVertex vert[10], clip[10];
+    vert[0] = a, vert[1] = b, vert[2] = c;
+    uint8_t size = 3;
+
+    // Clip a triangle on 6 sides using the Sutherland-Hodgman algorithm
+    for (int i = 0; i < 6; i++) {
+        // Build a list of clipped vertices from the working ones
+        uint8_t idx = 0;
+        for (int j = 0; j < size; j++) {
+            // Get the current and previous working vertices
+            SoftVertex &v1 = vert[j];
+            SoftVertex &v2 = vert[(j - 1 + size) % size];
+
+            // Get coordinates to check based on the side being clipped against
+            float x1, x2;
+            switch (i) {
+                case 0: x1 = v1.x, x2 = v2.x; break;
+                case 1: x1 = -v1.x, x2 = -v2.x; break;
+                case 2: x1 = v1.y, x2 = v2.y; break;
+                case 3: x1 = -v1.y, x2 = -v2.y; break;
+                case 4: x1 = v1.z, x2 = v2.z; break;
+                default: x1 = -v1.z, x2 = -v2.z; break;
+            }
+
+            // Add vertices to the list, clipping them if out of bounds
+            if (x1 >= -v1.w) { // Current in bounds
+                if (x2 < -v2.w) // Previous not in bounds
+                    clip[idx++] = intersect(v1, v2, x1, x2);
+                clip[idx++] = v1;
+            }
+            else if (x2 >= -v2.w) { // Previous in bounds
+                clip[idx++] = intersect(v1, v2, x1, x2);
+            }
+        }
+
+        // Update the working vertices
+        size = idx;
+        memcpy(vert, clip, size * sizeof(SoftVertex));
+    }
+
+    // Apply X/Y perspective division and draw clipped triangles in a fan
+    if (size < 3) return;
+    for (int i = 0; i < size; i++) {
+        vert[i].x /= vert[i].w;
+        vert[i].y /= vert[i].w;
+        if (i >= 2)
+            drawTriangle(vert[0], vert[i - 1], vert[i]);
     }
 }
 
@@ -226,13 +305,13 @@ void GpuRenderSoft::runShader(float (*input)[4], PrimMode mode) {
     // Build a vertex using the shader output map
     SoftVertex vertex;
     vertex.w = shdOut[outMap[0x3][0]][outMap[0x3][1]];
-    vertex.x = shdOut[outMap[0x0][0]][outMap[0x0][1]] / vertex.w;
-    vertex.y = shdOut[outMap[0x1][0]][outMap[0x1][1]] / vertex.w;
-    vertex.z = shdOut[outMap[0x2][0]][outMap[0x2][1]] / vertex.w;
-    vertex.r = std::min(1.0f, std::max(0.0f, shdOut[outMap[0x8][0]][outMap[0x8][1]]));
-    vertex.g = std::min(1.0f, std::max(0.0f, shdOut[outMap[0x9][0]][outMap[0x9][1]]));
-    vertex.b = std::min(1.0f, std::max(0.0f, shdOut[outMap[0xA][0]][outMap[0xA][1]]));
-    vertex.a = std::min(1.0f, std::max(0.0f, shdOut[outMap[0xB][0]][outMap[0xB][1]]));
+    vertex.x = shdOut[outMap[0x0][0]][outMap[0x0][1]];
+    vertex.y = shdOut[outMap[0x1][0]][outMap[0x1][1]];
+    vertex.z = shdOut[outMap[0x2][0]][outMap[0x2][1]];
+    vertex.r = shdOut[outMap[0x8][0]][outMap[0x8][1]];
+    vertex.g = shdOut[outMap[0x9][0]][outMap[0x9][1]];
+    vertex.b = shdOut[outMap[0xA][0]][outMap[0xA][1]];
+    vertex.a = shdOut[outMap[0xB][0]][outMap[0xB][1]];
 
     // Reset the vertex count if the primitive mode changed
     if (mode != SAME_PRIM) {
@@ -248,7 +327,7 @@ void GpuRenderSoft::runShader(float (*input)[4], PrimMode mode) {
         vertices[vtxCount] = vertex;
         if (++vtxCount < 3) return;
         vtxCount = 0;
-        return drawTriangle(vertices[0], vertices[1], vertices[2]);
+        return clipTriangle(vertices[0], vertices[1], vertices[2]);
 
     case TRI_STRIPS:
         // Draw triangles in strips that reuse the last 2 vertices
@@ -258,23 +337,23 @@ void GpuRenderSoft::runShader(float (*input)[4], PrimMode mode) {
             return;
         case 2: // v0, v1, v2
             vertices[2] = vertex;
-            return drawTriangle(vertices[0], vertices[1], vertices[2]);
+            return clipTriangle(vertices[0], vertices[1], vertices[2]);
         case 3: // v2, v1, v3
             vertices[0] = vertex;
-            return drawTriangle(vertices[2], vertices[1], vertices[0]);
+            return clipTriangle(vertices[2], vertices[1], vertices[0]);
         case 4: // v2, v3, v4
             vertices[1] = vertex;
-            return drawTriangle(vertices[2], vertices[0], vertices[1]);
+            return clipTriangle(vertices[2], vertices[0], vertices[1]);
         case 5: // v4, v3, v5
             vertices[2] = vertex;
-            return drawTriangle(vertices[1], vertices[0], vertices[2]);
+            return clipTriangle(vertices[1], vertices[0], vertices[2]);
         case 6: // v4, v5, v6
             vertices[0] = vertex;
-            return drawTriangle(vertices[1], vertices[2], vertices[0]);
+            return clipTriangle(vertices[1], vertices[2], vertices[0]);
         default: // v6, v5, v7
             vertices[1] = vertex;
             vtxCount = 2;
-            return drawTriangle(vertices[0], vertices[2], vertices[1]);
+            return clipTriangle(vertices[0], vertices[2], vertices[1]);
         }
 
     case TRI_FANS:
@@ -285,11 +364,11 @@ void GpuRenderSoft::runShader(float (*input)[4], PrimMode mode) {
             return;
         case 2: // v0, v1, v2
             vertices[2] = vertex;
-            return drawTriangle(vertices[0], vertices[1], vertices[2]);
+            return clipTriangle(vertices[0], vertices[1], vertices[2]);
         default: // v0, v2, v3
             vertices[1] = vertex;
             vtxCount = 2;
-            return drawTriangle(vertices[0], vertices[2], vertices[1]);
+            return clipTriangle(vertices[0], vertices[2], vertices[1]);
         }
     }
 }
