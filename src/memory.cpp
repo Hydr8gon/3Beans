@@ -624,7 +624,9 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x104010CC, data = core->gpu.readIrqStatH()) // GPU_IRQ_STAT_H
                 DEF_IO32(0x104010D0, data = core->gpu.readIrqAutostop()) // GPU_IRQ_AUTOSTOP
                 DEF_IO32(0x10401104, data = core->gpu.readViewScaleH()) // GPU_VIEW_SCALE_H
+                DEF_IO32(0x10401108, data = core->gpu.readViewStepH()) // GPU_VIEW_STEP_H
                 DEF_IO32(0x1040110C, data = core->gpu.readViewScaleV()) // GPU_VIEW_SCALE_V
+                DEF_IO32(0x10401110, data = core->gpu.readViewStepV()) // GPU_VIEW_STEP_V
                 DEF_IO32(0x1040113C, data = core->gpu.readShdOutTotal()) // GPU_SHD_OUT_TOTAL
                 DEF_IO32(0x10401140, data = core->gpu.readShdOutMap(0)) // GPU_SHD_OUT_MAP0
                 DEF_IO32(0x10401144, data = core->gpu.readShdOutMap(1)) // GPU_SHD_OUT_MAP1
@@ -633,7 +635,12 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x10401150, data = core->gpu.readShdOutMap(4)) // GPU_SHD_OUT_MAP4
                 DEF_IO32(0x10401154, data = core->gpu.readShdOutMap(5)) // GPU_SHD_OUT_MAP5
                 DEF_IO32(0x10401158, data = core->gpu.readShdOutMap(6)) // GPU_SHD_OUT_MAP6
+                DEF_IO32(0x1040141C, data = core->gpu.readDepcolMask()) // GPU_DEPCOL_MASK
+                DEF_IO32(0x1040144C, data = core->gpu.readColbufWrite()) // GPU_COLBUF_WRITE
+                DEF_IO32(0x10401454, data = core->gpu.readDepbufWrite()) // GPU_DEPBUF_WRITE
+                DEF_IO32(0x10401458, data = core->gpu.readDepbufFmt()) // GPU_DEPBUF_FMT
                 DEF_IO32(0x1040145C, data = core->gpu.readColbufFmt()) // GPU_COLBUF_FMT
+                DEF_IO32(0x10401470, data = core->gpu.readDepbufLoc()) // GPU_DEPBUF_LOC
                 DEF_IO32(0x10401474, data = core->gpu.readColbufLoc()) // GPU_COLBUF_LOC
                 DEF_IO32(0x10401478, data = core->gpu.readBufferDim()) // GPU_BUFFER_DIM
                 DEF_IO32(0x10401800, data = core->gpu.readAttrBase()) // GPU_ATTR_BASE
@@ -682,6 +689,8 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x104018E4, data = core->gpu.readCmdSize(1)) // GPU_CMD_SIZE1
                 DEF_IO32(0x104018E8, data = core->gpu.readCmdAddr(0)) // GPU_CMD_ADDR0
                 DEF_IO32(0x104018EC, data = core->gpu.readCmdAddr(1)) // GPU_CMD_ADDR1
+                DEF_IO32(0x10401978, data = core->gpu.readPrimConfig()) // GPU_PRIM_CONFIG
+                DEF_IO32(0x1040197C, data = core->gpu.readPrimRestart()) // GPU_PRIM_RESTART
                 DEF_IO32(0x10401AC0, data = core->gpu.readVshBools()) // GPU_VSH_BOOLS
                 DEF_IO32(0x10401AC4, data = core->gpu.readVshInts(0)) // GPU_VSH_INTS0
                 DEF_IO32(0x10401AC8, data = core->gpu.readVshInts(1)) // GPU_VSH_INTS1
@@ -1752,7 +1761,9 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x104010C4, core->gpu.writeIrqMaskH(IO_PARAMS)) // GPU_IRQ_MASK_H
                 DEF_IO32(0x104010D0, core->gpu.writeIrqAutostop(IO_PARAMS)) // GPU_IRQ_AUTOSTOP
                 DEF_IO32(0x10401104, core->gpu.writeViewScaleH(IO_PARAMS)) // GPU_VIEW_SCALE_H
+                DEF_IO32(0x10401108, core->gpu.writeViewStepH(IO_PARAMS)) // GPU_VIEW_STEP_H
                 DEF_IO32(0x1040110C, core->gpu.writeViewScaleV(IO_PARAMS)) // GPU_VIEW_SCALE_V
+                DEF_IO32(0x10401110, core->gpu.writeViewStepV(IO_PARAMS)) // GPU_VIEW_STEP_V
                 DEF_IO32(0x1040113C, core->gpu.writeShdOutTotal(IO_PARAMS)) // GPU_SHD_OUT_TOTAL
                 DEF_IO32(0x10401140, core->gpu.writeShdOutMap<0>(IO_PARAMS)) // GPU_SHD_OUT_MAP0
                 DEF_IO32(0x10401144, core->gpu.writeShdOutMap<1>(IO_PARAMS)) // GPU_SHD_OUT_MAP1
@@ -1761,7 +1772,12 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x10401150, core->gpu.writeShdOutMap<4>(IO_PARAMS)) // GPU_SHD_OUT_MAP4
                 DEF_IO32(0x10401154, core->gpu.writeShdOutMap<5>(IO_PARAMS)) // GPU_SHD_OUT_MAP5
                 DEF_IO32(0x10401158, core->gpu.writeShdOutMap<6>(IO_PARAMS)) // GPU_SHD_OUT_MAP6
+                DEF_IO32(0x1040141C, core->gpu.writeDepcolMask(IO_PARAMS)) // GPU_DEPCOL_MASK
+                DEF_IO32(0x1040144C, core->gpu.writeColbufWrite(IO_PARAMS)) // GPU_COLBUF_WRITE
+                DEF_IO32(0x10401454, core->gpu.writeDepbufWrite(IO_PARAMS)) // GPU_DEPBUF_WRITE
+                DEF_IO32(0x10401458, core->gpu.writeDepbufFmt(IO_PARAMS)) // GPU_DEPBUF_FMT
                 DEF_IO32(0x1040145C, core->gpu.writeColbufFmt(IO_PARAMS)) // GPU_COLBUF_FMT
+                DEF_IO32(0x10401470, core->gpu.writeDepbufLoc(IO_PARAMS)) // GPU_DEPBUF_LOC
                 DEF_IO32(0x10401474, core->gpu.writeColbufLoc(IO_PARAMS)) // GPU_COLBUF_LOC
                 DEF_IO32(0x10401478, core->gpu.writeBufferDim(IO_PARAMS)) // GPU_BUFFER_DIM
                 DEF_IO32(0x10401800, core->gpu.writeAttrBase(IO_PARAMS)) // GPU_ATTR_BASE
@@ -1814,6 +1830,8 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x104018EC, core->gpu.writeCmdAddr<1>(IO_PARAMS)) // GPU_CMD_ADDR1
                 DEF_IO32(0x104018F0, core->gpu.writeCmdJump<0>(IO_PARAMS)) // GPU_CMD_JUMP0
                 DEF_IO32(0x104018F4, core->gpu.writeCmdJump<1>(IO_PARAMS)) // GPU_CMD_JUMP1
+                DEF_IO32(0x10401978, core->gpu.writePrimConfig(IO_PARAMS)) // GPU_PRIM_CONFIG
+                DEF_IO32(0x1040197C, core->gpu.writePrimRestart(IO_PARAMS)) // GPU_PRIM_RESTART
                 DEF_IO32(0x10401AC0, core->gpu.writeVshBools(IO_PARAMS)) // GPU_VSH_BOOLS
                 DEF_IO32(0x10401AC4, core->gpu.writeVshInts<0>(IO_PARAMS)) // GPU_VSH_INTS0
                 DEF_IO32(0x10401AC8, core->gpu.writeVshInts<1>(IO_PARAMS)) // GPU_VSH_INTS1

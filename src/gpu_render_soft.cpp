@@ -54,7 +54,133 @@ GpuRenderSoft::GpuRenderSoft(Core *core): core(core) {
     shdBools = vshBools;
 }
 
-void GpuRenderSoft::runShader(uint16_t entry, float (*input)[4]) {
+float GpuRenderSoft::interpolate(float v1, float v2, float x1, float x, float x2) {
+    // Linearly interpolate a new value between the min and max values
+    if (x <= x1) return v1;
+    if (x >= x2) return v2;
+    return v1 + (v2 - v1) * (x - x1) / (x2 - x1);
+}
+
+SoftVertex GpuRenderSoft::interpolate(SoftVertex &v1, SoftVertex &v2, float x1, float x, float x2) {
+    // Interpolate all values in a vertex with perspective correction
+    SoftVertex v;
+    v.x = interpolate(v1.x, v2.x, x1, x, x2);
+    v.y = interpolate(v1.y, v2.y, x1, x, x2);
+    v.z = interpolate(v1.z, v2.z, x1, x, x2);
+    v.w = interpolate(v1.w, v2.w, x1, x, x2);
+    v.r = interpolate(v1.r * v1.w, v2.r * v2.w, x1, x, x2) / v.w;
+    v.g = interpolate(v1.g * v1.w, v2.g * v2.w, x1, x, x2) / v.w;
+    v.b = interpolate(v1.b * v1.w, v2.b * v2.w, x1, x, x2) / v.w;
+    v.a = interpolate(v1.a * v1.w, v2.a * v2.w, x1, x, x2) / v.w;
+    return v;
+}
+
+void GpuRenderSoft::drawPixel(SoftVertex &p) {
+    // Convert coordinates to screen space and check bounds
+    int x = p.x * viewScaleH + viewScaleH;
+    int y = p.y * signY * viewScaleV + viewScaleV;
+    if (x < 0 || x >= bufWidth || y < 0 || y >= bufHeight) return;
+    uint32_t val, ofs = (((y >> 3) * (bufWidth >> 3) + (x >> 3)) << 6) + ((y & 0x7) << 3) + (x & 0x7); // 8x8 tiles
+
+    // Read a depth value to compare with based on buffer format
+    float depth = 0.0f;
+    switch (depbufFmt) {
+    case DEP16:
+        val = core->memory.read<uint16_t>(ARM11, depbufAddr + ofs * 2);
+        depth = float(val) / 0xFFFF;
+        break;
+    case DEP24:
+        val = core->memory.read<uint8_t>(ARM11, depbufAddr + ofs * 3 + 0) << 0;
+        val |= core->memory.read<uint8_t>(ARM11, depbufAddr + ofs * 3 + 1) << 8;
+        val |= core->memory.read<uint8_t>(ARM11, depbufAddr + ofs * 3 + 2) << 16;
+        depth = float(val) / 0xFFFFFF;
+        break;
+    case DEP24STN8:
+        val = core->memory.read<uint32_t>(ARM11, depbufAddr + ofs * 4) & 0xFFFFFF;
+        depth = float(val) / 0xFFFFFF;
+        break;
+    }
+
+    // Compare the incoming depth value with the existing one
+    switch (depthFunc) {
+        case DEPTH_NV: return;
+        case DEPTH_AL: break;
+        case DEPTH_EQ: if (p.z == depth) break; return;
+        case DEPTH_NE: if (p.z != depth) break; return;
+        case DEPTH_LT: if (p.z < depth) break; return;
+        case DEPTH_LE: if (p.z <= depth) break; return;
+        case DEPTH_GT: if (p.z > depth) break; return;
+        case DEPTH_GE: if (p.z >= depth) break; return;
+    }
+
+    // Store the incoming depth value based on buffer format if enabled
+    if (depbufMask & BIT(1)) {
+        switch (depbufFmt) {
+        case DEP16:
+            val = std::min<int>(0xFFFF, std::max<int>(0, p.z * 0xFFFF));
+            core->memory.write<uint16_t>(ARM11, depbufAddr + ofs * 2, val);
+            break;
+        case DEP24:
+            val = std::min<int>(0xFFFFFF, std::max<int>(0, p.z * 0xFFFFFF));
+            core->memory.write<uint8_t>(ARM11, depbufAddr + ofs * 3 + 0, val >> 0);
+            core->memory.write<uint8_t>(ARM11, depbufAddr + ofs * 3 + 1, val >> 8);
+            core->memory.write<uint8_t>(ARM11, depbufAddr + ofs * 3 + 2, val >> 16);
+            break;
+        case DEP24STN8:
+            val = std::min<int>(0xFFFFFF, std::max<int>(0, p.z * 0xFFFFFF));
+            val |= core->memory.read<uint8_t>(ARM11, depbufAddr + ofs * 4 + 3) << 24;
+            core->memory.write<uint32_t>(ARM11, depbufAddr + ofs * 4, val);
+            break;
+        }
+    }
+
+    // Store the incoming color values based on buffer format if enabled
+    if (!colbufMask) return; // TODO: use individual components
+    switch (colbufFmt) {
+    case RGBA8:
+        val = (int(p.r * 255) << 24) | (int(p.g * 255) << 16) | (int(p.b * 255) << 8) | int(p.a * 255);
+        return core->memory.write<uint32_t>(ARM11, colbufAddr + ofs * 4, val);
+    case RGB565:
+        val = (int(p.r * 31) << 11) | (int(p.g * 63) << 5) | int(p.b * 31);
+        return core->memory.write<uint16_t>(ARM11, colbufAddr + ofs * 2, val);
+    case RGB5A1:
+        val = (int(p.r * 31) << 11) | (int(p.g * 31) << 6) | (int(p.b * 31) << 1) | (p.a > 0);
+        return core->memory.write<uint16_t>(ARM11, colbufAddr + ofs * 2, val);
+    case RGBA4:
+        val = (int(p.r * 15) << 12) | (int(p.g * 15) << 8) | (int(p.b * 15) << 4) | int(p.a * 15);
+        return core->memory.write<uint16_t>(ARM11, colbufAddr + ofs * 2, val);
+    }
+}
+
+void GpuRenderSoft::drawTriangle(SoftVertex &a, SoftVertex &b, SoftVertex &c) {
+    // Sort the vertices by increasing Y-coordinates
+    SoftVertex *v[3] = { &a, &b, &c };
+    if (v[0]->y > v[1]->y) std::swap(v[0], v[1]);
+    if (v[0]->y > v[2]->y) std::swap(v[0], v[2]);
+    if (v[1]->y > v[2]->y) std::swap(v[1], v[2]);
+
+    // Ignore triangles that have out-of-bounds vertices
+    // TODO: actually implement clipping
+    for (int i = 0; i < 3; i++)
+        if (fabsf(v[i]->x) >= 1.0f || fabsf(v[i]->y) >= 1.0f) return;
+
+    // Draw the pixels of a triangle by interpolating between X and Y bounds
+    if (viewStepH <= 0 || viewStepV <= 0) return;
+    float y1 = std::max(-1.0f, v[0]->y), y2 = std::min(1.0f, v[2]->y);
+    for (float y = y1; y < y2; y += viewStepV) {
+        int r = (y >= v[1]->y) ? 1 : 0;
+        SoftVertex vl = interpolate(*v[0], *v[2], v[0]->y, y, v[2]->y);
+        SoftVertex vr = interpolate(*v[r], *v[r + 1], v[r]->y, y, v[r + 1]->y);
+        if (vl.x > vr.x) std::swap(vl, vr);
+        float x1 = std::max(-1.0f, vl.x), x2 = std::min(1.0f, vr.x);
+        for (float x = x1; x < x2; x += viewStepH) {
+            SoftVertex vm = interpolate(vl, vr, vl.x, x, vr.x);
+            drawPixel(vm);
+        }
+    }
+}
+
+void GpuRenderSoft::runShader(float (*input)[4], PrimMode mode) {
     // Update source registers and reset the shader state
     for (int i = 0x0; i < 0x10; i++)
         srcRegs[i] = input[i];
@@ -63,11 +189,10 @@ void GpuRenderSoft::runShader(uint16_t entry, float (*input)[4]) {
     memset(shdAddr, 0, sizeof(shdAddr));
     memset(shdCond, 0, sizeof(shdCond));
     ifStack = callStack = {};
-    shdPc = entry;
-    running = true;
+    shdPc = vshEntry;
 
     // Execute the vertex shader until completion
-    while (running) {
+    while (shdPc != vshEnd) {
         // Run an opcode and increment the program counter
         uint32_t opcode = vshCode[shdPc & 0x1FF];
         uint16_t cmpPc = ++shdPc;
@@ -85,7 +210,7 @@ void GpuRenderSoft::runShader(uint16_t entry, float (*input)[4]) {
             shdAddr[2] += shdInts[(opcode >> 22) & 0x3][2];
             if (loopStack.front() >> 24) {
                 loopStack[loopStack.size() - 1] -= BIT(24);
-                shdPc = (loopStack.front() >> 12);
+                shdPc = (loopStack.front() >> 12) & 0xFFF;
             }
             else {
                 loopStack.pop_front();
@@ -93,37 +218,79 @@ void GpuRenderSoft::runShader(uint16_t entry, float (*input)[4]) {
         }
     }
 
-    // Convert output positions to screen coordinates and check bounds
-    float w = shdOut[outMap[0x3][0]][outMap[0x3][1]];
-    if (w == 0) return;
-    int x = shdOut[outMap[0x0][0]][outMap[0x0][1]] / w * viewScaleH + viewScaleH;
-    int y = shdOut[outMap[0x1][0]][outMap[0x1][1]] / w * signY * viewScaleV + viewScaleV;
-    if (x < 0 || x >= bufWidth || y < 0 || y >= bufHeight) return;
+    // Build a vertex using the shader output map
+    SoftVertex vertex;
+    vertex.w = shdOut[outMap[0x3][0]][outMap[0x3][1]];
+    vertex.x = shdOut[outMap[0x0][0]][outMap[0x0][1]] / vertex.w;
+    vertex.y = shdOut[outMap[0x1][0]][outMap[0x1][1]] / vertex.w;
+    vertex.z = shdOut[outMap[0x2][0]][outMap[0x2][1]] / vertex.w;
+    vertex.r = std::min(1.0f, std::max(0.0f, shdOut[outMap[0x8][0]][outMap[0x8][1]]));
+    vertex.g = std::min(1.0f, std::max(0.0f, shdOut[outMap[0x9][0]][outMap[0x9][1]]));
+    vertex.b = std::min(1.0f, std::max(0.0f, shdOut[outMap[0xA][0]][outMap[0xA][1]]));
+    vertex.a = std::min(1.0f, std::max(0.0f, shdOut[outMap[0xB][0]][outMap[0xB][1]]));
 
-    // Get output color components and ensure they're within range
-    float r = std::min(1.0f, std::max(0.0f, shdOut[outMap[0x8][0]][outMap[0x8][1]]));
-    float g = std::min(1.0f, std::max(0.0f, shdOut[outMap[0x9][0]][outMap[0x9][1]]));
-    float b = std::min(1.0f, std::max(0.0f, shdOut[outMap[0xA][0]][outMap[0xA][1]]));
-    float a = std::min(1.0f, std::max(0.0f, shdOut[outMap[0xB][0]][outMap[0xB][1]]));
+    // Reset the vertex count if the primitive mode changed
+    if (mode != SAME_PRIM) {
+        vtxCount = 0;
+        curMode = mode;
+    }
 
-    // Draw a pixel representing a vertex to an 8x8 framebuffer tile based on format
-    uint32_t color, offset = (((y >> 3) * (bufWidth >> 3) + (x >> 3)) << 7) + ((y & 0x7) << 4) + ((x & 0x7) << 1);
-    switch (colbufFmt) {
-    case RGBA8:
-        color = (int(r * 255) << 24) | (int(g * 255) << 16) | (int(b * 255) << 8) | int(a * 255);
-        return core->memory.write<uint32_t>(ARM11, colbufAddr + (offset << 1), color);
+    // Build a triangle based on the current primitive mode
+    switch (curMode) {
+    case TRIANGLES:
+    case GEO_PRIM: // TODO?
+        // Draw separate triangles every 3 vertices
+        vertices[vtxCount] = vertex;
+        if (++vtxCount < 3) return;
+        vtxCount = 0;
+        return drawTriangle(vertices[0], vertices[1], vertices[2]);
 
-    case RGB565:
-        color = (int(r * 31) << 11) | (int(g * 63) << 5) | int(b * 31);
-        return core->memory.write<uint16_t>(ARM11, colbufAddr + offset, color);
+    case TRI_STRIPS:
+        // Draw triangles in strips that reuse the last 2 vertices
+        switch (vtxCount++) {
+        case 0: case 1:
+            vertices[vtxCount - 1] = vertex;
+            return;
+        case 2: // v0, v1, v2
+            vertices[2] = vertex;
+            return drawTriangle(vertices[0], vertices[1], vertices[2]);
+        case 3: // v2, v1, v3
+            vertices[0] = vertex;
+            return drawTriangle(vertices[2], vertices[1], vertices[0]);
+        case 4: // v2, v3, v4
+            vertices[1] = vertex;
+            return drawTriangle(vertices[2], vertices[0], vertices[1]);
+        case 5: // v4, v3, v5
+            vertices[2] = vertex;
+            return drawTriangle(vertices[1], vertices[0], vertices[2]);
+        case 6: // v4, v5, v6
+            vertices[0] = vertex;
+            return drawTriangle(vertices[1], vertices[2], vertices[0]);
+        default: // v6, v5, v7
+            vertices[1] = vertex;
+            vtxCount = 2;
+            return drawTriangle(vertices[0], vertices[2], vertices[1]);
+        }
 
-    case RGB5A1:
-        color = (int(r * 31) << 11) | (int(g * 31) << 6) | (int(b * 31) << 1) | (a > 0);
-        return core->memory.write<uint16_t>(ARM11, colbufAddr + offset, color);
+    case TRI_FANS:
+        // Draw triangles in a fan that reuses the first vertex
+        switch (vtxCount++) {
+        case 0: case 1:
+            vertices[vtxCount - 1] = vertex;
+            return;
+        case 2: // v0, v1, v2
+            vertices[2] = vertex;
+            return drawTriangle(vertices[0], vertices[1], vertices[2]);
+        default: // v0, v2, v3
+            vertices[1] = vertex;
+            vtxCount = 2;
+            return drawTriangle(vertices[0], vertices[2], vertices[1]);
+        }
 
-    case RGBA4:
-        color = (int(r * 15) << 12) | (int(g * 15) << 8) | (int(b * 15) << 4) | int(a * 15);
-        return core->memory.write<uint16_t>(ARM11, colbufAddr + offset, color);
+    case SAME_PRIM:
+        // Catch vertices sent without setting primitive mode
+        LOG_WARN("Vertex sent to GPU without setting primitive mode\n");
+        return;
     }
 }
 
@@ -337,7 +504,7 @@ void GpuRenderSoft::shdNop(uint32_t opcode) {
 
 void GpuRenderSoft::shdEnd(uint32_t opcode) {
     // Finish shader execution
-    running = false;
+    shdPc = vshEnd;
 }
 
 void GpuRenderSoft::shdBreakc(uint32_t opcode) {
@@ -508,6 +675,12 @@ void GpuRenderSoft::writeVshDesc(uint16_t address, uint32_t value) {
     vshDesc[address] = value;
 }
 
+void GpuRenderSoft::setVshEntry(uint16_t entry, uint16_t end) {
+    // Set the vertex shader entry and end points
+    vshEntry = entry;
+    vshEnd = end;
+}
+
 void GpuRenderSoft::setVshBool(int i, bool value) {
     // Set one of the vertex uniform boolean values
     vshBools[i] = value;
@@ -533,13 +706,30 @@ void GpuRenderSoft::setViewScaleH(float scale) {
     viewScaleH = scale;
 }
 
+void GpuRenderSoft::setViewStepH(float step) {
+    // Set the viewport horizontal step
+    viewStepH = step;
+}
+
 void GpuRenderSoft::setViewScaleV(float scale) {
     // Set the viewport vertical scale
     viewScaleV = scale;
 }
 
+void GpuRenderSoft::setViewStepV(float step) {
+    // Set the viewport vertical step
+    viewStepV = step;
+}
+
+void GpuRenderSoft::setBufferDims(uint16_t width, uint16_t height, bool mirror) {
+    // Set the render buffer width, height, and Y-mirror
+    bufWidth = width;
+    bufHeight = height;
+    signY = (mirror ? -1.0f : 1.0f);
+}
+
 void GpuRenderSoft::setColbufAddr(uint32_t address) {
-    // Set the color buffer address;
+    // Set the color buffer address
     colbufAddr = address;
 }
 
@@ -548,9 +738,27 @@ void GpuRenderSoft::setColbufFmt(ColbufFmt format) {
     colbufFmt = format;
 }
 
-void GpuRenderSoft::setBufferDims(uint16_t width, uint16_t height, bool mirror) {
-    // Set the render buffer width, height, and Y-mirror
-    bufWidth = width;
-    bufHeight = height;
-    signY = (mirror ? -1.0f : 1.0f);
+void GpuRenderSoft::setColbufMask(uint8_t mask) {
+    // Set the color buffer write mask
+    colbufMask = mask;
+}
+
+void GpuRenderSoft::setDepbufAddr(uint32_t address) {
+    // Set the depth buffer address
+    depbufAddr = address;
+}
+
+void GpuRenderSoft::setDepbufFmt(DepbufFmt format) {
+    // Set the depth buffer format
+    depbufFmt = format;
+}
+
+void GpuRenderSoft::setDepbufMask(uint8_t mask) {
+    // Set the depth buffer write mask
+    depbufMask = mask;
+}
+
+void GpuRenderSoft::setDepthFunc(DepthFunc func) {
+    // Set the depth test comparison function
+    depthFunc = func;
 }

@@ -105,7 +105,7 @@ void Aes::initKey(bool decrypt) {
     if (!decrypt) return;
     for (int i = 0; i < 20; i += 4)
         for (int j = 0; j < 4; j++)
-            SWAP(rKey[i + j], rKey[40 - i + j])
+            std::swap(rKey[i + j], rKey[40 - i + j]);
 
     // Modify values for decryption
     for (int i = 4; i < 40; i++) {

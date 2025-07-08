@@ -21,17 +21,17 @@
 
 int TeakInterp::banke(uint16_t opcode) { // BANKE BankFlags6
     // Swap banked address registers if their bits are set
-    if (opcode & BIT(0)) SWAP(regR[0], shadR[0]);
-    if (opcode & BIT(1)) SWAP(regR[1], shadR[1]);
-    if (opcode & BIT(2)) SWAP(regR[4], shadR[2]);
-    if (opcode & BIT(4)) SWAP(regR[7], shadR[3]);
+    if (opcode & BIT(0)) std::swap(regR[0], shadR[0]);
+    if (opcode & BIT(1)) std::swap(regR[1], shadR[1]);
+    if (opcode & BIT(2)) std::swap(regR[4], shadR[2]);
+    if (opcode & BIT(4)) std::swap(regR[7], shadR[3]);
 
     // Swap banked step/mod registers based on STP16 if their bits are set
     for (int i = 0; i < 2; i++) {
         if (opcode & BIT(3 + i * 2)) {
-            SWAP(regCfg[i], shadCfg[i]);
+            std::swap(regCfg[i], shadCfg[i]);
             if (regMod[1] & BIT(12)) // STP16
-                SWAP(regStep0[i], shadStep0[i]);
+                std::swap(regStep0[i], shadStep0[i]);
         }
     }
     return 1;
@@ -154,10 +154,10 @@ int TeakInterp::cntxR(uint16_t opcode) { // CNTX R
 
     // Swap AR/ARP registers and A1/B1 accumulators
     for (int i = 0; i < 2; i++)
-        SWAP(regAr[i], shadAr[i]);
+        std::swap(regAr[i], shadAr[i]);
     for (int i = 0; i < 4; i++)
-        SWAP(regArp[i], shadArp[i]);
-    SWAP(regA[1].v, regB[1].v);
+        std::swap(regArp[i], shadArp[i]);
+    std::swap(regA[1].v, regB[1].v);
     return 1;
 }
 
@@ -170,10 +170,10 @@ int TeakInterp::cntxS(uint16_t opcode) { // CNTX S
 
     // Swap AR/ARP registers and A1/B1 accumulators, and set flags
     for (int i = 0; i < 2; i++)
-        SWAP(regAr[i], shadAr[i]);
+        std::swap(regAr[i], shadAr[i]);
     for (int i = 0; i < 4; i++)
-        SWAP(regArp[i], shadArp[i]);
-    SWAP(regA[1].v, regB[1].v);
+        std::swap(regArp[i], shadArp[i]);
+    std::swap(regA[1].v, regB[1].v);
     writeStt0((regStt[0] & ~0xE4) | calcZmne(regA[1].v));
     return 1;
 }

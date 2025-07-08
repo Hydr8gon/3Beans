@@ -39,9 +39,14 @@ TEMPLATE2(void Gpu::writeCmdAddr, 0, uint32_t, uint32_t)
 TEMPLATE2(void Gpu::writeCmdJump, 0, uint32_t, uint32_t)
 TEMPLATE4(void Gpu::writeVshInts, 0, uint32_t, uint32_t)
 
-FORCE_INLINE uint32_t Gpu::float24To32(uint32_t value) {
+FORCE_INLINE uint32_t Gpu::flt24e7to32e8(uint32_t value) {
     // Convert a 24-bit float with 7-bit exponent to 32-bit with 8-bit exponent
     return ((value << 8) & BIT(31)) | (((value & 0x7FFFFF) + 0x400000) << 7);
+}
+
+FORCE_INLINE uint32_t Gpu::flt32e7to32e8(uint32_t value) {
+    // Convert a 32-bit float with 7-bit exponent to 32-bit with 8-bit exponent
+    return (value & BIT(31)) | (((value & 0x7FFFFFFF) + 0x40000000) >> 1);
 }
 
 void Gpu::runCommands() {
@@ -120,8 +125,9 @@ void Gpu::drawAttrIdx(uint32_t idx) {
         }
     }
 
-    // Run the finished input list through the shader
-    core->gpuRender.runShader(gpuVshEntry, input);
+    // Run the finished input through the shader and handle primitive restarts
+    core->gpuRender.runShader(input, restart ? PrimMode(((gpuPrimConfig >> 8) & 0x3) + 1) : SAME_PRIM);
+    restart = false;
 }
 
 void Gpu::updateOutMap() {
@@ -149,15 +155,29 @@ template <int i> void Gpu::writeIrqReq(uint32_t mask, uint32_t value) {
 void Gpu::writeViewScaleH(uint32_t mask, uint32_t value) {
     // Write to the viewport horizontal scale and send it to the renderer
     gpuViewScaleH = (gpuViewScaleH & ~mask) | (value & mask);
-    uint32_t conv = float24To32(gpuViewScaleH);
+    uint32_t conv = flt24e7to32e8(gpuViewScaleH);
     core->gpuRender.setViewScaleH(*(float*)&conv);
+}
+
+void Gpu::writeViewStepH(uint32_t mask, uint32_t value) {
+    // Write to the viewport horizontal step and send it to the renderer
+    gpuViewStepH = (gpuViewStepH & ~mask) | (value & mask);
+    uint32_t conv = flt32e7to32e8(gpuViewStepH);
+    core->gpuRender.setViewStepH(*(float*)&conv);
 }
 
 void Gpu::writeViewScaleV(uint32_t mask, uint32_t value) {
     // Write to the viewport vertical scale and send it to the renderer
     gpuViewScaleV = (gpuViewScaleV & ~mask) | (value & mask);
-    uint32_t conv = float24To32(gpuViewScaleV);
+    uint32_t conv = flt24e7to32e8(gpuViewScaleV);
     core->gpuRender.setViewScaleV(*(float*)&conv);
+}
+
+void Gpu::writeViewStepV(uint32_t mask, uint32_t value) {
+    // Write to the viewport vertical step and send it to the renderer
+    gpuViewStepV = (gpuViewStepV & ~mask) | (value & mask);
+    uint32_t conv = flt32e7to32e8(gpuViewStepV);
+    core->gpuRender.setViewStepV(*(float*)&conv);
 }
 
 void Gpu::writeShdOutTotal(uint32_t mask, uint32_t value) {
@@ -172,6 +192,47 @@ template <int i> void Gpu::writeShdOutMap(uint32_t mask, uint32_t value) {
     mask &= 0x1F1F1F1F;
     gpuShdOutMap[i] = (gpuShdOutMap[i] & ~mask) | (value & mask);
     updateOutMap();
+}
+
+void Gpu::writeDepcolMask(uint32_t mask, uint32_t value) {
+    // Write to the depth/color mask register and update the renderer's state
+    mask &= 0x1F71;
+    gpuDepcolMask = (gpuDepcolMask & ~mask) | (value & mask);
+    core->gpuRender.setDepthFunc((gpuDepcolMask & BIT(0)) ? DepthFunc((gpuDepcolMask >> 4) & 0x7) : DEPTH_AL);
+    core->gpuRender.setColbufMask(gpuColbufWrite & (gpuDepcolMask >> 8) & 0xF);
+    core->gpuRender.setDepbufMask(gpuDepbufWrite & (((gpuDepcolMask >> 12) & 0x1) | ((gpuDepcolMask >> 11) & 0x2)));
+}
+
+void Gpu::writeColbufWrite(uint32_t mask, uint32_t value) {
+    // Write to the color buffer write enable and update the renderer's color mask
+    mask &= 0xF;
+    gpuColbufWrite = (gpuColbufWrite & ~mask) | (value & mask);
+    core->gpuRender.setColbufMask(gpuColbufWrite & (gpuDepcolMask >> 8) & 0xF);
+}
+
+void Gpu::writeDepbufWrite(uint32_t mask, uint32_t value) {
+    // Write to the depth buffer write enable and update the renderer's depth mask
+    mask &= 0x3;
+    gpuDepbufWrite = (gpuDepbufWrite & ~mask) | (value & mask);
+    core->gpuRender.setDepbufMask(gpuDepbufWrite & (((gpuDepcolMask >> 12) & 0x1) | ((gpuDepcolMask >> 11) & 0x2)));
+}
+
+void Gpu::writeDepbufFmt(uint32_t mask, uint32_t value) {
+    // Write to the depth buffer format register
+    mask &= 0x3;
+    gpuDepbufFmt = (gpuDepbufFmt & ~mask) | (value & mask);
+
+    // Set the format for the renderer if it's valid
+    switch (gpuDepbufFmt) {
+        case 0x0: return core->gpuRender.setDepbufFmt(DEP16);
+        case 0x2: return core->gpuRender.setDepbufFmt(DEP24);
+        case 0x3: return core->gpuRender.setDepbufFmt(DEP24STN8);
+
+    default:
+        // Catch unknown depth buffer formats
+        LOG_CRIT("Setting unknown GPU depth buffer format: 0x%X\n", gpuDepbufFmt);
+        return core->gpuRender.setDepbufFmt(DEP_UNK);
+    }
 }
 
 void Gpu::writeColbufFmt(uint32_t mask, uint32_t value) {
@@ -189,8 +250,15 @@ void Gpu::writeColbufFmt(uint32_t mask, uint32_t value) {
     default:
         // Catch unknown color buffer formats
         LOG_CRIT("Setting unknown GPU color buffer format: 0x%X\n", gpuColbufFmt);
-        return core->gpuRender.setColbufFmt(UNK_FMT);
+        return core->gpuRender.setColbufFmt(COL_UNK);
     }
+}
+
+void Gpu::writeDepbufLoc(uint32_t mask, uint32_t value) {
+    // Write to the depth buffer location and send its address to the renderer
+    mask &= 0xFFFFFFF;
+    gpuDepbufLoc = (gpuDepbufLoc & ~mask) | (value & mask);
+    core->gpuRender.setDepbufAddr((gpuDepbufLoc & ~0x7) << 3);
 }
 
 void Gpu::writeColbufLoc(uint32_t mask, uint32_t value) {
@@ -295,6 +363,19 @@ template <int i> void Gpu::writeCmdJump(uint32_t mask, uint32_t value) {
     if (stopped) runCommands();
 }
 
+void Gpu::writePrimConfig(uint32_t mask, uint32_t value) {
+    // Write to the primitive configuration register
+    // TODO: use bits other than primitive mode?
+    mask &= 0x1030F;
+    gpuPrimConfig = (gpuPrimConfig & ~mask) | (value & mask);
+}
+
+void Gpu::writePrimRestart(uint32_t mask, uint32_t value) {
+    // Write to the primitive restart register and restart on the next vertex
+    gpuPrimRestart = (gpuPrimConfig & ~mask) | (value & mask);
+    restart = true;
+}
+
 void Gpu::writeVshBools(uint32_t mask, uint32_t value) {
     // Write to the vertex uniform boolean register
     // TODO: use the upper bits for something?
@@ -317,10 +398,10 @@ template <int i> void Gpu::writeVshInts(uint32_t mask, uint32_t value) {
 }
 
 void Gpu::writeVshEntry(uint32_t mask, uint32_t value) {
-    // Write to the vertex shader entrypoint
-    // TODO: use the upper bits for something?
+    // Write to the vertex shader entry/end and send them to the renderer
     mask &= 0x1FF01FF;
     gpuVshEntry = (gpuVshEntry & ~mask) | (value & mask);
+    core->gpuRender.setVshEntry(gpuVshEntry >> 0, gpuVshEntry >> 16);
 }
 
 void Gpu::writeVshAttrIdsL(uint32_t mask, uint32_t value) {
@@ -343,10 +424,10 @@ void Gpu::writeVshFloatData(uint32_t mask, uint32_t value) {
     // Write to the vertex uniform float buffer and convert 24-bit to 32-bit if necessary
     vshFloatData[~vshFloatIdx & 0x3] = (value & mask);
     if (!vshFloat32 && (vshFloatIdx & 0x3) == 0x2) {
-        vshFloatData[0] = float24To32(vshFloatData[1]);
-        vshFloatData[1] = float24To32((vshFloatData[2] << 8) | (vshFloatData[1] >> 24));
-        vshFloatData[2] = float24To32((vshFloatData[3] << 16) | (vshFloatData[2] >> 16));
-        vshFloatData[3] = float24To32(vshFloatData[3] >> 8);
+        vshFloatData[0] = flt24e7to32e8(vshFloatData[1]);
+        vshFloatData[1] = flt24e7to32e8((vshFloatData[2] << 8) | (vshFloatData[1] >> 24));
+        vshFloatData[2] = flt24e7to32e8((vshFloatData[3] << 16) | (vshFloatData[2] >> 16));
+        vshFloatData[3] = flt24e7to32e8(vshFloatData[3] >> 8);
         vshFloatIdx++;
     }
 

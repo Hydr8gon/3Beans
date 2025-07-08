@@ -213,7 +213,7 @@ void Csnd::pushSample(int16_t sampleLeft, int16_t sampleRight) {
     }
 
     // Swap buffers and reset the pointer
-    SWAP(buffers[0], buffers[1]);
+    std::swap(buffers[0], buffers[1]);
     bufferOfs = 0;
 
     { // Signal that a buffer is ready to play

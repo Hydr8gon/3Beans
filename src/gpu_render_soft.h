@@ -24,27 +24,44 @@
 
 class Core;
 
+struct SoftVertex {
+    float x = 0, y = 0, z = 0, w = 0;
+    float r = 0, g = 0, b = 0, a = 0;
+};
+
 class GpuRenderSoft {
 public:
     GpuRenderSoft(Core *core);
-    void runShader(uint16_t entry, float (*input)[4]);
+    void runShader(float (*input)[4], PrimMode mode);
 
     void writeVshCode(uint16_t address, uint32_t value);
     void writeVshDesc(uint16_t address, uint32_t value);
+    void setVshEntry(uint16_t entry, uint16_t end);
     void setVshBool(int i, bool value);
     void setVshInt(int i, int j, uint8_t value);
     void setVshFloat(int i, int j, float value);
 
     void setOutMap(uint8_t (*map)[2]);
     void setViewScaleH(float scale);
+    void setViewStepH(float step);
     void setViewScaleV(float scale);
+    void setViewStepV(float step);
     void setBufferDims(uint16_t width, uint16_t height, bool mirror);
     void setColbufAddr(uint32_t address);
     void setColbufFmt(ColbufFmt format);
+    void setColbufMask(uint8_t mask);
+    void setDepbufAddr(uint32_t address);
+    void setDepbufFmt(DepbufFmt format);
+    void setDepbufMask(uint8_t mask);
+    void setDepthFunc(DepthFunc func);
 
 private:
     Core *core;
     static void (GpuRenderSoft::*vshInstrs[0x40])(uint32_t);
+
+    SoftVertex vertices[3];
+    uint32_t vtxCount = 0;
+    PrimMode curMode = SAME_PRIM;
 
     float *srcRegs[0x80];
     float *dstRegs[0x20];
@@ -57,7 +74,6 @@ private:
     int16_t shdAddr[3];
     bool shdCond[2];
     uint16_t shdPc;
-    bool running;
 
     std::deque<uint32_t> loopStack;
     std::deque<uint32_t> ifStack;
@@ -67,18 +83,33 @@ private:
 
     uint32_t vshCode[0x200] = {};
     uint32_t vshDesc[0x80] = {};
+    uint16_t vshEntry = 0;
+    uint16_t vshEnd = 0;
     bool vshBools[16] = {};
     uint8_t vshInts[4][3] = {};
     float vshFloats[96][4] = {};
 
     uint8_t outMap[0x18][2] = {};
-    float viewScaleV = 0;
     float viewScaleH = 0;
+    float viewStepH = 0;
+    float viewScaleV = 0;
+    float viewStepV = 0;
     float signY = 0;
     uint16_t bufWidth = 0;
     uint16_t bufHeight = 0;
     uint32_t colbufAddr = 0;
-    ColbufFmt colbufFmt = UNK_FMT;
+    ColbufFmt colbufFmt = COL_UNK;
+    uint8_t colbufMask = 0;
+    uint32_t depbufAddr = 0;
+    DepbufFmt depbufFmt = DEP_UNK;
+    uint8_t depbufMask = 0;
+    DepthFunc depthFunc = DEPTH_AL;
+
+    static float interpolate(float v1, float v2, float x1, float x, float x2);
+    static SoftVertex interpolate(SoftVertex &v1, SoftVertex &v2, float x1, float x, float x2);
+
+    void drawPixel(SoftVertex &p);
+    void drawTriangle(SoftVertex &a, SoftVertex &b, SoftVertex &c);
 
     float *getSrc(uint8_t src, uint32_t desc, uint8_t idx);
     void setDst(uint8_t dst, uint32_t desc, float *value);

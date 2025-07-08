@@ -23,12 +23,38 @@
 
 class Core;
 
+enum PrimMode {
+    SAME_PRIM = 0,
+    TRIANGLES,
+    TRI_STRIPS,
+    TRI_FANS,
+    GEO_PRIM
+};
+
 enum ColbufFmt {
     RGBA8 = 0,
     RGB565,
     RGB5A1,
     RGBA4,
-    UNK_FMT
+    COL_UNK
+};
+
+enum DepbufFmt {
+    DEP16,
+    DEP24,
+    DEP24STN8,
+    DEP_UNK
+};
+
+enum DepthFunc {
+    DEPTH_NV,
+    DEPTH_AL,
+    DEPTH_EQ,
+    DEPTH_NE,
+    DEPTH_LT,
+    DEPTH_LE,
+    DEPTH_GT,
+    DEPTH_GE
 };
 
 class Gpu {
@@ -59,10 +85,17 @@ public:
 
     uint32_t readIrqReq(int i) { return gpuIrqReq[i]; }
     uint32_t readViewScaleH() { return gpuViewScaleH; }
+    uint32_t readViewStepH() { return gpuViewStepH; }
     uint32_t readViewScaleV() { return gpuViewScaleV; }
+    uint32_t readViewStepV() { return gpuViewStepV; }
     uint32_t readShdOutTotal() { return gpuShdOutTotal; }
     uint32_t readShdOutMap(int i) { return gpuShdOutMap[i]; }
+    uint32_t readDepcolMask() { return gpuDepcolMask; }
+    uint32_t readColbufWrite() { return gpuColbufWrite; }
+    uint32_t readDepbufWrite() { return gpuDepbufWrite; }
+    uint32_t readDepbufFmt() { return gpuDepbufFmt; }
     uint32_t readColbufFmt() { return gpuColbufFmt; }
+    uint32_t readDepbufLoc() { return gpuDepbufLoc; }
     uint32_t readColbufLoc() { return gpuColbufLoc; }
     uint32_t readBufferDim() { return gpuBufferDim; }
     uint32_t readAttrBase() { return gpuAttrBase; }
@@ -76,6 +109,8 @@ public:
     uint32_t readAttrFirstIdx() { return gpuAttrFirstIdx; }
     uint32_t readCmdSize(int i) { return gpuCmdSize[i]; }
     uint32_t readCmdAddr(int i) { return gpuCmdAddr[i]; }
+    uint32_t readPrimConfig() { return gpuPrimConfig; }
+    uint32_t readPrimRestart() { return gpuPrimRestart; }
     uint32_t readVshBools() { return gpuVshBools; }
     uint32_t readVshInts(int i) { return gpuVshInts[i]; }
     uint32_t readVshEntry() { return gpuVshEntry; }
@@ -104,10 +139,17 @@ public:
 
     template <int i> void writeIrqReq(uint32_t mask, uint32_t value);
     void writeViewScaleH(uint32_t mask, uint32_t value);
+    void writeViewStepH(uint32_t mask, uint32_t value);
     void writeViewScaleV(uint32_t mask, uint32_t value);
+    void writeViewStepV(uint32_t mask, uint32_t value);
     void writeShdOutTotal(uint32_t mask, uint32_t value);
     template <int i> void writeShdOutMap(uint32_t mask, uint32_t value);
+    void writeDepcolMask(uint32_t mask, uint32_t value);
+    void writeColbufWrite(uint32_t mask, uint32_t value);
+    void writeDepbufWrite(uint32_t mask, uint32_t value);
+    void writeDepbufFmt(uint32_t mask, uint32_t value);
     void writeColbufFmt(uint32_t mask, uint32_t value);
+    void writeDepbufLoc(uint32_t mask, uint32_t value);
     void writeColbufLoc(uint32_t mask, uint32_t value);
     void writeBufferDim(uint32_t mask, uint32_t value);
     void writeAttrBase(uint32_t mask, uint32_t value);
@@ -124,6 +166,8 @@ public:
     template <int i> void writeCmdSize(uint32_t mask, uint32_t value);
     template <int i> void writeCmdAddr(uint32_t mask, uint32_t value);
     template <int i> void writeCmdJump(uint32_t mask, uint32_t value);
+    void writePrimConfig(uint32_t mask, uint32_t value);
+    void writePrimRestart(uint32_t mask, uint32_t value);
     void writeVshBools(uint32_t mask, uint32_t value);
     template <int i> void writeVshInts(uint32_t mask, uint32_t value);
     void writeVshEntry(uint32_t mask, uint32_t value);
@@ -147,6 +191,7 @@ private:
     uint32_t cmdEnd = 0;
     uint16_t curCmd = 0;
 
+    bool restart = false;
     uint32_t vshFloatData[4] = {};
     uint16_t vshFloatIdx = 0;
     bool vshFloat32 = false;
@@ -172,10 +217,17 @@ private:
 
     uint32_t gpuIrqReq[16] = {};
     uint32_t gpuViewScaleH = 0;
+    uint32_t gpuViewStepH = 0;
     uint32_t gpuViewScaleV = 0;
+    uint32_t gpuViewStepV = 0;
     uint32_t gpuShdOutTotal = 0;
     uint32_t gpuShdOutMap[7] = {};
+    uint32_t gpuDepcolMask = 0;
+    uint32_t gpuColbufWrite = 0;
+    uint32_t gpuDepbufWrite = 0;
+    uint32_t gpuDepbufFmt = 0;
     uint32_t gpuColbufFmt = 0;
+    uint32_t gpuDepbufLoc = 0;
     uint32_t gpuColbufLoc = 0;
     uint32_t gpuBufferDim = 0;
     uint32_t gpuAttrBase = 0;
@@ -187,6 +239,8 @@ private:
     uint32_t gpuAttrFirstIdx = 0;
     uint32_t gpuCmdSize[2] = {};
     uint32_t gpuCmdAddr[2] = {};
+    uint32_t gpuPrimConfig = 0;
+    uint32_t gpuPrimRestart = 0;
     uint32_t gpuVshBools = 0;
     uint32_t gpuVshInts[4] = {};
     uint32_t gpuVshEntry = 0;
@@ -195,7 +249,8 @@ private:
     uint32_t gpuVshDescIdx = 0;
 
     bool checkInterrupt(int i);
-    static uint32_t float24To32(uint32_t value);
+    static uint32_t flt24e7to32e8(uint32_t value);
+    static uint32_t flt32e7to32e8(uint32_t value);
 
     void runCommands();
     void drawAttrIdx(uint32_t idx);

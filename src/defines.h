@@ -35,9 +35,6 @@ enum CpuId {
 #define BIT(i) (1U << (i))
 #define BITL(i) (1ULL << (i))
 
-// Macro to swap two values
-#define SWAP(a, b) { auto c = a; a = b; b = c; }
-
 // Macros to perform byteswaps
 #define BSWAP32(v) __builtin_bswap32(v)
 #define BSWAP64(v) __builtin_bswap64(v)

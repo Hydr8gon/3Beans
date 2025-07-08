@@ -287,7 +287,7 @@ template <typename T> T Wifi::readMbox(int i) {
     T value = 0;
     for (int j = 0; j < sizeof(T); j++) {
         if (mboxes[i].empty()) break;
-        value |= mboxes[i].front() << (i * 8);
+        value |= mboxes[i].front() << (j * 8);
         mboxes[i].pop();
     }
     return value;
