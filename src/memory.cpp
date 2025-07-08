@@ -623,6 +623,7 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x104010C8, data = core->gpu.readIrqStatL()) // GPU_IRQ_STAT_L
                 DEF_IO32(0x104010CC, data = core->gpu.readIrqStatH()) // GPU_IRQ_STAT_H
                 DEF_IO32(0x104010D0, data = core->gpu.readIrqAutostop()) // GPU_IRQ_AUTOSTOP
+                DEF_IO32(0x10401100, data = core->gpu.readFaceCulling()) // GPU_FACE_CULLING
                 DEF_IO32(0x10401104, data = core->gpu.readViewScaleH()) // GPU_VIEW_SCALE_H
                 DEF_IO32(0x10401108, data = core->gpu.readViewStepH()) // GPU_VIEW_STEP_H
                 DEF_IO32(0x1040110C, data = core->gpu.readViewScaleV()) // GPU_VIEW_SCALE_V
@@ -1760,6 +1761,7 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x104010C0, core->gpu.writeIrqMaskL(IO_PARAMS)) // GPU_IRQ_MASK_L
                 DEF_IO32(0x104010C4, core->gpu.writeIrqMaskH(IO_PARAMS)) // GPU_IRQ_MASK_H
                 DEF_IO32(0x104010D0, core->gpu.writeIrqAutostop(IO_PARAMS)) // GPU_IRQ_AUTOSTOP
+                DEF_IO32(0x10401100, core->gpu.writeFaceCulling(IO_PARAMS)) // GPU_FACE_CULLING
                 DEF_IO32(0x10401104, core->gpu.writeViewScaleH(IO_PARAMS)) // GPU_VIEW_SCALE_H
                 DEF_IO32(0x10401108, core->gpu.writeViewStepH(IO_PARAMS)) // GPU_VIEW_STEP_H
                 DEF_IO32(0x1040110C, core->gpu.writeViewScaleV(IO_PARAMS)) // GPU_VIEW_SCALE_V
@@ -1824,6 +1826,10 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x104018A8, core->gpu.writeAttrFirstIdx(IO_PARAMS)) // GPU_ATTR_FIRST_IDX
                 DEF_IO32(0x104018B8, core->gpu.writeAttrDrawArrays(IO_PARAMS)) // GPU_ATTR_DRAW_ARRAYS
                 DEF_IO32(0x104018BC, core->gpu.writeAttrDrawElems(IO_PARAMS)) // GPU_ATTR_DRAW_ELEMS
+                DEF_IO32(0x104018C8, core->gpu.writeAttrFixedIdx(IO_PARAMS)) // GPU_ATTR_FIXED_IDX
+                DEF_IO32(0x104018CC, core->gpu.writeAttrFixedData(IO_PARAMS)) // GPU_ATTR_FIXED_DATA
+                DEF_IO32(0x104018D0, core->gpu.writeAttrFixedData(IO_PARAMS)) // GPU_ATTR_FIXED_DATA
+                DEF_IO32(0x104018D4, core->gpu.writeAttrFixedData(IO_PARAMS)) // GPU_ATTR_FIXED_DATA
                 DEF_IO32(0x104018E0, core->gpu.writeCmdSize<0>(IO_PARAMS)) // GPU_CMD_SIZE0
                 DEF_IO32(0x104018E4, core->gpu.writeCmdSize<1>(IO_PARAMS)) // GPU_CMD_SIZE1
                 DEF_IO32(0x104018E8, core->gpu.writeCmdAddr<0>(IO_PARAMS)) // GPU_CMD_ADDR0

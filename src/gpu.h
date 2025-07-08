@@ -31,6 +31,12 @@ enum PrimMode {
     GEO_PRIM
 };
 
+enum CullMode {
+    CULL_NONE,
+    CULL_FRONT,
+    CULL_BACK
+};
+
 enum ColbufFmt {
     RGBA8 = 0,
     RGB565,
@@ -84,6 +90,7 @@ public:
     uint32_t readIrqAutostop() { return gpuIrqAutostop; }
 
     uint32_t readIrqReq(int i) { return gpuIrqReq[i]; }
+    uint32_t readFaceCulling() { return gpuFaceCulling; }
     uint32_t readViewScaleH() { return gpuViewScaleH; }
     uint32_t readViewStepH() { return gpuViewStepH; }
     uint32_t readViewScaleV() { return gpuViewScaleV; }
@@ -138,6 +145,7 @@ public:
     void writeIrqAutostop(uint32_t mask, uint32_t value);
 
     template <int i> void writeIrqReq(uint32_t mask, uint32_t value);
+    void writeFaceCulling(uint32_t mask, uint32_t value);
     void writeViewScaleH(uint32_t mask, uint32_t value);
     void writeViewStepH(uint32_t mask, uint32_t value);
     void writeViewScaleV(uint32_t mask, uint32_t value);
@@ -163,6 +171,8 @@ public:
     void writeAttrFirstIdx(uint32_t mask, uint32_t value);
     void writeAttrDrawArrays(uint32_t mask, uint32_t value);
     void writeAttrDrawElems(uint32_t mask, uint32_t value);
+    void writeAttrFixedIdx(uint32_t mask, uint32_t value);
+    void writeAttrFixedData(uint32_t mask, uint32_t value);
     template <int i> void writeCmdSize(uint32_t mask, uint32_t value);
     template <int i> void writeCmdAddr(uint32_t mask, uint32_t value);
     template <int i> void writeCmdJump(uint32_t mask, uint32_t value);
@@ -192,6 +202,10 @@ private:
     uint16_t curCmd = 0;
 
     bool restart = false;
+    bool fixedDirty = false;
+    float fixedBase[16][4] = {};
+    uint32_t attrFixedData[15][3] = {};
+    uint8_t attrFixedIdx = 0;
     uint32_t vshFloatData[4] = {};
     uint16_t vshFloatIdx = 0;
     bool vshFloat32 = false;
@@ -216,6 +230,7 @@ private:
     uint32_t gpuIrqAutostop = 0;
 
     uint32_t gpuIrqReq[16] = {};
+    uint32_t gpuFaceCulling = 0;
     uint32_t gpuViewScaleH = 0;
     uint32_t gpuViewStepH = 0;
     uint32_t gpuViewScaleV = 0;

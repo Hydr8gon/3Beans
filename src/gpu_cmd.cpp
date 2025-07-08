@@ -17,6 +17,7 @@
     along with 3Beans. If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <cstring>
 #include "core.h"
 
 TEMPLATE4(void Gpu::writeIrqReq, 0, uint32_t, uint32_t)
@@ -78,8 +79,21 @@ void Gpu::runCommands() {
 }
 
 void Gpu::drawAttrIdx(uint32_t idx) {
-    // Build a shader input list by parsing attribute arrays at the given index
-    float input[16][4] = {};
+    // Update the base shader input list using fixed attributes if dirty
+    if (fixedDirty) {
+        fixedDirty = false;
+        for (uint32_t i = 0, f; i < 12; i++) {
+            if (~gpuAttrFmt & BITL(48 + i)) continue;
+            fixedBase[i][0] = *(float*)&(f = flt24e7to32e8(attrFixedData[i][2]));
+            fixedBase[i][1] = *(float*)&(f = flt24e7to32e8((attrFixedData[i][1] << 8) | (attrFixedData[i][2] >> 24)));
+            fixedBase[i][2] = *(float*)&(f = flt24e7to32e8((attrFixedData[i][0] << 16) | (attrFixedData[i][1] >> 16)));
+            fixedBase[i][3] = *(float*)&(f = flt24e7to32e8(attrFixedData[i][0] >> 8));
+        }
+    }
+
+    // Build an input list on top of the base by parsing attribute arrays at the given index
+    float input[16][4];
+    memcpy(input, fixedBase, sizeof(input));
     for (int i = 0; i < 12; i++) {
         uint8_t count = std::min<uint8_t>(12, gpuAttrCfg[i] >> 60);
         uint32_t base = (gpuAttrBase << 3) + gpuAttrOfs[i] + uint8_t(gpuAttrCfg[i] >> 48) * idx;
@@ -150,6 +164,19 @@ template <int i> void Gpu::writeIrqReq(uint32_t mask, uint32_t value) {
     for (int j = 0; j < 4; j++)
         if ((mask & (0xFF << (j * 8))) && checkInterrupt((i << 2) + j) && gpuIrqAutostop)
             cmdAddr = -1;
+}
+
+void Gpu::writeFaceCulling(uint32_t mask, uint32_t value) {
+    // Write to the triangle face culling register
+    mask &= 0x3;
+    gpuFaceCulling = (gpuFaceCulling & ~mask) | (value & mask);
+
+    // Set the culling mode for the renderer
+    switch (gpuFaceCulling) {
+        case 0x1: return core->gpuRender.setCullMode(CULL_FRONT);
+        case 0x2: return core->gpuRender.setCullMode(CULL_BACK);
+        default: return core->gpuRender.setCullMode(CULL_NONE);
+    }
 }
 
 void Gpu::writeViewScaleH(uint32_t mask, uint32_t value) {
@@ -289,6 +316,7 @@ void Gpu::writeAttrFmtL(uint32_t mask, uint32_t value) {
 void Gpu::writeAttrFmtH(uint32_t mask, uint32_t value) {
     // Write to the upper attribute buffer format register
     gpuAttrFmt = (gpuAttrFmt & ~(uint64_t(mask) << 32)) | (uint64_t(value & mask) << 32);
+    fixedDirty = true;
 }
 
 template <int i> void Gpu::writeAttrOfs(uint32_t mask, uint32_t value) {
@@ -340,6 +368,25 @@ void Gpu::writeAttrDrawElems(uint32_t mask, uint32_t value) {
     else // 8-bit
         for (uint32_t i = 0; i < gpuAttrNumVerts; i++)
             drawAttrIdx(core->memory.read<uint8_t>(ARM11, base + i));
+}
+
+void Gpu::writeAttrFixedIdx(uint32_t mask, uint32_t value) {
+    // Update the fixed attribute data index if written to
+    if (mask & 0xFF)
+        attrFixedIdx = (value & 0xF) << 2;
+}
+
+void Gpu::writeAttrFixedData(uint32_t mask, uint32_t value) {
+    // Catch the immediate-mode vertex submission index
+    if (attrFixedIdx == (0xF << 2)) {
+        LOG_CRIT("Unhandled immediate-mode vertex submission data sent\n");
+        return;
+    }
+
+    // Write to the selected 3-word fixed attribute data buffer
+    attrFixedData[attrFixedIdx >> 2][attrFixedIdx & 0x3] = (value & mask);
+    if ((++attrFixedIdx & 0x3) == 0x3) attrFixedIdx &= ~0x3;
+    fixedDirty = true;
 }
 
 template <int i> void Gpu::writeCmdSize(uint32_t mask, uint32_t value) {

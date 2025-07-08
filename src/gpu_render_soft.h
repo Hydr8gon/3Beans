@@ -42,6 +42,7 @@ public:
     void setVshFloat(int i, int j, float value);
 
     void setOutMap(uint8_t (*map)[2]);
+    void setCullMode(CullMode mode);
     void setViewScaleH(float scale);
     void setViewStepH(float step);
     void setViewScaleV(float scale);
@@ -61,7 +62,8 @@ private:
 
     SoftVertex vertices[3];
     uint32_t vtxCount = 0;
-    PrimMode curMode = SAME_PRIM;
+    PrimMode primMode = SAME_PRIM;
+    CullMode cullMode = CULL_NONE;
 
     float *srcRegs[0x80];
     float *dstRegs[0x20];

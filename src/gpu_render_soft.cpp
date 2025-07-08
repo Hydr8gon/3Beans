@@ -153,6 +153,11 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
 }
 
 void GpuRenderSoft::drawTriangle(SoftVertex &a, SoftVertex &b, SoftVertex &c) {
+    // Cull triangles by determining their orientation with a cross product
+    float cross = ((b.y - a.y) * (c.x - b.x)) - ((b.x - a.x) * (c.y - b.y));
+    if ((cullMode == CULL_FRONT && (cross < 0)) || (cullMode == CULL_BACK && (cross > 0)))
+        return;
+
     // Sort the vertices by increasing Y-coordinates
     SoftVertex *v[3] = { &a, &b, &c };
     if (v[0]->y > v[1]->y) std::swap(v[0], v[1]);
@@ -232,11 +237,11 @@ void GpuRenderSoft::runShader(float (*input)[4], PrimMode mode) {
     // Reset the vertex count if the primitive mode changed
     if (mode != SAME_PRIM) {
         vtxCount = 0;
-        curMode = mode;
+        primMode = mode;
     }
 
     // Build a triangle based on the current primitive mode
-    switch (curMode) {
+    switch (primMode) {
     case TRIANGLES:
     case GEO_PRIM: // TODO?
         // Draw separate triangles every 3 vertices
@@ -286,11 +291,6 @@ void GpuRenderSoft::runShader(float (*input)[4], PrimMode mode) {
             vtxCount = 2;
             return drawTriangle(vertices[0], vertices[2], vertices[1]);
         }
-
-    case SAME_PRIM:
-        // Catch vertices sent without setting primitive mode
-        LOG_WARN("Vertex sent to GPU without setting primitive mode\n");
-        return;
     }
 }
 
@@ -699,6 +699,11 @@ void GpuRenderSoft::setVshFloat(int i, int j, float value) {
 void GpuRenderSoft::setOutMap(uint8_t (*map)[2]) {
     // Set the map of shader outputs to fixed semantics
     memcpy(outMap, map, sizeof(outMap));
+}
+
+void GpuRenderSoft::setCullMode(CullMode mode) {
+    // Set the triangle face culling mode
+    cullMode = mode;
 }
 
 void GpuRenderSoft::setViewScaleH(float scale) {
