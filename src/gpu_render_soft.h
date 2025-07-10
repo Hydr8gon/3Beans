@@ -27,6 +27,8 @@ class Core;
 struct SoftVertex {
     float x = 0, y = 0, z = 0, w = 0;
     float r = 0, g = 0, b = 0, a = 0;
+    float s0 = 0, s1 = 0, s2 = 0;
+    float t0 = 0, t1 = 0, t2 = 0;
 };
 
 class GpuRenderSoft {
@@ -34,27 +36,35 @@ public:
     GpuRenderSoft(Core *core);
     void runShader(float (*input)[4], PrimMode mode);
 
-    void writeVshCode(uint16_t address, uint32_t value);
-    void writeVshDesc(uint16_t address, uint32_t value);
+    void writeVshCode(int i, uint32_t value) { vshCode[i] = value; }
+    void writeVshDesc(int i, uint32_t value) { vshDesc[i] = value; }
     void setVshEntry(uint16_t entry, uint16_t end);
-    void setVshBool(int i, bool value);
-    void setVshInt(int i, int j, uint8_t value);
-    void setVshFloat(int i, int j, float value);
+    void setVshBool(int i, bool value) { vshBools[i] = value; }
+    void setVshInt(int i, int j, uint8_t value) { vshInts[i][j] = value; }
+    void setVshFloat(int i, int j, float value) { vshFloats[i][j] = value; }
 
     void setOutMap(uint8_t (*map)[2]);
-    void setCullMode(CullMode mode);
-    void setViewScaleH(float scale);
-    void setViewStepH(float step);
-    void setViewScaleV(float scale);
-    void setViewStepV(float step);
+    void setCombSrc(int i, int j, CombSrc src) { combSrcs[i][j] = src; }
+    void setCombOper(int i, int j, CombOper oper) { combOpers[i][j] = oper; }
+    void setCombMode(int i, int j, CombMode mode) { combModes[i][j] = mode; }
+    void setCombColor(int i, float r, float g, float b, float a);
+    void setTexAddr(int i, uint32_t address) { texAddrs[i] = address; }
+    void setTexDims(int i, uint16_t width, uint16_t height);
+    void setTexFmt(int i, TexFmt format) { texFmts[i] = format; }
+    void setCullMode(CullMode mode) { cullMode = mode; }
+
+    void setViewScaleH(float scale) { viewScaleH = scale; }
+    void setViewStepH(float step) { viewStepH = step; }
+    void setViewScaleV(float scale) { viewScaleV = scale; }
+    void setViewStepV(float step) { viewStepV = step; }
     void setBufferDims(uint16_t width, uint16_t height, bool mirror);
-    void setColbufAddr(uint32_t address);
-    void setColbufFmt(ColbufFmt format);
-    void setColbufMask(uint8_t mask);
-    void setDepbufAddr(uint32_t address);
-    void setDepbufFmt(DepbufFmt format);
-    void setDepbufMask(uint8_t mask);
-    void setDepthFunc(DepthFunc func);
+    void setColbufAddr(uint32_t address) { colbufAddr = address; }
+    void setColbufFmt(ColbufFmt format) { colbufFmt = format; }
+    void setColbufMask(uint8_t mask) { colbufMask = mask; }
+    void setDepbufAddr(uint32_t address) { depbufAddr = address; }
+    void setDepbufFmt(DepbufFmt format) { depbufFmt = format; }
+    void setDepbufMask(uint8_t mask) { depbufMask = mask; }
+    void setDepthFunc(DepthFunc func) { depthFunc = func; }
 
 private:
     Core *core;
@@ -64,6 +74,9 @@ private:
     uint32_t vtxCount = 0;
     PrimMode primMode = SAME_PRIM;
     CullMode cullMode = CULL_NONE;
+
+    float rc[6], gc[6], bc[6], ac[6];
+    uint8_t combMask = 0;
 
     float *srcRegs[0x80];
     float *dstRegs[0x20];
@@ -92,6 +105,15 @@ private:
     float vshFloats[96][4] = {};
 
     uint8_t outMap[0x18][2] = {};
+    CombSrc combSrcs[6][6] = {};
+    CombOper combOpers[6][6] = {};
+    CombMode combModes[6][2] = {};
+    float combColors[6][4] = {};
+    uint32_t texAddrs[3] = {};
+    uint16_t texWidths[3] = {};
+    uint16_t texHeights[3] = {};
+    TexFmt texFmts[3] = {};
+
     float viewScaleH = 0;
     float viewStepH = 0;
     float viewScaleV = 0;
@@ -110,6 +132,10 @@ private:
     static float interpolate(float v1, float v2, float x1, float x, float x2);
     static SoftVertex interpolate(SoftVertex &v1, SoftVertex &v2, float x1, float x, float x2);
     static SoftVertex intersect(SoftVertex &v1, SoftVertex &v2, float x1, float x2);
+
+    void getTexel(float &r, float &g, float &b, float &a, float s, float t, int i);
+    void getSource(float &r, float &g, float &b, float &a, SoftVertex &v, int i, int j);
+    void getCombine(float &r, float &g, float &b, float &a, SoftVertex &v, int i = 5);
 
     void drawPixel(SoftVertex &p);
     void drawTriangle(SoftVertex &a, SoftVertex &b, SoftVertex &c);

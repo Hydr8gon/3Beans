@@ -636,6 +636,39 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x10401150, data = core->gpu.readShdOutMap(4)) // GPU_SHD_OUT_MAP4
                 DEF_IO32(0x10401154, data = core->gpu.readShdOutMap(5)) // GPU_SHD_OUT_MAP5
                 DEF_IO32(0x10401158, data = core->gpu.readShdOutMap(6)) // GPU_SHD_OUT_MAP6
+                DEF_IO32(0x10401208, data = core->gpu.readTexDim(0)) // GPU_TEX0_DIM
+                DEF_IO32(0x10401214, data = core->gpu.readTexAddr1(0)) // GPU_TEX0_ADDR1
+                DEF_IO32(0x10401238, data = core->gpu.readTexType(0)) // GPU_TEX0_TYPE
+                DEF_IO32(0x10401248, data = core->gpu.readTexDim(1)) // GPU_TEX1_DIM
+                DEF_IO32(0x10401254, data = core->gpu.readTexAddr1(1)) // GPU_TEX1_ADDR
+                DEF_IO32(0x10401258, data = core->gpu.readTexType(1)) // GPU_TEX1_TYPE
+                DEF_IO32(0x10401268, data = core->gpu.readTexDim(2)) // GPU_TEX2_DIM
+                DEF_IO32(0x10401274, data = core->gpu.readTexAddr1(2)) // GPU_TEX2_ADDR
+                DEF_IO32(0x10401278, data = core->gpu.readTexType(2)) // GPU_TEX2_TYPE
+                DEF_IO32(0x10401300, data = core->gpu.readCombSrc(0)) // GPU_COMB0_SRC
+                DEF_IO32(0x10401304, data = core->gpu.readCombOper(0)) // GPU_COMB0_OPER
+                DEF_IO32(0x10401308, data = core->gpu.readCombMode(0)) // GPU_COMB0_MODE
+                DEF_IO32(0x1040130C, data = core->gpu.readCombColor(0)) // GPU_COMB0_COLOR
+                DEF_IO32(0x10401320, data = core->gpu.readCombSrc(1)) // GPU_COMB1_SRC
+                DEF_IO32(0x10401324, data = core->gpu.readCombOper(1)) // GPU_COMB1_OPER
+                DEF_IO32(0x10401328, data = core->gpu.readCombMode(1)) // GPU_COMB1_MODE
+                DEF_IO32(0x1040132C, data = core->gpu.readCombColor(1)) // GPU_COMB1_COLOR
+                DEF_IO32(0x10401340, data = core->gpu.readCombSrc(2)) // GPU_COMB2_SRC
+                DEF_IO32(0x10401344, data = core->gpu.readCombOper(2)) // GPU_COMB2_OPER
+                DEF_IO32(0x10401348, data = core->gpu.readCombMode(2)) // GPU_COMB2_MODE
+                DEF_IO32(0x1040134C, data = core->gpu.readCombColor(2)) // GPU_COMB2_COLOR
+                DEF_IO32(0x10401360, data = core->gpu.readCombSrc(3)) // GPU_COMB3_SRC
+                DEF_IO32(0x10401364, data = core->gpu.readCombOper(3)) // GPU_COMB3_OPER
+                DEF_IO32(0x10401368, data = core->gpu.readCombMode(3)) // GPU_COMB3_MODE
+                DEF_IO32(0x1040136C, data = core->gpu.readCombColor(3)) // GPU_COMB3_COLOR
+                DEF_IO32(0x104013C0, data = core->gpu.readCombSrc(4)) // GPU_COMB4_SRC
+                DEF_IO32(0x104013C4, data = core->gpu.readCombOper(4)) // GPU_COMB4_OPER
+                DEF_IO32(0x104013C8, data = core->gpu.readCombMode(4)) // GPU_COMB4_MODE
+                DEF_IO32(0x104013CC, data = core->gpu.readCombColor(4)) // GPU_COMB4_COLOR
+                DEF_IO32(0x104013E0, data = core->gpu.readCombSrc(5)) // GPU_COMB5_SRC
+                DEF_IO32(0x104013E4, data = core->gpu.readCombOper(5)) // GPU_COMB5_OPER
+                DEF_IO32(0x104013E8, data = core->gpu.readCombMode(5)) // GPU_COMB5_MODE
+                DEF_IO32(0x104013EC, data = core->gpu.readCombColor(5)) // GPU_COMB5_COLOR
                 DEF_IO32(0x1040141C, data = core->gpu.readDepcolMask()) // GPU_DEPCOL_MASK
                 DEF_IO32(0x1040144C, data = core->gpu.readColbufWrite()) // GPU_COLBUF_WRITE
                 DEF_IO32(0x10401454, data = core->gpu.readDepbufWrite()) // GPU_DEPBUF_WRITE
@@ -700,6 +733,7 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x10401AE8, data = core->gpu.readVshEntry()) // GPU_VSH_ENTRY
                 DEF_IO32(0x10401AEC, data = core->gpu.readVshAttrIdsL()) // GPU_VSH_ATTR_IDS_L
                 DEF_IO32(0x10401AF0, data = core->gpu.readVshAttrIdsH()) // GPU_VSH_ATTR_IDS_H
+                DEF_IO32(0x10401AF4, data = core->gpu.readVshOutMask()) // GPU_VSH_OUT_MASK
                 DEF_IO32(0x17E00004, data = core->interrupts.readMpScuConfig()) // MP_SCU_CONFIG
                 DEF_IO32(0x17E00100, data = core->interrupts.readMpIle(id)) // MP_ILE
                 DEF_IO32(0x17E0010C, data = core->interrupts.readMpAck(id)) // MP_ACK
@@ -1774,6 +1808,39 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x10401150, core->gpu.writeShdOutMap<4>(IO_PARAMS)) // GPU_SHD_OUT_MAP4
                 DEF_IO32(0x10401154, core->gpu.writeShdOutMap<5>(IO_PARAMS)) // GPU_SHD_OUT_MAP5
                 DEF_IO32(0x10401158, core->gpu.writeShdOutMap<6>(IO_PARAMS)) // GPU_SHD_OUT_MAP6
+                DEF_IO32(0x10401208, core->gpu.writeTexDim<0>(IO_PARAMS)) // GPU_TEX0_DIM
+                DEF_IO32(0x10401214, core->gpu.writeTexAddr1<0>(IO_PARAMS)) // GPU_TEX0_ADDR1
+                DEF_IO32(0x10401238, core->gpu.writeTexType<0>(IO_PARAMS)) // GPU_TEX0_TYPE
+                DEF_IO32(0x10401248, core->gpu.writeTexDim<1>(IO_PARAMS)) // GPU_TEX1_DIM
+                DEF_IO32(0x10401254, core->gpu.writeTexAddr1<1>(IO_PARAMS)) // GPU_TEX1_ADDR
+                DEF_IO32(0x10401258, core->gpu.writeTexType<1>(IO_PARAMS)) // GPU_TEX1_TYPE
+                DEF_IO32(0x10401268, core->gpu.writeTexDim<2>(IO_PARAMS)) // GPU_TEX2_DIM
+                DEF_IO32(0x10401274, core->gpu.writeTexAddr1<2>(IO_PARAMS)) // GPU_TEX2_ADDR
+                DEF_IO32(0x10401278, core->gpu.writeTexType<2>(IO_PARAMS)) // GPU_TEX2_TYPE
+                DEF_IO32(0x10401300, core->gpu.writeCombSrc<0>(IO_PARAMS)) // GPU_COMB0_SRC
+                DEF_IO32(0x10401304, core->gpu.writeCombOper<0>(IO_PARAMS)) // GPU_COMB0_OPER
+                DEF_IO32(0x10401308, core->gpu.writeCombMode<0>(IO_PARAMS)) // GPU_COMB0_MODE
+                DEF_IO32(0x1040130C, core->gpu.writeCombColor<0>(IO_PARAMS)) // GPU_COMB0_COLOR
+                DEF_IO32(0x10401320, core->gpu.writeCombSrc<1>(IO_PARAMS)) // GPU_COMB1_SRC
+                DEF_IO32(0x10401324, core->gpu.writeCombOper<1>(IO_PARAMS)) // GPU_COMB1_OPER
+                DEF_IO32(0x10401328, core->gpu.writeCombMode<1>(IO_PARAMS)) // GPU_COMB1_MODE
+                DEF_IO32(0x1040132C, core->gpu.writeCombColor<1>(IO_PARAMS)) // GPU_COMB1_COLOR
+                DEF_IO32(0x10401340, core->gpu.writeCombSrc<2>(IO_PARAMS)) // GPU_COMB2_SRC
+                DEF_IO32(0x10401344, core->gpu.writeCombOper<2>(IO_PARAMS)) // GPU_COMB2_OPER
+                DEF_IO32(0x10401348, core->gpu.writeCombMode<2>(IO_PARAMS)) // GPU_COMB2_MODE
+                DEF_IO32(0x1040134C, core->gpu.writeCombColor<2>(IO_PARAMS)) // GPU_COMB2_COLOR
+                DEF_IO32(0x10401360, core->gpu.writeCombSrc<3>(IO_PARAMS)) // GPU_COMB3_SRC
+                DEF_IO32(0x10401364, core->gpu.writeCombOper<3>(IO_PARAMS)) // GPU_COMB3_OPER
+                DEF_IO32(0x10401368, core->gpu.writeCombMode<3>(IO_PARAMS)) // GPU_COMB3_MODE
+                DEF_IO32(0x1040136C, core->gpu.writeCombColor<3>(IO_PARAMS)) // GPU_COMB3_COLOR
+                DEF_IO32(0x104013C0, core->gpu.writeCombSrc<4>(IO_PARAMS)) // GPU_COMB4_SRC
+                DEF_IO32(0x104013C4, core->gpu.writeCombOper<4>(IO_PARAMS)) // GPU_COMB4_OPER
+                DEF_IO32(0x104013C8, core->gpu.writeCombMode<4>(IO_PARAMS)) // GPU_COMB4_MODE
+                DEF_IO32(0x104013CC, core->gpu.writeCombColor<4>(IO_PARAMS)) // GPU_COMB4_COLOR
+                DEF_IO32(0x104013E0, core->gpu.writeCombSrc<5>(IO_PARAMS)) // GPU_COMB5_SRC
+                DEF_IO32(0x104013E4, core->gpu.writeCombOper<5>(IO_PARAMS)) // GPU_COMB5_OPER
+                DEF_IO32(0x104013E8, core->gpu.writeCombMode<5>(IO_PARAMS)) // GPU_COMB5_MODE
+                DEF_IO32(0x104013EC, core->gpu.writeCombColor<5>(IO_PARAMS)) // GPU_COMB5_COLOR
                 DEF_IO32(0x1040141C, core->gpu.writeDepcolMask(IO_PARAMS)) // GPU_DEPCOL_MASK
                 DEF_IO32(0x1040144C, core->gpu.writeColbufWrite(IO_PARAMS)) // GPU_COLBUF_WRITE
                 DEF_IO32(0x10401454, core->gpu.writeDepbufWrite(IO_PARAMS)) // GPU_DEPBUF_WRITE
@@ -1846,6 +1913,7 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x10401AE8, core->gpu.writeVshEntry(IO_PARAMS)) // GPU_VSH_ENTRY
                 DEF_IO32(0x10401AEC, core->gpu.writeVshAttrIdsL(IO_PARAMS)) // GPU_VSH_ATTR_IDS_L
                 DEF_IO32(0x10401AF0, core->gpu.writeVshAttrIdsH(IO_PARAMS)) // GPU_VSH_ATTR_IDS_H
+                DEF_IO32(0x10401AF4, core->gpu.writeVshOutMask(IO_PARAMS)) // GPU_VSH_OUT_MASK
                 DEF_IO32(0x10401B00, core->gpu.writeVshFloatIdx(IO_PARAMS)) // GPU_VSH_FLOAT_IDX
                 DEF_IO32(0x10401B04, core->gpu.writeVshFloatData(IO_PARAMS)) // GPU_VSH_FLOAT_DATA
                 DEF_IO32(0x10401B08, core->gpu.writeVshFloatData(IO_PARAMS)) // GPU_VSH_FLOAT_DATA

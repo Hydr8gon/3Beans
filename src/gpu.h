@@ -24,7 +24,7 @@
 class Core;
 
 enum PrimMode {
-    SAME_PRIM = 0,
+    SAME_PRIM,
     TRIANGLES,
     TRI_STRIPS,
     TRI_FANS,
@@ -37,18 +37,65 @@ enum CullMode {
     CULL_BACK
 };
 
+enum CombSrc {
+    COMB_PRIM,
+    COMB_TEX0,
+    COMB_TEX1,
+    COMB_TEX2,
+    COMB_CONST,
+    COMB_PREV,
+    COMB_UNK
+};
+
+enum CombOper {
+    OPER_SRC,
+    OPER_1MSRC,
+    OPER_SRCA,
+    OPER_1MSRCA
+};
+
+enum CombMode {
+    MODE_REPLACE,
+    MODE_MOD,
+    MODE_ADD,
+    MODE_ADDS,
+    MODE_INTERP,
+    MODE_SUB,
+    MODE_DOT3,
+    MODE_DOT3A,
+    MODE_MULADD,
+    MODE_ADDMUL,
+    MODE_UNK
+};
+
+enum TexFmt {
+    TEX_RGBA8,
+    TEX_RGB8,
+    TEX_RGB5A1,
+    TEX_RGB565,
+    TEX_RGBA4,
+    TEX_LA8,
+    TEX_RG8,
+    TEX_L8,
+    TEX_A8,
+    TEX_LA4,
+    TEX_L4,
+    TEX_A4,
+    TEX_UNK
+};
+
 enum ColbufFmt {
-    RGBA8 = 0,
-    RGB565,
-    RGB5A1,
-    RGBA4,
+    COL_RGBA8,
+    COL_RGB565,
+    COL_RGB5A1,
+    COL_RGBA4,
     COL_UNK
 };
 
 enum DepbufFmt {
-    DEP16,
-    DEP24,
-    DEP24STN8,
+    DEP_16,
+    DEP_24,
+    DEP_24S8,
     DEP_UNK
 };
 
@@ -97,6 +144,13 @@ public:
     uint32_t readViewStepV() { return gpuViewStepV; }
     uint32_t readShdOutTotal() { return gpuShdOutTotal; }
     uint32_t readShdOutMap(int i) { return gpuShdOutMap[i]; }
+    uint32_t readTexDim(int i) { return gpuTexDim[i]; }
+    uint32_t readTexAddr1(int i) { return gpuTexAddr1[i]; }
+    uint32_t readTexType(int i) { return gpuTexType[i]; }
+    uint32_t readCombSrc(int i) { return gpuCombSrc[i]; }
+    uint32_t readCombOper(int i) { return gpuCombOper[i]; }
+    uint32_t readCombMode(int i) { return gpuCombMode[i]; }
+    uint32_t readCombColor(int i) { return gpuCombColor[i]; }
     uint32_t readDepcolMask() { return gpuDepcolMask; }
     uint32_t readColbufWrite() { return gpuColbufWrite; }
     uint32_t readDepbufWrite() { return gpuDepbufWrite; }
@@ -123,6 +177,7 @@ public:
     uint32_t readVshEntry() { return gpuVshEntry; }
     uint32_t readVshAttrIdsL() { return gpuVshAttrIds >> 0; }
     uint32_t readVshAttrIdsH() { return gpuVshAttrIds >> 32; }
+    uint32_t readVshOutMask() { return gpuVshOutMask; }
 
     void writeCfg11GpuCnt(uint32_t mask, uint32_t value);
     void writeMemsetDstAddr(int i, uint32_t mask, uint32_t value);
@@ -152,6 +207,13 @@ public:
     void writeViewStepV(uint32_t mask, uint32_t value);
     void writeShdOutTotal(uint32_t mask, uint32_t value);
     template <int i> void writeShdOutMap(uint32_t mask, uint32_t value);
+    template <int i> void writeTexDim(uint32_t mask, uint32_t value);
+    template <int i> void writeTexAddr1(uint32_t mask, uint32_t value);
+    template <int i> void writeTexType(uint32_t mask, uint32_t value);
+    template <int i> void writeCombSrc(uint32_t mask, uint32_t value);
+    template <int i> void writeCombOper(uint32_t mask, uint32_t value);
+    template <int i> void writeCombMode(uint32_t mask, uint32_t value);
+    template <int i> void writeCombColor(uint32_t mask, uint32_t value);
     void writeDepcolMask(uint32_t mask, uint32_t value);
     void writeColbufWrite(uint32_t mask, uint32_t value);
     void writeDepbufWrite(uint32_t mask, uint32_t value);
@@ -183,6 +245,7 @@ public:
     void writeVshEntry(uint32_t mask, uint32_t value);
     void writeVshAttrIdsL(uint32_t mask, uint32_t value);
     void writeVshAttrIdsH(uint32_t mask, uint32_t value);
+    void writeVshOutMask(uint32_t mask, uint32_t value);
     void writeVshFloatIdx(uint32_t mask, uint32_t value);
     void writeVshFloatData(uint32_t mask, uint32_t value);
     void writeVshCodeIdx(uint32_t mask, uint32_t value);
@@ -237,6 +300,13 @@ private:
     uint32_t gpuViewStepV = 0;
     uint32_t gpuShdOutTotal = 0;
     uint32_t gpuShdOutMap[7] = {};
+    uint32_t gpuTexDim[3] = {};
+    uint32_t gpuTexAddr1[3] = {};
+    uint32_t gpuTexType[3] = {};
+    uint32_t gpuCombSrc[6] = {};
+    uint32_t gpuCombOper[6] = {};
+    uint32_t gpuCombMode[6] = {};
+    uint32_t gpuCombColor[6] = {};
     uint32_t gpuDepcolMask = 0;
     uint32_t gpuColbufWrite = 0;
     uint32_t gpuDepbufWrite = 0;
@@ -260,6 +330,7 @@ private:
     uint32_t gpuVshInts[4] = {};
     uint32_t gpuVshEntry = 0;
     uint64_t gpuVshAttrIds = 0;
+    uint32_t gpuVshOutMask = 0;
     uint32_t gpuVshCodeIdx = 0;
     uint32_t gpuVshDescIdx = 0;
 

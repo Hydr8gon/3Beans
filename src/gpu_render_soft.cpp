@@ -72,22 +72,274 @@ SoftVertex GpuRenderSoft::interpolate(SoftVertex &v1, SoftVertex &v2, float x1, 
     v.g = interpolate(v1.g * v1.w, v2.g * v2.w, x1, x, x2) / v.w;
     v.b = interpolate(v1.b * v1.w, v2.b * v2.w, x1, x, x2) / v.w;
     v.a = interpolate(v1.a * v1.w, v2.a * v2.w, x1, x, x2) / v.w;
+    v.s0 = interpolate(v1.s0 * v1.w, v2.s0 * v2.w, x1, x, x2) / v.w;
+    v.s1 = interpolate(v1.s1 * v1.w, v2.s1 * v2.w, x1, x, x2) / v.w;
+    v.s2 = interpolate(v1.s2 * v1.w, v2.s2 * v2.w, x1, x, x2) / v.w;
+    v.t0 = interpolate(v1.t0 * v1.w, v2.t0 * v2.w, x1, x, x2) / v.w;
+    v.t1 = interpolate(v1.t1 * v1.w, v2.t1 * v2.w, x1, x, x2) / v.w;
+    v.t2 = interpolate(v1.t2 * v1.w, v2.t2 * v2.w, x1, x, x2) / v.w;
     return v;
 }
 
 SoftVertex GpuRenderSoft::intersect(SoftVertex &v1, SoftVertex &v2, float x1, float x2) {
     // Calculate the intersection of two vertices at a clipping bound
     SoftVertex v;
-    float s1 = x1 + v1.w, s2 = x2 + v2.w;
-    v.x = ((v1.x * s2) - (v2.x * s1)) / (s2 - s1);
-    v.y = ((v1.y * s2) - (v2.y * s1)) / (s2 - s1);
-    v.z = ((v1.z * s2) - (v2.z * s1)) / (s2 - s1);
-    v.w = ((v1.w * s2) - (v2.w * s1)) / (s2 - s1);
-    v.r = ((v1.r * s2) - (v2.r * s1)) / (s2 - s1);
-    v.g = ((v1.g * s2) - (v2.g * s1)) / (s2 - s1);
-    v.b = ((v1.b * s2) - (v2.b * s1)) / (s2 - s1);
-    v.a = ((v1.a * s2) - (v2.a * s1)) / (s2 - s1);
+    float c1 = x1 + v1.w, c2 = x2 + v2.w;
+    v.x = ((v1.x * c2) - (v2.x * c1)) / (c2 - c1);
+    v.y = ((v1.y * c2) - (v2.y * c1)) / (c2 - c1);
+    v.z = ((v1.z * c2) - (v2.z * c1)) / (c2 - c1);
+    v.w = ((v1.w * c2) - (v2.w * c1)) / (c2 - c1);
+    v.r = ((v1.r * c2) - (v2.r * c1)) / (c2 - c1);
+    v.g = ((v1.g * c2) - (v2.g * c1)) / (c2 - c1);
+    v.b = ((v1.b * c2) - (v2.b * c1)) / (c2 - c1);
+    v.a = ((v1.a * c2) - (v2.a * c1)) / (c2 - c1);
+    v.s0 = ((v1.s0 * c2) - (v2.s0 * c1)) / (c2 - c1);
+    v.s1 = ((v1.s1 * c2) - (v2.s1 * c1)) / (c2 - c1);
+    v.s2 = ((v1.s2 * c2) - (v2.s2 * c1)) / (c2 - c1);
+    v.t0 = ((v1.t0 * c2) - (v2.t0 * c1)) / (c2 - c1);
+    v.t1 = ((v1.t1 * c2) - (v2.t1 * c1)) / (c2 - c1);
+    v.t2 = ((v1.t2 * c2) - (v2.t2 * c1)) / (c2 - c1);
     return v;
+}
+
+void GpuRenderSoft::getTexel(float &r, float &g, float &b, float &a, float s, float t, int i) {
+    // Convert float texture coordinates to a swizzled memory offset
+    uint32_t u = uint32_t(s * texWidths[i]) % texWidths[i];
+    uint32_t v = uint32_t(t * texHeights[i]) % texHeights[i];
+    uint32_t ofs = (u & 0x1) | ((u << 1) & 0x4) | ((u << 2) & 0x10);
+    ofs |= ((v << 1) & 0x2) | ((v << 2) & 0x8) | ((v << 3) & 0x20);
+    ofs += ((v & ~0x7) * texWidths[i]) + ((u & ~0x7) << 3);
+    uint32_t value;
+
+    // Read a texel and convert it to floats based on format
+    switch (texFmts[i]) {
+    case TEX_RGBA8:
+        value = core->memory.read<uint32_t>(ARM11, texAddrs[i] + ofs * 4);
+        r = float((value >> 24) & 0xFF) / 0xFF;
+        g = float((value >> 16) & 0xFF) / 0xFF;
+        b = float((value >> 8) & 0xFF) / 0xFF;
+        a = float((value >> 0) & 0xFF) / 0xFF;
+        return;
+    case TEX_RGB8:
+        r = float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs * 3 + 2)) / 0xFF;
+        g = float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs * 3 + 1)) / 0xFF;
+        b = float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs * 3 + 0)) / 0xFF;
+        a = 1.0f;
+        return;
+    case TEX_RGB5A1:
+        value = core->memory.read<uint16_t>(ARM11, texAddrs[i] + ofs * 2);
+        r = float((value >> 11) & 0x1F) / 0x1F;
+        g = float((value >> 6) & 0x1F) / 0x1F;
+        b = float((value >> 1) & 0x1F) / 0x1F;
+        a = (value & BIT(0)) ? 1.0f : 0.0f;
+        return;
+    case TEX_RGB565:
+        value = core->memory.read<uint16_t>(ARM11, texAddrs[i] + ofs * 2);
+        r = float((value >> 11) & 0x1F) / 0x1F;
+        g = float((value >> 5) & 0x3F) / 0x3F;
+        b = float((value >> 0) & 0x1F) / 0x1F;
+        a = 1.0f;
+        return;
+    case TEX_RGBA4:
+        value = core->memory.read<uint16_t>(ARM11, texAddrs[i] + ofs * 2);
+        r = float((value >> 12) & 0xF) / 0xF;
+        g = float((value >> 8) & 0xF) / 0xF;
+        b = float((value >> 4) & 0xF) / 0xF;
+        a = float((value >> 0) & 0xF) / 0xF;
+        return;
+    case TEX_LA8:
+        value = core->memory.read<uint16_t>(ARM11, texAddrs[i] + ofs * 2);
+        r = g = b = float((value >> 8) & 0xFF) / 0xFF;
+        a = float((value >> 0) & 0xFF) / 0xFF;
+        return;
+    case TEX_RG8:
+        value = core->memory.read<uint16_t>(ARM11, texAddrs[i] + ofs * 2);
+        r = float((value >> 8) & 0xFF) / 0xFF;
+        g = float((value >> 0) & 0xFF) / 0xFF;
+        b = 0.0f, a = 1.0f;
+        return;
+    case TEX_L8:
+        r = g = b = float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs)) / 0xFF;
+        a = 1.0f;
+        return;
+    case TEX_A8:
+        r = g = b = 0.0f;
+        a = float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs)) / 0xFF;
+        return;
+    case TEX_LA4:
+        value = core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs);
+        r = g = b = float((value >> 4) & 0xF) / 0xF;
+        a = float((value >> 0) & 0xF) / 0xF;
+        return;
+    case TEX_L4:
+        value = core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs / 2);
+        r = g = b = float((value >> ((ofs & 0x1) * 4)) & 0xF) / 0xF;
+        a = 1.0f;
+        return;
+    case TEX_A4:
+        value = core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs / 2);
+        r = g = b = 0.0f;
+        a = float((value >> ((ofs & 0x1) * 4)) & 0xF) / 0xF;
+        return;
+    case TEX_UNK:
+        r = g = b = a = 1.0f;
+        return;
+    }
+}
+
+void GpuRenderSoft::getSource(float &r, float &g, float &b, float &a, SoftVertex &v, int i, int j) {
+    // Get the components of a texture combiner source color
+    switch (combSrcs[i][j]) {
+        case COMB_PRIM: r = v.r, g = v.g, b = v.b, a = v.a; break;
+        case COMB_TEX0: getTexel(r, g, b, a, v.s0, v.t0, 0); break;
+        case COMB_TEX1: getTexel(r, g, b, a, v.s1, v.t1, 1); break;
+        case COMB_TEX2: getTexel(r, g, b, a, v.s2, v.t2, 2); break;
+        case COMB_CONST: r = combColors[i][0], g = combColors[i][1], b = combColors[i][2], a = combColors[i][3]; break;
+        case COMB_UNK: r = g = b = a = 1.0f; break;
+
+    case COMB_PREV:
+        // Generate the previous combiner's output, or use the cache if already done
+        if (i == 0)
+            r = g = b = a = 0.0f;
+        else if (combMask & BIT(i - 1))
+            r = rc[i - 1], g = gc[i - 1], b = bc[i - 1], a = ac[i - 1];
+        else
+            getCombine(r, g, b, a, v, i - 1);
+        break;
+    }
+
+    // Modify the source color based on its operand type
+    switch (combOpers[i][j]) {
+        case OPER_SRC: return;
+        case OPER_1MSRC: r = 1.0f - r, g = 1.0f - g, b = 1.0f - b, a = 1.0f - a; return;
+        case OPER_SRCA: r = g = b = a; return;
+        case OPER_1MSRCA: r = g = b = 1.0f - a; return;
+    }
+}
+
+void GpuRenderSoft::getCombine(float &r, float &g, float &b, float &a, SoftVertex &v, int i) {
+    // Define temporary values and reset the cache
+    float r0, g0, b0, a0;
+    float r1, g1, b1, a1;
+    float r2, g2, b2, a2;
+    if (i > 4) combMask = 0;
+
+    // Combine RGB source values based on the selected mode
+    switch (combModes[i][0]) {
+    case MODE_REPLACE:
+        getSource(r0, g0, b0, a0, v, i, 0);
+        r = r0, g = g0, b = b0;
+        break;
+    case MODE_MOD:
+        getSource(r0, g0, b0, a0, v, i, 0);
+        getSource(r1, g1, b1, a1, v, i, 1);
+        r = r0 * r1, g = g0 * g1, b = b0 * b1;
+        break;
+    case MODE_ADD:
+        getSource(r0, g0, b0, a0, v, i, 0);
+        getSource(r1, g1, b1, a1, v, i, 1);
+        r = r0 + r1, g = g0 + g1, b = b0 + b1;
+        break;
+    case MODE_ADDS:
+        getSource(r0, g0, b0, a0, v, i, 0);
+        getSource(r1, g1, b1, a1, v, i, 1);
+        r = r0 + r1 - 0.5f, g = g0 + g1 - 0.5f, b = b0 + b1 - 0.5f;
+        break;
+    case MODE_INTERP:
+        getSource(r0, g0, b0, a0, v, i, 0);
+        getSource(r1, g1, b1, a1, v, i, 1);
+        getSource(r2, g2, b2, a2, v, i, 2);
+        r = r0 * r2 + r1 * (1.0f - r2), g = g0 * g2 + g1 * (1.0f - g2), b = b0 * b2 + b1 * (1.0f - b2);
+        break;
+    case MODE_SUB:
+        getSource(r0, g0, b0, a0, v, i, 0);
+        getSource(r1, g1, b1, a1, v, i, 1);
+        r = r0 - r1, g = g0 - g1, b = b0 - b1;
+        break;
+    case MODE_DOT3:
+    case MODE_DOT3A:
+        getSource(r0, g0, b0, a0, v, i, 0);
+        getSource(r1, g1, b1, a1, v, i, 1);
+        r = g = b = 4.0f * r0 - 0.5f * r1 - 0.5f + g0 - 0.5f * g1 - 0.5f + b0 - 0.5f * b1 - 0.5f;
+        break;
+    case MODE_MULADD:
+        getSource(r0, g0, b0, a0, v, i, 0);
+        getSource(r1, g1, b1, a1, v, i, 1);
+        getSource(r2, g2, b2, a2, v, i, 2);
+        r = (r0 * r1) + r2, g = (g0 * g1) + g2, b = (b0 * b1) + b2;
+        break;
+    case MODE_ADDMUL:
+        getSource(r0, g0, b0, a0, v, i, 0);
+        getSource(r1, g1, b1, a1, v, i, 1);
+        getSource(r2, g2, b2, a2, v, i, 2);
+        r = (r0 + r1) * r2, g = (g0 + g1) * g2, b = (b0 + b1) * b2;
+        break;
+    case MODE_UNK:
+        r = g = b = 1.0f;
+        break;
+    }
+
+    // Combine alpha source values based on the selected mode
+    switch (combModes[i][1]) {
+    case MODE_REPLACE:
+        getSource(r0, g0, b0, a0, v, i, 3);
+        a = a0;
+        break;
+    case MODE_MOD:
+        getSource(r0, g0, b0, a0, v, i, 3);
+        getSource(r1, g1, b1, a1, v, i, 4);
+        a = a0 * a1;
+        break;
+    case MODE_ADD:
+        getSource(r0, g0, b0, a0, v, i, 3);
+        getSource(r1, g1, b1, a1, v, i, 4);
+        a = a0 + a1;
+        break;
+    case MODE_ADDS:
+        getSource(r0, g0, b0, a0, v, i, 3);
+        getSource(r1, g1, b1, a1, v, i, 4);
+        a = a0 + a1 - 0.5f;
+        break;
+    case MODE_INTERP:
+        getSource(r0, g0, b0, a0, v, i, 3);
+        getSource(r1, g1, b1, a1, v, i, 4);
+        getSource(r2, g2, b2, a2, v, i, 5);
+        a = a0 * a2 + a1 * (1.0f - a2);
+        break;
+    case MODE_SUB:
+        getSource(r0, g0, b0, a0, v, i, 3);
+        getSource(r1, g1, b1, a1, v, i, 4);
+        a = a0 - a1;
+        break;
+    case MODE_DOT3A:
+        getSource(r0, g0, b0, a0, v, i, 3);
+        getSource(r1, g1, b1, a1, v, i, 4);
+        a = 4.0f * r0 - 0.5f * r1 - 0.5f + g0 - 0.5f * g1 - 0.5f + b0 - 0.5f * b1 - 0.5f;
+        break;
+    case MODE_MULADD:
+        getSource(r0, g0, b0, a0, v, i, 3);
+        getSource(r1, g1, b1, a1, v, i, 4);
+        getSource(r2, g2, b2, a2, v, i, 5);
+        a = (a0 * a1) + a2;
+        break;
+    case MODE_ADDMUL:
+        getSource(r0, g0, b0, a0, v, i, 3);
+        getSource(r1, g1, b1, a1, v, i, 4);
+        getSource(r2, g2, b2, a2, v, i, 5);
+        a = (a0 + a1) * a2;
+        break;
+    case MODE_DOT3:
+    case MODE_UNK:
+        a = 1.0f;
+        break;
+    }
+
+    // Ensure final values are within range and cache them
+    rc[i] = r = std::min(1.0f, std::max(0.0f, r));
+    gc[i] = g = std::min(1.0f, std::max(0.0f, g));
+    bc[i] = b = std::min(1.0f, std::max(0.0f, b));
+    ac[i] = a = std::min(1.0f, std::max(0.0f, a));
+    combMask |= BIT(i);
 }
 
 void GpuRenderSoft::drawPixel(SoftVertex &p) {
@@ -100,17 +352,17 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
     // Read a depth value to compare with based on buffer format
     float depth = 0.0f;
     switch (depbufFmt) {
-    case DEP16:
+    case DEP_16:
         val = core->memory.read<uint16_t>(ARM11, depbufAddr + ofs * 2);
         depth = float(val) / 0xFFFF;
         break;
-    case DEP24:
+    case DEP_24:
         val = core->memory.read<uint8_t>(ARM11, depbufAddr + ofs * 3 + 0) << 0;
         val |= core->memory.read<uint8_t>(ARM11, depbufAddr + ofs * 3 + 1) << 8;
         val |= core->memory.read<uint8_t>(ARM11, depbufAddr + ofs * 3 + 2) << 16;
         depth = float(val) / 0xFFFFFF;
         break;
-    case DEP24STN8:
+    case DEP_24S8:
         val = core->memory.read<uint32_t>(ARM11, depbufAddr + ofs * 4) & 0xFFFFFF;
         depth = float(val) / 0xFFFFFF;
         break;
@@ -131,17 +383,17 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
     // Store the incoming depth value based on buffer format if enabled
     if (depbufMask & BIT(1)) {
         switch (depbufFmt) {
-        case DEP16:
+        case DEP_16:
             val = std::min<int>(0xFFFF, std::max<int>(0, p.z * 0xFFFF));
             core->memory.write<uint16_t>(ARM11, depbufAddr + ofs * 2, val);
             break;
-        case DEP24:
+        case DEP_24:
             val = std::min<int>(0xFFFFFF, std::max<int>(0, p.z * 0xFFFFFF));
             core->memory.write<uint8_t>(ARM11, depbufAddr + ofs * 3 + 0, val >> 0);
             core->memory.write<uint8_t>(ARM11, depbufAddr + ofs * 3 + 1, val >> 8);
             core->memory.write<uint8_t>(ARM11, depbufAddr + ofs * 3 + 2, val >> 16);
             break;
-        case DEP24STN8:
+        case DEP_24S8:
             val = std::min<int>(0xFFFFFF, std::max<int>(0, p.z * 0xFFFFFF));
             val |= core->memory.read<uint8_t>(ARM11, depbufAddr + ofs * 4 + 3) << 24;
             core->memory.write<uint32_t>(ARM11, depbufAddr + ofs * 4, val);
@@ -149,25 +401,23 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
         }
     }
 
-    // Ensure the incoming color values stay within bounds
-    float r = std::min(1.0f, std::max(0.0f, p.r));
-    float g = std::min(1.0f, std::max(0.0f, p.g));
-    float b = std::min(1.0f, std::max(0.0f, p.b));
-    float a = std::min(1.0f, std::max(0.0f, p.a));
+    // Get final color values from the texture combiners
+    float r, g, b, a;
+    getCombine(r, g, b, a, p);
 
-    // Store the incoming color values based on buffer format if enabled
+    // Store the final color values based on buffer format if enabled
     if (!colbufMask) return; // TODO: use individual components
     switch (colbufFmt) {
-    case RGBA8:
+    case COL_RGBA8:
         val = (int(r * 255) << 24) | (int(g * 255) << 16) | (int(b * 255) << 8) | int(a * 255);
         return core->memory.write<uint32_t>(ARM11, colbufAddr + ofs * 4, val);
-    case RGB565:
+    case COL_RGB565:
         val = (int(r * 31) << 11) | (int(g * 63) << 5) | int(b * 31);
         return core->memory.write<uint16_t>(ARM11, colbufAddr + ofs * 2, val);
-    case RGB5A1:
+    case COL_RGB5A1:
         val = (int(r * 31) << 11) | (int(g * 31) << 6) | (int(b * 31) << 1) | (a > 0);
         return core->memory.write<uint16_t>(ARM11, colbufAddr + ofs * 2, val);
-    case RGBA4:
+    case COL_RGBA4:
         val = (int(r * 15) << 12) | (int(g * 15) << 8) | (int(b * 15) << 4) | int(a * 15);
         return core->memory.write<uint16_t>(ARM11, colbufAddr + ofs * 2, val);
     }
@@ -304,14 +554,20 @@ void GpuRenderSoft::runShader(float (*input)[4], PrimMode mode) {
 
     // Build a vertex using the shader output map
     SoftVertex vertex;
-    vertex.w = shdOut[outMap[0x3][0]][outMap[0x3][1]];
     vertex.x = shdOut[outMap[0x0][0]][outMap[0x0][1]];
     vertex.y = shdOut[outMap[0x1][0]][outMap[0x1][1]];
     vertex.z = shdOut[outMap[0x2][0]][outMap[0x2][1]];
+    vertex.w = shdOut[outMap[0x3][0]][outMap[0x3][1]];
     vertex.r = shdOut[outMap[0x8][0]][outMap[0x8][1]];
     vertex.g = shdOut[outMap[0x9][0]][outMap[0x9][1]];
     vertex.b = shdOut[outMap[0xA][0]][outMap[0xA][1]];
     vertex.a = shdOut[outMap[0xB][0]][outMap[0xB][1]];
+    vertex.s0 = shdOut[outMap[0xC][0]][outMap[0xC][1]];
+    vertex.t0 = shdOut[outMap[0xD][0]][outMap[0xD][1]];
+    vertex.s1 = shdOut[outMap[0xE][0]][outMap[0xE][1]];
+    vertex.t1 = shdOut[outMap[0xF][0]][outMap[0xF][1]];
+    vertex.s2 = shdOut[outMap[0x16][0]][outMap[0x16][1]];
+    vertex.t2 = shdOut[outMap[0x17][0]][outMap[0x17][1]];
 
     // Reset the vertex count if the primitive mode changed
     if (mode != SAME_PRIM) {
@@ -744,35 +1000,10 @@ void GpuRenderSoft::vshUnk(uint32_t opcode) {
     LOG_CRIT("Unknown GPU vertex shader opcode: 0x%X\n", opcode);
 }
 
-void GpuRenderSoft::writeVshCode(uint16_t address, uint32_t value) {
-    // Write a value to the vertex shader program buffer
-    vshCode[address] = value;
-}
-
-void GpuRenderSoft::writeVshDesc(uint16_t address, uint32_t value) {
-    // Write a value to the vertex operand descriptor buffer
-    vshDesc[address] = value;
-}
-
 void GpuRenderSoft::setVshEntry(uint16_t entry, uint16_t end) {
     // Set the vertex shader entry and end points
     vshEntry = entry;
     vshEnd = end;
-}
-
-void GpuRenderSoft::setVshBool(int i, bool value) {
-    // Set one of the vertex uniform boolean values
-    vshBools[i] = value;
-}
-
-void GpuRenderSoft::setVshInt(int i, int j, uint8_t value) {
-    // Set one of the vertex uniform integer values
-    vshInts[i][j] = value;
-}
-
-void GpuRenderSoft::setVshFloat(int i, int j, float value) {
-    // Set one of the vertex uniform float values
-    vshFloats[i][j] = value;
 }
 
 void GpuRenderSoft::setOutMap(uint8_t (*map)[2]) {
@@ -780,29 +1011,18 @@ void GpuRenderSoft::setOutMap(uint8_t (*map)[2]) {
     memcpy(outMap, map, sizeof(outMap));
 }
 
-void GpuRenderSoft::setCullMode(CullMode mode) {
-    // Set the triangle face culling mode
-    cullMode = mode;
+void GpuRenderSoft::setCombColor(int i, float r, float g, float b, float a) {
+    // Set one of the texture combiner constant colors
+    combColors[i][0] = r;
+    combColors[i][1] = g;
+    combColors[i][2] = b;
+    combColors[i][3] = a;
 }
 
-void GpuRenderSoft::setViewScaleH(float scale) {
-    // Set the viewport horizontal scale
-    viewScaleH = scale;
-}
-
-void GpuRenderSoft::setViewStepH(float step) {
-    // Set the viewport horizontal step
-    viewStepH = step;
-}
-
-void GpuRenderSoft::setViewScaleV(float scale) {
-    // Set the viewport vertical scale
-    viewScaleV = scale;
-}
-
-void GpuRenderSoft::setViewStepV(float step) {
-    // Set the viewport vertical step
-    viewStepV = step;
+void GpuRenderSoft::setTexDims(int i, uint16_t width, uint16_t height) {
+    // Set one of the texture unit widths and heights
+    texWidths[i] = width;
+    texHeights[i] = height;
 }
 
 void GpuRenderSoft::setBufferDims(uint16_t width, uint16_t height, bool mirror) {
@@ -810,39 +1030,4 @@ void GpuRenderSoft::setBufferDims(uint16_t width, uint16_t height, bool mirror) 
     bufWidth = width;
     bufHeight = height;
     signY = (mirror ? -1.0f : 1.0f);
-}
-
-void GpuRenderSoft::setColbufAddr(uint32_t address) {
-    // Set the color buffer address
-    colbufAddr = address;
-}
-
-void GpuRenderSoft::setColbufFmt(ColbufFmt format) {
-    // Set the color buffer format
-    colbufFmt = format;
-}
-
-void GpuRenderSoft::setColbufMask(uint8_t mask) {
-    // Set the color buffer write mask
-    colbufMask = mask;
-}
-
-void GpuRenderSoft::setDepbufAddr(uint32_t address) {
-    // Set the depth buffer address
-    depbufAddr = address;
-}
-
-void GpuRenderSoft::setDepbufFmt(DepbufFmt format) {
-    // Set the depth buffer format
-    depbufFmt = format;
-}
-
-void GpuRenderSoft::setDepbufMask(uint8_t mask) {
-    // Set the depth buffer write mask
-    depbufMask = mask;
-}
-
-void GpuRenderSoft::setDepthFunc(DepthFunc func) {
-    // Set the depth test comparison function
-    depthFunc = func;
 }

@@ -26,6 +26,17 @@ TEMPLATE4(void Gpu::writeIrqReq, 8, uint32_t, uint32_t)
 TEMPLATE4(void Gpu::writeIrqReq, 12, uint32_t, uint32_t)
 TEMPLATE4(void Gpu::writeShdOutMap, 0, uint32_t, uint32_t)
 TEMPLATE3(void Gpu::writeShdOutMap, 4, uint32_t, uint32_t)
+TEMPLATE3(void Gpu::writeTexDim, 0, uint32_t, uint32_t)
+TEMPLATE3(void Gpu::writeTexAddr1, 0, uint32_t, uint32_t)
+TEMPLATE3(void Gpu::writeTexType, 0, uint32_t, uint32_t)
+TEMPLATE3(void Gpu::writeCombSrc, 0, uint32_t, uint32_t)
+TEMPLATE3(void Gpu::writeCombSrc, 3, uint32_t, uint32_t)
+TEMPLATE3(void Gpu::writeCombOper, 0, uint32_t, uint32_t)
+TEMPLATE3(void Gpu::writeCombOper, 3, uint32_t, uint32_t)
+TEMPLATE3(void Gpu::writeCombMode, 0, uint32_t, uint32_t)
+TEMPLATE3(void Gpu::writeCombMode, 3, uint32_t, uint32_t)
+TEMPLATE3(void Gpu::writeCombColor, 0, uint32_t, uint32_t)
+TEMPLATE3(void Gpu::writeCombColor, 3, uint32_t, uint32_t)
 TEMPLATE4(void Gpu::writeAttrOfs, 0, uint32_t, uint32_t)
 TEMPLATE4(void Gpu::writeAttrOfs, 4, uint32_t, uint32_t)
 TEMPLATE4(void Gpu::writeAttrOfs, 8, uint32_t, uint32_t)
@@ -147,7 +158,9 @@ void Gpu::drawAttrIdx(uint32_t idx) {
 void Gpu::updateOutMap() {
     // Build a map of shader outputs to fixed semantics for the renderer
     uint8_t outMap[0x18][2] = {};
-    for (int i = 0; i < gpuShdOutTotal; i++) {
+    for (int t = 0, i = 0; t < gpuShdOutTotal && i < 7; t++, i++) {
+        while (!(gpuVshOutMask & BIT(i)))
+            if (++i >= 7) break;
         for (int j = 0; j < 4; j++) {
             uint8_t sem = (gpuShdOutMap[i] >> (j << 3));
             if (sem >= 0x18) continue;
@@ -221,6 +234,91 @@ template <int i> void Gpu::writeShdOutMap(uint32_t mask, uint32_t value) {
     updateOutMap();
 }
 
+template <int i> void Gpu::writeTexDim(uint32_t mask, uint32_t value) {
+    // Write to one of the texture dimensions and send them to the renderer
+    mask &= 0x7FFFFFF;
+    gpuTexDim[i] = (gpuTexDim[i] & ~mask) | (value & mask);
+    core->gpuRender.setTexDims(i, gpuTexDim[i] >> 16, gpuTexDim[i] & 0x7FF);
+}
+
+template <int i> void Gpu::writeTexAddr1(uint32_t mask, uint32_t value) {
+    // Write to one of the texture addresses and send it to the renderer
+    mask &= 0xFFFFFFF;
+    gpuTexAddr1[i] = (gpuTexAddr1[i] & ~mask) | (value & mask);
+    core->gpuRender.setTexAddr(i, gpuTexAddr1[i] << 3);
+}
+
+template <int i> void Gpu::writeTexType(uint32_t mask, uint32_t value) {
+    // Write to one of the texture types
+    mask &= 0xF;
+    gpuTexType[i] = (gpuTexType[i] & ~mask) | (value & mask);
+
+    // Set the format for the renderer if it's valid
+    if (gpuTexType[i] < 0xC)
+        return core->gpuRender.setTexFmt(i, TexFmt(gpuTexType[i]));
+    LOG_WARN("GPU texture %d set to unknown format: 0x%X\n", i, gpuTexType[i]);
+    return core->gpuRender.setTexFmt(i, TEX_UNK);
+}
+
+template <int i> void Gpu::writeCombSrc(uint32_t mask, uint32_t value) {
+    // Write to one of the texture combiner source registers
+    mask &= 0xFFF0FFF;
+    gpuCombSrc[i] = (gpuCombSrc[i] & ~mask) | (value & mask);
+
+    // Set the sources for the renderer if they're valid
+    for (int j = 0; j < 6; j++) {
+        switch (uint8_t src = (gpuCombSrc[i] >> ((j + (j > 2)) * 4)) & 0xF) {
+            case 0x0: core->gpuRender.setCombSrc(i, j, COMB_PRIM); continue;
+            case 0x3: core->gpuRender.setCombSrc(i, j, COMB_TEX0); continue;
+            case 0x4: core->gpuRender.setCombSrc(i, j, COMB_TEX1); continue;
+            case 0x5: core->gpuRender.setCombSrc(i, j, COMB_TEX2); continue;
+            case 0xE: core->gpuRender.setCombSrc(i, j, COMB_CONST); continue;
+            case 0xF: core->gpuRender.setCombSrc(i, j, COMB_PREV); continue;
+
+        default:
+            // Catch unknown texture combiner source values
+            LOG_WARN("GPU texture combiner %d source %d set to unknown value: 0x%X\n", i, j, src);
+            core->gpuRender.setCombSrc(i, j, COMB_UNK);
+            continue;
+        }
+    }
+}
+
+template <int i> void Gpu::writeCombOper(uint32_t mask, uint32_t value) {
+    // Write to some of the texture combiner operands and send them to the renderer
+    mask &= 0x111333;
+    gpuCombOper[i] = (gpuCombOper[i] & ~mask) | (value & mask);
+    for (int j = 0; j < 6; j++)
+        core->gpuRender.setCombOper(i, j, CombOper((gpuCombOper[i] >> (j * 4)) & 0xF));
+}
+
+template <int i> void Gpu::writeCombMode(uint32_t mask, uint32_t value) {
+    // Write to one of the texture combiner mode registers
+    mask &= 0xF000F;
+    gpuCombMode[i] = (gpuCombMode[i] & ~mask) | (value & mask);
+
+    // Set the modes for the renderer if they're valid
+    for (int j = 0; j < 2; j++) {
+        uint8_t mode = (gpuCombMode[i] >> (j * 16)) & 0xF;
+        if (mode < 0xA) {
+            core->gpuRender.setCombMode(i, j, CombMode(mode));
+            continue;
+        }
+        LOG_WARN("GPU texture combiner %d mode %d set to unknown value: 0x%X\n", i, j, mode);
+        core->gpuRender.setCombMode(i, j, MODE_UNK);
+    }
+}
+
+template <int i> void Gpu::writeCombColor(uint32_t mask, uint32_t value) {
+    // Write to one of the texture combiner colors and send it to the renderer
+    gpuCombColor[i] = (gpuCombColor[i] & ~mask) | (value & mask);
+    float r = float((gpuCombColor[i] >> 0) & 0xFF) / 0xFF;
+    float g = float((gpuCombColor[i] >> 8) & 0xFF) / 0xFF;
+    float b = float((gpuCombColor[i] >> 16) & 0xFF) / 0xFF;
+    float a = float((gpuCombColor[i] >> 24) & 0xFF) / 0xFF;
+    core->gpuRender.setCombColor(i, r, g, b, a);
+}
+
 void Gpu::writeDepcolMask(uint32_t mask, uint32_t value) {
     // Write to the depth/color mask register and update the renderer's state
     mask &= 0x1F71;
@@ -251,9 +349,9 @@ void Gpu::writeDepbufFmt(uint32_t mask, uint32_t value) {
 
     // Set the format for the renderer if it's valid
     switch (gpuDepbufFmt) {
-        case 0x0: return core->gpuRender.setDepbufFmt(DEP16);
-        case 0x2: return core->gpuRender.setDepbufFmt(DEP24);
-        case 0x3: return core->gpuRender.setDepbufFmt(DEP24STN8);
+        case 0x0: return core->gpuRender.setDepbufFmt(DEP_16);
+        case 0x2: return core->gpuRender.setDepbufFmt(DEP_24);
+        case 0x3: return core->gpuRender.setDepbufFmt(DEP_24S8);
 
     default:
         // Catch unknown depth buffer formats
@@ -269,10 +367,10 @@ void Gpu::writeColbufFmt(uint32_t mask, uint32_t value) {
 
     // Set the format for the renderer if it's valid
     switch (gpuColbufFmt) {
-        case 0x00002: return core->gpuRender.setColbufFmt(RGBA8);
-        case 0x20000: return core->gpuRender.setColbufFmt(RGB5A1);
-        case 0x30000: return core->gpuRender.setColbufFmt(RGB565);
-        case 0x40000: return core->gpuRender.setColbufFmt(RGBA4);
+        case 0x00002: return core->gpuRender.setColbufFmt(COL_RGBA8);
+        case 0x20000: return core->gpuRender.setColbufFmt(COL_RGB5A1);
+        case 0x30000: return core->gpuRender.setColbufFmt(COL_RGB565);
+        case 0x40000: return core->gpuRender.setColbufFmt(COL_RGBA4);
 
     default:
         // Catch unknown color buffer formats
@@ -459,6 +557,13 @@ void Gpu::writeVshAttrIdsL(uint32_t mask, uint32_t value) {
 void Gpu::writeVshAttrIdsH(uint32_t mask, uint32_t value) {
     // Write to the upper vertex shader attribute IDs
     gpuVshAttrIds = (gpuVshAttrIds & ~(uint64_t(mask) << 32)) | (uint64_t(value & mask) << 32);
+}
+
+void Gpu::writeVshOutMask(uint32_t mask, uint32_t value) {
+    // Write to the vertex shader output mask
+    mask &= 0x7FFFFFF;
+    gpuVshOutMask = (gpuVshOutMask & ~mask) | (value & mask);
+    updateOutMap();
 }
 
 void Gpu::writeVshFloatIdx(uint32_t mask, uint32_t value) {
