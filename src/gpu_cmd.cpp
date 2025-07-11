@@ -53,11 +53,13 @@ TEMPLATE4(void Gpu::writeVshInts, 0, uint32_t, uint32_t)
 
 FORCE_INLINE uint32_t Gpu::flt24e7to32e8(uint32_t value) {
     // Convert a 24-bit float with 7-bit exponent to 32-bit with 8-bit exponent
+    if (!(value & 0xFFFFFF)) return 0;
     return ((value << 8) & BIT(31)) | (((value & 0x7FFFFF) + 0x400000) << 7);
 }
 
 FORCE_INLINE uint32_t Gpu::flt32e7to32e8(uint32_t value) {
     // Convert a 32-bit float with 7-bit exponent to 32-bit with 8-bit exponent
+    if (!value) return 0;
     return (value & BIT(31)) | (((value & 0x7FFFFFFF) + 0x40000000) >> 1);
 }
 
@@ -116,9 +118,13 @@ void Gpu::drawAttrIdx(uint32_t idx) {
                 continue;
             }
 
-            // Handle components based on format and write them to their mapped input ID
+            // Fill in default values that aren't provided by the array
             uint8_t fmt = (gpuAttrFmt >> (comp << 2)) & 0xF;
             uint8_t id = (gpuVshAttrIds >> (comp << 2)) & 0xF;
+            for (int k = 3; k > (fmt >> 2); k--)
+                input[id][k] = (k == 3) ? 1.0f : 0.0f;
+
+            // Handle components based on format and write them to their mapped input ID
             switch (fmt & 0x3) {
             case 0: // Signed byte
                 for (int k = 0; k <= (fmt >> 2); k++)

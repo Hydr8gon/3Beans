@@ -105,7 +105,7 @@ SoftVertex GpuRenderSoft::intersect(SoftVertex &v1, SoftVertex &v2, float x1, fl
 void GpuRenderSoft::getTexel(float &r, float &g, float &b, float &a, float s, float t, int i) {
     // Convert float texture coordinates to a swizzled memory offset
     uint32_t u = uint32_t(s * texWidths[i]) % texWidths[i];
-    uint32_t v = uint32_t(t * texHeights[i]) % texHeights[i];
+    uint32_t v = uint32_t(-t * texHeights[i]) % texHeights[i];
     uint32_t ofs = (u & 0x1) | ((u << 1) & 0x4) | ((u << 2) & 0x10);
     ofs |= ((v << 1) & 0x2) | ((v << 2) & 0x8) | ((v << 3) & 0x20);
     ofs += ((v & ~0x7) * texWidths[i]) + ((u & ~0x7) << 3);
@@ -401,9 +401,10 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
         }
     }
 
-    // Get final color values from the texture combiners
+    // Combine color values and discard fully transparent pixels
     float r, g, b, a;
     getCombine(r, g, b, a, p);
+    if (a == 0.0f) return;
 
     // Store the final color values based on buffer format if enabled
     if (!colbufMask) return; // TODO: use individual components
