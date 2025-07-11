@@ -68,7 +68,9 @@ public:
 
 private:
     Core *core;
+
     static void (GpuRenderSoft::*vshInstrs[0x40])(uint32_t);
+    static int16_t etc1Tables[8][4];
 
     SoftVertex vertices[3];
     uint32_t vtxCount = 0;

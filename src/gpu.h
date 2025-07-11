@@ -81,6 +81,8 @@ enum TexFmt {
     TEX_LA4,
     TEX_L4,
     TEX_A4,
+    TEX_ETC1,
+    TEX_ETC1A4,
     TEX_UNK
 };
 

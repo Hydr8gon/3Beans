@@ -260,7 +260,7 @@ template <int i> void Gpu::writeTexType(uint32_t mask, uint32_t value) {
     gpuTexType[i] = (gpuTexType[i] & ~mask) | (value & mask);
 
     // Set the format for the renderer if it's valid
-    if (gpuTexType[i] < 0xC)
+    if (gpuTexType[i] < 0xE)
         return core->gpuRender.setTexFmt(i, TexFmt(gpuTexType[i]));
     LOG_WARN("GPU texture %d set to unknown format: 0x%X\n", i, gpuTexType[i]);
     return core->gpuRender.setTexFmt(i, TEX_UNK);

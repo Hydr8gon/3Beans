@@ -22,7 +22,7 @@
 #include "core.h"
 
 // Lookup table for vertex shader instructions
-void (GpuRenderSoft::*GpuRenderSoft::vshInstrs[0x40])(uint32_t) {
+void (GpuRenderSoft::*GpuRenderSoft::vshInstrs[])(uint32_t) {
     &GpuRenderSoft::shdAdd, &GpuRenderSoft::shdDp3, &GpuRenderSoft::shdDp4, &GpuRenderSoft::shdDph, // 0x00-0x03
     &GpuRenderSoft::vshUnk, &GpuRenderSoft::vshUnk, &GpuRenderSoft::vshUnk, &GpuRenderSoft::vshUnk, // 0x04-0x07
     &GpuRenderSoft::shdMul, &GpuRenderSoft::shdSge, &GpuRenderSoft::shdSlt, &GpuRenderSoft::shdFlr, // 0x08-0x0B
@@ -39,6 +39,17 @@ void (GpuRenderSoft::*GpuRenderSoft::vshInstrs[0x40])(uint32_t) {
     &GpuRenderSoft::shdMadi, &GpuRenderSoft::shdMadi, &GpuRenderSoft::shdMadi, &GpuRenderSoft::shdMadi, // 0x34-0x37
     &GpuRenderSoft::shdMad, &GpuRenderSoft::shdMad, &GpuRenderSoft::shdMad, &GpuRenderSoft::shdMad, // 0x38-0x3B
     &GpuRenderSoft::shdMad, &GpuRenderSoft::shdMad, &GpuRenderSoft::shdMad, &GpuRenderSoft::shdMad // 0x3C-0x3F
+};
+
+int16_t GpuRenderSoft::etc1Tables[][4] {
+    { 2, 8, -2, -8 },
+    { 5, 17, -5, -17 },
+    { 9, 29, -9, -29 },
+    { 13, 42, -13, -42 },
+    { 18, 60, -18, -60 },
+    { 24, 80, -24, -80 },
+    { 33, 106, -33, -106 },
+    { 47, 183, -47, -183 }
 };
 
 GpuRenderSoft::GpuRenderSoft(Core *core): core(core) {
@@ -66,8 +77,8 @@ SoftVertex GpuRenderSoft::interpolate(SoftVertex &v1, SoftVertex &v2, float x1, 
     SoftVertex v;
     v.x = interpolate(v1.x, v2.x, x1, x, x2);
     v.y = interpolate(v1.y, v2.y, x1, x, x2);
+    v.z = interpolate(v1.z, v2.z, x1, x, x2);
     v.w = interpolate(v1.w, v2.w, x1, x, x2);
-    v.z = interpolate(v1.z * v1.w, v2.z * v2.w, x1, x, x2) / v.w;
     v.r = interpolate(v1.r * v1.w, v2.r * v2.w, x1, x, x2) / v.w;
     v.g = interpolate(v1.g * v1.w, v2.g * v2.w, x1, x, x2) / v.w;
     v.b = interpolate(v1.b * v1.w, v2.b * v2.w, x1, x, x2) / v.w;
@@ -184,6 +195,51 @@ void GpuRenderSoft::getTexel(float &r, float &g, float &b, float &a, float s, fl
     case TEX_UNK:
         r = g = b = a = 1.0f;
         return;
+    }
+
+    // Adjust the offset for 4x4 ETC1 tiles and read alpha if provided
+    uint8_t idx = (u & 0x3) * 4 + (v & 0x3);
+    if (texFmts[i] == TEX_ETC1A4) {
+        ofs = (ofs & ~0xF) + 8;
+        value = core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs - 8 + idx / 2);
+        a = float((value >> ((idx & 0x1) * 4)) & 0xF) / 0xF;
+    }
+    else {
+        ofs = (ofs & ~0xF) >> 1;
+        a = 1.0f;
+    }
+
+    // Decode an ETC1 texel based on the block it falls in and the base color mode
+    uint32_t val1 = core->memory.read<uint32_t>(ARM11, texAddrs[i] + ofs + 0);
+    uint32_t val2 = core->memory.read<uint32_t>(ARM11, texAddrs[i] + ofs + 4);
+    if ((!(val2 & BIT(0)) && (u & 0x3) < 2) || ((val2 & BIT(0)) && (v & 0x3) < 2)) { // Block 1
+        int16_t tbl = etc1Tables[(val2 >> 5) & 0x7][((val1 >> (idx + 15)) & 0x2) | ((val1 >> idx) & 0x1)];
+        if (val2 & BIT(1)) { // Differential
+            r = std::min(1.0f, std::max(0.0f, float(((val2 >> 27) & 0x1F) * 0x21 / 4 + tbl) / 255));
+            g = std::min(1.0f, std::max(0.0f, float(((val2 >> 19) & 0x1F) * 0x21 / 4 + tbl) / 255));
+            b = std::min(1.0f, std::max(0.0f, float(((val2 >> 11) & 0x1F) * 0x21 / 4 + tbl) / 255));
+        }
+        else { // Individual
+            r = std::min(1.0f, std::max(0.0f, float(((val2 >> 28) & 0xF) * 0x11 + tbl) / 255));
+            g = std::min(1.0f, std::max(0.0f, float(((val2 >> 20) & 0xF) * 0x11 + tbl) / 255));
+            b = std::min(1.0f, std::max(0.0f, float(((val2 >> 12) & 0xF) * 0x11 + tbl) / 255));
+        }
+    }
+    else { // Block 2
+        int16_t tbl = etc1Tables[(val2 >> 2) & 0x7][((val1 >> (idx + 15)) & 0x2) | ((val1 >> idx) & 0x1)];
+        if (val2 & BIT(1)) { // Differential
+            int8_t diff = int8_t(val2 >> 19) >> 5;
+            r = std::min(1.0f, std::max(0.0f, float((((val2 >> 27) & 0x1F) + diff) * 0x21 / 4 + tbl) / 255));
+            diff = int8_t(val2 >> 11) >> 5;
+            g = std::min(1.0f, std::max(0.0f, float((((val2 >> 19) & 0x1F) + diff) * 0x21 / 4 + tbl) / 255));
+            diff = int8_t(val2 >> 3) >> 5;
+            b = std::min(1.0f, std::max(0.0f, float((((val2 >> 11) & 0x1F) + diff) * 0x21 / 4 + tbl) / 255));
+        }
+        else { // Individual
+            r = std::min(1.0f, std::max(0.0f, float(((val2 >> 24) & 0xF) * 0x11 + tbl) / 255));
+            g = std::min(1.0f, std::max(0.0f, float(((val2 >> 16) & 0xF) * 0x11 + tbl) / 255));
+            b = std::min(1.0f, std::max(0.0f, float(((val2 >> 8) & 0xF) * 0x11 + tbl) / 255));
+        }
     }
 }
 
@@ -354,17 +410,17 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
     switch (depbufFmt) {
     case DEP_16:
         val = core->memory.read<uint16_t>(ARM11, depbufAddr + ofs * 2);
-        depth = float(val) / 0xFFFF;
+        depth = -float(val) / 0xFFFF;
         break;
     case DEP_24:
         val = core->memory.read<uint8_t>(ARM11, depbufAddr + ofs * 3 + 0) << 0;
         val |= core->memory.read<uint8_t>(ARM11, depbufAddr + ofs * 3 + 1) << 8;
         val |= core->memory.read<uint8_t>(ARM11, depbufAddr + ofs * 3 + 2) << 16;
-        depth = float(val) / 0xFFFFFF;
+        depth = -float(val) / 0xFFFFFF;
         break;
     case DEP_24S8:
         val = core->memory.read<uint32_t>(ARM11, depbufAddr + ofs * 4) & 0xFFFFFF;
-        depth = float(val) / 0xFFFFFF;
+        depth = -float(val) / 0xFFFFFF;
         break;
     }
 
@@ -372,39 +428,39 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
     switch (depthFunc) {
         case DEPTH_NV: return;
         case DEPTH_AL: break;
-        case DEPTH_EQ: if (p.z == depth) break; return;
-        case DEPTH_NE: if (p.z != depth) break; return;
-        case DEPTH_LT: if (p.z < depth) break; return;
-        case DEPTH_LE: if (p.z <= depth) break; return;
-        case DEPTH_GT: if (p.z > depth) break; return;
-        case DEPTH_GE: if (p.z >= depth) break; return;
-    }
-
-    // Store the incoming depth value based on buffer format if enabled
-    if (depbufMask & BIT(1)) {
-        switch (depbufFmt) {
-        case DEP_16:
-            val = std::min<int>(0xFFFF, std::max<int>(0, p.z * 0xFFFF));
-            core->memory.write<uint16_t>(ARM11, depbufAddr + ofs * 2, val);
-            break;
-        case DEP_24:
-            val = std::min<int>(0xFFFFFF, std::max<int>(0, p.z * 0xFFFFFF));
-            core->memory.write<uint8_t>(ARM11, depbufAddr + ofs * 3 + 0, val >> 0);
-            core->memory.write<uint8_t>(ARM11, depbufAddr + ofs * 3 + 1, val >> 8);
-            core->memory.write<uint8_t>(ARM11, depbufAddr + ofs * 3 + 2, val >> 16);
-            break;
-        case DEP_24S8:
-            val = std::min<int>(0xFFFFFF, std::max<int>(0, p.z * 0xFFFFFF));
-            val |= core->memory.read<uint8_t>(ARM11, depbufAddr + ofs * 4 + 3) << 24;
-            core->memory.write<uint32_t>(ARM11, depbufAddr + ofs * 4, val);
-            break;
-        }
+        case DEPTH_EQ: if (depth == p.z) break; return;
+        case DEPTH_NE: if (depth != p.z) break; return;
+        case DEPTH_LT: if (depth < p.z) break; return;
+        case DEPTH_LE: if (depth <= p.z) break; return;
+        case DEPTH_GT: if (depth > p.z) break; return;
+        case DEPTH_GE: if (depth >= p.z) break; return;
     }
 
     // Combine color values and discard fully transparent pixels
     float r, g, b, a;
     getCombine(r, g, b, a, p);
     if (a == 0.0f) return;
+
+    // Store the incoming depth value based on buffer format if enabled
+    if (depbufMask & BIT(1)) {
+        switch (depbufFmt) {
+        case DEP_16:
+            val = std::min<int>(0xFFFF, std::max<int>(0, -p.z * 0xFFFF));
+            core->memory.write<uint16_t>(ARM11, depbufAddr + ofs * 2, val);
+            break;
+        case DEP_24:
+            val = std::min<int>(0xFFFFFF, std::max<int>(0, -p.z * 0xFFFFFF));
+            core->memory.write<uint8_t>(ARM11, depbufAddr + ofs * 3 + 0, val >> 0);
+            core->memory.write<uint8_t>(ARM11, depbufAddr + ofs * 3 + 1, val >> 8);
+            core->memory.write<uint8_t>(ARM11, depbufAddr + ofs * 3 + 2, val >> 16);
+            break;
+        case DEP_24S8:
+            val = std::min<int>(0xFFFFFF, std::max<int>(0, -p.z * 0xFFFFFF));
+            val |= core->memory.read<uint8_t>(ARM11, depbufAddr + ofs * 4 + 3) << 24;
+            core->memory.write<uint32_t>(ARM11, depbufAddr + ofs * 4, val);
+            break;
+        }
+    }
 
     // Store the final color values based on buffer format if enabled
     if (!colbufMask) return; // TODO: use individual components
@@ -435,17 +491,6 @@ void GpuRenderSoft::drawTriangle(SoftVertex &a, SoftVertex &b, SoftVertex &c) {
     if (v[0]->y > v[1]->y) std::swap(v[0], v[1]);
     if (v[0]->y > v[2]->y) std::swap(v[0], v[2]);
     if (v[1]->y > v[2]->y) std::swap(v[1], v[2]);
-
-    // Hack to skip an annoying polygon in Super Mario 3D Land
-    // TODO: remove this
-    bool hack = true;
-    for (int i = 0; i < 3; i++) {
-        if (fabsf(v[i]->x) != 1.0f || fabsf(v[i]->y) != 1.0f || v[i]->r != 1.0f || v[i]->g != 1.0f || v[i]->b != 1.0f) {
-            hack = false;
-            break;
-        }
-    }
-    if (hack) return;
 
     // Draw the pixels of a triangle by interpolating between X and Y bounds
     if (viewStepH <= 0 || viewStepV <= 0) return;
@@ -505,11 +550,12 @@ void GpuRenderSoft::clipTriangle(SoftVertex &a, SoftVertex &b, SoftVertex &c) {
         memcpy(vert, clip, size * sizeof(SoftVertex));
     }
 
-    // Apply X/Y perspective division and draw clipped triangles in a fan
+    // Apply XYZ perspective division and draw clipped triangles in a fan
     if (size < 3) return;
     for (int i = 0; i < size; i++) {
         vert[i].x /= vert[i].w;
         vert[i].y /= vert[i].w;
+        vert[i].z /= vert[i].w;
         if (i >= 2)
             drawTriangle(vert[0], vert[i - 1], vert[i]);
     }
