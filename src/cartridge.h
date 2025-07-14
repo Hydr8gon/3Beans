@@ -27,7 +27,8 @@ class Core;
 
 enum ReplyCmd {
     REPLY_NONE = 0,
-    REPLY_CHIP,
+    REPLY_CHIP1,
+    REPLY_CHIP2,
     REPLY_HEADER,
     REPLY_ROM,
     REPLY_PROM
@@ -38,6 +39,7 @@ public:
     Cartridge(Core *core, std::string &cartPath);
     ~Cartridge();
 
+    void updateSave();
     void ntrWordReady();
     void ctrWordReady();
 
@@ -76,8 +78,11 @@ private:
     static const uint16_t ctrClocks[8];
 
     FILE *cartFile = nullptr;
+    uint64_t cartSize = 0;
+    uint32_t cartId = -1;
     uint8_t *saveData = nullptr;
     uint32_t saveSize = 0;
+    uint32_t saveId = -1;
     std::string savePath;
     bool saveDirty = false;
 
@@ -112,6 +117,5 @@ private:
     uint32_t spiFifoIntStat = 0;
 
     uint32_t readCart(uint32_t address);
-    void updateSave();
     uint8_t spiTransfer(uint8_t value);
 };

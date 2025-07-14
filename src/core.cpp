@@ -105,9 +105,10 @@ void Core::endFrame() {
     running.store(false);
     fpsCount++;
 
-    // Update FPS and reset the counter every second
+    // Update the save file and FPS counter every second
     std::chrono::duration<double> fpsTime = std::chrono::steady_clock::now() - lastFpsTime;
     if (fpsTime.count() >= 1.0f) {
+        cartridge.updateSave();
         fps = fpsCount;
         fpsCount = 0;
         lastFpsTime = std::chrono::steady_clock::now();

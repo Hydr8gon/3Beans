@@ -198,7 +198,7 @@ void Aes::update() {
             cryptBlock<false>(cbc, cbc);
             if (aesCnt & BIT(19))
                 for (int i = 0; i < 4; i++)
-                    readFifo.push(src[(aesCnt & BIT(25)) ? (3 - i) : i]);
+                    readFifo.push(src[(aesCnt & BIT(24)) ? (3 - i) : i]);
             curExtra--;
             continue;
         }
@@ -208,7 +208,7 @@ void Aes::update() {
         switch (mode) {
         case 0: // CCM decrypt
             for (int i = 0, c = 1; i < 4; i++)
-                ctr[i] += c, c = (ctr[i] == 0);
+                ctr[i] += c, c &= (ctr[i] == 0);
             cryptBlock<false>(ctr, dst);
             for (int i = 0; i < 4; i++)
                 cbc[i] ^= (dst[i] ^= src[i]);
@@ -217,7 +217,7 @@ void Aes::update() {
 
         case 1: // CCM encrypt
             for (int i = 0, c = 1; i < 4; i++)
-                ctr[i] += c, c = (ctr[i] == 0);
+                ctr[i] += c, c &= (ctr[i] == 0);
             cryptBlock<false>(ctr, dst);
             for (int i = 0; i < 4; i++)
                 cbc[i] ^= src[i], dst[i] ^= src[i];
@@ -228,7 +228,7 @@ void Aes::update() {
             cryptBlock<false>(ctr, dst);
             for (int i = 0, c = 1; i < 4; i++) {
                 ctr[i] += c;
-                c = (ctr[i] == 0);
+                c &= (ctr[i] == 0);
                 dst[i] ^= src[i];
             }
             break;
@@ -258,7 +258,7 @@ void Aes::update() {
 
         // Send an output block to the read FIFO based on endian settings
         for (int i = 0; i < 4; i++)
-            readFifo.push(dst[(aesCnt & BIT(25)) ? (3 - i) : i]);
+            readFifo.push(dst[(aesCnt & BIT(24)) ? (3 - i) : i]);
 
         // Disable the FIFO once all blocks are processed and trigger an interrupt if enabled
         if (--curBlock > 0) continue;
@@ -284,7 +284,7 @@ void Aes::update() {
         if (mode == 1) { // Encrypt
             // Append the MAC to the output data (possibly overflowing the FIFO, but that's fine)
             for (int i = 0; i < 4; i++) {
-                int j = (aesCnt & BIT(25)) ? (3 - i) : i;
+                int j = (aesCnt & BIT(24)) ? (3 - i) : i;
                 readFifo.push(cbc[j] & mask[j]);
             }
         }
@@ -355,7 +355,7 @@ void Aes::generateKey(int i) {
 uint32_t Aes::readRdfifo() {
     // Pop a value from the read FIFO based on endian settings
     if (readFifo.empty()) return aesRdfifo;
-    aesRdfifo = (aesCnt & BIT(23)) ? BSWAP32(readFifo.front()) : readFifo.front();
+    aesRdfifo = (aesCnt & BIT(22)) ? BSWAP32(readFifo.front()) : readFifo.front();
     readFifo.pop();
     triggerFifo();
     return aesRdfifo;

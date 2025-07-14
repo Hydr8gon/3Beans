@@ -24,18 +24,40 @@ const uint16_t Cartridge::ctrClocks[] = { 64, 80, 96, 128, 160, 256, 256, 256 };
 
 Cartridge::Cartridge(Core *core, std::string &cartPath): core(core) {
     // Open a cartridge file if a path was provided
-    if (cartPath.empty()) return;
-    cartFile = fopen(cartPath.c_str(), "rb");
+    if (cartPath.empty() || !(cartFile = fopen(cartPath.c_str(), "rb"))) return;
     cfg9CardPower &= ~BIT(0); // Inserted
 
-    // Create a 512KB save and try to load data from a file
-    // TODO: support other sizes and add some sort of detection
-    saveData = new uint8_t[saveSize = 0x80000];
-    memset(saveData, 0xFF, saveSize);
+    // Determine a 3DS cartridge ID based on ROM size, from 128MB to 4GB
+    fseek(cartFile, 0, SEEK_END);
+    cartSize = ftell(cartFile);
+    const uint8_t ids[] = { 0x7F, 0xFF, 0xFE, 0xFA, 0xF8, 0xF0 };
+    uint8_t idx = 0;
+    while ((0x8000000 << idx) < cartSize && idx < 5) idx++;
+    cartId = 0x900000C2 | (ids[idx] << 8);
+
+    // Open a save file associated with the ROM if it exists
     savePath = cartPath.substr(0, cartPath.rfind('.')) + ".sav";
-    if (FILE *file = fopen(savePath.c_str(), "rb")) {
-        fread(saveData, sizeof(uint8_t), saveSize, file);
-        fclose(file);
+    if (FILE *saveFile = fopen(savePath.c_str(), "rb")) {
+        // Determine a 3DS save ID based on size, up to 8MB
+        fseek(saveFile, 0, SEEK_END);
+        saveSize = ftell(saveFile);
+        uint8_t id = 0;
+        while ((1 << id) < saveSize && id < 0x17) id++;
+        saveId = (id << 16) | 0x22C2;
+
+        // Allocate save data and fill it with the file contents
+        saveData = new uint8_t[1 << id];
+        memset(saveData, 0xFF, saveSize);
+        fseek(saveFile, 0, SEEK_SET);
+        fread(saveData, sizeof(uint8_t), std::min(saveSize, 1U << id), saveFile);
+        saveSize = (1 << id);
+        fclose(saveFile);
+    }
+    else {
+        // Create a new save file and assume 512KB size
+        saveId = 0x1322C2;
+        saveData = new uint8_t[saveSize = 0x80000];
+        memset(saveData, 0xFF, saveSize);
     }
 }
 
@@ -47,6 +69,7 @@ Cartridge::~Cartridge() {
 
 uint32_t Cartridge::readCart(uint32_t address) {
     // Read a value from cartridge ROM, loading new blocks from file as necessary
+    if (address >= cartSize) return 0xFFFFFFFF;
     if (((address ^ cartBase) >> 11) != 0) {
         cartBase = (address & ~0x7FF);
         fseek(cartFile, cartBase, SEEK_SET);
@@ -58,10 +81,10 @@ uint32_t Cartridge::readCart(uint32_t address) {
 void Cartridge::updateSave() {
     // Update the save file if its data changed
     if (!saveDirty) return;
-    if (FILE *file = fopen(savePath.c_str(), "wb")) {
+    if (FILE *saveFile = fopen(savePath.c_str(), "wb")) {
         LOG_INFO("Writing updated save file to disk\n");
-        fwrite(saveData, sizeof(uint8_t), saveSize, file);
-        fclose(file);
+        fwrite(saveData, sizeof(uint8_t), saveSize, saveFile);
+        fclose(saveFile);
         saveDirty = false;
     }
 }
@@ -87,9 +110,13 @@ void Cartridge::ctrWordReady() {
 
     // Push a value to the FIFO based on the current CTRCARD reply state
     switch (ctrReply) {
-    case REPLY_CHIP:
-        // Reply with a standard 3DS cartridge chip ID
-        return ctrFifo.push(0x9000E2C2);
+    case REPLY_CHIP1:
+        // Reply with the primary 3DS cartridge chip ID
+        return ctrFifo.push(cartId);
+
+    case REPLY_CHIP2:
+        // Reply with the secondary 3DS cartridge chip ID (empty?)
+        return ctrFifo.push(0);
 
     case REPLY_HEADER:
         // Reply with data from the initial cartridge header
@@ -166,14 +193,23 @@ uint8_t Cartridge::spiTransfer(uint8_t value) {
         spiStatus |= BIT(1);
         return 0;
 
+    case 0x20: // Erase 4KB
+        // Set the 3-byte address to erase
+        if (spiTotal <= 4 && spiTotal >= 2)
+            spiAddress |= value << ((4 - spiTotal) * 8);
+
+        // On the last write, erase a 4KB block if enabled
+        if (spiTotal != 4 || !(spiStatus & BIT(1))) return 0;
+        for (int i = 0; i < 0x1000; i++)
+            if (spiAddress + i < saveSize)
+                saveData[spiAddress + i] = 0xFF, saveDirty = true;
+        return 0;
+
     case 0x9F: // Read ID
-        // Return the ID of a 512KB Macronix FLASH chip
-        switch (spiTotal) {
-            case 2: return 0xC2;
-            case 3: return 0x22;
-            case 4: return 0x13;
-            default: return 0xFF;
-        }
+        // Read the 3DS cartridge save ID
+        if (spiTotal <= 4 && spiTotal >= 2)
+            return saveId >> ((spiTotal - 2) * 8);
+        return 0;
 
     default:
         // Catch SPICARD accesses with unknown commands
@@ -203,9 +239,13 @@ uint32_t Cartridge::readNtrData() {
 
     // Return a value based on the current NTRCARD reply state
     switch (ntrReply) {
-    case REPLY_CHIP:
-        // Reply with a standard 3DS cartridge chip ID
-        return 0x9000E2C2;
+    case REPLY_CHIP1:
+        // Reply with the primary 3DS cartridge chip ID
+        return cartId;
+
+    case REPLY_CHIP2:
+        // Reply with the secondary 3DS cartridge chip ID (empty?)
+        return 0;
 
     default:
         // Reply with all high bits when there's no data
@@ -274,9 +314,14 @@ void Cartridge::writeNtrRomcnt(uint32_t mask, uint32_t value) {
     // Interpret the NTRCARD command
     if (cartFile && !ctrMode) {
         switch (cmd >> 56) {
-        case 0x90: case 0xA0: // Chip ID
-            // Switch to chip ID reply state
-            ntrReply = REPLY_CHIP;
+        case 0x90: // Chip ID 1
+            // Switch to primary chip ID reply state
+            ntrReply = REPLY_CHIP1;
+            break;
+
+        case 0xA0: // Chip ID 2
+            // Switch to secondary chip ID reply state
+            ntrReply = REPLY_CHIP2;
             break;
 
         case 0x3E: // CTRCARD mode
@@ -335,9 +380,14 @@ void Cartridge::writeCtrCnt(uint32_t mask, uint32_t value) {
     // Interpret the CTRCARD command
     if (cartFile && ctrMode) {
         switch (cmdH >> 56) {
-        case 0xA2: case 0xA3: // Chip ID
-            // Switch to chip ID reply state
-            ctrReply = REPLY_CHIP;
+        case 0xA2: // Chip ID 1
+            // Switch to primary chip ID reply state
+            ctrReply = REPLY_CHIP1;
+            break;
+
+        case 0xA3: // Chip ID 2
+            // Switch to secondary chip ID reply state
+            ctrReply = REPLY_CHIP2;
             break;
 
         case 0x82: // Header
@@ -421,9 +471,8 @@ void Cartridge::writeSpiFifoSelect(uint32_t mask, uint32_t value) {
     spiFifoSelect = (spiFifoSelect & ~mask) | (value & mask);
 
     // Reset SPICARD transfer state when the chip is deselected
-    if (spiFifoSelect) return;
-    spiTotal = 0;
-    updateSave();
+    if (!spiFifoSelect)
+        spiTotal = 0;
 }
 
 void Cartridge::writeSpiFifoBlklen(uint32_t mask, uint32_t value) {
