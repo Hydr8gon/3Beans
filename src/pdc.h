@@ -37,12 +37,14 @@ public:
     uint32_t readFramebufFormat(int i) { return pdcFramebufFormat[i]; }
     uint32_t readInterruptType(int i) { return pdcInterruptType[i]; }
     uint32_t readFramebufSelAck(int i) { return pdcFramebufSelAck[i]; }
+    uint32_t readFramebufStep(int i) { return pdcFramebufStep[i]; }
 
     void writeFramebufLt0(int i, uint32_t mask, uint32_t value);
     void writeFramebufLt1(int i, uint32_t mask, uint32_t value);
     void writeFramebufFormat(int i, uint32_t mask, uint32_t value);
     void writeInterruptType(int i, uint32_t mask, uint32_t value);
     void writeFramebufSelAck(int i, uint32_t mask, uint32_t value);
+    void writeFramebufStep(int i, uint32_t mask, uint32_t value);
 
 private:
     Core *core;
@@ -56,6 +58,7 @@ private:
     uint32_t pdcFramebufFormat[2] = {};
     uint32_t pdcInterruptType[2] = {};
     uint32_t pdcFramebufSelAck[2] = {};
+    uint32_t pdcFramebufStep[2] = {};
 
     void drawScreen(int i, uint32_t *buffer);
 };

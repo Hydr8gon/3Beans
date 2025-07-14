@@ -254,6 +254,67 @@ void Gpu::writeMemcpyCnt(uint32_t mask, uint32_t value) {
         }
         return;
 
+    case 0x2: // RGB565
+        for (int y0 = yStart, y1 = 0; y0 != yEnd; y0 += yInc, y1++) {
+            for (int x = 0; x < dstWidth; x++) {
+                switch (scaleType) {
+                default: // No downscale
+                    ofs = (((y0 >> 3) * (srcWidth >> 3) + (x >> 3)) << 7) + ((y0 & 0x7) << 4) + ((x & 0x7) << 1);
+                    c0 = core->memory.read<uint16_t>(ARM11, srcAddr + ofs);
+                    r = ((c0 >> 11) & 0x1F);
+                    g = ((c0 >> 5) & 0x3F);
+                    b = ((c0 >> 0) & 0x1F);
+                    break;
+
+                case 0x1: // 2x1 downscale
+                    ofs = (((y0 >> 3) * (srcWidth >> 3) + (x >> 2)) << 7) + ((y0 & 0x7) << 4) + ((x & 0x3) << 2);
+                    c0 = core->memory.read<uint16_t>(ARM11, srcAddr + ofs + 0 * 2);
+                    c1 = core->memory.read<uint16_t>(ARM11, srcAddr + ofs + 1 * 2);
+                    r = (((c0 >> 11) & 0x1F) + ((c1 >> 11) & 0x1F)) / 2;
+                    g = (((c0 >> 5) & 0x3F) + ((c1 >> 5) & 0x3F)) / 2;
+                    b = (((c0 >> 0) & 0x1F) + ((c1 >> 0) & 0x1F)) / 2;
+                    break;
+
+                case 0x2: // 2x2 downscale
+                    ofs = (((y0 >> 2) * (srcWidth >> 3) + (x >> 2)) << 7) + ((y0 & 0x3) << 5) + ((x & 0x3) << 2);
+                    c0 = core->memory.read<uint32_t>(ARM11, srcAddr + ofs + 0 * 2);
+                    c1 = core->memory.read<uint32_t>(ARM11, srcAddr + ofs + 1 * 2);
+                    c2 = core->memory.read<uint32_t>(ARM11, srcAddr + ofs + 8 * 2);
+                    c3 = core->memory.read<uint32_t>(ARM11, srcAddr + ofs + 9 * 2);
+                    r = (((c0 >> 11) & 0x1F) + ((c1 >> 11) & 0x1F) + ((c2 >> 11) & 0x1F) + ((c3 >> 11) & 0x1F)) / 4;
+                    g = (((c0 >> 5) & 0x3F) + ((c1 >> 5) & 0x3F) + ((c2 >> 5) & 0x3F) + ((c3 >> 5) & 0x3F)) / 4;
+                    b = (((c0 >> 0) & 0x1F) + ((c1 >> 0) & 0x1F) + ((c2 >> 0) & 0x1F) + ((c3 >> 0) & 0x1F)) / 4;
+                    break;
+                }
+
+                switch (dstFmt) {
+                case 0x0: // RGBA8
+                case 0x1: // RGB8
+                    LOG_CRIT("Invalid destination format for RGB565 display copy: 0x%X\n", dstFmt);
+                    return;
+
+                case 0x2: // RGB565
+                    ofs = (y1 * dstWidth + x) * 2;
+                    c0 = (r << 11) | (g << 5) | b;
+                    core->memory.write<uint16_t>(ARM11, dstAddr + ofs, c0);
+                    continue;
+
+                case 0x3: // RGB5A1
+                    ofs = (y1 * dstWidth + x) * 2;
+                    c0 = (r << 11) | ((g * 31 / 63) << 6) | (b << 1) | 0x1;
+                    core->memory.write<uint16_t>(ARM11, dstAddr + ofs, c0);
+                    continue;
+
+                default: // RGBA4
+                    ofs = (y1 * dstWidth + x) * 2;
+                    c0 = ((r * 15 / 31) << 12) | ((g * 15 / 63) << 8) | ((b * 15 / 31) << 4) | 0xF;
+                    core->memory.write<uint16_t>(ARM11, dstAddr + ofs, c0);
+                    continue;
+                }
+            }
+        }
+        return;
+
     default:
         LOG_CRIT("Unimplemented GPU display copy source format: 0x%X\n", srcFmt);
         return;
