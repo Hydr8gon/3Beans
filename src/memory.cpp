@@ -346,6 +346,12 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
             DEF_IO08(0x10141311, data = core->interrupts.readCfg11MpBootcnt(1)) // CFG11_MP_BOOTCNT1
             DEF_IO08(0x10141312, data = core->interrupts.readCfg11MpBootcnt(2)) // CFG11_MP_BOOTCNT2
             DEF_IO08(0x10141313, data = core->interrupts.readCfg11MpBootcnt(3)) // CFG11_MP_BOOTCNT3
+            DEF_IO32(0x10142800, data = core->input.readSpiFifoCnt()) // SPIBUS1_FIFO_CNT
+            DEF_IO32(0x10142804, data = core->input.readSpiFifoSelect()) // SPIBUS1_FIFO_SELECT
+            DEF_IO32(0x10142808, data = core->input.readSpiFifoBlklen()) // SPIBUS1_FIFO_BLKLEN
+            DEF_IO32(0x1014280C, data = core->input.readSpiFifoData()) // SPIBUS1_FIFO_DATA
+            DEF_IO32(0x10142818, data = core->input.readSpiFifoIntMask()) // SPIBUS1_FIFO_INT_MASK
+            DEF_IO32(0x1014281C, data = core->input.readSpiFifoIntStat()) // SPIBUS1_FIFO_INT_STAT
             DEF_IO08(0x10144000, data = core->i2c.readBusData(1)) // I2C_BUS1_DATA
             DEF_IO08(0x10144001, data = core->i2c.readBusCnt(1)) // I2C_BUS1_CNT
             DEF_IO16(0x10146000, data = core->input.readHidPad()) // HID_PAD
@@ -1665,6 +1671,12 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
             DEF_IO32(0x10141304, writeCfg11MpCnt(IO_PARAMS)) // CFG11_MP_CNT
             DEF_IO08(0x10141312, core->interrupts.writeCfg11MpBootcnt(2, IO_PARAMS8)) // CFG11_MP_BOOTCNT2
             DEF_IO08(0x10141313, core->interrupts.writeCfg11MpBootcnt(3, IO_PARAMS8)) // CFG11_MP_BOOTCNT3
+            DEF_IO32(0x10142800, core->input.writeSpiFifoCnt(IO_PARAMS)) // SPIBUS1_FIFO_CNT
+            DEF_IO32(0x10142804, core->input.writeSpiFifoSelect(IO_PARAMS)) // SPIBUS1_FIFO_SELECT
+            DEF_IO32(0x10142808, core->input.writeSpiFifoBlklen(IO_PARAMS)) // SPIBUS1_FIFO_BLKLEN
+            DEF_IO32(0x1014280C, core->input.writeSpiFifoData(IO_PARAMS)) // SPIBUS1_FIFO_DATA
+            DEF_IO32(0x10142818, core->input.writeSpiFifoIntMask(IO_PARAMS)) // SPIBUS1_FIFO_INT_MASK
+            DEF_IO32(0x1014281C, core->input.writeSpiFifoIntStat(IO_PARAMS)) // SPIBUS1_FIFO_INT_STAT
             DEF_IO08(0x10144000, core->i2c.writeBusData(1, IO_PARAMS8)) // I2C_BUS1_DATA
             DEF_IO08(0x10144001, core->i2c.writeBusCnt(1, IO_PARAMS8)) // I2C_BUS1_CNT
             DEF_IO08(0x10148000, core->i2c.writeBusData(2, IO_PARAMS8)) // I2C_BUS2_DATA

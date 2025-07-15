@@ -29,10 +29,45 @@ public:
 
     void pressKey(int key);
     void releaseKey(int key);
+    void pressScreen(int x, int y);
+    void releaseScreen();
+    void setLStick(int x, int y);
 
+    uint32_t readSpiFifoCnt() { return spiFifoCnt; }
+    uint32_t readSpiFifoSelect() { return spiFifoSelect; }
+    uint32_t readSpiFifoBlklen() { return spiFifoBlklen; }
+    uint32_t readSpiFifoData();
+    uint32_t readSpiFifoIntMask() { return spiFifoIntMask; }
+    uint32_t readSpiFifoIntStat() { return spiFifoIntStat; }
     uint16_t readHidPad() { return hidPad; }
+
+    void writeSpiFifoCnt(uint32_t mask, uint32_t value);
+    void writeSpiFifoSelect(uint32_t mask, uint32_t value);
+    void writeSpiFifoBlklen(uint32_t mask, uint32_t value);
+    void writeSpiFifoData(uint32_t mask, uint32_t value);
+    void writeSpiFifoIntMask(uint32_t mask, uint32_t value);
+    void writeSpiFifoIntStat(uint32_t mask, uint32_t value);
 
 private:
     Core *core;
+
+    uint16_t stickLX = 0x7FF;
+    uint16_t stickLY = 0x7FF;
+    uint16_t touchX = 0xFFF;
+    uint16_t touchY = 0xFFF;
+    bool touchActive = false;
+
+    uint32_t spiCount = 0;
+    uint32_t spiTotal = 0;
+    uint8_t spiIndex = 0;
+    uint8_t spiPage = 0;
+
+    uint32_t spiFifoCnt = 0;
+    uint32_t spiFifoSelect = 0;
+    uint32_t spiFifoBlklen = 0;
+    uint32_t spiFifoIntMask = 0;
+    uint32_t spiFifoIntStat = 0;
     uint16_t hidPad = 0xFFF;
+
+    uint8_t spiTransfer(uint8_t value);
 };

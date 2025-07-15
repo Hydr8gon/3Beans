@@ -33,6 +33,7 @@ public:
 private:
     b3Frame *frame;
     wxGLContext *context;
+    bool stickKeys[5] = {};
 
     std::chrono::steady_clock::time_point lastRateTime;
     int frameCount = 0;
@@ -45,9 +46,13 @@ private:
     uint32_t x = 0;
     uint32_t y = 0;
 
+    void updateKeyStick();
+
     void draw(wxPaintEvent &event);
     void resize(wxSizeEvent &event);
     void pressKey(wxKeyEvent &event);
     void releaseKey(wxKeyEvent &event);
+    void pressScreen(wxMouseEvent &event);
+    void releaseScreen(wxMouseEvent &event);
     wxDECLARE_EVENT_TABLE();
 };

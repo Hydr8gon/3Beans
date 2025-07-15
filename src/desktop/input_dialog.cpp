@@ -32,6 +32,11 @@ enum InputEvent {
     REMAP_L,
     REMAP_X,
     REMAP_Y,
+    REMAP_LRIGHT,
+    REMAP_LLEFT,
+    REMAP_LUP,
+    REMAP_LDOWN,
+    REMAP_LMOD,
     CLEAR_MAP
 };
 
@@ -48,6 +53,11 @@ EVT_BUTTON(REMAP_R, InputDialog::remapKey<8>)
 EVT_BUTTON(REMAP_L, InputDialog::remapKey<9>)
 EVT_BUTTON(REMAP_X, InputDialog::remapKey<10>)
 EVT_BUTTON(REMAP_Y, InputDialog::remapKey<11>)
+EVT_BUTTON(REMAP_LRIGHT, InputDialog::remapKey<12>)
+EVT_BUTTON(REMAP_LLEFT, InputDialog::remapKey<13>)
+EVT_BUTTON(REMAP_LUP, InputDialog::remapKey<14>)
+EVT_BUTTON(REMAP_LDOWN, InputDialog::remapKey<15>)
+EVT_BUTTON(REMAP_LMOD, InputDialog::remapKey<16>)
 EVT_BUTTON(CLEAR_MAP, InputDialog::clearMap)
 EVT_BUTTON(wxID_OK, InputDialog::confirm)
 EVT_CHAR_HOOK(InputDialog::pressKey)
@@ -171,12 +181,17 @@ InputDialog::InputDialog(): wxDialog(nullptr, wxID_ANY, "Input Bindings") {
     int size = dummy->GetSize().y;
     delete dummy;
 
-    // Load the current key bindings
+    // Load the current key bindings and define strings
     memcpy(keyBinds, b3App::keyBinds, sizeof(keyBinds));
+    const char *strs[] = {
+        "A Button:", "B Button:", "Select Button:", "Start Button:",
+        "D-Pad Right:", "D-Pad Left:", "D-Pad Up:", "D-Pad Down",
+        "R Button:", "L Button:", "X Button:", "Y Button:",
+        "Stick Right:", "Stick Left:", "Stick Up:", "Stick Down:", "Stick Mod:"
+    };
 
     // Set up the button settings
     wxBoxSizer *btnSizers[MAX_KEYS];
-    const char *strs[] = { "A:", "B:", "Select:", "Start:", "Right:", "Left:", "Up:", "Down", "R:", "L:", "X:", "Y:" };
     for (int i = 0; i < MAX_KEYS; i++) {
         btnSizers[i] = new wxBoxSizer(wxHORIZONTAL);
         btnSizers[i]->Add(new wxStaticText(this, wxID_ANY, strs[i]), 1, wxALIGN_CENTRE | wxRIGHT, size / 16);
@@ -193,18 +208,28 @@ InputDialog::InputDialog(): wxDialog(nullptr, wxID_ANY, "Input Bindings") {
     leftSizer->Add(btnSizers[3], 1, wxEXPAND | wxALL, size / 8);
     leftSizer->Add(btnSizers[2], 1, wxEXPAND | wxALL, size / 8);
 
+    // Combine all the middle settings
+    wxBoxSizer *middleSizer = new wxBoxSizer(wxVERTICAL);
+    middleSizer->Add(btnSizers[6], 1, wxEXPAND | wxALL, size / 8);
+    middleSizer->Add(btnSizers[7], 1, wxEXPAND | wxALL, size / 8);
+    middleSizer->Add(btnSizers[5], 1, wxEXPAND | wxALL, size / 8);
+    middleSizer->Add(btnSizers[4], 1, wxEXPAND | wxALL, size / 8);
+    middleSizer->Add(btnSizers[9], 1, wxEXPAND | wxALL, size / 8);
+    middleSizer->Add(btnSizers[8], 1, wxEXPAND | wxALL, size / 8);
+
     // Combine all the right settings
     wxBoxSizer *rightSizer = new wxBoxSizer(wxVERTICAL);
-    rightSizer->Add(btnSizers[6], 1, wxEXPAND | wxALL, size / 8);
-    rightSizer->Add(btnSizers[7], 1, wxEXPAND | wxALL, size / 8);
-    rightSizer->Add(btnSizers[5], 1, wxEXPAND | wxALL, size / 8);
-    rightSizer->Add(btnSizers[4], 1, wxEXPAND | wxALL, size / 8);
-    rightSizer->Add(btnSizers[9], 1, wxEXPAND | wxALL, size / 8);
-    rightSizer->Add(btnSizers[8], 1, wxEXPAND | wxALL, size / 8);
+    rightSizer->Add(btnSizers[14], 1, wxEXPAND | wxALL, size / 8);
+    rightSizer->Add(btnSizers[15], 1, wxEXPAND | wxALL, size / 8);
+    rightSizer->Add(btnSizers[13], 1, wxEXPAND | wxALL, size / 8);
+    rightSizer->Add(btnSizers[12], 1, wxEXPAND | wxALL, size / 8);
+    rightSizer->Add(btnSizers[16], 1, wxEXPAND | wxALL, size / 8);
+    rightSizer->Add(new wxStaticText(this, wxID_ANY, ""), 1, wxEXPAND | wxALL, size / 8);
 
-    // Combine both sides of settings
+    // Combine all the settings
     wxBoxSizer *buttonSizer = new wxBoxSizer(wxHORIZONTAL);
     buttonSizer->Add(leftSizer, 1, wxEXPAND | wxRIGHT, size / 8);
+    buttonSizer->Add(middleSizer, 1, wxEXPAND, size / 8);
     buttonSizer->Add(rightSizer, 1, wxEXPAND | wxLEFT, size / 8);
 
     // Set up the clear, cancel, and confirm buttons

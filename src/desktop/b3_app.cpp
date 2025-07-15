@@ -29,7 +29,10 @@ wxBEGIN_EVENT_TABLE(b3App, wxApp)
 EVT_TIMER(UPDATE, b3App::update)
 wxEND_EVENT_TABLE()
 
-int b3App::keyBinds[] = { 'L', 'K', 'G', 'H', 'D', 'A', 'W', 'S', 'P', 'Q', 'O', 'I' };
+int b3App::keyBinds[] = {
+    'L', 'K', 'G', 'H', WXK_RIGHT, WXK_LEFT, WXK_UP, WXK_DOWN, // A, B, Select, Start, D-pad
+    'P', 'Q', 'O', 'I', 'D', 'A', 'W', 'S', WXK_SHIFT // R, L, X, Y, L-stick
+};
 
 bool b3App::OnInit() {
     // Define and add platform-specific settings
@@ -45,7 +48,12 @@ bool b3App::OnInit() {
         Setting("keyR", &keyBinds[8], false),
         Setting("keyL", &keyBinds[9], false),
         Setting("keyX", &keyBinds[10], false),
-        Setting("keyY", &keyBinds[11], false)
+        Setting("keyY", &keyBinds[11], false),
+        Setting("keyLRight", &keyBinds[12], false),
+        Setting("keyLLeft", &keyBinds[13], false),
+        Setting("keyLUp", &keyBinds[14], false),
+        Setting("keyLDown", &keyBinds[15], false),
+        Setting("keyLMod", &keyBinds[16], false)
     };
     Settings::add(platSettings);
 

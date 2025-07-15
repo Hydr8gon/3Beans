@@ -30,6 +30,9 @@ EVT_PAINT(b3Canvas::draw)
 EVT_SIZE(b3Canvas::resize)
 EVT_KEY_DOWN(b3Canvas::pressKey)
 EVT_KEY_UP(b3Canvas::releaseKey)
+EVT_LEFT_DOWN(b3Canvas::pressScreen)
+EVT_MOTION(b3Canvas::pressScreen)
+EVT_LEFT_UP(b3Canvas::releaseScreen)
 wxEND_EVENT_TABLE()
 
 b3Canvas::b3Canvas(b3Frame *frame): wxGLCanvas(frame, wxID_ANY, nullptr), frame(frame) {
@@ -41,6 +44,30 @@ b3Canvas::b3Canvas(b3Frame *frame): wxGLCanvas(frame, wxID_ANY, nullptr), frame(
 void b3Canvas::finish() {
     // Tell the canvas to stop rendering
     finished = true;
+}
+
+void b3Canvas::updateKeyStick() {
+    // Apply the base stick movement from pressed keys
+    int stickX = 0, stickY = 0;
+    if (stickKeys[0]) stickX -= 0x7FF;
+    if (stickKeys[1]) stickX += 0x7FF;
+    if (stickKeys[2]) stickY += 0x7FF;
+    if (stickKeys[3]) stickY -= 0x7FF;
+
+    // Scale diagonals to create a round boundary
+    if (stickX && stickY) {
+        stickX = stickX * 0x5FF / 0x7FF;
+        stickY = stickY * 0x5FF / 0x7FF;
+    }
+
+    // Halve coordinates when the modifier is applied
+    if (stickKeys[4]) {
+        stickX /= 2;
+        stickY /= 2;
+    }
+
+    // Send stick coordinates to the core
+    frame->core->input.setLStick(stickX, stickY);
 }
 
 void b3Canvas::draw(wxPaintEvent &event) {
@@ -144,19 +171,48 @@ void b3Canvas::resize(wxSizeEvent &event) {
 void b3Canvas::pressKey(wxKeyEvent &event) {
     // Trigger a key press if a mapped key was pressed
     frame->mutex.lock();
-    if (frame->core)
-        for (int i = 0; i < MAX_KEYS; i++)
+    if (frame->core) {
+        for (int i = 0; i < 12; i++)
             if (event.GetKeyCode() == b3App::keyBinds[i])
                 frame->core->input.pressKey(i);
+        for (int i = 12; i < 17; i++)
+            if (event.GetKeyCode() == b3App::keyBinds[i])
+                stickKeys[i - 12] = true, updateKeyStick();
+    }
     frame->mutex.unlock();
 }
 
 void b3Canvas::releaseKey(wxKeyEvent &event) {
     // Trigger a key release if a mapped key was released
     frame->mutex.lock();
-    if (frame->core)
-        for (int i = 0; i < MAX_KEYS; i++)
+    if (frame->core) {
+        for (int i = 0; i < 12; i++)
             if (event.GetKeyCode() == b3App::keyBinds[i])
                 frame->core->input.releaseKey(i);
+        for (int i = 12; i < 17; i++)
+            if (event.GetKeyCode() == b3App::keyBinds[i])
+                stickKeys[i - 12] = false, updateKeyStick();
+    }
+    frame->mutex.unlock();
+}
+
+void b3Canvas::pressScreen(wxMouseEvent &event) {
+    // Calculate coordinates relative to the bottom screen if clicked
+    if (!event.LeftIsDown()) return;
+    int touchX = (int(event.GetX()) - x) * 400 / width - 40;
+    int touchY = (int(event.GetY()) - y) * 480 / height - 240;
+
+    // Send a screen press to the core
+    frame->mutex.lock();
+    if (frame->core)
+        frame->core->input.pressScreen(touchX, touchY);
+    frame->mutex.unlock();
+}
+
+void b3Canvas::releaseScreen(wxMouseEvent &event) {
+    // Send a screen release to the core
+    frame->mutex.lock();
+    if (frame->core)
+        frame->core->input.releaseScreen();
     frame->mutex.unlock();
 }
