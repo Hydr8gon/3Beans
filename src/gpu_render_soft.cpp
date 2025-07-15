@@ -73,22 +73,20 @@ float GpuRenderSoft::interpolate(float v1, float v2, float x1, float x, float x2
 }
 
 SoftVertex GpuRenderSoft::interpolate(SoftVertex &v1, SoftVertex &v2, float x1, float x, float x2) {
-    // Interpolate all values in a vertex with perspective correction
+    // Interpolate non-XY values in a vertex with perspective correction
     SoftVertex v;
-    v.x = interpolate(v1.x, v2.x, x1, x, x2);
-    v.y = interpolate(v1.y, v2.y, x1, x, x2);
-    v.z = interpolate(v1.z, v2.z, x1, x, x2);
-    v.w = interpolate(v1.w, v2.w, x1, x, x2);
-    v.r = interpolate(v1.r * v1.w, v2.r * v2.w, x1, x, x2) / v.w;
-    v.g = interpolate(v1.g * v1.w, v2.g * v2.w, x1, x, x2) / v.w;
-    v.b = interpolate(v1.b * v1.w, v2.b * v2.w, x1, x, x2) / v.w;
-    v.a = interpolate(v1.a * v1.w, v2.a * v2.w, x1, x, x2) / v.w;
-    v.s0 = interpolate(v1.s0 * v1.w, v2.s0 * v2.w, x1, x, x2) / v.w;
-    v.s1 = interpolate(v1.s1 * v1.w, v2.s1 * v2.w, x1, x, x2) / v.w;
-    v.s2 = interpolate(v1.s2 * v1.w, v2.s2 * v2.w, x1, x, x2) / v.w;
-    v.t0 = interpolate(v1.t0 * v1.w, v2.t0 * v2.w, x1, x, x2) / v.w;
-    v.t1 = interpolate(v1.t1 * v1.w, v2.t1 * v2.w, x1, x, x2) / v.w;
-    v.t2 = interpolate(v1.t2 * v1.w, v2.t2 * v2.w, x1, x, x2) / v.w;
+    v.z = 1.0f / interpolate(1.0f / v1.z, 1.0f / v2.z, x1, x, x2);
+    v.w = 1.0f / interpolate(1.0f / v1.w, 1.0f / v2.w, x1, x, x2);
+    v.r = interpolate(v1.r / v1.w, v2.r / v2.w, x1, x, x2) * v.w;
+    v.g = interpolate(v1.g / v1.w, v2.g / v2.w, x1, x, x2) * v.w;
+    v.b = interpolate(v1.b / v1.w, v2.b / v2.w, x1, x, x2) * v.w;
+    v.a = interpolate(v1.a / v1.w, v2.a / v2.w, x1, x, x2) * v.w;
+    v.s0 = interpolate(v1.s0 / v1.w, v2.s0 / v2.w, x1, x, x2) * v.w;
+    v.s1 = interpolate(v1.s1 / v1.w, v2.s1 / v2.w, x1, x, x2) * v.w;
+    v.s2 = interpolate(v1.s2 / v1.w, v2.s2 / v2.w, x1, x, x2) * v.w;
+    v.t0 = interpolate(v1.t0 / v1.w, v2.t0 / v2.w, x1, x, x2) * v.w;
+    v.t1 = interpolate(v1.t1 / v1.w, v2.t1 / v2.w, x1, x, x2) * v.w;
+    v.t2 = interpolate(v1.t2 / v1.w, v2.t2 / v2.w, x1, x, x2) * v.w;
     return v;
 }
 
@@ -210,37 +208,39 @@ void GpuRenderSoft::getTexel(float &r, float &g, float &b, float &a, float s, fl
     }
 
     // Decode an ETC1 texel based on the block it falls in and the base color mode
-    uint32_t val1 = core->memory.read<uint32_t>(ARM11, texAddrs[i] + ofs + 0);
-    uint32_t val2 = core->memory.read<uint32_t>(ARM11, texAddrs[i] + ofs + 4);
+    int32_t val1 = core->memory.read<uint32_t>(ARM11, texAddrs[i] + ofs + 0);
+    int32_t val2 = core->memory.read<uint32_t>(ARM11, texAddrs[i] + ofs + 4);
     if ((!(val2 & BIT(0)) && (u & 0x3) < 2) || ((val2 & BIT(0)) && (v & 0x3) < 2)) { // Block 1
         int16_t tbl = etc1Tables[(val2 >> 5) & 0x7][((val1 >> (idx + 15)) & 0x2) | ((val1 >> idx) & 0x1)];
         if (val2 & BIT(1)) { // Differential
-            r = std::min(1.0f, std::max(0.0f, float(((val2 >> 27) & 0x1F) * 0x21 / 4 + tbl) / 255));
-            g = std::min(1.0f, std::max(0.0f, float(((val2 >> 19) & 0x1F) * 0x21 / 4 + tbl) / 255));
-            b = std::min(1.0f, std::max(0.0f, float(((val2 >> 11) & 0x1F) * 0x21 / 4 + tbl) / 255));
+            r = float(((val2 >> 27) & 0x1F) * 0x21 / 4 + tbl);
+            g = float(((val2 >> 19) & 0x1F) * 0x21 / 4 + tbl);
+            b = float(((val2 >> 11) & 0x1F) * 0x21 / 4 + tbl);
         }
         else { // Individual
-            r = std::min(1.0f, std::max(0.0f, float(((val2 >> 28) & 0xF) * 0x11 + tbl) / 255));
-            g = std::min(1.0f, std::max(0.0f, float(((val2 >> 20) & 0xF) * 0x11 + tbl) / 255));
-            b = std::min(1.0f, std::max(0.0f, float(((val2 >> 12) & 0xF) * 0x11 + tbl) / 255));
+            r = float(((val2 >> 28) & 0xF) * 0x11 + tbl);
+            g = float(((val2 >> 20) & 0xF) * 0x11 + tbl);
+            b = float(((val2 >> 12) & 0xF) * 0x11 + tbl);
         }
     }
     else { // Block 2
         int16_t tbl = etc1Tables[(val2 >> 2) & 0x7][((val1 >> (idx + 15)) & 0x2) | ((val1 >> idx) & 0x1)];
         if (val2 & BIT(1)) { // Differential
-            int8_t diff = int8_t(val2 >> 19) >> 5;
-            r = std::min(1.0f, std::max(0.0f, float((((val2 >> 27) & 0x1F) + diff) * 0x21 / 4 + tbl) / 255));
-            diff = int8_t(val2 >> 11) >> 5;
-            g = std::min(1.0f, std::max(0.0f, float((((val2 >> 19) & 0x1F) + diff) * 0x21 / 4 + tbl) / 255));
-            diff = int8_t(val2 >> 3) >> 5;
-            b = std::min(1.0f, std::max(0.0f, float((((val2 >> 11) & 0x1F) + diff) * 0x21 / 4 + tbl) / 255));
+            r = float((((val2 >> 27) & 0x1F) + (int8_t(val2 >> 19) >> 5)) * 0x21 / 4 + tbl);
+            g = float((((val2 >> 19) & 0x1F) + (int8_t(val2 >> 11) >> 5)) * 0x21 / 4 + tbl);
+            b = float((((val2 >> 11) & 0x1F) + (int8_t(val2 >> 3) >> 5)) * 0x21 / 4 + tbl);
         }
         else { // Individual
-            r = std::min(1.0f, std::max(0.0f, float(((val2 >> 24) & 0xF) * 0x11 + tbl) / 255));
-            g = std::min(1.0f, std::max(0.0f, float(((val2 >> 16) & 0xF) * 0x11 + tbl) / 255));
-            b = std::min(1.0f, std::max(0.0f, float(((val2 >> 8) & 0xF) * 0x11 + tbl) / 255));
+            r = float(((val2 >> 24) & 0xF) * 0x11 + tbl);
+            g = float(((val2 >> 16) & 0xF) * 0x11 + tbl);
+            b = float(((val2 >> 8) & 0xF) * 0x11 + tbl);
         }
     }
+
+    // Normalize and clamp the final color values
+    r = std::min(1.0f, std::max(0.0f, r / 255));
+    g = std::min(1.0f, std::max(0.0f, g / 255));
+    b = std::min(1.0f, std::max(0.0f, b / 255));
 }
 
 void GpuRenderSoft::getSource(float &r, float &g, float &b, float &a, SoftVertex &v, int i, int j) {
@@ -494,15 +494,16 @@ void GpuRenderSoft::drawTriangle(SoftVertex &a, SoftVertex &b, SoftVertex &c) {
 
     // Draw the pixels of a triangle by interpolating between X and Y bounds
     if (viewStepH <= 0 || viewStepV <= 0) return;
-    float y1 = std::max(-1.0f, v[0]->y), y2 = std::min(1.0f, v[2]->y);
-    for (float y = y1; y < y2; y += viewStepV) {
+    for (float y = v[0]->y; y < v[2]->y; y += viewStepV) {
         int r = (y >= v[1]->y) ? 1 : 0;
         SoftVertex vl = interpolate(*v[0], *v[2], v[0]->y, y, v[2]->y);
+        vl.x = interpolate(v[0]->x, v[2]->x, v[0]->y, y, v[2]->y);
         SoftVertex vr = interpolate(*v[r], *v[r + 1], v[r]->y, y, v[r + 1]->y);
+        vr.x = interpolate(v[r]->x, v[r + 1]->x, v[r]->y, y, v[r + 1]->y);
         if (vl.x > vr.x) std::swap(vl, vr);
-        float x1 = std::max(-1.0f, vl.x), x2 = std::min(1.0f, vr.x);
-        for (float x = x1; x < x2; x += viewStepH) {
+        for (float x = vl.x; x < vr.x; x += viewStepH) {
             SoftVertex vm = interpolate(vl, vr, vl.x, x, vr.x);
+            vm.x = x, vm.y = y;
             drawPixel(vm);
         }
     }
