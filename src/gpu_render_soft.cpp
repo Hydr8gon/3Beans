@@ -399,11 +399,10 @@ void GpuRenderSoft::getCombine(float &r, float &g, float &b, float &a, SoftVerte
 }
 
 void GpuRenderSoft::drawPixel(SoftVertex &p) {
-    // Convert coordinates to screen space and check bounds
-    int x = p.x * viewScaleH + viewScaleH;
-    int y = p.y * signY * viewScaleV + viewScaleV;
+    // Check bounds and convert coordinates to an 8x8 tile offset
+    int x = p.x, y = p.y;
     if (x < 0 || x >= bufWidth || y < 0 || y >= bufHeight) return;
-    uint32_t val, ofs = (((y >> 3) * (bufWidth >> 3) + (x >> 3)) << 6) + ((y & 0x7) << 3) + (x & 0x7); // 8x8 tiles
+    uint32_t val, ofs = (((y >> 3) * (bufWidth >> 3) + (x >> 3)) << 6) + ((y & 0x7) << 3) + (x & 0x7);
 
     // Read a depth value to compare with based on buffer format
     float depth = 0.0f;
@@ -486,22 +485,32 @@ void GpuRenderSoft::drawTriangle(SoftVertex &a, SoftVertex &b, SoftVertex &c) {
     if ((cullMode == CULL_FRONT && (cross < 0)) || (cullMode == CULL_BACK && (cross > 0)))
         return;
 
+    // Scale the coordinate steps to screen space
+    if (viewStepH <= 0 || viewStepV <= 0) return;
+    float ys = viewStepV * viewScaleV;
+    float xs = viewStepH * viewScaleH;
+
+    // Scale the coordinates to screen space
+    SoftVertex v[3] = { a, b, c };
+    for (int i = 0; i < 3; i++) {
+        v[i].x = v[i].x * viewScaleH + viewScaleH;
+        v[i].y = v[i].y * viewScaleV * signY + viewScaleV;
+    }
+
     // Sort the vertices by increasing Y-coordinates
-    SoftVertex *v[3] = { &a, &b, &c };
-    if (v[0]->y > v[1]->y) std::swap(v[0], v[1]);
-    if (v[0]->y > v[2]->y) std::swap(v[0], v[2]);
-    if (v[1]->y > v[2]->y) std::swap(v[1], v[2]);
+    if (v[0].y > v[1].y) std::swap(v[0], v[1]);
+    if (v[0].y > v[2].y) std::swap(v[0], v[2]);
+    if (v[1].y > v[2].y) std::swap(v[1], v[2]);
 
     // Draw the pixels of a triangle by interpolating between X and Y bounds
-    if (viewStepH <= 0 || viewStepV <= 0) return;
-    for (float y = v[0]->y; y < v[2]->y; y += viewStepV) {
-        int r = (y >= v[1]->y) ? 1 : 0;
-        SoftVertex vl = interpolate(*v[0], *v[2], v[0]->y, y, v[2]->y);
-        vl.x = interpolate(v[0]->x, v[2]->x, v[0]->y, y, v[2]->y);
-        SoftVertex vr = interpolate(*v[r], *v[r + 1], v[r]->y, y, v[r + 1]->y);
-        vr.x = interpolate(v[r]->x, v[r + 1]->x, v[r]->y, y, v[r + 1]->y);
+    for (float y = floorf(v[0].y) + ys / 2; y < ceilf(v[2].y); y += ys) {
+        int r = (y >= v[1].y) ? 1 : 0;
+        SoftVertex vl = interpolate(v[0], v[2], v[0].y, y, v[2].y);
+        vl.x = interpolate(v[0].x, v[2].x, v[0].y, y, v[2].y);
+        SoftVertex vr = interpolate(v[r], v[r + 1], v[r].y, y, v[r + 1].y);
+        vr.x = interpolate(v[r].x, v[r + 1].x, v[r].y, y, v[r + 1].y);
         if (vl.x > vr.x) std::swap(vl, vr);
-        for (float x = vl.x; x < vr.x; x += viewStepH) {
+        for (float x = floorf(vl.x) + xs / 2; x < ceilf(vr.x); x += xs) {
             SoftVertex vm = interpolate(vl, vr, vl.x, x, vr.x);
             vm.x = x, vm.y = y;
             drawPixel(vm);

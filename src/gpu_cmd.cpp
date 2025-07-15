@@ -96,7 +96,10 @@ void Gpu::drawAttrIdx(uint32_t idx) {
     if (fixedDirty) {
         fixedDirty = false;
         for (uint32_t i = 0, f; i < 12; i++) {
-            if (~gpuAttrFmt & BITL(48 + i)) continue;
+            if (~gpuAttrFmt & BITL(48 + i)) {
+                memset(fixedBase[i], 0, sizeof(fixedBase[i]));
+                continue;
+            }
             fixedBase[i][0] = *(float*)&(f = flt24e7to32e8(attrFixedData[i][2]));
             fixedBase[i][1] = *(float*)&(f = flt24e7to32e8((attrFixedData[i][1] << 8) | (attrFixedData[i][2] >> 24)));
             fixedBase[i][2] = *(float*)&(f = flt24e7to32e8((attrFixedData[i][0] << 16) | (attrFixedData[i][1] >> 16)));
