@@ -280,7 +280,7 @@ void GpuRenderSoft::getCombine(float &r, float &g, float &b, float &a, SoftVerte
     float r2, g2, b2, a2;
     if (i > 4) combMask = 0;
 
-    // Combine RGB source values based on the selected mode
+    // Combine source RGB values based on the selected mode
     switch (combModes[i][0]) {
     case MODE_REPLACE:
         getSource(r0, g0, b0, a0, v, i, 0);
@@ -335,7 +335,7 @@ void GpuRenderSoft::getCombine(float &r, float &g, float &b, float &a, SoftVerte
         break;
     }
 
-    // Combine alpha source values based on the selected mode
+    // Combine source alpha values based on the selected mode
     switch (combModes[i][1]) {
     case MODE_REPLACE:
         getSource(r0, g0, b0, a0, v, i, 3);
@@ -425,20 +425,31 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
 
     // Compare the incoming depth value with the existing one
     switch (depthFunc) {
-        case DEPTH_NV: return;
-        case DEPTH_AL: break;
-        case DEPTH_EQ: if (depth == p.z) break; return;
-        case DEPTH_NE: if (depth != p.z) break; return;
-        case DEPTH_LT: if (depth < p.z) break; return;
-        case DEPTH_LE: if (depth <= p.z) break; return;
-        case DEPTH_GT: if (depth > p.z) break; return;
-        case DEPTH_GE: if (depth >= p.z) break; return;
+        case TEST_NV: return;
+        case TEST_AL: break;
+        case TEST_EQ: if (depth == p.z) break; return;
+        case TEST_NE: if (depth != p.z) break; return;
+        case TEST_LT: if (depth < p.z) break; return;
+        case TEST_LE: if (depth <= p.z) break; return;
+        case TEST_GT: if (depth > p.z) break; return;
+        case TEST_GE: if (depth >= p.z) break; return;
     }
 
-    // Combine color values and discard fully transparent pixels
-    float r, g, b, a;
-    getCombine(r, g, b, a, p);
-    if (a == 0.0f) return;
+    // Get source color values from the texture combiner
+    float srcR, srcG, srcB, srcA;
+    getCombine(srcR, srcG, srcB, srcA, p);
+
+    // Compare the source alpha value with the provided one
+    switch (alphaFunc) {
+        case TEST_NV: return;
+        case TEST_AL: break;
+        case TEST_EQ: if (srcA == alphaValue) break; return;
+        case TEST_NE: if (srcA != alphaValue) break; return;
+        case TEST_LT: if (srcA < alphaValue) break; return;
+        case TEST_LE: if (srcA <= alphaValue) break; return;
+        case TEST_GT: if (srcA > alphaValue) break; return;
+        case TEST_GE: if (srcA >= alphaValue) break; return;
+    }
 
     // Store the incoming depth value based on buffer format if enabled
     if (depbufMask & BIT(1)) {
@@ -460,6 +471,127 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
             break;
         }
     }
+
+    // Read color values to blend with based on buffer format
+    float dstR, dstG, dstB, dstA;
+    switch (colbufFmt) {
+    case COL_RGBA8:
+        val = core->memory.read<uint32_t>(ARM11, colbufAddr + ofs * 4);
+        dstR = float((val >> 24) & 0xFF) / 0xFF;
+        dstG = float((val >> 16) & 0xFF) / 0xFF;
+        dstB = float((val >> 8) & 0xFF) / 0xFF;
+        dstA = float((val >> 0) & 0xFF) / 0xFF;
+        break;
+    case COL_RGB565:
+        val = core->memory.read<uint16_t>(ARM11, colbufAddr + ofs * 2);
+        dstR = float((val >> 11) & 0x1F) / 0x1F;
+        dstG = float((val >> 5) & 0x3F) / 0x3F;
+        dstB = float((val >> 0) & 0x1F) / 0x1F;
+        dstA = 1.0f;
+        break;
+    case COL_RGB5A1:
+        val = core->memory.read<uint16_t>(ARM11, colbufAddr + ofs * 2);
+        dstR = float((val >> 11) & 0x1F) / 0x1F;
+        dstG = float((val >> 6) & 0x1F) / 0x1F;
+        dstB = float((val >> 1) & 0x1F) / 0x1F;
+        dstA = (val & BIT(0)) ? 1.0f : 0.0f;
+        break;
+    case COL_RGBA4:
+        val = core->memory.read<uint16_t>(ARM11, colbufAddr + ofs * 2);
+        dstR = float((val >> 12) & 0xF) / 0xF;
+        dstG = float((val >> 8) & 0xF) / 0xF;
+        dstB = float((val >> 4) & 0xF) / 0xF;
+        dstA = float((val >> 0) & 0xF) / 0xF;
+        break;
+    case COL_UNK:
+        return;
+    }
+
+    // Multiply source RGB values with the selected operand
+    switch (blendOpers[0]) {
+        case OPER_ZERO: srcR = srcG = srcB = 0.0f; break;
+        case OPER_ONE: break;
+        case OPER_SRC: srcR *= srcR, srcG *= srcG, srcB *= srcB; break;
+        case OPER_1MSRC: srcR *= 1.0f - srcR, srcG *= 1.0f - srcG, srcB *= 1.0f - srcB; break;
+        case OPER_DST: srcR *= dstR, srcG *= dstG, srcB *= dstB; break;
+        case OPER_1MDST: srcR *= 1.0f - dstR, srcG *= 1.0f - dstG, srcB *= 1.0f - dstB; break;
+        case OPER_SRCA: srcR *= srcA, srcG *= srcA, srcB *= srcA; break;
+        case OPER_1MSRCA: srcR *= 1.0f - srcA, srcG *= 1.0f - srcA, srcB *= 1.0f - srcA; break;
+        case OPER_DSTA: srcR *= dstA, srcG *= dstA, srcB *= dstA; break;
+        case OPER_1MDSTA: srcR *= 1.0f - dstA, srcG *= 1.0f - dstA, srcB *= 1.0f - dstA; break;
+        case OPER_CONST: srcR *= blendR, srcG *= blendG, srcB *= blendB; break;
+        case OPER_1MCON: srcR *= 1.0f - blendR, srcG *= 1.0f - blendG, srcB *= 1.0f - blendB; break;
+        case OPER_CONSTA: srcR *= blendA, srcG *= blendA, srcB *= blendA; break;
+        case OPER_1MCONA: srcR *= 1.0f - blendA, srcG *= 1.0f - blendA, srcB *= 1.0f - blendA; break;
+    }
+
+    // Multiply destination RGB values with the selected operand
+    switch (blendOpers[1]) {
+        case OPER_ZERO: dstR = dstG = dstB = 0.0f; break;
+        case OPER_ONE: break;
+        case OPER_SRC: dstR *= srcR, dstG *= srcG, dstB *= srcB; break;
+        case OPER_1MSRC: dstR *= 1.0f - srcR, dstG *= 1.0f - srcG, dstB *= 1.0f - srcB; break;
+        case OPER_DST: dstR *= dstR, dstG *= dstG, dstB *= dstB; break;
+        case OPER_1MDST: dstR *= 1.0f - dstR, dstG *= 1.0f - dstG, dstB *= 1.0f - dstB; break;
+        case OPER_SRCA: dstR *= srcA, dstG *= srcA, dstB *= srcA; break;
+        case OPER_1MSRCA: dstR *= 1.0f - srcA, dstG *= 1.0f - srcA, dstB *= 1.0f - srcA; break;
+        case OPER_DSTA: dstR *= dstA, dstG *= dstA, dstB *= dstA; break;
+        case OPER_1MDSTA: dstR *= 1.0f - dstA, dstG *= 1.0f - dstA, dstB *= 1.0f - dstA; break;
+        case OPER_CONST: dstR *= blendR, dstG *= blendG, dstB *= blendB; break;
+        case OPER_1MCON: dstR *= 1.0f - blendR, dstG *= 1.0f - blendG, dstB *= 1.0f - blendB; break;
+        case OPER_CONSTA: dstR *= blendA, dstG *= blendA, dstB *= blendA; break;
+        case OPER_1MCONA: dstR *= 1.0f - blendA, dstG *= 1.0f - blendA, dstB *= 1.0f - blendA; break;
+    }
+
+    // Multiply source alpha values with the selected operand
+    switch (blendOpers[2]) {
+        case OPER_ZERO: srcA = 0.0f; break;
+        case OPER_ONE: break;
+        case OPER_SRC: case OPER_SRCA: srcA *= srcA; break;
+        case OPER_1MSRC: case OPER_1MSRCA: srcA *= 1.0f - srcA; break;
+        case OPER_DST: case OPER_DSTA: srcA *= dstA; break;
+        case OPER_1MDST: case OPER_1MDSTA: srcA *= 1.0f - dstA; break;
+        case OPER_CONST: case OPER_CONSTA: srcA *= blendA; break;
+        case OPER_1MCON: case OPER_1MCONA: srcA *= 1.0f - blendA; break;
+    }
+
+    // Multiply destination alpha values with the selected operand
+    switch (blendOpers[3]) {
+        case OPER_ZERO: dstA = 0.0f; break;
+        case OPER_ONE: break;
+        case OPER_SRC: case OPER_SRCA: dstA *= srcA; break;
+        case OPER_1MSRC: case OPER_1MSRCA: dstA *= 1.0f - srcA; break;
+        case OPER_DST: case OPER_DSTA: dstA *= dstA; break;
+        case OPER_1MDST: case OPER_1MDSTA: dstA *= 1.0f - dstA; break;
+        case OPER_CONST: case OPER_CONSTA: dstA *= blendA; break;
+        case OPER_1MCON: case OPER_1MCONA: dstA *= 1.0f - blendA; break;
+    }
+
+    // Blend the source and destination RGB values based on mode
+    float r, g, b;
+    switch (blendModes[0]) {
+        default: r = srcR + dstR, g = srcG + dstG, b = srcB + dstB; break;
+        case MODE_SUB: r = srcR - dstR, g = srcG - dstG, b = srcB - dstB; break;
+        case MODE_RSUB: r = dstR - srcR, g = dstG - srcG, b = dstB - srcB; break;
+        case MODE_MIN: r = std::min(srcR, dstR), g = std::min(srcG, dstG), b = std::min(srcB, dstB); break;
+        case MODE_MAX: r = std::max(srcR, dstR), g = std::max(srcG, dstG), b = std::max(srcB, dstB); break;
+    }
+
+    // Blend the source and destination alpha values based on mode
+    float a;
+    switch (blendModes[1]) {
+        default: a = srcA + dstA; break;
+        case MODE_SUB: a = srcA - dstA; break;
+        case MODE_RSUB: a = dstA - srcA; break;
+        case MODE_MIN: a = std::min(srcA, dstA); break;
+        case MODE_MAX: a = std::max(srcA, dstA); break;
+    }
+
+    // Clamp the final color values
+    r = std::min(1.0f, std::max(0.0f, r));
+    g = std::min(1.0f, std::max(0.0f, g));
+    b = std::min(1.0f, std::max(0.0f, b));
+    a = std::min(1.0f, std::max(0.0f, a));
 
     // Store the final color values based on buffer format if enabled
     if (!colbufMask) return; // TODO: use individual components
@@ -1017,7 +1149,6 @@ void GpuRenderSoft::shdCmp(uint32_t opcode) {
     float *src1 = getSrc((opcode >> 12) & 0x7F, desc, (opcode >> 19) & 0x3);
     float *src2 = getSrc((opcode >> 7) & 0x1F, desc >> 9, 0);
     for (int i = 0; i < 2; i++) {
-        if (~desc & BIT(3 - i)) continue;
         switch ((opcode >> (24 - i * 3)) & 0x7) {
             case 0x0: shdCond[i] = (src1[i] == src2[i]); continue; // EQ
             case 0x1: shdCond[i] = (src1[i] != src2[i]); continue; // NE
@@ -1068,6 +1199,12 @@ void GpuRenderSoft::setOutMap(uint8_t (*map)[2]) {
     memcpy(outMap, map, sizeof(outMap));
 }
 
+void GpuRenderSoft::setTexDims(int i, uint16_t width, uint16_t height) {
+    // Set one of the texture unit widths and heights
+    texWidths[i] = width;
+    texHeights[i] = height;
+}
+
 void GpuRenderSoft::setCombColor(int i, float r, float g, float b, float a) {
     // Set one of the texture combiner constant colors
     combColors[i][0] = r;
@@ -1076,10 +1213,12 @@ void GpuRenderSoft::setCombColor(int i, float r, float g, float b, float a) {
     combColors[i][3] = a;
 }
 
-void GpuRenderSoft::setTexDims(int i, uint16_t width, uint16_t height) {
-    // Set one of the texture unit widths and heights
-    texWidths[i] = width;
-    texHeights[i] = height;
+void GpuRenderSoft::setBlendColor(float r, float g, float b, float a) {
+    // Set the blender constant color
+    blendR = r;
+    blendG = g;
+    blendB = b;
+    blendA = a;
 }
 
 void GpuRenderSoft::setBufferDims(uint16_t width, uint16_t height, bool mirror) {

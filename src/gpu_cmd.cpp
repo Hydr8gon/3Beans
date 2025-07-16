@@ -294,11 +294,19 @@ template <int i> void Gpu::writeCombSrc(uint32_t mask, uint32_t value) {
 }
 
 template <int i> void Gpu::writeCombOper(uint32_t mask, uint32_t value) {
-    // Write to some of the texture combiner operands and send them to the renderer
+    // Write to some of the texture combiner operands
     mask &= 0x111333;
     gpuCombOper[i] = (gpuCombOper[i] & ~mask) | (value & mask);
-    for (int j = 0; j < 6; j++)
-        core->gpuRender.setCombOper(i, j, CombOper((gpuCombOper[i] >> (j * 4)) & 0xF));
+
+    // Set the operands for the renderer
+    for (int j = 0; j < 6; j++) {
+        switch ((gpuCombOper[i] >> (j * 4)) & 0x3) {
+            case 0x0: core->gpuRender.setCombOper(i, j, OPER_SRC); continue;
+            case 0x1: core->gpuRender.setCombOper(i, j, OPER_1MSRC); continue;
+            case 0x2: core->gpuRender.setCombOper(i, j, OPER_SRCA); continue;
+            default: core->gpuRender.setCombOper(i, j, OPER_1MSRCA); continue;
+        }
+    }
 }
 
 template <int i> void Gpu::writeCombMode(uint32_t mask, uint32_t value) {
@@ -310,7 +318,7 @@ template <int i> void Gpu::writeCombMode(uint32_t mask, uint32_t value) {
     for (int j = 0; j < 2; j++) {
         uint8_t mode = (gpuCombMode[i] >> (j * 16)) & 0xF;
         if (mode < 0xA) {
-            core->gpuRender.setCombMode(i, j, CombMode(mode));
+            core->gpuRender.setCombMode(i, j, CalcMode(mode));
             continue;
         }
         LOG_WARN("GPU texture combiner %d mode %d set to unknown value: 0x%X\n", i, j, mode);
@@ -328,11 +336,57 @@ template <int i> void Gpu::writeCombColor(uint32_t mask, uint32_t value) {
     core->gpuRender.setCombColor(i, r, g, b, a);
 }
 
+void Gpu::writeBlendFunc(uint32_t mask, uint32_t value) {
+    // Write to the blender function register
+    mask &= 0xFFFF0707;
+    gpuBlendFunc = (gpuBlendFunc & ~mask) | (value & mask);
+
+    // Set the blend modes for the renderer
+    for (int i = 0; i < 2; i++) {
+        switch ((gpuBlendFunc >> (i * 8)) & 0x7) {
+            default: core->gpuRender.setBlendMode(i, MODE_ADD); continue;
+            case 0x1: core->gpuRender.setBlendMode(i, MODE_SUB); continue;
+            case 0x2: core->gpuRender.setBlendMode(i, MODE_RSUB); continue;
+            case 0x3: core->gpuRender.setBlendMode(i, MODE_MIN); continue;
+            case 0x4: core->gpuRender.setBlendMode(i, MODE_MAX); continue;
+        }
+    }
+
+    // Set the blend operands for the renderer if they're valid
+    for (int i = 0; i < 4; i++) {
+        uint8_t oper = (gpuBlendFunc >> (16 + (i * 4))) & 0xF;
+        if (oper < 0xE) {
+            core->gpuRender.setBlendOper(i, OperFunc(oper));
+            continue;
+        }
+        LOG_WARN("GPU blender operand %d set to unknown value: 0x%X\n", i, oper);
+        core->gpuRender.setBlendOper(i, OPER_ONE);
+    }
+}
+
+void Gpu::writeBlendColor(uint32_t mask, uint32_t value) {
+    // Write to the blender constant color and send it to the renderer
+    gpuBlendColor = (gpuBlendColor & ~mask) | (value & mask);
+    float r = float((gpuBlendColor >> 0) & 0xFF) / 0xFF;
+    float g = float((gpuBlendColor >> 8) & 0xFF) / 0xFF;
+    float b = float((gpuBlendColor >> 16) & 0xFF) / 0xFF;
+    float a = float((gpuBlendColor >> 24) & 0xFF) / 0xFF;
+    core->gpuRender.setBlendColor(r, g, b, a);
+}
+
+void Gpu::writeAlphaTest(uint32_t mask, uint32_t value) {
+    // Write to the alpha test register and update the renderer's state
+    mask &= 0xFF71;
+    gpuAlphaTest = (gpuAlphaTest & ~mask) | (value & mask);
+    core->gpuRender.setAlphaFunc((gpuAlphaTest & BIT(0)) ? TestFunc((gpuAlphaTest >> 4) & 0x7) : TEST_AL);
+    core->gpuRender.setAlphaValue(float(gpuAlphaTest >> 8) / 0xFF);
+}
+
 void Gpu::writeDepcolMask(uint32_t mask, uint32_t value) {
     // Write to the depth/color mask register and update the renderer's state
     mask &= 0x1F71;
     gpuDepcolMask = (gpuDepcolMask & ~mask) | (value & mask);
-    core->gpuRender.setDepthFunc((gpuDepcolMask & BIT(0)) ? DepthFunc((gpuDepcolMask >> 4) & 0x7) : DEPTH_AL);
+    core->gpuRender.setDepthFunc((gpuDepcolMask & BIT(0)) ? TestFunc((gpuDepcolMask >> 4) & 0x7) : TEST_AL);
     core->gpuRender.setColbufMask(gpuColbufWrite & (gpuDepcolMask >> 8) & 0xF);
     core->gpuRender.setDepbufMask(gpuDepbufWrite & (((gpuDepcolMask >> 12) & 0x1) | ((gpuDepcolMask >> 11) & 0x2)));
 }

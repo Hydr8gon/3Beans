@@ -47,14 +47,24 @@ enum CombSrc {
     COMB_UNK
 };
 
-enum CombOper {
+enum OperFunc {
+    OPER_ZERO,
+    OPER_ONE,
     OPER_SRC,
     OPER_1MSRC,
+    OPER_DST,
+    OPER_1MDST,
     OPER_SRCA,
-    OPER_1MSRCA
+    OPER_1MSRCA,
+    OPER_DSTA,
+    OPER_1MDSTA,
+    OPER_CONST,
+    OPER_1MCON,
+    OPER_CONSTA,
+    OPER_1MCONA
 };
 
-enum CombMode {
+enum CalcMode {
     MODE_REPLACE,
     MODE_MOD,
     MODE_ADD,
@@ -65,7 +75,21 @@ enum CombMode {
     MODE_DOT3A,
     MODE_MULADD,
     MODE_ADDMUL,
+    MODE_RSUB,
+    MODE_MIN,
+    MODE_MAX,
     MODE_UNK
+};
+
+enum TestFunc {
+    TEST_NV,
+    TEST_AL,
+    TEST_EQ,
+    TEST_NE,
+    TEST_LT,
+    TEST_LE,
+    TEST_GT,
+    TEST_GE
 };
 
 enum TexFmt {
@@ -99,17 +123,6 @@ enum DepbufFmt {
     DEP_24,
     DEP_24S8,
     DEP_UNK
-};
-
-enum DepthFunc {
-    DEPTH_NV,
-    DEPTH_AL,
-    DEPTH_EQ,
-    DEPTH_NE,
-    DEPTH_LT,
-    DEPTH_LE,
-    DEPTH_GT,
-    DEPTH_GE
 };
 
 class Gpu {
@@ -153,6 +166,9 @@ public:
     uint32_t readCombOper(int i) { return gpuCombOper[i]; }
     uint32_t readCombMode(int i) { return gpuCombMode[i]; }
     uint32_t readCombColor(int i) { return gpuCombColor[i]; }
+    uint32_t readBlendFunc() { return gpuBlendFunc; }
+    uint32_t readBlendColor() { return gpuBlendColor; }
+    uint32_t readAlphaTest() { return gpuAlphaTest; }
     uint32_t readDepcolMask() { return gpuDepcolMask; }
     uint32_t readColbufWrite() { return gpuColbufWrite; }
     uint32_t readDepbufWrite() { return gpuDepbufWrite; }
@@ -216,6 +232,9 @@ public:
     template <int i> void writeCombOper(uint32_t mask, uint32_t value);
     template <int i> void writeCombMode(uint32_t mask, uint32_t value);
     template <int i> void writeCombColor(uint32_t mask, uint32_t value);
+    void writeBlendFunc(uint32_t mask, uint32_t value);
+    void writeBlendColor(uint32_t mask, uint32_t value);
+    void writeAlphaTest(uint32_t mask, uint32_t value);
     void writeDepcolMask(uint32_t mask, uint32_t value);
     void writeColbufWrite(uint32_t mask, uint32_t value);
     void writeDepbufWrite(uint32_t mask, uint32_t value);
@@ -309,6 +328,9 @@ private:
     uint32_t gpuCombOper[6] = {};
     uint32_t gpuCombMode[6] = {};
     uint32_t gpuCombColor[6] = {};
+    uint32_t gpuBlendFunc = 0;
+    uint32_t gpuBlendColor = 0;
+    uint32_t gpuAlphaTest = 0;
     uint32_t gpuDepcolMask = 0;
     uint32_t gpuColbufWrite = 0;
     uint32_t gpuDepbufWrite = 0;

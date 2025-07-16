@@ -44,14 +44,19 @@ public:
     void setVshFloat(int i, int j, float value) { vshFloats[i][j] = value; }
 
     void setOutMap(uint8_t (*map)[2]);
-    void setCombSrc(int i, int j, CombSrc src) { combSrcs[i][j] = src; }
-    void setCombOper(int i, int j, CombOper oper) { combOpers[i][j] = oper; }
-    void setCombMode(int i, int j, CombMode mode) { combModes[i][j] = mode; }
-    void setCombColor(int i, float r, float g, float b, float a);
+    void setCullMode(CullMode mode) { cullMode = mode; }
     void setTexAddr(int i, uint32_t address) { texAddrs[i] = address; }
     void setTexDims(int i, uint16_t width, uint16_t height);
     void setTexFmt(int i, TexFmt format) { texFmts[i] = format; }
-    void setCullMode(CullMode mode) { cullMode = mode; }
+    void setCombSrc(int i, int j, CombSrc src) { combSrcs[i][j] = src; }
+    void setCombOper(int i, int j, OperFunc oper) { combOpers[i][j] = oper; }
+    void setCombMode(int i, int j, CalcMode mode) { combModes[i][j] = mode; }
+    void setCombColor(int i, float r, float g, float b, float a);
+    void setBlendOper(int i, OperFunc oper) { blendOpers[i] = oper; }
+    void setBlendMode(int i, CalcMode mode) { blendModes[i] = mode; }
+    void setBlendColor(float r, float g, float b, float a);
+    void setAlphaFunc(TestFunc func) { alphaFunc = func; }
+    void setAlphaValue(float value) { alphaValue = value; }
 
     void setViewScaleH(float scale) { viewScaleH = scale; }
     void setViewStepH(float step) { viewStepH = step; }
@@ -64,7 +69,7 @@ public:
     void setDepbufAddr(uint32_t address) { depbufAddr = address; }
     void setDepbufFmt(DepbufFmt format) { depbufFmt = format; }
     void setDepbufMask(uint8_t mask) { depbufMask = mask; }
-    void setDepthFunc(DepthFunc func) { depthFunc = func; }
+    void setDepthFunc(TestFunc func) { depthFunc = func; }
 
 private:
     Core *core;
@@ -72,6 +77,7 @@ private:
     static void (GpuRenderSoft::*vshInstrs[0x40])(uint32_t);
     static int16_t etc1Tables[8][4];
 
+    uint8_t outMap[0x18][2] = {};
     SoftVertex vertices[3];
     uint32_t vtxCount = 0;
     PrimMode primMode = SAME_PRIM;
@@ -106,15 +112,19 @@ private:
     uint8_t vshInts[4][3] = {};
     float vshFloats[96][4] = {};
 
-    uint8_t outMap[0x18][2] = {};
-    CombSrc combSrcs[6][6] = {};
-    CombOper combOpers[6][6] = {};
-    CombMode combModes[6][2] = {};
-    float combColors[6][4] = {};
     uint32_t texAddrs[3] = {};
     uint16_t texWidths[3] = {};
     uint16_t texHeights[3] = {};
     TexFmt texFmts[3] = {};
+    CombSrc combSrcs[6][6] = {};
+    OperFunc combOpers[6][6] = {};
+    CalcMode combModes[6][2] = {};
+    float combColors[6][4] = {};
+    OperFunc blendOpers[4] = {};
+    CalcMode blendModes[2] = {};
+    float blendR = 0, blendG = 0, blendB = 0, blendA = 0;
+    TestFunc alphaFunc = TEST_AL;
+    float alphaValue = 0;
 
     float viewScaleH = 0;
     float viewStepH = 0;
@@ -129,7 +139,7 @@ private:
     uint32_t depbufAddr = 0;
     DepbufFmt depbufFmt = DEP_UNK;
     uint8_t depbufMask = 0;
-    DepthFunc depthFunc = DEPTH_AL;
+    TestFunc depthFunc = TEST_AL;
 
     static float interpolate(float v1, float v2, float x1, float x, float x2);
     static SoftVertex interpolate(SoftVertex &v1, SoftVertex &v2, float x1, float x, float x2);

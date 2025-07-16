@@ -85,8 +85,8 @@ void (Gpu::*Gpu::cmdWrites[])(uint32_t, uint32_t) {
     &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x0F4-0x0F7
     &Gpu::writeCombSrc<5>, &Gpu::writeCombOper<5>, &Gpu::writeCombMode<5>, &Gpu::writeCombColor<5>, // 0x0F8-0x0FB
     &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x0FC-0x0FF
-    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x100-0x103
-    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeDepcolMask, // 0x104-0x107
+    &Gpu::writeUnkCmd, &Gpu::writeBlendFunc, &Gpu::writeUnkCmd, &Gpu::writeBlendColor, // 0x100-0x103
+    &Gpu::writeAlphaTest, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeDepcolMask, // 0x104-0x107
     &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x108-0x10B
     &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x10C-0x10F
     &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeColbufWrite, // 0x110-0x113
