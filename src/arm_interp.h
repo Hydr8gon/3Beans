@@ -438,6 +438,7 @@ private:
     int rev16(uint32_t opcode);
     int revsh(uint32_t opcode);
     int rev(uint32_t opcode);
+    int qsub8(uint32_t opcode);
     int uqsub8(uint32_t opcode);
     int uqsub16(uint32_t opcode);
     int uadd8(uint32_t opcode);

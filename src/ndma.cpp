@@ -64,12 +64,8 @@ void Ndma::transferBlock(int i) {
         break;
     }
 
-    // Get the number of words to transfer per block
-    uint32_t count = ndmaWcnt[i] ? ndmaWcnt[i] : 0x1000000;
-    LOG_INFO("NDMA channel %d transferring from 0x%X to 0x%X with size 0x%X\n",
-        i, srcAddrs[i], dstAddrs[i], count << 2);
-
     // Perform an NDMA transfer based on the repeat mode
+    uint32_t count = ndmaWcnt[i] ? ndmaWcnt[i] : 0x1000000;
     if (ndmaCnt[i] & (BIT(28) | BIT(29))) { // Immediate/infinite
         // Transfer a block and adjust source and destination addresses
         while (count--) {
@@ -95,7 +91,7 @@ void Ndma::transferBlock(int i) {
 
             // Trigger an interrupt and end if the word total is reached
             if (--ndmaTcnt[i] &= 0xFFFFFFF) continue;
-            LOG_INFO("NDMA channel %d reached total word count\n", i);
+            LOG_INFO("NDMA channel %d finished transferring\n", i);
             if (ndmaCnt[i] & BIT(30))
                 core->interrupts.sendInterrupt(ARM9, i);
             ndmaCnt[i] &= ~BIT(31);
@@ -150,9 +146,11 @@ void Ndma::writeCnt(int i, uint32_t mask, uint32_t value) {
 
     // Handle immediate transfers or catch unimplemented modes
     uint8_t mode = (ndmaCnt[i] >> 24) & 0x1F;
-    if ((mode < 0x6 && mode != 0x4) || (mode > 0xC && mode < 0x10))
+    LOG_INFO("NDMA channel %d starting in mode 0x%X with size 0x%X in blocks of 0x%X\n",
+        i, mode, ndmaTcnt[i] << 2, ndmaWcnt[i] << 2);
+    if ((mode < 0x6 && mode != 0x4) || (mode > 0xC && mode < 0xF))
         LOG_CRIT("NDMA channel %d started in unimplemented mode: 0x%X\n", i, mode);
-    else
-        LOG_INFO("NDMA channel %d starting in mode 0x%X\n", i, mode);
+    else if (mode == 0xF)
+        LOG_CRIT("NDMA channel %d started in unimplemented sub-mode: 0x%X\n", i, ndmaCnt[i] & 0x1F);
     if (mode >= 0x10) transferBlock(i); // Immediate
 }

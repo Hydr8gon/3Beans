@@ -417,7 +417,7 @@ int (ArmInterp::*ArmInterp::armInstrs[])(uint32_t) = {
     &ArmInterp::strPtrmll, &ArmInterp::unkArm, &ArmInterp::strPtrmlr, &ArmInterp::unkArm, // 0x620-0x623
     &ArmInterp::strPtrmar, &ArmInterp::unkArm, &ArmInterp::strPtrmrr, &ArmInterp::unkArm, // 0x624-0x627
     &ArmInterp::strPtrmll, &ArmInterp::unkArm, &ArmInterp::strPtrmlr, &ArmInterp::unkArm, // 0x628-0x62B
-    &ArmInterp::strPtrmar, &ArmInterp::unkArm, &ArmInterp::strPtrmrr, &ArmInterp::unkArm, // 0x62C-0x62F
+    &ArmInterp::strPtrmar, &ArmInterp::unkArm, &ArmInterp::strPtrmrr, &ArmInterp::qsub8, // 0x62C-0x62F
     &ArmInterp::ldrPtrmll, &ArmInterp::unkArm, &ArmInterp::ldrPtrmlr, &ArmInterp::unkArm, // 0x630-0x633
     &ArmInterp::ldrPtrmar, &ArmInterp::unkArm, &ArmInterp::ldrPtrmrr, &ArmInterp::unkArm, // 0x634-0x637
     &ArmInterp::ldrPtrmll, &ArmInterp::unkArm, &ArmInterp::ldrPtrmlr, &ArmInterp::unkArm, // 0x638-0x63B

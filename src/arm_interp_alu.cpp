@@ -1060,6 +1060,20 @@ int ArmInterp::rev(uint32_t opcode) { // REV Rd,Rm
     return 1;
 }
 
+int ArmInterp::qsub8(uint32_t opcode) { // QSUB8 Rd,Rn,Rm
+    // Signed parallel 8-bit subtraction with saturation
+    if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
+    uint32_t *op0 = registers[(opcode >> 12) & 0xF];
+    uint32_t op1 = *registers[(opcode >> 16) & 0xF];
+    uint32_t op2 = *registers[opcode & 0xF];
+    *op0 = 0;
+    for (int i = 0; i < 4; i++) {
+        int value = int8_t((op1 >> (i << 3))) - int8_t((op2 >> (i << 3)));
+        *op0 |= (std::min(0x7F, std::max(-0x80, value)) & 0xFF) << (i << 3);
+    }
+    return 1;
+}
+
 int ArmInterp::uqsub8(uint32_t opcode) { // UQSUB8 Rd,Rn,Rm
     // Unsigned parallel 8-bit subtraction with saturation
     if (id == ARM9) return unkArm(opcode); // ARM11-exclusive

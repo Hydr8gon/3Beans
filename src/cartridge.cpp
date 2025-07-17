@@ -35,10 +35,16 @@ Cartridge::Cartridge(Core *core, std::string &cartPath): core(core) {
     while ((0x8000000 << idx) < cartSize && idx < 5) idx++;
     cartId = 0x900000C2 | (ids[idx] << 8);
 
+    // Read the cartridge media type and handle saving based on that
+    uint8_t type = readCart(0x18C) >> 8;
+    if (type == 2) cartId |= BIT(27);
+    LOG_INFO("Cartridge is type %d, and its ID is 0x%X\n", type, cartId);
+    if (type != 1) return;
+
     // Open a save file associated with the ROM if it exists
     savePath = cartPath.substr(0, cartPath.rfind('.')) + ".sav";
     if (FILE *saveFile = fopen(savePath.c_str(), "rb")) {
-        // Determine a 3DS save ID based on size, up to 8MB
+        // Determine a CARD1 save ID based on size, up to 8MB
         fseek(saveFile, 0, SEEK_END);
         saveSize = ftell(saveFile);
         uint8_t id = 0;
@@ -54,7 +60,7 @@ Cartridge::Cartridge(Core *core, std::string &cartPath): core(core) {
         fclose(saveFile);
     }
     else {
-        // Create a new save file and assume 512KB size
+        // Create a new CARD1 save and assume 512KB size
         saveId = 0x1322C2;
         saveData = new uint8_t[saveSize = 0x80000];
         memset(saveData, 0xFF, saveSize);
@@ -351,7 +357,6 @@ void Cartridge::writeNtrRomcnt(uint32_t mask, uint32_t value) {
     }
 
     // Schedule the first word at either 4.2MHz or 6.7MHz per byte
-    LOG_INFO("Starting NTRCARD transfer with command 0x%lX and size 0x%X\n", cmd, ntrCount);
     core->schedule(NTR_WORD_READY, (ntrRomcnt & BIT(27)) ? 256 : 160);
 }
 
@@ -400,6 +405,7 @@ void Cartridge::writeCtrCnt(uint32_t mask, uint32_t value) {
             // Switch to ROM reply state and set the address
             ctrReply = REPLY_ROM;
             ctrAddress = cmdH;
+            LOG_INFO("Starting CTRCARD read from address 0x%X with size 0x%X\n", ctrAddress, ctrCount);
             break;
 
         case 0xC6: // Unique ID
@@ -428,7 +434,6 @@ void Cartridge::writeCtrCnt(uint32_t mask, uint32_t value) {
     }
 
     // Schedule the first word between 4.2MHz to 16.7MHz per byte
-    LOG_INFO("Starting CTRCARD transfer with command 0x%lX%016lX and size 0x%X\n", cmdH, cmdL, ctrCount);
     if (ctrFifo.size() < 8)
         core->schedule(CTR_WORD_READY, ctrClocks[(ctrCnt >> 24) & 0x7]);
 }

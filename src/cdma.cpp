@@ -178,9 +178,9 @@ void Cdma::dmaLd(int i) { // DMALD
 
     default:
         if (id == XDMA)
-            LOG_INFO("XDMA channel %d loading with invalid size: %d\n", i, size);
+            LOG_CRIT("XDMA channel %d loading with invalid size: %d\n", i, size);
         else
-            LOG_INFO("CDMA%d channel %d loading with invalid size: %d\n", id, i, size);
+            LOG_CRIT("CDMA%d channel %d loading with invalid size: %d\n", id, i, size);
         return;
     }
 }
@@ -247,9 +247,9 @@ void Cdma::dmaSt(int i) { // DMAST
 
     default:
         if (id == XDMA)
-            LOG_INFO("XDMA channel %d storing with invalid size: %d\n", i, size);
+            LOG_CRIT("XDMA channel %d storing with invalid size: %d\n", i, size);
         else
-            LOG_INFO("CDMA%d channel %d storing with invalid size: %d\n", id, i, size);
+            LOG_CRIT("CDMA%d channel %d storing with invalid size: %d\n", id, i, size);
         return;
     }
 }
