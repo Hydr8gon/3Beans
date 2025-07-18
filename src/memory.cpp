@@ -644,13 +644,19 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x10401150, data = core->gpu.readShdOutMap(4)) // GPU_SHD_OUT_MAP4
                 DEF_IO32(0x10401154, data = core->gpu.readShdOutMap(5)) // GPU_SHD_OUT_MAP5
                 DEF_IO32(0x10401158, data = core->gpu.readShdOutMap(6)) // GPU_SHD_OUT_MAP6
+                DEF_IO32(0x10401204, data = core->gpu.readTexBorder(0)) // GPU_TEX0_BORDER
                 DEF_IO32(0x10401208, data = core->gpu.readTexDim(0)) // GPU_TEX0_DIM
+                DEF_IO32(0x1040120C, data = core->gpu.readTexParam(0)) // GPU_TEX0_PARAM
                 DEF_IO32(0x10401214, data = core->gpu.readTexAddr1(0)) // GPU_TEX0_ADDR1
                 DEF_IO32(0x10401238, data = core->gpu.readTexType(0)) // GPU_TEX0_TYPE
+                DEF_IO32(0x10401244, data = core->gpu.readTexBorder(1)) // GPU_TEX1_BORDER
                 DEF_IO32(0x10401248, data = core->gpu.readTexDim(1)) // GPU_TEX1_DIM
+                DEF_IO32(0x1040124C, data = core->gpu.readTexParam(1)) // GPU_TEX1_PARAM
                 DEF_IO32(0x10401254, data = core->gpu.readTexAddr1(1)) // GPU_TEX1_ADDR
                 DEF_IO32(0x10401258, data = core->gpu.readTexType(1)) // GPU_TEX1_TYPE
+                DEF_IO32(0x10401264, data = core->gpu.readTexBorder(2)) // GPU_TEX2_BORDER
                 DEF_IO32(0x10401268, data = core->gpu.readTexDim(2)) // GPU_TEX2_DIM
+                DEF_IO32(0x1040126C, data = core->gpu.readTexParam(2)) // GPU_TEX2_PARAM
                 DEF_IO32(0x10401274, data = core->gpu.readTexAddr1(2)) // GPU_TEX2_ADDR
                 DEF_IO32(0x10401278, data = core->gpu.readTexType(2)) // GPU_TEX2_TYPE
                 DEF_IO32(0x10401300, data = core->gpu.readCombSrc(0)) // GPU_COMB0_SRC
@@ -1827,13 +1833,19 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x10401150, core->gpu.writeShdOutMap<4>(IO_PARAMS)) // GPU_SHD_OUT_MAP4
                 DEF_IO32(0x10401154, core->gpu.writeShdOutMap<5>(IO_PARAMS)) // GPU_SHD_OUT_MAP5
                 DEF_IO32(0x10401158, core->gpu.writeShdOutMap<6>(IO_PARAMS)) // GPU_SHD_OUT_MAP6
+                DEF_IO32(0x10401204, core->gpu.writeTexBorder<0>(IO_PARAMS)) // GPU_TEX0_BORDER
                 DEF_IO32(0x10401208, core->gpu.writeTexDim<0>(IO_PARAMS)) // GPU_TEX0_DIM
+                DEF_IO32(0x1040120C, core->gpu.writeTexParam<0>(IO_PARAMS)) // GPU_TEX0_PARAM
                 DEF_IO32(0x10401214, core->gpu.writeTexAddr1<0>(IO_PARAMS)) // GPU_TEX0_ADDR1
                 DEF_IO32(0x10401238, core->gpu.writeTexType<0>(IO_PARAMS)) // GPU_TEX0_TYPE
+                DEF_IO32(0x10401244, core->gpu.writeTexBorder<1>(IO_PARAMS)) // GPU_TEX1_BORDER
                 DEF_IO32(0x10401248, core->gpu.writeTexDim<1>(IO_PARAMS)) // GPU_TEX1_DIM
+                DEF_IO32(0x1040124C, core->gpu.writeTexParam<1>(IO_PARAMS)) // GPU_TEX1_PARAM
                 DEF_IO32(0x10401254, core->gpu.writeTexAddr1<1>(IO_PARAMS)) // GPU_TEX1_ADDR
                 DEF_IO32(0x10401258, core->gpu.writeTexType<1>(IO_PARAMS)) // GPU_TEX1_TYPE
+                DEF_IO32(0x10401264, core->gpu.writeTexBorder<2>(IO_PARAMS)) // GPU_TEX2_BORDER
                 DEF_IO32(0x10401268, core->gpu.writeTexDim<2>(IO_PARAMS)) // GPU_TEX2_DIM
+                DEF_IO32(0x1040126C, core->gpu.writeTexParam<2>(IO_PARAMS)) // GPU_TEX2_PARAM
                 DEF_IO32(0x10401274, core->gpu.writeTexAddr1<2>(IO_PARAMS)) // GPU_TEX2_ADDR
                 DEF_IO32(0x10401278, core->gpu.writeTexType<2>(IO_PARAMS)) // GPU_TEX2_TYPE
                 DEF_IO32(0x10401300, core->gpu.writeCombSrc<0>(IO_PARAMS)) // GPU_COMB0_SRC

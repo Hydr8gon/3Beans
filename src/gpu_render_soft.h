@@ -43,11 +43,12 @@ public:
     void setVshInt(int i, int j, uint8_t value) { vshInts[i][j] = value; }
     void setVshFloat(int i, int j, float value) { vshFloats[i][j] = value; }
 
-    void setOutMap(uint8_t (*map)[2]);
-    void setCullMode(CullMode mode) { cullMode = mode; }
     void setTexAddr(int i, uint32_t address) { texAddrs[i] = address; }
     void setTexDims(int i, uint16_t width, uint16_t height);
+    void setTexBorder(int i, float r, float g, float b, float a);
     void setTexFmt(int i, TexFmt format) { texFmts[i] = format; }
+    void setTexWrapS(int i, TexWrap wrap) { texWrapS[i] = wrap; }
+    void setTexWrapT(int i, TexWrap wrap) { texWrapT[i] = wrap; }
     void setCombSrc(int i, int j, CombSrc src) { combSrcs[i][j] = src; }
     void setCombOper(int i, int j, OperFunc oper) { combOpers[i][j] = oper; }
     void setCombMode(int i, int j, CalcMode mode) { combModes[i][j] = mode; }
@@ -58,11 +59,13 @@ public:
     void setAlphaFunc(TestFunc func) { alphaFunc = func; }
     void setAlphaValue(float value) { alphaValue = value; }
 
+    void setOutMap(uint8_t (*map)[2]);
+    void setCullMode(CullMode mode) { cullMode = mode; }
     void setViewScaleH(float scale) { viewScaleH = scale; }
     void setViewStepH(float step) { viewStepH = step; }
     void setViewScaleV(float scale) { viewScaleV = scale; }
     void setViewStepV(float step) { viewStepV = step; }
-    void setBufferDims(uint16_t width, uint16_t height, bool mirror);
+    void setBufferDims(uint16_t width, uint16_t height, bool flip);
     void setColbufAddr(uint32_t address) { colbufAddr = address; }
     void setColbufFmt(ColbufFmt format) { colbufFmt = format; }
     void setColbufMask(uint8_t mask) { colbufMask = mask; }
@@ -115,7 +118,10 @@ private:
     uint32_t texAddrs[3] = {};
     uint16_t texWidths[3] = {};
     uint16_t texHeights[3] = {};
+    float texBorders[3][4] = {};
     TexFmt texFmts[3] = {};
+    TexWrap texWrapS[3] = {};
+    TexWrap texWrapT[3] = {};
     CombSrc combSrcs[6][6] = {};
     OperFunc combOpers[6][6] = {};
     CalcMode combModes[6][2] = {};
@@ -130,7 +136,7 @@ private:
     float viewStepH = 0;
     float viewScaleV = 0;
     float viewStepV = 0;
-    float signY = 0;
+    bool flipY = false;
     uint16_t bufWidth = 0;
     uint16_t bufHeight = 0;
     uint32_t colbufAddr = 0;

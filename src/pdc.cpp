@@ -40,7 +40,7 @@ void Pdc::drawScreen(int i, uint32_t *buffer) {
     case 0: // RGBA8
         for (int y = 0; y < 240; y++) {
             for (int x = 0; x < width; x++) {
-                uint32_t address = base + (x + 1) * pdcFramebufStep[i] - (y + 1) * 4;
+                uint32_t address = base + x * pdcFramebufStep[i] + (239 - y) * 4;
                 uint32_t color = core->memory.read<uint32_t>(ARM11A, address);
                 uint8_t r = (color >> 24) & 0xFF;
                 uint8_t g = (color >> 16) & 0xFF;
@@ -53,7 +53,7 @@ void Pdc::drawScreen(int i, uint32_t *buffer) {
     case 1: // RGB8
         for (int y = 0; y < 240; y++) {
             for (int x = 0; x < width; x++) {
-                uint32_t address = base + (x + 1) * pdcFramebufStep[i] - (y + 1) * 3;
+                uint32_t address = base + x * pdcFramebufStep[i] + (239 - y) * 3;
                 uint8_t r = core->memory.read<uint8_t>(ARM11, address + 2);
                 uint8_t g = core->memory.read<uint8_t>(ARM11, address + 1);
                 uint8_t b = core->memory.read<uint8_t>(ARM11, address + 0);
@@ -65,7 +65,7 @@ void Pdc::drawScreen(int i, uint32_t *buffer) {
     case 2: // RGB565
         for (int y = 0; y < 240; y++) {
             for (int x = 0; x < width; x++) {
-                uint32_t address = base + (x + 1) * pdcFramebufStep[i] - (y + 1) * 2;
+                uint32_t address = base + x * pdcFramebufStep[i] + (239 - y) * 2;
                 uint16_t color = core->memory.read<uint16_t>(ARM11, address);
                 uint8_t r = ((color >> 11) & 0x1F) * 255 / 31;
                 uint8_t g = ((color >> 5) & 0x3F) * 255 / 63;
@@ -78,7 +78,7 @@ void Pdc::drawScreen(int i, uint32_t *buffer) {
     case 3: // RGB5A1
         for (int y = 0; y < 240; y++) {
             for (int x = 0; x < width; x++) {
-                uint32_t address = base + (x + 1) * pdcFramebufStep[i] - (y + 1) * 2;
+                uint32_t address = base + x * pdcFramebufStep[i] + (239 - y) * 2;
                 uint16_t color = core->memory.read<uint16_t>(ARM11, address);
                 uint8_t r = ((color >> 11) & 0x1F) * 255 / 31;
                 uint8_t g = ((color >> 6) & 0x1F) * 255 / 31;
@@ -91,7 +91,7 @@ void Pdc::drawScreen(int i, uint32_t *buffer) {
     default: // RGBA4
         for (int y = 0; y < 240; y++) {
             for (int x = 0; x < width; x++) {
-                uint32_t address = base + (x + 1) * pdcFramebufStep[i] - (y + 1) * 2;
+                uint32_t address = base + x * pdcFramebufStep[i] + (239 - y) * 2;
                 uint16_t color = core->memory.read<uint16_t>(ARM11, address);
                 uint8_t r = ((color >> 12) & 0xF) * 255 / 15;
                 uint8_t g = ((color >> 8) & 0xF) * 255 / 15;

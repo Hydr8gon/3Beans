@@ -26,7 +26,9 @@ TEMPLATE4(void Gpu::writeIrqReq, 8, uint32_t, uint32_t)
 TEMPLATE4(void Gpu::writeIrqReq, 12, uint32_t, uint32_t)
 TEMPLATE4(void Gpu::writeShdOutMap, 0, uint32_t, uint32_t)
 TEMPLATE3(void Gpu::writeShdOutMap, 4, uint32_t, uint32_t)
+TEMPLATE3(void Gpu::writeTexBorder, 0, uint32_t, uint32_t)
 TEMPLATE3(void Gpu::writeTexDim, 0, uint32_t, uint32_t)
+TEMPLATE3(void Gpu::writeTexParam, 0, uint32_t, uint32_t)
 TEMPLATE3(void Gpu::writeTexAddr1, 0, uint32_t, uint32_t)
 TEMPLATE3(void Gpu::writeTexType, 0, uint32_t, uint32_t)
 TEMPLATE3(void Gpu::writeCombSrc, 0, uint32_t, uint32_t)
@@ -243,11 +245,30 @@ template <int i> void Gpu::writeShdOutMap(uint32_t mask, uint32_t value) {
     updateOutMap();
 }
 
+template <int i> void Gpu::writeTexBorder(uint32_t mask, uint32_t value) {
+    // Write to one of the texture border colors and send it to the renderer
+    gpuTexBorder[i] = (gpuTexBorder[i] & ~mask) | (value & mask);
+    float r = float((gpuTexBorder[i] >> 0) & 0xFF) / 0xFF;
+    float g = float((gpuTexBorder[i] >> 8) & 0xFF) / 0xFF;
+    float b = float((gpuTexBorder[i] >> 16) & 0xFF) / 0xFF;
+    float a = float((gpuTexBorder[i] >> 24) & 0xFF) / 0xFF;
+    core->gpuRender.setTexBorder(i, r, g, b, a);
+}
+
 template <int i> void Gpu::writeTexDim(uint32_t mask, uint32_t value) {
     // Write to one of the texture dimensions and send them to the renderer
     mask &= 0x7FFFFFF;
     gpuTexDim[i] = (gpuTexDim[i] & ~mask) | (value & mask);
     core->gpuRender.setTexDims(i, gpuTexDim[i] >> 16, gpuTexDim[i] & 0x7FF);
+}
+
+template <int i> void Gpu::writeTexParam(uint32_t mask, uint32_t value) {
+    // Write to one of the texture parameter registers and update the renderer's state
+    // TODO: use bits other than coordinate wraps
+    mask &= (i ? 0x1FFFFFF : 0x71FFFFFF);
+    gpuTexParam[i] = (gpuTexParam[i] & ~mask) | (value & mask);
+    core->gpuRender.setTexWrapS(i, TexWrap((gpuTexParam[i] >> 12) & 0x3));
+    core->gpuRender.setTexWrapT(i, TexWrap((gpuTexParam[i] >> 8) & 0x3));
 }
 
 template <int i> void Gpu::writeTexAddr1(uint32_t mask, uint32_t value) {

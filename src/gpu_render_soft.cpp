@@ -112,13 +112,50 @@ SoftVertex GpuRenderSoft::intersect(SoftVertex &v1, SoftVertex &v2, float x1, fl
 }
 
 void GpuRenderSoft::getTexel(float &r, float &g, float &b, float &a, float s, float t, int i) {
-    // Convert float texture coordinates to a swizzled memory offset
-    uint32_t u = uint32_t(s * texWidths[i]) % texWidths[i];
-    uint32_t v = (uint32_t(-t * texHeights[i]) - 1) % texHeights[i];
-    uint32_t ofs = (u & 0x1) | ((u << 1) & 0x4) | ((u << 2) & 0x10);
+    // Scale the S-coordinate to texels and handle wrapping based on mode
+    uint32_t u = uint32_t(s * texWidths[i]);
+    if (u >= texWidths[i]) {
+        switch (texWrapS[i]) {
+        case WRAP_CLAMP:
+            u = (int32_t(u) < 0) ? 0 : (texWidths[i] - 1);
+            break;
+        case WRAP_BORDER:
+            r = texBorders[i][0], g = texBorders[i][1], b = texBorders[i][2], a = texBorders[i][3];
+            return;
+        case WRAP_REPEAT:
+            u %= texWidths[i];
+            break;
+        case WRAP_MIRROR:
+            if ((u %= texWidths[i] * 2) >= texWidths[i])
+                u = (texWidths[i] * 2) - u - 1;
+            break;
+        }
+    }
+
+    // Scale the T-coordinate to texels and handle wrapping based on mode
+    uint32_t v = texHeights[i] - uint32_t(t * texHeights[i]) - 1;
+    if (v >= texHeights[i]) {
+        switch (texWrapT[i]) {
+        case WRAP_CLAMP:
+            v = (int32_t(v) < 0) ? 0 : (texHeights[i] - 1);
+            break;
+        case WRAP_BORDER:
+            r = texBorders[i][0], g = texBorders[i][1], b = texBorders[i][2], a = texBorders[i][3];
+            return;
+        case WRAP_REPEAT:
+            v %= texHeights[i];
+            break;
+        case WRAP_MIRROR:
+            if ((v %= texHeights[i] * 2) >= texHeights[i])
+                v = (texHeights[i] * 2) - v - 1;
+            break;
+        }
+    }
+
+    // Convert the texture coordinates to a swizzled memory offset
+    uint32_t value, ofs = (u & 0x1) | ((u << 1) & 0x4) | ((u << 2) & 0x10);
     ofs |= ((v << 1) & 0x2) | ((v << 2) & 0x8) | ((v << 3) & 0x20);
     ofs += ((v & ~0x7) * texWidths[i]) + ((u & ~0x7) << 3);
-    uint32_t value;
 
     // Read a texel and convert it to floats based on format
     switch (texFmts[i]) {
@@ -210,7 +247,7 @@ void GpuRenderSoft::getTexel(float &r, float &g, float &b, float &a, float s, fl
     // Decode an ETC1 texel based on the block it falls in and the base color mode
     int32_t val1 = core->memory.read<uint32_t>(ARM11, texAddrs[i] + ofs + 0);
     int32_t val2 = core->memory.read<uint32_t>(ARM11, texAddrs[i] + ofs + 4);
-    if ((!(val2 & BIT(0)) && (u & 0x3) < 2) || ((val2 & BIT(0)) && (v & 0x3) < 2)) { // Block 1
+    if ((((val2 & BIT(0)) ? v : u) & 0x3) < 2) { // Block 1
         int16_t tbl = etc1Tables[(val2 >> 5) & 0x7][((val1 >> (idx + 15)) & 0x2) | ((val1 >> idx) & 0x1)];
         if (val2 & BIT(1)) { // Differential
             r = float(((val2 >> 27) & 0x1F) * 0x21 / 4 + tbl);
@@ -400,9 +437,11 @@ void GpuRenderSoft::getCombine(float &r, float &g, float &b, float &a, SoftVerte
 
 void GpuRenderSoft::drawPixel(SoftVertex &p) {
     // Check bounds and convert coordinates to an 8x8 tile offset
-    int x = p.x, y = p.y;
+    int x = int(p.x), y = flipY ? (bufHeight - int(p.y) - 1) : int(p.y);
     if (x < 0 || x >= bufWidth || y < 0 || y >= bufHeight) return;
-    uint32_t val, ofs = (((y >> 3) * (bufWidth >> 3) + (x >> 3)) << 6) + ((y & 0x7) << 3) + (x & 0x7);
+    uint32_t val, ofs = (((y >> 3) * (bufWidth >> 3) + (x >> 3)) << 6);
+    ofs |= ((y << 3) & 0x20) | ((y << 2) & 0x8) | ((y << 1) & 0x2);
+    ofs |= ((x << 2) & 0x10) | ((x << 1) & 0x4) | (x & 0x1);
 
     // Read a depth value to compare with based on buffer format
     float depth = 0.0f;
@@ -626,7 +665,7 @@ void GpuRenderSoft::drawTriangle(SoftVertex &a, SoftVertex &b, SoftVertex &c) {
     SoftVertex v[3] = { a, b, c };
     for (int i = 0; i < 3; i++) {
         v[i].x = v[i].x * viewScaleH + viewScaleH;
-        v[i].y = v[i].y * viewScaleV * signY + viewScaleV;
+        v[i].y = v[i].y * viewScaleV + viewScaleV;
     }
 
     // Sort the vertices by increasing Y-coordinates
@@ -731,13 +770,11 @@ void GpuRenderSoft::runShader(float (*input)[4], PrimMode mode) {
         if (!loopStack.empty() && !((cmpPc ^ loopStack.front()) & 0x1FF)) {
             opcode = vshCode[((loopStack.front() >> 12) - 1) & 0x1FF];
             shdAddr[2] += shdInts[(opcode >> 22) & 0x3][2];
-            if (loopStack.front() >> 24) {
+            shdPc = (loopStack.front() >> 12) & 0xFFF;
+            if (loopStack.front() >> 24)
                 loopStack[loopStack.size() - 1] -= BIT(24);
-                shdPc = (loopStack.front() >> 12) & 0xFFF;
-            }
-            else {
+            else
                 loopStack.pop_front();
-            }
         }
     }
 
@@ -1205,6 +1242,14 @@ void GpuRenderSoft::setTexDims(int i, uint16_t width, uint16_t height) {
     texHeights[i] = height;
 }
 
+void GpuRenderSoft::setTexBorder(int i, float r, float g, float b, float a) {
+    // Set one of the texture unit border colors
+    texBorders[i][0] = r;
+    texBorders[i][1] = g;
+    texBorders[i][2] = b;
+    texBorders[i][3] = a;
+}
+
 void GpuRenderSoft::setCombColor(int i, float r, float g, float b, float a) {
     // Set one of the texture combiner constant colors
     combColors[i][0] = r;
@@ -1221,9 +1266,9 @@ void GpuRenderSoft::setBlendColor(float r, float g, float b, float a) {
     blendA = a;
 }
 
-void GpuRenderSoft::setBufferDims(uint16_t width, uint16_t height, bool mirror) {
-    // Set the render buffer width, height, and Y-mirror
+void GpuRenderSoft::setBufferDims(uint16_t width, uint16_t height, bool flip) {
+    // Set the render buffer width, height, and Y-flip
     bufWidth = width;
     bufHeight = height;
-    signY = (mirror ? -1.0f : 1.0f);
+    flipY = flip;
 }

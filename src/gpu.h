@@ -37,6 +37,13 @@ enum CullMode {
     CULL_BACK
 };
 
+enum TexWrap {
+    WRAP_CLAMP,
+    WRAP_BORDER,
+    WRAP_REPEAT,
+    WRAP_MIRROR
+};
+
 enum CombSrc {
     COMB_PRIM,
     COMB_TEX0,
@@ -159,7 +166,9 @@ public:
     uint32_t readViewStepV() { return gpuViewStepV; }
     uint32_t readShdOutTotal() { return gpuShdOutTotal; }
     uint32_t readShdOutMap(int i) { return gpuShdOutMap[i]; }
+    uint32_t readTexBorder(int i) { return gpuTexBorder[i]; }
     uint32_t readTexDim(int i) { return gpuTexDim[i]; }
+    uint32_t readTexParam(int i) { return gpuTexParam[i]; }
     uint32_t readTexAddr1(int i) { return gpuTexAddr1[i]; }
     uint32_t readTexType(int i) { return gpuTexType[i]; }
     uint32_t readCombSrc(int i) { return gpuCombSrc[i]; }
@@ -225,7 +234,9 @@ public:
     void writeViewStepV(uint32_t mask, uint32_t value);
     void writeShdOutTotal(uint32_t mask, uint32_t value);
     template <int i> void writeShdOutMap(uint32_t mask, uint32_t value);
+    template <int i> void writeTexBorder(uint32_t mask, uint32_t value);
     template <int i> void writeTexDim(uint32_t mask, uint32_t value);
+    template <int i> void writeTexParam(uint32_t mask, uint32_t value);
     template <int i> void writeTexAddr1(uint32_t mask, uint32_t value);
     template <int i> void writeTexType(uint32_t mask, uint32_t value);
     template <int i> void writeCombSrc(uint32_t mask, uint32_t value);
@@ -321,7 +332,9 @@ private:
     uint32_t gpuViewStepV = 0;
     uint32_t gpuShdOutTotal = 0;
     uint32_t gpuShdOutMap[7] = {};
+    uint32_t gpuTexBorder[3] = {};
     uint32_t gpuTexDim[3] = {};
+    uint32_t gpuTexParam[3] = {};
     uint32_t gpuTexAddr1[3] = {};
     uint32_t gpuTexType[3] = {};
     uint32_t gpuCombSrc[6] = {};

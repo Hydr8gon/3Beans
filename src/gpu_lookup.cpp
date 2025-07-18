@@ -53,13 +53,13 @@ void (Gpu::*Gpu::cmdWrites[])(uint32_t, uint32_t) {
     &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x074-0x077
     &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x078-0x07B
     &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x07C-0x07F
-    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeTexDim<0>, &Gpu::writeUnkCmd, // 0x080-0x083
+    &Gpu::writeUnkCmd, &Gpu::writeTexBorder<0>, &Gpu::writeTexDim<0>, &Gpu::writeTexParam<0>, // 0x080-0x083
     &Gpu::writeUnkCmd, &Gpu::writeTexAddr1<0>, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x084-0x087
     &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x088-0x08B
     &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeTexType<0>, &Gpu::writeUnkCmd, // 0x08C-0x08F
-    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeTexDim<1>, &Gpu::writeUnkCmd, // 0x090-0x093
+    &Gpu::writeUnkCmd, &Gpu::writeTexBorder<1>, &Gpu::writeTexDim<1>, &Gpu::writeTexParam<1>, // 0x090-0x093
     &Gpu::writeUnkCmd, &Gpu::writeTexAddr1<1>, &Gpu::writeTexType<1>, &Gpu::writeUnkCmd, // 0x094-0x097
-    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeTexDim<2>, &Gpu::writeUnkCmd, // 0x098-0x09B
+    &Gpu::writeUnkCmd, &Gpu::writeTexBorder<2>, &Gpu::writeTexDim<2>, &Gpu::writeTexParam<2>, // 0x098-0x09B
     &Gpu::writeUnkCmd, &Gpu::writeTexAddr1<2>, &Gpu::writeTexType<2>, &Gpu::writeUnkCmd, // 0x09C-0x09F
     &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x0A0-0x0A3
     &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x0A4-0x0A7
