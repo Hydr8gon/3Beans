@@ -65,28 +65,27 @@ GpuRenderSoft::GpuRenderSoft(Core *core): core(core) {
     shdBools = vshBools;
 }
 
-float GpuRenderSoft::interpolate(float v1, float v2, float x1, float x, float x2) {
-    // Linearly interpolate a new value between the min and max values
+template <bool doX> SoftVertex GpuRenderSoft::interpolate(SoftVertex &v1, SoftVertex &v2, float x1, float x, float x2) {
+    // Check bounds and calculate an interpolation factor
     if (x <= x1) return v1;
     if (x >= x2) return v2;
-    return v1 + (v2 - v1) * (x - x1) / (x2 - x1);
-}
+    float factor = (x - x1) / (x2 - x1);
 
-SoftVertex GpuRenderSoft::interpolate(SoftVertex &v1, SoftVertex &v2, float x1, float x, float x2) {
-    // Interpolate non-XY values in a vertex with perspective correction
+    // Interpolate triangle vertex attributes using the factor
     SoftVertex v;
-    v.z = 1.0f / interpolate(1.0f / v1.z, 1.0f / v2.z, x1, x, x2);
-    v.w = 1.0f / interpolate(1.0f / v1.w, 1.0f / v2.w, x1, x, x2);
-    v.r = interpolate(v1.r / v1.w, v2.r / v2.w, x1, x, x2) * v.w;
-    v.g = interpolate(v1.g / v1.w, v2.g / v2.w, x1, x, x2) * v.w;
-    v.b = interpolate(v1.b / v1.w, v2.b / v2.w, x1, x, x2) * v.w;
-    v.a = interpolate(v1.a / v1.w, v2.a / v2.w, x1, x, x2) * v.w;
-    v.s0 = interpolate(v1.s0 / v1.w, v2.s0 / v2.w, x1, x, x2) * v.w;
-    v.s1 = interpolate(v1.s1 / v1.w, v2.s1 / v2.w, x1, x, x2) * v.w;
-    v.s2 = interpolate(v1.s2 / v1.w, v2.s2 / v2.w, x1, x, x2) * v.w;
-    v.t0 = interpolate(v1.t0 / v1.w, v2.t0 / v2.w, x1, x, x2) * v.w;
-    v.t1 = interpolate(v1.t1 / v1.w, v2.t1 / v2.w, x1, x, x2) * v.w;
-    v.t2 = interpolate(v1.t2 / v1.w, v2.t2 / v2.w, x1, x, x2) * v.w;
+    v.z = 1.0f / (1.0f / v1.z + (1.0f / v2.z - 1.0f / v1.z) * factor);
+    v.w = 1.0f / (1.0f / v1.w + (1.0f / v2.w - 1.0f / v1.w) * factor);
+    if (doX) v.x = v1.x + (v2.x - v1.x) * factor;
+    v.r = v1.r + (v2.r - v1.r) * factor;
+    v.g = v1.g + (v2.g - v1.g) * factor;
+    v.b = v1.b + (v2.b - v1.b) * factor;
+    v.a = v1.a + (v2.a - v1.a) * factor;
+    v.s0 = v1.s0 + (v2.s0 - v1.s0) * factor;
+    v.s1 = v1.s1 + (v2.s1 - v1.s1) * factor;
+    v.s2 = v1.s2 + (v2.s2 - v1.s2) * factor;
+    v.t0 = v1.t0 + (v2.t0 - v1.t0) * factor;
+    v.t1 = v1.t1 + (v2.t1 - v1.t1) * factor;
+    v.t2 = v1.t2 + (v2.t2 - v1.t2) * factor;
     return v;
 }
 
@@ -283,10 +282,10 @@ void GpuRenderSoft::getTexel(float &r, float &g, float &b, float &a, float s, fl
 void GpuRenderSoft::getSource(float &r, float &g, float &b, float &a, SoftVertex &v, int i, int j) {
     // Get the components of a texture combiner source color
     switch (combSrcs[i][j]) {
-        case COMB_PRIM: r = v.r, g = v.g, b = v.b, a = v.a; break;
-        case COMB_TEX0: getTexel(r, g, b, a, v.s0, v.t0, 0); break;
-        case COMB_TEX1: getTexel(r, g, b, a, v.s1, v.t1, 1); break;
-        case COMB_TEX2: getTexel(r, g, b, a, v.s2, v.t2, 2); break;
+        case COMB_PRIM: r = v.r * v.w, g = v.g * v.w, b = v.b * v.w, a = v.a * v.w; break;
+        case COMB_TEX0: getTexel(r, g, b, a, v.s0 * v.w, v.t0 * v.w, 0); break;
+        case COMB_TEX1: getTexel(r, g, b, a, v.s1 * v.w, v.t1 * v.w, 1); break;
+        case COMB_TEX2: getTexel(r, g, b, a, v.s2 * v.w, v.t2 * v.w, 2); break;
         case COMB_CONST: r = combColors[i][0], g = combColors[i][1], b = combColors[i][2], a = combColors[i][3]; break;
         case COMB_UNK: r = g = b = a = 1.0f; break;
 
@@ -306,16 +305,15 @@ void GpuRenderSoft::getSource(float &r, float &g, float &b, float &a, SoftVertex
         case OPER_SRC: return;
         case OPER_1MSRC: r = 1.0f - r, g = 1.0f - g, b = 1.0f - b, a = 1.0f - a; return;
         case OPER_SRCA: r = g = b = a; return;
-        case OPER_1MSRCA: r = g = b = 1.0f - a; return;
+        case OPER_1MSRCA: r = g = b = a = 1.0f - a; return;
     }
 }
 
 void GpuRenderSoft::getCombine(float &r, float &g, float &b, float &a, SoftVertex &v, int i) {
-    // Define temporary values and reset the cache
+    // Define temporary values
     float r0, g0, b0, a0;
     float r1, g1, b1, a1;
     float r2, g2, b2, a2;
-    if (i > 4) combMask = 0;
 
     // Combine source RGB values based on the selected mode
     switch (combModes[i][0]) {
@@ -476,7 +474,8 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
 
     // Get source color values from the texture combiner
     float srcR, srcG, srcB, srcA;
-    getCombine(srcR, srcG, srcB, srcA, p);
+    combMask = 0; // Reset cache
+    getCombine(srcR, srcG, srcB, srcA, p, combStart);
 
     // Compare the source alpha value with the provided one
     switch (alphaFunc) {
@@ -661,28 +660,29 @@ void GpuRenderSoft::drawTriangle(SoftVertex &a, SoftVertex &b, SoftVertex &c) {
     float ys = viewStepV * viewScaleV;
     float xs = viewStepH * viewScaleH;
 
-    // Scale the coordinates to screen space
-    SoftVertex v[3] = { a, b, c };
-    for (int i = 0; i < 3; i++) {
-        v[i].x = v[i].x * viewScaleH + viewScaleH;
-        v[i].y = v[i].y * viewScaleV + viewScaleV;
+    // Sort the vertices by increasing Y-coordinates
+    SoftVertex *v[3] = { &a, &b, &c };
+    if (v[0]->y > v[1]->y) std::swap(v[0], v[1]);
+    if (v[0]->y > v[2]->y) std::swap(v[0], v[2]);
+    if (v[1]->y > v[2]->y) std::swap(v[1], v[2]);
+
+    // Check for combiners set to simply output the previous color, so they can be skipped
+    if (combStart > 5) {
+        combStart = 5;
+        uint8_t &i = combStart;
+        while (i > 0 && combModes[i][0] == MODE_REPLACE && combModes[i][1] == MODE_REPLACE && combSrcs[i][0] ==
+            COMB_PREV && combSrcs[i][3] == COMB_PREV && combOpers[i][0] == OPER_SRC && combOpers[i][3] == OPER_SRC)
+            combStart--;
     }
 
-    // Sort the vertices by increasing Y-coordinates
-    if (v[0].y > v[1].y) std::swap(v[0], v[1]);
-    if (v[0].y > v[2].y) std::swap(v[0], v[2]);
-    if (v[1].y > v[2].y) std::swap(v[1], v[2]);
-
     // Draw the pixels of a triangle by interpolating between X and Y bounds
-    for (float y = floorf(v[0].y) + ys / 2; y < ceilf(v[2].y); y += ys) {
-        int r = (y >= v[1].y) ? 1 : 0;
-        SoftVertex vl = interpolate(v[0], v[2], v[0].y, y, v[2].y);
-        vl.x = interpolate(v[0].x, v[2].x, v[0].y, y, v[2].y);
-        SoftVertex vr = interpolate(v[r], v[r + 1], v[r].y, y, v[r + 1].y);
-        vr.x = interpolate(v[r].x, v[r + 1].x, v[r].y, y, v[r + 1].y);
+    for (float y = floorf(v[0]->y) + ys / 2; y < ceilf(v[2]->y); y += ys) {
+        int r = (y >= v[1]->y) ? 1 : 0;
+        SoftVertex vl = interpolate<true>(*v[0], *v[2], v[0]->y, y, v[2]->y);
+        SoftVertex vr = interpolate<true>(*v[r], *v[r + 1], v[r]->y, y, v[r + 1]->y);
         if (vl.x > vr.x) std::swap(vl, vr);
         for (float x = floorf(vl.x) + xs / 2; x < ceilf(vr.x); x += xs) {
-            SoftVertex vm = interpolate(vl, vr, vl.x, x, vr.x);
+            SoftVertex vm = interpolate<false>(vl, vr, vl.x, x, vr.x);
             vm.x = x, vm.y = y;
             drawPixel(vm);
         }
@@ -731,14 +731,16 @@ void GpuRenderSoft::clipTriangle(SoftVertex &a, SoftVertex &b, SoftVertex &c) {
         memcpy(vert, clip, size * sizeof(SoftVertex));
     }
 
-    // Apply XYZ perspective division and draw clipped triangles in a fan
+    // Apply perspective division, scale coordinates, and draw clipped triangles in a fan
     if (size < 3) return;
     for (int i = 0; i < size; i++) {
-        vert[i].x /= vert[i].w;
-        vert[i].y /= vert[i].w;
-        vert[i].z /= vert[i].w;
-        if (i >= 2)
-            drawTriangle(vert[0], vert[i - 1], vert[i]);
+        vert[i].x = (vert[i].x / vert[i].w) * viewScaleH + viewScaleH;
+        vert[i].y = (vert[i].y / vert[i].w) * viewScaleV + viewScaleV;
+        vert[i].z /= vert[i].w, vert[i].a /= vert[i].w;
+        vert[i].r /= vert[i].w, vert[i].g /= vert[i].w, vert[i].b /= vert[i].w;
+        vert[i].s0 /= vert[i].w, vert[i].s1 /= vert[i].w, vert[i].s2 /= vert[i].w;
+        vert[i].t0 /= vert[i].w, vert[i].t1 /= vert[i].w, vert[i].t2 /= vert[i].w;
+        if (i >= 2) drawTriangle(vert[0], vert[i - 1], vert[i]);
     }
 }
 
@@ -1248,6 +1250,24 @@ void GpuRenderSoft::setTexBorder(int i, float r, float g, float b, float a) {
     texBorders[i][1] = g;
     texBorders[i][2] = b;
     texBorders[i][3] = a;
+}
+
+void GpuRenderSoft::setCombSrc(int i, int j, CombSrc src) {
+    // Set a texture combiner source and invalidate the start index
+    combSrcs[i][j] = src;
+    combStart = -1;
+}
+
+void GpuRenderSoft::setCombOper(int i, int j, OperFunc oper) {
+    // Set a texture combiner operand and invalidate the start index
+    combOpers[i][j] = oper;
+    combStart = -1;
+}
+
+void GpuRenderSoft::setCombMode(int i, int j, CalcMode mode) {
+    // Set a texture combiner mode and invalidate the start index
+    combModes[i][j] = mode;
+    combStart = -1;
 }
 
 void GpuRenderSoft::setCombColor(int i, float r, float g, float b, float a) {

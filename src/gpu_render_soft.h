@@ -25,10 +25,10 @@
 class Core;
 
 struct SoftVertex {
-    float x = 0, y = 0, z = 0, w = 0;
-    float r = 0, g = 0, b = 0, a = 0;
-    float s0 = 0, s1 = 0, s2 = 0;
-    float t0 = 0, t1 = 0, t2 = 0;
+    float x, y, z, w;
+    float r, g, b, a;
+    float s0, s1, s2;
+    float t0, t1, t2;
 };
 
 class GpuRenderSoft {
@@ -49,9 +49,9 @@ public:
     void setTexFmt(int i, TexFmt format) { texFmts[i] = format; }
     void setTexWrapS(int i, TexWrap wrap) { texWrapS[i] = wrap; }
     void setTexWrapT(int i, TexWrap wrap) { texWrapT[i] = wrap; }
-    void setCombSrc(int i, int j, CombSrc src) { combSrcs[i][j] = src; }
-    void setCombOper(int i, int j, OperFunc oper) { combOpers[i][j] = oper; }
-    void setCombMode(int i, int j, CalcMode mode) { combModes[i][j] = mode; }
+    void setCombSrc(int i, int j, CombSrc src);
+    void setCombOper(int i, int j, OperFunc oper);
+    void setCombMode(int i, int j, CalcMode mode);
     void setCombColor(int i, float r, float g, float b, float a);
     void setBlendOper(int i, OperFunc oper) { blendOpers[i] = oper; }
     void setBlendMode(int i, CalcMode mode) { blendModes[i] = mode; }
@@ -87,6 +87,7 @@ private:
     CullMode cullMode = CULL_NONE;
 
     float rc[6], gc[6], bc[6], ac[6];
+    uint8_t combStart = -1;
     uint8_t combMask = 0;
 
     float *srcRegs[0x80];
@@ -147,13 +148,12 @@ private:
     uint8_t depbufMask = 0;
     TestFunc depthFunc = TEST_AL;
 
-    static float interpolate(float v1, float v2, float x1, float x, float x2);
-    static SoftVertex interpolate(SoftVertex &v1, SoftVertex &v2, float x1, float x, float x2);
+    template <bool doX> static SoftVertex interpolate(SoftVertex &v1, SoftVertex &v2, float x1, float x, float x2);
     static SoftVertex intersect(SoftVertex &v1, SoftVertex &v2, float x1, float x2);
 
     void getTexel(float &r, float &g, float &b, float &a, float s, float t, int i);
     void getSource(float &r, float &g, float &b, float &a, SoftVertex &v, int i, int j);
-    void getCombine(float &r, float &g, float &b, float &a, SoftVertex &v, int i = 5);
+    void getCombine(float &r, float &g, float &b, float &a, SoftVertex &v, int i);
 
     void drawPixel(SoftVertex &p);
     void drawTriangle(SoftVertex &a, SoftVertex &b, SoftVertex &c);
