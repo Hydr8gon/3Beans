@@ -676,12 +676,12 @@ void GpuRenderSoft::drawTriangle(SoftVertex &a, SoftVertex &b, SoftVertex &c) {
     }
 
     // Draw the pixels of a triangle by interpolating between X and Y bounds
-    for (float y = floorf(v[0]->y) + ys / 2; y < ceilf(v[2]->y); y += ys) {
+    for (float y = roundf(v[0]->y) + ys / 2; y < roundf(v[2]->y); y += ys) {
         int r = (y >= v[1]->y) ? 1 : 0;
         SoftVertex vl = interpolate<true>(*v[0], *v[2], v[0]->y, y, v[2]->y);
         SoftVertex vr = interpolate<true>(*v[r], *v[r + 1], v[r]->y, y, v[r + 1]->y);
         if (vl.x > vr.x) std::swap(vl, vr);
-        for (float x = floorf(vl.x) + xs / 2; x < ceilf(vr.x); x += xs) {
+        for (float x = roundf(vl.x) + xs / 2; x < roundf(vr.x); x += xs) {
             SoftVertex vm = interpolate<false>(vl, vr, vl.x, x, vr.x);
             vm.x = x, vm.y = y;
             drawPixel(vm);
