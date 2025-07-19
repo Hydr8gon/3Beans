@@ -43,7 +43,7 @@ int TeakInterp::banke(uint16_t opcode) { // BANKE BankFlags6
     uint8_t count = (regStt[2] >> 12) & 0x7; \
     if (count < 4) { \
         bkStart[count] = regPc; \
-        bkEnd[count] = ((((op1h) & 0x30000) | param) + 1) & 0x3FFFF; \
+        bkEnd[count] = ((((op1h) & 0x10000) | param) + 1) & 0x1FFFF; \
         bkStack[count] = regLc; \
         regLc = (op0); \
         regStt[2] = (regStt[2] | BIT(15)) + BIT(12); \
@@ -61,8 +61,8 @@ BKREP_FUNC(bkrepR6, regR[6], (opcode << 16)) // BKREP R6, Address18
     uint16_t &reg = op0; \
     uint8_t count = (regStt[2] >> 12) & 0x7; \
     uint16_t ext = core->dsp.readData(reg++); \
-    bkEnd[count] = ((ext << 8) & 0x30000) | core->dsp.readData(reg++); \
-    bkStart[count] = ((ext << 16) & 0x30000) | core->dsp.readData(reg++); \
+    bkEnd[count] = ((ext << 8) & 0x10000) | core->dsp.readData(reg++); \
+    bkStart[count] = ((ext << 16) & 0x10000) | core->dsp.readData(reg++); \
     regLc = core->dsp.readData(reg++); \
     if ((ext & BIT(15)) && count < 4) { \
         regStt[2] = (regStt[2] | BIT(15)) + BIT(12); \
@@ -101,7 +101,7 @@ int TeakInterp::br(uint16_t opcode) { // BR Address18, Cond
     // Branch to an 18-bit address if the condition is met
     uint16_t param = readParam();
     if (checkCond(opcode))
-        regPc = ((opcode << 12) & 0x30000) | param;
+        regPc = ((opcode << 12) & 0x10000) | param;
     return 2;
 }
 
@@ -118,7 +118,7 @@ int TeakInterp::call(uint16_t opcode) { // CALL Address18, Cond
     if (checkCond(opcode)) {
         core->dsp.writeData(--regSp, regPc >> ((regMod[3] & BIT(14)) ? 16 : 0));
         core->dsp.writeData(--regSp, regPc >> ((regMod[3] & BIT(14)) ? 0 : 16));
-        regPc = ((opcode << 12) & 0x30000) | param;
+        regPc = ((opcode << 12) & 0x10000) | param;
     }
     return 2;
 }
@@ -127,12 +127,12 @@ int TeakInterp::call(uint16_t opcode) { // CALL Address18, Cond
 #define CALLA_FUNC(name, op0) int TeakInterp::name(uint16_t opcode) { \
     core->dsp.writeData(--regSp, regPc >> ((regMod[3] & BIT(14)) ? 16 : 0)); \
     core->dsp.writeData(--regSp, regPc >> ((regMod[3] & BIT(14)) ? 0 : 16)); \
-    regPc = (op0) & 0x3FFFF; \
+    regPc = (op0) & 0x1FFFF; \
     return 1; \
 }
 
 CALLA_FUNC(callaA, regA[(opcode >> 4) & 0x1].v) // CALLA Ax
-CALLA_FUNC(callaAl, ((regStt[2] << 10) & 0x30000) | regA[(opcode >> 8) & 0x1].l) // CALLA Axl
+CALLA_FUNC(callaAl, ((regStt[2] << 10) & 0x10000) | regA[(opcode >> 8) & 0x1].l) // CALLA Axl
 
 int TeakInterp::callr(uint16_t opcode) { // CALLR RelAddr7, Cond
     // Branch to a relative 7-bit signed offset and push PC to the stack if the condition is met
@@ -214,7 +214,7 @@ int TeakInterp::ret(uint16_t opcode) { // RET, Cond
     if (checkCond(opcode)) {
         uint16_t h = core->dsp.readData(regSp++);
         uint16_t l = core->dsp.readData(regSp++);
-        regPc = ((regMod[3] & BIT(14)) ? ((l << 16) | h) : ((h << 16) | l)) & 0x3FFFF;
+        regPc = ((regMod[3] & BIT(14)) ? ((l << 16) | h) : ((h << 16) | l)) & 0x1FFFF;
     }
     return 1;
 }
@@ -225,7 +225,7 @@ int TeakInterp::reti(uint16_t opcode) { // RETI, Cond
         // Pop PC from the stack
         uint16_t h = core->dsp.readData(regSp++);
         uint16_t l = core->dsp.readData(regSp++);
-        regPc = ((regMod[3] & BIT(14)) ? ((l << 16) | h) : ((h << 16) | l)) & 0x3FFFF;
+        regPc = ((regMod[3] & BIT(14)) ? ((l << 16) | h) : ((h << 16) | l)) & 0x1FFFF;
 
         // Set the IE bit and optionally restore context
         if (opcode & BIT(4)) cntxR(0);
@@ -240,7 +240,7 @@ int TeakInterp::rets(uint16_t opcode) { // RETS, Imm8u
     // Pop PC from the stack and add an 8-bit immediate to SP
     uint16_t h = core->dsp.readData(regSp++);
     uint16_t l = core->dsp.readData(regSp++);
-    regPc = ((regMod[3] & BIT(14)) ? ((l << 16) | h) : ((h << 16) | l)) & 0x3FFFF;
+    regPc = ((regMod[3] & BIT(14)) ? ((l << 16) | h) : ((h << 16) | l)) & 0x1FFFF;
     regSp += (opcode & 0xFF);
     return 1;
 }

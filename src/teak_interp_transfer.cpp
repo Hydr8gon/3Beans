@@ -63,7 +63,7 @@ int TeakInterp::loadStep(uint16_t opcode) { // LOAD Imm7s, Step
     return cyc; \
 }
 
-MOV_FUNC(movApc, regA[(opcode >> 8) & 0x1].v & 0x3FFFF, regPc=, 1) // MOV Ax, PC
+MOV_FUNC(movApc, regA[(opcode >> 8) & 0x1].v & 0x1FFFF, regPc=, 1) // MOV Ax, PC
 MOV_FUNC(movA0hstp, readAhS<0>(), regStep0[(opcode >> 8) & 0x1]=, 1) // MOV A0H, Step0
 MOV_FUNC(movArapabl, *readArArp[opcode & 0x7], (this->*writeAblM[(opcode >> 3) & 0x3]), 1) // MOV ArArp, Abl
 MOV_FUNC(movI16arap, readParam(), (this->*writeArArp[opcode & 0x7]), 2) // MOV Imm16, ArArp
@@ -155,7 +155,7 @@ MOVMA_FUNC(movaRarab, 0, 0, writeAb40M[(opcode >> 4) & 0x3]) // MOVA MemRarOffsS
 
 int TeakInterp::movpPmareg(uint16_t opcode) { // MOVP ProgMemAx, Register
     // Move program memory addressed by an A accumulator to a register
-    uint32_t address = 0x1FF00000 + ((regA[(opcode >> 5) & 0x1].v & 0x3FFFF) << 1);
+    uint32_t address = 0x1FF00000 + ((regA[(opcode >> 5) & 0x1].v & 0x1FFFF) << 1);
     (this->*writeRegM[opcode & 0x1F])(core->memory.read<uint16_t>(ARM11, address));
     return 1;
 }

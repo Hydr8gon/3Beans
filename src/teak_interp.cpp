@@ -69,7 +69,7 @@ void TeakInterp::resetCycles() {
 
 void TeakInterp::incrementPc() {
     // Increment the program counter and check if it's at the end of a loop
-    regPc = (regPc + 1) & 0x3FFFF;
+    regPc = (regPc + 1) & 0x1FFFF;
     if (~regStt[2] & BIT(15)) return;
     uint8_t count = ((regStt[2] >> 12) & 0x7) - 1;
     if (regPc != bkEnd[count]) return;
@@ -152,7 +152,7 @@ void TeakInterp::interrupt(int i) {
     // For vector interrupts, jump to a vector handler with optional context save
     uint32_t vector = core->dsp.getIcuVector();
     if (vector & BIT(31)) cntxS(0);
-    regPc = vector & 0x3FFFF;
+    regPc = vector & 0x1FFFF;
 }
 
 void TeakInterp::bkrepPop(uint8_t count) {
