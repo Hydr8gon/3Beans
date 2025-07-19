@@ -79,7 +79,8 @@ private:
 
     FILE *cartFile = nullptr;
     uint64_t cartSize = 0;
-    uint32_t cartId = -1;
+    uint32_t cartId1 = -1;
+    uint32_t cartId2 = -1;
     uint8_t *saveData = nullptr;
     uint32_t saveSize = 0;
     uint32_t saveId = -1;

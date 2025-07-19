@@ -27,18 +27,22 @@ Cartridge::Cartridge(Core *core, std::string &cartPath): core(core) {
     if (cartPath.empty() || !(cartFile = fopen(cartPath.c_str(), "rb"))) return;
     cfg9CardPower &= ~BIT(0); // Inserted
 
-    // Determine a 3DS cartridge ID based on ROM size, from 128MB to 4GB
+    // Determine a primary 3DS cartridge ID based on ROM size, from 128MB to 4GB
     fseek(cartFile, 0, SEEK_END);
     cartSize = ftell(cartFile);
     const uint8_t ids[] = { 0x7F, 0xFF, 0xFE, 0xFA, 0xF8, 0xF0 };
     uint8_t idx = 0;
     while ((0x8000000 << idx) < cartSize && idx < 5) idx++;
-    cartId = 0x900000C2 | (ids[idx] << 8);
+    cartId1 = 0x900000C2 | (ids[idx] << 8);
+
+    // Determine a secondary 3DS cartridge ID based on comparison bits in newer carts
+    uint8_t comp = readCart(0x1FC) >> 16;
+    cartId2 = (comp & BIT(0)) ? ((comp >> 1) & 0x3) : 0;
 
     // Read the cartridge media type and handle saving based on that
     uint8_t type = readCart(0x18C) >> 8;
-    if (type == 2) cartId |= BIT(27);
-    LOG_INFO("Cartridge is type %d, and its ID is 0x%X\n", type, cartId);
+    if (type == 2) cartId1 |= BIT(27);
+    LOG_INFO("Cartridge is type %d, and its IDs are 0x%X and 0x%X\n", type, cartId1, cartId2);
     if (type != 1) return;
 
     // Open a save file associated with the ROM if it exists
@@ -118,11 +122,11 @@ void Cartridge::ctrWordReady() {
     switch (ctrReply) {
     case REPLY_CHIP1:
         // Reply with the primary 3DS cartridge chip ID
-        return ctrFifo.push(cartId);
+        return ctrFifo.push(cartId1);
 
     case REPLY_CHIP2:
-        // Reply with the secondary 3DS cartridge chip ID (empty?)
-        return ctrFifo.push(0);
+        // Reply with the secondary 3DS cartridge chip ID
+        return ctrFifo.push(cartId2);
 
     case REPLY_HEADER:
         // Reply with data from the initial cartridge header
@@ -247,11 +251,11 @@ uint32_t Cartridge::readNtrData() {
     switch (ntrReply) {
     case REPLY_CHIP1:
         // Reply with the primary 3DS cartridge chip ID
-        return cartId;
+        return cartId1;
 
     case REPLY_CHIP2:
-        // Reply with the secondary 3DS cartridge chip ID (empty?)
-        return 0;
+        // Reply with the secondary 3DS cartridge chip ID
+        return cartId2;
 
     default:
         // Reply with all high bits when there's no data
