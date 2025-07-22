@@ -38,7 +38,7 @@ public:
     uint32_t readCmdParam() { return sdCmdParam; }
     uint16_t readData16Blkcnt() { return sdData16Blkcnt; }
     uint32_t readResponse(int i) { return sdResponse[i]; }
-    uint32_t readIrqStatus();
+    uint32_t readIrqStatus() { return sdIrqStatus; }
     uint32_t readIrqMask() { return sdIrqMask; }
     uint16_t readData16Blklen() { return sdData16Blklen; }
     uint32_t readErrDetail() { return sdErrDetail; }
@@ -82,7 +82,7 @@ private:
     uint32_t sdCmdParam = 0;
     uint16_t sdData16Blkcnt = 0;
     uint32_t sdResponse[4] = {};
-    uint32_t sdIrqStatus = 0;
+    uint32_t sdIrqStatus = 0xA0;
     uint32_t sdIrqMask = 0;
     uint16_t sdData16Blklen = 0;
     uint32_t sdErrDetail = 0;

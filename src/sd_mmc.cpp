@@ -53,8 +53,8 @@ void SdMmc::sendInterrupt(int bit) {
     // Set the interrupt's request bit
     sdIrqStatus |= BIT(bit);
 
-    // Send an interrupt to the ARM9 if conditions are met
-    if (sdIrqStatus & ~sdIrqMask)
+    // Send an interrupt to the ARM9 if the new bit is unmasked
+    if (~sdIrqMask & BIT(bit))
         core->interrupts.sendInterrupt(ARM9, 16 + (id << 1));
 }
 
@@ -339,11 +339,6 @@ void SdMmc::getScr() {
     pushResponse(cardStatus);
 }
 
-uint32_t SdMmc::readIrqStatus() {
-    // Read from the SD_IRQ_STATUS register with the insert and write bits set for SD cards
-    return sdIrqStatus | ((sdPortSelect & BIT(0)) ? 0 : 0xA0);
-}
-
 uint16_t SdMmc::readData16Fifo() {
     // Pop a value from the 16-bit FIFO and check if empty
     if (dataFifo16.empty()) return sdData16Fifo;
@@ -410,6 +405,7 @@ void SdMmc::writeData16Blkcnt(uint16_t mask, uint16_t value) {
 
 void SdMmc::writeIrqStatus(uint32_t mask, uint32_t value) {
     // Acknowledge bits in the SD_IRQ_STATUS register
+    mask &= ~0xA0; // Always set
     sdIrqStatus = (sdIrqStatus & ~mask) | (sdIrqStatus & value & mask);
 }
 
