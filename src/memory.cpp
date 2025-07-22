@@ -740,6 +740,7 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x104018E4, data = core->gpu.readCmdSize(1)) // GPU_CMD_SIZE1
                 DEF_IO32(0x104018E8, data = core->gpu.readCmdAddr(0)) // GPU_CMD_ADDR0
                 DEF_IO32(0x104018EC, data = core->gpu.readCmdAddr(1)) // GPU_CMD_ADDR1
+                DEF_IO32(0x10401908, data = core->gpu.readVshNumAttr()) // GPU_VSH_NUM_ATTR
                 DEF_IO32(0x10401978, data = core->gpu.readPrimConfig()) // GPU_PRIM_CONFIG
                 DEF_IO32(0x1040197C, data = core->gpu.readPrimRestart()) // GPU_PRIM_RESTART
                 DEF_IO32(0x10401AC0, data = core->gpu.readVshBools()) // GPU_VSH_BOOLS
@@ -1937,6 +1938,7 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x104018EC, core->gpu.writeCmdAddr<1>(IO_PARAMS)) // GPU_CMD_ADDR1
                 DEF_IO32(0x104018F0, core->gpu.writeCmdJump<0>(IO_PARAMS)) // GPU_CMD_JUMP0
                 DEF_IO32(0x104018F4, core->gpu.writeCmdJump<1>(IO_PARAMS)) // GPU_CMD_JUMP1
+                DEF_IO32(0x10401908, core->gpu.writeVshNumAttr(IO_PARAMS)) // GPU_VSH_NUM_ATTR
                 DEF_IO32(0x10401978, core->gpu.writePrimConfig(IO_PARAMS)) // GPU_PRIM_CONFIG
                 DEF_IO32(0x1040197C, core->gpu.writePrimRestart(IO_PARAMS)) // GPU_PRIM_RESTART
                 DEF_IO32(0x10401AC0, core->gpu.writeVshBools(IO_PARAMS)) // GPU_VSH_BOOLS

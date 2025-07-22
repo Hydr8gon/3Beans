@@ -559,16 +559,34 @@ void Gpu::writeAttrFixedIdx(uint32_t mask, uint32_t value) {
 }
 
 void Gpu::writeAttrFixedData(uint32_t mask, uint32_t value) {
-    // Catch the immediate-mode vertex submission index
-    if (attrFixedIdx == (0xF << 2)) {
-        LOG_CRIT("Unhandled immediate-mode vertex submission data sent\n");
+    // Write to the selected 3-word fixed attribute data buffer
+    attrFixedData[attrFixedIdx >> 2][attrFixedIdx & 0x3] = (value & mask);
+
+    // In non-immediate mode, reset the index once the attribute is finished
+    if (attrFixedIdx < (0xF << 2)) {
+        if ((++attrFixedIdx & 0x3) == 0x3) attrFixedIdx &= ~0x3;
+        fixedDirty = true;
         return;
     }
 
-    // Write to the selected 3-word fixed attribute data buffer
-    attrFixedData[attrFixedIdx >> 2][attrFixedIdx & 0x3] = (value & mask);
-    if ((++attrFixedIdx & 0x3) == 0x3) attrFixedIdx &= ~0x3;
-    fixedDirty = true;
+    // In immediate mode, increment the index and check if a full vertex has been sent
+    if ((++attrFixedIdx & 0x3) == 0x3) attrFixedIdx++;
+    if (attrFixedIdx != ((gpuVshNumAttr + 0x10) << 2)) return;
+    attrFixedIdx = (0xF << 2); // Reset index
+
+    // Build a shader input list using the immediate attributes
+    float input[16][4] = {};
+    for (uint32_t i = 0, f; i <= gpuVshNumAttr; i++) {
+        uint32_t j = i + 0xF;
+        input[i][0] = *(float*)&(f = flt24e7to32e8(attrFixedData[j][2]));
+        input[i][1] = *(float*)&(f = flt24e7to32e8((attrFixedData[j][1] << 8) | (attrFixedData[j][2] >> 24)));
+        input[i][2] = *(float*)&(f = flt24e7to32e8((attrFixedData[j][0] << 16) | (attrFixedData[j][1] >> 16)));
+        input[i][3] = *(float*)&(f = flt24e7to32e8(attrFixedData[j][0] >> 8));
+    }
+
+    // Run the finished input through the shader and handle primitive restarts
+    core->gpuRender.runShader(input, restart ? PrimMode(((gpuPrimConfig >> 8) & 0x3) + 1) : SAME_PRIM);
+    restart = false;
 }
 
 template <int i> void Gpu::writeCmdSize(uint32_t mask, uint32_t value) {
@@ -590,6 +608,12 @@ template <int i> void Gpu::writeCmdJump(uint32_t mask, uint32_t value) {
     cmdEnd = (gpuCmdAddr[i] + gpuCmdSize[i]) << 3;
     LOG_INFO("Jumping to GPU command list at 0x%X with size 0x%X\n", cmdAddr, cmdEnd - cmdAddr);
     if (stopped) runCommands();
+}
+
+void Gpu::writeVshNumAttr(uint32_t mask, uint32_t value) {
+    // Write to the vertex shader input attribute count
+    mask &= 0xF;
+    gpuVshNumAttr = (gpuVshNumAttr & ~mask) | (value & mask);
 }
 
 void Gpu::writePrimConfig(uint32_t mask, uint32_t value) {

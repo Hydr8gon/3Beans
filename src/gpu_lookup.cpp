@@ -165,7 +165,7 @@ void (Gpu::*Gpu::cmdWrites[])(uint32_t, uint32_t) {
     &Gpu::writeAttrFixedData, &Gpu::writeAttrFixedData, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x234-0x237
     &Gpu::writeCmdSize<0>, &Gpu::writeCmdSize<1>, &Gpu::writeCmdAddr<0>, &Gpu::writeCmdAddr<1>, // 0x238-0x23B
     &Gpu::writeCmdJump<0>, &Gpu::writeCmdJump<1>, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x23C-0x23F
-    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x240-0x243
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeVshNumAttr, &Gpu::writeUnkCmd, // 0x240-0x243
     &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x244-0x247
     &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x248-0x24B
     &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x24C-0x24F

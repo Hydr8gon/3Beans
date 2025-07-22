@@ -197,6 +197,7 @@ public:
     uint32_t readAttrFirstIdx() { return gpuAttrFirstIdx; }
     uint32_t readCmdSize(int i) { return gpuCmdSize[i]; }
     uint32_t readCmdAddr(int i) { return gpuCmdAddr[i]; }
+    uint32_t readVshNumAttr() { return gpuVshNumAttr; }
     uint32_t readPrimConfig() { return gpuPrimConfig; }
     uint32_t readPrimRestart() { return gpuPrimRestart; }
     uint32_t readVshBools() { return gpuVshBools; }
@@ -270,6 +271,7 @@ public:
     template <int i> void writeCmdSize(uint32_t mask, uint32_t value);
     template <int i> void writeCmdAddr(uint32_t mask, uint32_t value);
     template <int i> void writeCmdJump(uint32_t mask, uint32_t value);
+    void writeVshNumAttr(uint32_t mask, uint32_t value);
     void writePrimConfig(uint32_t mask, uint32_t value);
     void writePrimRestart(uint32_t mask, uint32_t value);
     void writeVshBools(uint32_t mask, uint32_t value);
@@ -299,7 +301,7 @@ private:
     bool restart = false;
     bool fixedDirty = false;
     float fixedBase[16][4] = {};
-    uint32_t attrFixedData[15][3] = {};
+    uint32_t attrFixedData[31][3] = {};
     uint8_t attrFixedIdx = 0;
     uint32_t vshFloatData[4] = {};
     uint16_t vshFloatIdx = 0;
@@ -361,6 +363,7 @@ private:
     uint32_t gpuAttrFirstIdx = 0;
     uint32_t gpuCmdSize[2] = {};
     uint32_t gpuCmdAddr[2] = {};
+    uint32_t gpuVshNumAttr = 0;
     uint32_t gpuPrimConfig = 0;
     uint32_t gpuPrimRestart = 0;
     uint32_t gpuVshBools = 0;
