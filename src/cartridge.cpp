@@ -43,31 +43,51 @@ Cartridge::Cartridge(Core *core, std::string &cartPath): core(core) {
     uint8_t type = readCart(0x18C) >> 8;
     if (type == 2) cartId1 |= BIT(27);
     LOG_INFO("Cartridge is type %d, and its IDs are 0x%X and 0x%X\n", type, cartId1, cartId2);
-    if (type != 1) return;
-
-    // Open a save file associated with the ROM if it exists
     savePath = cartPath.substr(0, cartPath.rfind('.')) + ".sav";
-    if (FILE *saveFile = fopen(savePath.c_str(), "rb")) {
-        // Determine a CARD1 save ID based on size, up to 8MB
-        fseek(saveFile, 0, SEEK_END);
-        saveSize = ftell(saveFile);
-        uint8_t id = 0;
-        while ((1 << id) < saveSize && id < 0x17) id++;
-        saveId = (id << 16) | 0x22C2;
 
-        // Allocate save data and fill it with the file contents
-        saveData = new uint8_t[1 << id];
-        memset(saveData, 0xFF, saveSize);
+    // Open a CARD1 save file if it exists
+    if (type == 1) {
+        if (FILE *saveFile = fopen(savePath.c_str(), "rb")) {
+            // Determine a CARD1 save ID based on size, up to 8MB
+            fseek(saveFile, 0, SEEK_END);
+            saveSize1 = ftell(saveFile);
+            uint8_t id = 0;
+            while ((1 << id) < saveSize1 && id < 0x17) id++;
+            saveId = (id << 16) | 0x22C2;
+
+            // Allocate save data and fill it with the file contents
+            saveData = new uint8_t[1 << id];
+            memset(saveData, 0xFF, saveSize1);
+            fseek(saveFile, 0, SEEK_SET);
+            fread(saveData, sizeof(uint8_t), std::min(saveSize1, 1U << id), saveFile);
+            saveSize1 = (1 << id);
+            fclose(saveFile);
+        }
+        else {
+            // Create a new CARD1 save and assume 512KB size
+            saveId = 0x1322C2;
+            saveData = new uint8_t[saveSize1 = 0x80000];
+            memset(saveData, 0xFF, saveSize1);
+        }
+        return;
+    }
+
+    // Open a CARD2 save file if it exists and set the writable address
+    if (type != 2) return;
+    saveBase = readCart(0x200) << 9;
+    if (FILE *saveFile = fopen(savePath.c_str(), "rb")) {
+        // Get the file size and allocate CARD2 save data based on that
+        fseek(saveFile, 0, SEEK_END);
+        saveSize2 = ftell(saveFile);
+        saveData = new uint8_t[saveSize2];
         fseek(saveFile, 0, SEEK_SET);
-        fread(saveData, sizeof(uint8_t), std::min(saveSize, 1U << id), saveFile);
-        saveSize = (1 << id);
+        fread(saveData, sizeof(uint8_t), saveSize2, saveFile);
         fclose(saveFile);
     }
     else {
-        // Create a new CARD1 save and assume 512KB size
-        saveId = 0x1322C2;
-        saveData = new uint8_t[saveSize = 0x80000];
-        memset(saveData, 0xFF, saveSize);
+        // Create a new CARD2 save and assume 1MB size
+        saveData = new uint8_t[saveSize2 = 0x100000];
+        memset(saveData, 0xFF, saveSize2);
     }
 }
 
@@ -78,8 +98,12 @@ Cartridge::~Cartridge() {
 }
 
 uint32_t Cartridge::readCart(uint32_t address) {
-    // Read a value from cartridge ROM, loading new blocks from file as necessary
+    // Handle overflow and CARD2 save reads
     if (address >= cartSize) return 0xFFFFFFFF;
+    if (address >= saveBase && address < saveBase + saveSize2)
+        return *(uint32_t*)&saveData[address - saveBase];
+
+    // Read a value from cartridge ROM, loading new blocks from file as necessary
     if (((address ^ cartBase) >> 11) != 0) {
         cartBase = (address & ~0x7FF);
         fseek(cartFile, cartBase, SEEK_SET);
@@ -93,7 +117,7 @@ void Cartridge::updateSave() {
     if (!saveDirty) return;
     if (FILE *saveFile = fopen(savePath.c_str(), "wb")) {
         LOG_INFO("Writing updated save file to disk\n");
-        fwrite(saveData, sizeof(uint8_t), saveSize, saveFile);
+        fwrite(saveData, sizeof(uint8_t), std::max(saveSize1, saveSize2), saveFile);
         fclose(saveFile);
         saveDirty = false;
     }
@@ -107,13 +131,13 @@ void Cartridge::ntrWordReady() {
 
 void Cartridge::ctrWordReady() {
     // Clear the busy bit if finished, or schedule the next word if not full and running
-    if ((ctrCount -= 4) == 0)
+    if ((ctrReadCount -= 4) == 0)
         ctrCnt &= ~BIT(31);
     else if (ctrFifo.size() < 7 && (ctrCnt & BIT(31)))
         core->schedule(CTR_WORD_READY, ctrClocks[(ctrCnt >> 24) & 0x7]);
 
     // Set the ready bit and trigger DMAs every 8 words
-    if ((ctrCount & 0x1F) == 0) {
+    if ((ctrReadCount & 0x1F) == 0) {
         ctrCnt |= BIT(27);
         core->ndma.triggerMode(0x4);
     }
@@ -139,6 +163,10 @@ void Cartridge::ctrWordReady() {
     case REPLY_PROM:
         // Reply with a 16-byte unique ID (stubbed to zero), followed by 0x30 high bytes
         return ctrFifo.push((((ctrAddress += 4) & 0x3F) > 0x10) ? 0xFFFFFFFF : 0);
+
+    case REPLY_CARD2:
+        // Reply with a bit indicating if a CARD2 write is in progress
+        return ctrFifo.push(ctrWriteCount > 0);
 
     default:
         // Reply with all high bits when there's no data
@@ -173,7 +201,7 @@ uint8_t Cartridge::spiTransfer(uint8_t value) {
         }
 
         // Write save data and increment the address if enabled
-        if ((spiStatus & BIT(1)) && spiAddress < saveSize)
+        if ((spiStatus & BIT(1)) && spiAddress < saveSize1)
             saveData[spiAddress++] = value, saveDirty = true;
         return 0;
 
@@ -187,7 +215,7 @@ uint8_t Cartridge::spiTransfer(uint8_t value) {
         }
 
         // Read save data and increment the address once it's set
-        return (spiAddress < saveSize) ? saveData[spiAddress++] : 0xFF;
+        return (spiAddress < saveSize1) ? saveData[spiAddress++] : 0xFF;
 
     case 0x04: // Disable writes
         // Clear the write enable bit in the status register
@@ -211,7 +239,7 @@ uint8_t Cartridge::spiTransfer(uint8_t value) {
         // On the last write, erase a 4KB block if enabled
         if (spiTotal != 4 || !(spiStatus & BIT(1))) return 0;
         for (int i = 0; i < 0x1000; i++)
-            if (spiAddress + i < saveSize)
+            if (spiAddress + i < saveSize1)
                 saveData[spiAddress + i] = 0xFF, saveDirty = true;
         return 0;
 
@@ -236,7 +264,7 @@ uint32_t Cartridge::readNtrData() {
     // Decrement the read counter and check if finished
     if ((ntrCount -= 4) == 0) {
         // End the transfer and trigger interrupts if enabled
-        ntrRomcnt &= ~BIT(31); // Busy
+        ntrRomcnt &= ~BIT(31); // Not busy
         if (ntrMcnt & BIT(14)) {
             core->interrupts.sendInterrupt(ARM9, 27);
             core->interrupts.sendInterrupt(ARM11, 0x44);
@@ -265,9 +293,9 @@ uint32_t Cartridge::readNtrData() {
 
 uint32_t Cartridge::readCtrFifo() {
     // Schedule the next word if full but running, or trigger an end interrupt if done
-    if (ctrFifo.size() == 8 && ctrCount > 0 && (ctrCnt & BIT(31)))
+    if (ctrFifo.size() == 8 && ctrReadCount > 0 && (ctrCnt & BIT(31)))
         core->schedule(CTR_WORD_READY, ctrClocks[(ctrCnt >> 24) & 0x7]);
-    else if (ctrFifo.size() == 1 && ctrCount == 0 && (ctrCnt & BIT(30)))
+    else if (ctrFifo.size() == 1 && ctrReadCount == 0 && (ctrCnt & BIT(30)))
         core->interrupts.sendInterrupt(ARM9, 23);
 
     // Pop a word from the CTRCARD FIFO and clear the ready bit if empty
@@ -379,12 +407,13 @@ void Cartridge::writeCtrCnt(uint32_t mask, uint32_t value) {
     // Determine the total size of data to transfer
     static const uint16_t sizes[9] = { 0x0, 0x4, 0x10, 0x40, 0x200, 0x400, 0x800, 0x1000, 0x2000 };
     uint16_t blkSize = sizes[std::min(8U, (ctrCnt >> 16) & 0xF)];
-    ctrCount = blkSize * ((ctrBlkcnt & 0x7FFF) + 1);
+    ctrReadCount = blkSize * ((ctrBlkcnt & 0x7FFF) + 1);
 
     // Get the command in two parts and reset reply state
     uint64_t cmdL = (uint64_t(ctrCmd[1]) << 32) | ctrCmd[0];
     uint64_t cmdH = (uint64_t(ctrCmd[3]) << 32) | ctrCmd[2];
     ctrReply = REPLY_NONE;
+    ctrFifo = {};
 
     // Interpret the CTRCARD command
     if (cartFile && ctrMode) {
@@ -405,17 +434,35 @@ void Cartridge::writeCtrCnt(uint32_t mask, uint32_t value) {
             ctrAddress = 0;
             break;
 
-        case 0xBF: // ROM address
-            // Switch to ROM reply state and set the address
+        case 0xBF: // Cart read
+            // Switch to cart read reply state and set the address
             ctrReply = REPLY_ROM;
             ctrAddress = cmdH;
-            LOG_INFO("Starting CTRCARD read from address 0x%X with size 0x%X\n", ctrAddress, ctrCount);
+            LOG_INFO("Starting CTRCARD read from address 0x%X with size 0x%X\n", ctrAddress, ctrReadCount);
             break;
+
+        case 0xC3: // Cart write
+            // Set parameters for a cart write and trigger DMAs right away
+            ctrAddress = cmdH;
+            ctrWriteCount = blkSize * uint32_t(cmdL);
+            LOG_INFO("Starting CTRCARD write to address 0x%X with size 0x%X\n", ctrAddress, ctrWriteCount);
+            ctrCnt |= BIT(27); // Ready
+            core->ndma.triggerMode(0x4);
+
+            // Override the typical read response
+            ctrCnt &= ~BIT(31); // Not busy
+            ctrReadCount = 0;
+            return;
 
         case 0xC6: // Unique ID
             // Switch to PROM reply state and reset the address
             ctrReply = REPLY_PROM;
             ctrAddress = 0;
+            break;
+
+        case 0xC7: // Write status
+            // Switch to CARD2 write status reply state
+            ctrReply = REPLY_CARD2;
             break;
 
         case 0x83: case 0xC5: // Reseed or refresh
@@ -430,8 +477,8 @@ void Cartridge::writeCtrCnt(uint32_t mask, uint32_t value) {
     }
 
     // End the transfer and trigger an interrupt instantly if the size is zero
-    if (ctrCount == 0) {
-        ctrCnt &= ~0x88000000; // Busy, word ready
+    if (ctrReadCount == 0) {
+        ctrCnt &= ~BIT(31); // Not busy
         if (ctrCnt & BIT(30))
             core->interrupts.sendInterrupt(ARM9, 23);
         return;
@@ -460,6 +507,27 @@ void Cartridge::writeCtrSeccnt(uint32_t mask, uint32_t value) {
 void Cartridge::writeCtrCmd(int i, uint32_t mask, uint32_t value) {
     // Write to a 32-bit part of the CTRCARD_CMD register
     ctrCmd[i] = (ctrCmd[i] & ~mask) | (value & mask);
+}
+
+void Cartridge::writeCtrFifo(uint32_t mask, uint32_t value) {
+    // Write a word to the cart if writable and increment the address
+    if (!ctrWriteCount) return;
+    if (ctrAddress >= saveBase && ctrAddress < saveBase + saveSize2)
+        *(uint32_t*)&saveData[ctrAddress - saveBase] = (value & mask), saveDirty = true;
+    ctrAddress += 4;
+
+    // Decrement the write count and update state
+    ctrCnt &= ~BIT(31); // Not busy
+    if ((ctrWriteCount -= 4) == 0) {
+        // Trigger an interrupt once the last word is written
+        if (ctrCnt & BIT(30))
+            core->interrupts.sendInterrupt(ARM9, 23);
+    }
+    else if ((ctrWriteCount & 0x1F) == 0) {
+        // Set the ready bit and trigger DMAs every 8 words
+        ctrCnt |= BIT(27);
+        core->ndma.triggerMode(0x4);
+    }
 }
 
 void Cartridge::writeSpiFifoCnt(uint32_t mask, uint32_t value) {

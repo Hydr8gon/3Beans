@@ -73,9 +73,9 @@ template <bool doX> SoftVertex GpuRenderSoft::interpolate(SoftVertex &v1, SoftVe
 
     // Interpolate triangle vertex attributes using the factor
     SoftVertex v;
-    v.z = 1.0f / (1.0f / v1.z + (1.0f / v2.z - 1.0f / v1.z) * factor);
-    v.w = 1.0f / (1.0f / v1.w + (1.0f / v2.w - 1.0f / v1.w) * factor);
     if (doX) v.x = v1.x + (v2.x - v1.x) * factor;
+    v.z = v1.z + (v2.z - v1.z) * factor;
+    v.w = v1.w + (v2.w - v1.w) * factor;
     v.r = v1.r + (v2.r - v1.r) * factor;
     v.g = v1.g + (v2.g - v1.g) * factor;
     v.b = v1.b + (v2.b - v1.b) * factor;
@@ -282,10 +282,10 @@ void GpuRenderSoft::getTexel(float &r, float &g, float &b, float &a, float s, fl
 void GpuRenderSoft::getSource(float &r, float &g, float &b, float &a, SoftVertex &v, int i, int j) {
     // Get the components of a texture combiner source color
     switch (combSrcs[i][j]) {
-        case COMB_PRIM: r = v.r * v.w, g = v.g * v.w, b = v.b * v.w, a = v.a * v.w; break;
-        case COMB_TEX0: getTexel(r, g, b, a, v.s0 * v.w, v.t0 * v.w, 0); break;
-        case COMB_TEX1: getTexel(r, g, b, a, v.s1 * v.w, v.t1 * v.w, 1); break;
-        case COMB_TEX2: getTexel(r, g, b, a, v.s2 * v.w, v.t2 * v.w, 2); break;
+        case COMB_PRIM: r = v.r / v.w, g = v.g / v.w, b = v.b / v.w, a = v.a / v.w; break;
+        case COMB_TEX0: getTexel(r, g, b, a, v.s0 / v.w, v.t0 / v.w, 0); break;
+        case COMB_TEX1: getTexel(r, g, b, a, v.s1 / v.w, v.t1 / v.w, 1); break;
+        case COMB_TEX2: getTexel(r, g, b, a, v.s2 / v.w, v.t2 / v.w, 2); break;
         case COMB_CONST: r = combColors[i][0], g = combColors[i][1], b = combColors[i][2], a = combColors[i][3]; break;
         case COMB_UNK: r = g = b = a = 1.0f; break;
 
@@ -740,6 +740,7 @@ void GpuRenderSoft::clipTriangle(SoftVertex &a, SoftVertex &b, SoftVertex &c) {
         vert[i].r /= vert[i].w, vert[i].g /= vert[i].w, vert[i].b /= vert[i].w;
         vert[i].s0 /= vert[i].w, vert[i].s1 /= vert[i].w, vert[i].s2 /= vert[i].w;
         vert[i].t0 /= vert[i].w, vert[i].t1 /= vert[i].w, vert[i].t2 /= vert[i].w;
+        vert[i].w = 1.0f / vert[i].w;
         if (i >= 2) drawTriangle(vert[0], vert[i - 1], vert[i]);
     }
 }

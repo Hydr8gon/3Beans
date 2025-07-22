@@ -2236,6 +2236,7 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x10004024, core->cartridge.writeCtrCmd(1, IO_PARAMS)) // CTRCARD_CMD1
                 DEF_IO32(0x10004028, core->cartridge.writeCtrCmd(2, IO_PARAMS)) // CTRCARD_CMD2
                 DEF_IO32(0x1000402C, core->cartridge.writeCtrCmd(3, IO_PARAMS)) // CTRCARD_CMD3
+                DEF_IO32(0x10004030, core->cartridge.writeCtrFifo(IO_PARAMS)) // CTRCARD_FIFO
                 DEF_IO16(0x10006000, core->sdMmcs[0].writeCmd(IO_PARAMS)) // SD0_CMD
                 DEF_IO16(0x10006002, core->sdMmcs[0].writePortSelect(IO_PARAMS)) // SD0_PORT_SELECT
                 DEF_IO32(0x10006004, core->sdMmcs[0].writeCmdParam(IO_PARAMS)) // SD0_CMD_PARAM

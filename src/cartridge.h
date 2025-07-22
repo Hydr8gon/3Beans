@@ -31,7 +31,8 @@ enum ReplyCmd {
     REPLY_CHIP2,
     REPLY_HEADER,
     REPLY_ROM,
-    REPLY_PROM
+    REPLY_PROM,
+    REPLY_CARD2
 };
 
 class Cartridge {
@@ -66,6 +67,7 @@ public:
     void writeCtrBlkcnt(uint32_t mask, uint32_t value);
     void writeCtrSeccnt(uint32_t mask, uint32_t value);
     void writeCtrCmd(int i, uint32_t mask, uint32_t value);
+    void writeCtrFifo(uint32_t mask, uint32_t value);
     void writeSpiFifoCnt(uint32_t mask, uint32_t value);
     void writeSpiFifoSelect(uint32_t mask, uint32_t value);
     void writeSpiFifoBlklen(uint32_t mask, uint32_t value);
@@ -82,7 +84,9 @@ private:
     uint32_t cartId1 = -1;
     uint32_t cartId2 = -1;
     uint8_t *saveData = nullptr;
-    uint32_t saveSize = 0;
+    uint32_t saveSize1 = 0;
+    uint32_t saveSize2 = 0;
+    uint32_t saveBase = -1;
     uint32_t saveId = -1;
     std::string savePath;
     bool saveDirty = false;
@@ -95,7 +99,8 @@ private:
     ReplyCmd ntrReply = REPLY_NONE;
     ReplyCmd ctrReply = REPLY_NONE;
     uint16_t ntrCount = 0;
-    uint32_t ctrCount = 0;
+    uint32_t ctrReadCount = 0;
+    uint32_t ctrWriteCount = 0;
     uint32_t spiCount = 0;
     uint32_t spiTotal = 0;
     uint32_t ctrAddress = 0;
