@@ -51,6 +51,7 @@ private:
 
     uint8_t readMcuIrqFlags(int i);
     uint8_t readMcuIrqMask(int i);
+    uint8_t readRtcValue(int i);
 
     void writeMcuIrqMask(int i, uint8_t value);
     void writeMcuLcdPower(uint8_t value);

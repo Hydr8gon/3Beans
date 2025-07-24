@@ -57,6 +57,13 @@ void I2c::writeBusCnt(int i, uint8_t value) {
             case 0x14B19: i2cBusData[i] = readMcuIrqMask(1); return;
             case 0x14B1A: i2cBusData[i] = readMcuIrqMask(2); return;
             case 0x14B1B: i2cBusData[i] = readMcuIrqMask(3); return;
+            case 0x14B30: i2cBusData[i] = readRtcValue(0); return;
+            case 0x14B31: i2cBusData[i] = readRtcValue(1); return;
+            case 0x14B32: i2cBusData[i] = readRtcValue(2); return;
+            case 0x14B33: i2cBusData[i] = readRtcValue(3); return;
+            case 0x14B34: i2cBusData[i] = readRtcValue(4); return;
+            case 0x14B35: i2cBusData[i] = readRtcValue(5); return;
+            case 0x14B36: i2cBusData[i] = readRtcValue(6); return;
 
         default:
             LOG_WARN("Unknown I2C bus %d read from device 0x%X, register 0x%X\n", i, devAddr, regAddr);
@@ -102,6 +109,25 @@ uint8_t I2c::readMcuIrqFlags(int i) {
 uint8_t I2c::readMcuIrqMask(int i) {
     // Read part of the MCU interrupt mask
     return mcuIrqMask >> (i << 3);
+}
+
+uint8_t I2c::readRtcValue(int i) {
+    // Get the local time and adjust values for the DS
+    std::time_t t = std::time(nullptr);
+    std::tm *time = std::localtime(&t);
+    time->tm_year %= 100; // 2000-2099
+    time->tm_mon++; // Starts at 1
+
+    // Read the requested value converted to BCD format
+    switch (i) {
+        case 0: return ((time->tm_sec / 10) << 4) | (time->tm_sec % 10);
+        case 1: return ((time->tm_min / 10) << 4) | (time->tm_min % 10);
+        case 2: return ((time->tm_hour / 10) << 4) | (time->tm_hour % 10);
+        case 3: return 0; // TODO: day of week
+        case 4: return ((time->tm_mday / 10) << 4) | (time->tm_mday % 10);
+        case 5: return ((time->tm_mon / 10) << 4) | (time->tm_mon % 10);
+        default: return ((time->tm_year / 10) << 4) | (time->tm_year % 10);
+    }
 }
 
 void I2c::writeMcuIrqMask(int i, uint8_t value) {
