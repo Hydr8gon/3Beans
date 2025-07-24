@@ -89,6 +89,7 @@ MOV_FUNC(movStpa0h, regStep0[(opcode >> 8) & 0x1], writeAhM<0>, 1) // MOV Step0,
     return 1; \
 }
 
+MOVHH_FUNC(movAbab, readAbS[(opcode >> 10) & 0x3], writeAb40M[(opcode >> 5) & 0x3]) // MOV Ab, Ab
 MOVHH_FUNC(movAblarap, readAbS[(opcode >> 3) & 0x3], writeArArp[opcode & 0x7]) // MOV Abl, ArArp
 MOVHH_FUNC(movAblsm, readAbS[(opcode >> 3) & 0x3], writeSttMod[opcode & 0x7]) // MOV Abl, SttMod
 MOVHH_FUNC(movRegb, readRegP0S[opcode & 0x1F], writeBx16M[(opcode >> 5) & 0x1]) // MOV RegisterP0, Bx

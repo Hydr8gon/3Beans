@@ -59,7 +59,7 @@ ADD16_FUNC(addR6a, regR[6], 4, 1) // ADD R6, Ax
 
 // Add a value to the high part of an A accumulator and set flags
 #define ADDH_FUNC(name, op0, op1s) int TeakInterp::name(uint16_t opcode) { \
-    int64_t val1 = regA[(opcode >> 8) & 0x1].v; \
+    int64_t val1 = regA[(opcode >> op1s) & 0x1].v; \
     int32_t val2 = (op0) << 16; \
     int64_t res = ((val1 + val2) << 24) >> 24; \
     bool v = (~(val2 ^ val1) & (res ^ val2)) >> 39; \
@@ -73,6 +73,23 @@ ADDH_FUNC(addhMi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 8) //
 ADDH_FUNC(addhMrn, core->dsp.readData(getRnStepZids(opcode)), 8) // ADDH MemRnStepZids, Ax
 ADDH_FUNC(addhReg, *readReg[opcode & 0x1F], 8) // ADDH Register, Ax
 ADDH_FUNC(addhR6, regR[6], 0) // ADDH R6, Ax
+
+// Add a value to the low part of an A accumulator and set flags
+#define ADDL_FUNC(name, op0, op1s) int TeakInterp::name(uint16_t opcode) { \
+    int64_t val1 = regA[(opcode >> op1s) & 0x1].v; \
+    uint16_t val2 = op0; \
+    int64_t res = ((val1 + val2) << 24) >> 24; \
+    bool v = (~(val2 ^ val1) & (res ^ val2)) >> 39; \
+    bool c = (uint64_t(val1) > uint64_t(res)); \
+    writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
+    (this->*writeAx40[(opcode >> op1s) & 0x1])(res); \
+    return 1; \
+}
+
+ADDL_FUNC(addlMi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 8) // ADDL MemImm8, Ax
+ADDL_FUNC(addlMrn, core->dsp.readData(getRnStepZids(opcode)), 8) // ADDL MemRnStepZids, Ax
+ADDL_FUNC(addlReg, *readReg[opcode & 0x1F], 8) // ADDL Register, Ax
+ADDL_FUNC(addlR6, regR[6], 0) // ADDL R6, Ax
 
 // Add a 16-bit immediate to a memory value and set flags
 #define ADDVM_FUNC(name, op1a) int TeakInterp::name(uint16_t opcode) { \
@@ -245,6 +262,37 @@ int TeakInterp::dec(uint16_t opcode) { // DEC Ax, Cond
     return 1;
 }
 
+// Get a value from either an A accumulator or a register as a sign-extended high word
+#define EXP_REG ((opcode & 0x1E) == 0x18) ? regA[opcode & 0x1].v : int32_t(*readRegP0[opcode & 0x1F] << 16)
+
+// Calculate the shift that would normalize a value and store it in the shift register
+#define EXP_FUNC(name, op0) int TeakInterp::name(uint16_t opcode) { \
+    int64_t value = op0; \
+    int16_t exp = 1; \
+    while (!((value ^ (value << exp)) & BITL(40)) && exp < 40) exp++; \
+    regSv = (exp - 10); \
+    return 1; \
+}
+
+EXP_FUNC(expB, regB[opcode & 0x1].v) // EXP Bx
+EXP_FUNC(expMrn, int32_t(core->dsp.readData(getRnStepZids(opcode)) << 16)) // EXP MemRnStepZids
+EXP_FUNC(expReg, EXP_REG) // EXP RegisterP0
+EXP_FUNC(expR6, int32_t(regR[6] << 16)) // EXP R6
+
+// Calculate the shift that would normalize a value and store it in the shift register and an A accumulator
+#define EXPA_FUNC(name, op0, op1s) int TeakInterp::name(uint16_t opcode) { \
+    int64_t value = op0; \
+    int16_t exp = 1; \
+    while (!((value ^ (value << exp)) & BITL(40)) && exp < 40) exp++; \
+    (this->*writeAx40[(opcode >> op1s) & 0x1])(regSv = exp - 10); \
+    return 1; \
+}
+
+EXPA_FUNC(expBa, regB[opcode & 0x1].v, 8) // EXP Bx, Ax
+EXPA_FUNC(expMrna, int32_t(core->dsp.readData(getRnStepZids(opcode)) << 16), 8) // EXP MemRnStepZids, Ax
+EXPA_FUNC(expRega, EXP_REG, 8) // EXP RegisterP0, Ax
+EXPA_FUNC(expR6a, int32_t(regR[6] << 16), 4) // EXP R6, Ax
+
 int TeakInterp::inc(uint16_t opcode) { // INC Ax, Cond
     // Increment an A accumulator by 1 and set flags if the condition is met
     if (checkCond(opcode)) {
@@ -257,6 +305,26 @@ int TeakInterp::inc(uint16_t opcode) { // INC Ax, Cond
     }
     return 1;
 }
+
+// Take the min/max of A accumulators, set MIXP if changed, and post-adjust R0
+#define MINMAX_FUNC(name, op) int TeakInterp::name(uint16_t opcode) { \
+    bool a = (opcode >> 8) & 0x1; \
+    if (regA[!a].v op regA[a].v) { \
+        regA[a].v = regA[!a].v; \
+        regMixp = regR[0]; \
+        writeStt0(regStt[0] | BIT(6)); \
+    } \
+    else { \
+        writeStt0(regStt[0] & ~BIT(6)); \
+    } \
+    getRnStepZids(opcode); \
+    return 1; \
+}
+
+MINMAX_FUNC(maxGe, >=) // MAX Ax, R0StepZids, GE
+MINMAX_FUNC(maxGt, >) // MAX Ax, R0StepZids, GT
+MINMAX_FUNC(minLe, <=) // MIN Ax, R0StepZids, LE
+MINMAX_FUNC(minLt, <) // MIN Ax, R0StepZids, LT
 
 // Modify an address register as if memory was accessed and set the R flag if zero
 #define MODR_FUNC(name, op0) int TeakInterp::name(uint16_t opcode) { \
@@ -294,12 +362,18 @@ MOVS_FUNC(movsMrnab, core->dsp.readData(getRnStepZids(opcode)), (opcode >> 5) & 
 MOVS_FUNC(movsRegab, *readRegP0[opcode & 0x1F], (opcode >> 5) & 0x3) // MOVS RegisterP0, Ab
 MOVS_FUNC(movsR6a, regR[6], (opcode & 0x1) + 2) // MOVS R6, Ax
 
-int TeakInterp::mpyi(uint16_t opcode) { // MPYI Y0, Imm8s
-    // Load an 8-bit signed immediate into X0 and multiply it with Y0
-    regX[0] = int8_t(opcode);
-    multiplyXY(false, false);
-    return 1;
+// Load a value into X0 and multiply it with Y0
+#define MPY_FUNC(name, op1) int TeakInterp::name(uint16_t opcode) { \
+    regX[0] = op1; \
+    multiplyXY(false, false); \
+    return 1; \
 }
+
+MPY_FUNC(mpyY0mi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF))) // MPY Y0, MemImm8
+MPY_FUNC(mpyY0mrn, core->dsp.readData(getRnStepZids(opcode))) // MPY Y0, MemRnStepZids
+MPY_FUNC(mpyY0reg, *readReg[opcode & 0x1F]) // MPY Y0, Register
+MPY_FUNC(mpyY0r6, regR[6]) // MPY Y0, R6
+MPY_FUNC(mpyi, int8_t(opcode)) // MPYI Y0, Imm8s
 
 int TeakInterp::neg(uint16_t opcode) { // NEG Ax, Cond
     // Negate an A accumulator by subtracting it from 0 and set flags if the condition is met
@@ -403,47 +477,36 @@ SETR_FUNC(setR6, regR[6], regR[6]=) // SET Imm16, R6
 SETR_FUNC(setSm, *readSttMod[opcode & 0x7], (this->*writeSttMod[opcode & 0x7])) // SET Imm16, SttMod
 
 int TeakInterp::shfc(uint16_t opcode) { // SHFC Ab, Ab, Cond
-    // Shift an accumulator by the shift register and set flags if the condition is met
-    if (checkCond(opcode)) {
-        int16_t shift = regSv;
-        int64_t res = *readAb[(opcode >> 10) & 0x3];
-        if (regMod[0] & BIT(7)) { // Logical
-            res = (shift > 0) ? ((res & 0xFFFFFFFFFF) << shift) : ((res & 0xFFFFFFFFFF) >> -shift);
-            bool c = (res >> 40) & 0x1;
-            writeStt0((regStt[0] & ~0xEC) | calcZmne(res) | (c << 3));
-        }
-        else { // Arithmetic
-            res = (shift > 0) ? (res << shift) : (res >> -shift);
-            bool v = (res != ((res << 24) >> 24));
-            bool c = (res >> 40) & 0x1;
-            writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1));
-        }
-        (this->*writeAb40[(opcode >> 5) & 0x3])(res);
-    }
+    // Shift an accumulator by the shift register if the condition is met
+    if (checkCond(opcode))
+        (this->*writeAb40[(opcode >> 5) & 0x3])(shift(*readAb[(opcode >> 10) & 0x3], regSv));
     return 1;
 }
 
-// Move a value shifted by a signed immediate into an accumulator and set flags
+// Move a value shifted by a signed immediate into an accumulator
 #define SHFI_FUNC(name, op0, op1s, op2s) int TeakInterp::name(uint16_t opcode) { \
-    int8_t shift = int8_t(opcode << op2s) >> op2s; \
-    int64_t res = op0; \
-    if (regMod[0] & BIT(7)) { \
-        res = (shift > 0) ? ((res & 0xFFFFFFFFFF) << shift) : ((res & 0xFFFFFFFFFF) >> -shift); \
-        bool c = (res >> 40) & 0x1; \
-        writeStt0((regStt[0] & ~0xEC) | calcZmne(res) | (c << 3)); \
-    } \
-    else { \
-        res = (shift > 0) ? (res << shift) : (res >> -shift); \
-        bool v = (res != ((res << 24) >> 24)); \
-        bool c = (res >> 40) & 0x1; \
-        writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
-    } \
-    (this->*writeAb40[(opcode >> op1s) & 0x3])(res); \
+    (this->*writeAb40[(opcode >> op1s) & 0x3])(shift(op0, int8_t(opcode << op2s) >> op2s)); \
     return 1; \
 }
 
 SHFI_FUNC(movsi, int16_t(*readReg[(opcode >> 9) & 0x7]), 5, 3) // MOVSI R0123457y0, Ab, Imm5s
 SHFI_FUNC(shfi, *readAb[(opcode >> 10) & 0x3], 7, 2) // SHFI Ab, Ab, Imm6s
+
+// Shift an accumulator by a constant amount if the condition is met
+#define SHLR_FUNC(name, op0r, op0w, amt) int TeakInterp::name(uint16_t opcode) { \
+    if (checkCond(opcode)) \
+        (this->*op0w[(opcode >> 12) & 0x1])(shift(op0r[(opcode >> 12) & 0x1].v, amt)); \
+    return 1; \
+}
+
+SHLR_FUNC(shlA, regA, writeAx40, 1) // SHL Ax, Cond
+SHLR_FUNC(shlB, regB, writeBx40, 1) // SHL Bx, Cond
+SHLR_FUNC(shl4A, regA, writeAx40, 4) // SHL4 Ax, Cond
+SHLR_FUNC(shl4B, regB, writeBx40, 4) // SHL4 Bx, Cond
+SHLR_FUNC(shrA, regA, writeAx40, -1) // SHR Ax, Cond
+SHLR_FUNC(shrB, regB, writeBx40, -1) // SHR Bx, Cond
+SHLR_FUNC(shr4A, regA, writeAx40, -4) // SHR4 Ax, Cond
+SHLR_FUNC(shr4B, regB, writeBx40, -4) // SHR4 Bx, Cond
 
 // Subtract a 40-bit value from an accumulator and set flags
 #define SUB40_FUNC(name, op0, op1rb, op1wb, op1s) int TeakInterp::name(uint16_t opcode) { \

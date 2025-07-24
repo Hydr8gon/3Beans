@@ -60,6 +60,7 @@ private:
     uint8_t cfg9Sysprot9 = 0;
     uint8_t cfg9Sysprot11 = 0;
     uint32_t cfg9Extmemcnt9 = 0;
+    uint32_t prngSource[3] = {};
     uint32_t otpEncrypted[0x40] = {};
 
     template <typename T> T readFallback(CpuId id, uint32_t address);
@@ -74,6 +75,7 @@ private:
     uint8_t readCfg9Sysprot9() { return cfg9Sysprot9; }
     uint8_t readCfg9Sysprot11() { return cfg9Sysprot11; }
     uint8_t readCfg9Extmemcnt9() { return cfg9Extmemcnt9; }
+    uint32_t readPrngSource(int i);
     uint32_t readOtpEncrypted(int i) { return otpEncrypted[i]; }
 
     void writeCfg11BrOverlayCnt(uint32_t mask, uint32_t value);

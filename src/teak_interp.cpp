@@ -205,6 +205,23 @@ int64_t TeakInterp::saturate(int64_t value) {
     return value;
 }
 
+int64_t TeakInterp::shift(int64_t value, int16_t amount) {
+    // Shift a 40-bit value left or right based on mode and set flags
+    int64_t res = value;
+    if (regMod[0] & BIT(7)) { // Logical
+        res = (amount > 0) ? ((res & 0xFFFFFFFFFF) << amount) : ((res & 0xFFFFFFFFFF) >> -amount);
+        bool c = (res >> 40) & 0x1;
+        writeStt0((regStt[0] & ~0xEC) | calcZmne(res) | (c << 3));
+    }
+    else { // Arithmetic
+        res = (amount > 0) ? (res << amount) : (res >> -amount);
+        bool v = (res != ((res << 24) >> 24));
+        bool c = (res >> 40) & 0x1;
+        writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1));
+    }
+    return res;
+}
+
 void TeakInterp::multiplyXY(bool x, bool y) {
     // Get the X and Y values to multiply, with Y modified based on HWM bits
     int16_t valX = regX[x], valY;
@@ -258,21 +275,6 @@ uint16_t TeakInterp::stepReg(uint8_t reg, int32_t step) {
     else
         regR[reg] += int8_t(regCfg[reg >> 2] << 1) >> 1; // 7-bit step
     return value;
-}
-
-uint16_t TeakInterp::getRnStepZids(uint8_t rnStep) {
-    // Get an address register value and post-adjust with a ZIDS step
-    return stepReg(rnStep & 0x7, stepTable[(rnStep >> 3) & 0x3]);
-}
-
-uint16_t TeakInterp::getRarOffsAr(uint8_t rarOffs) {
-    // Get a configurable register value and offset with a configurable step
-    return offsReg(arRn[(rarOffs >> 2) & 0x3], arCs[rarOffs & 0x3]);
-}
-
-uint16_t TeakInterp::getRarStepAr(uint8_t rarStep) {
-    // Get a configurable register value and post-adjust with a configurable step
-    return stepReg(arRn[(rarStep >> 2) & 0x3], arPm[rarStep & 0x3]);
 }
 
 template <int i> int64_t TeakInterp::readA40S() {

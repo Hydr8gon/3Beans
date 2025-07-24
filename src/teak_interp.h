@@ -137,15 +137,16 @@ private:
     void bkrepPop(uint8_t count);
     bool checkCond(uint8_t cond);
     int64_t saturate(int64_t value);
+    int64_t shift(int64_t value, int16_t amount);
     void multiplyXY(bool x, bool y);
     static uint16_t calcZmne(int64_t res);
     static uint16_t revBits(uint16_t value);
 
     uint16_t offsReg(uint8_t reg, int8_t offs);
     uint16_t stepReg(uint8_t reg, int32_t step);
-    uint16_t getRnStepZids(uint8_t rnStep);
-    uint16_t getRarOffsAr(uint8_t rarOffs);
-    uint16_t getRarStepAr(uint8_t rarStep);
+    uint16_t getRnStepZids(uint8_t rnStep) { return stepReg(rnStep & 0x7, stepTable[(rnStep >> 3) & 0x3]); }
+    uint16_t getRarOffsAr(uint8_t rarOffs) { return offsReg(arRn[(rarOffs >> 2) & 0x3], arCs[rarOffs & 0x3]); }
+    uint16_t getRarStepAr(uint8_t rarStep) { return stepReg(arRn[(rarStep >> 2) & 0x3], arPm[rarStep & 0x3]); }
 
     template <int i> int64_t readA40S();
     template <int i> uint16_t readAlS();
@@ -227,6 +228,10 @@ private:
     int addhMrn(uint16_t opcode);
     int addhReg(uint16_t opcode);
     int addhR6(uint16_t opcode);
+    int addlMi8(uint16_t opcode);
+    int addlMrn(uint16_t opcode);
+    int addlReg(uint16_t opcode);
+    int addlR6(uint16_t opcode);
     int addvMi8(uint16_t opcode);
     int addvMrn(uint16_t opcode);
     int addvReg(uint16_t opcode);
@@ -268,7 +273,19 @@ private:
     int cmpvR6(uint16_t opcode);
     int copy(uint16_t opcode);
     int dec(uint16_t opcode);
+    int expB(uint16_t opcode);
+    int expBa(uint16_t opcode);
+    int expMrn(uint16_t opcode);
+    int expMrna(uint16_t opcode);
+    int expReg(uint16_t opcode);
+    int expRega(uint16_t opcode);
+    int expR6(uint16_t opcode);
+    int expR6a(uint16_t opcode);
     int inc(uint16_t opcode);
+    int maxGe(uint16_t opcode);
+    int maxGt(uint16_t opcode);
+    int minLe(uint16_t opcode);
+    int minLt(uint16_t opcode);
     int modrD2(uint16_t opcode);
     int modrI2(uint16_t opcode);
     int modrZids(uint16_t opcode);
@@ -277,6 +294,10 @@ private:
     int movsRegab(uint16_t opcode);
     int movsR6a(uint16_t opcode);
     int movsi(uint16_t opcode);
+    int mpyY0mi8(uint16_t opcode);
+    int mpyY0mrn(uint16_t opcode);
+    int mpyY0reg(uint16_t opcode);
+    int mpyY0r6(uint16_t opcode);
     int mpyi(uint16_t opcode);
     int neg(uint16_t opcode);
     int _not(uint16_t opcode);
@@ -304,6 +325,14 @@ private:
     int setSm(uint16_t opcode);
     int shfc(uint16_t opcode);
     int shfi(uint16_t opcode);
+    int shlA(uint16_t opcode);
+    int shlB(uint16_t opcode);
+    int shl4A(uint16_t opcode);
+    int shl4B(uint16_t opcode);
+    int shrA(uint16_t opcode);
+    int shrB(uint16_t opcode);
+    int shr4A(uint16_t opcode);
+    int shr4B(uint16_t opcode);
     int subAbb(uint16_t opcode);
     int subBa(uint16_t opcode);
     int subI16a(uint16_t opcode);
@@ -378,6 +407,7 @@ private:
     int loadStep(uint16_t opcode);
     int movApc(uint16_t opcode);
     int movA0hstp(uint16_t opcode);
+    int movAbab(uint16_t opcode);
     int movAblarap(uint16_t opcode);
     int movAblsm(uint16_t opcode);
     int movAblhmi8(uint16_t opcode);

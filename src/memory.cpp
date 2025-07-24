@@ -92,6 +92,13 @@ bool Memory::init() {
 void Memory::loadOtp(FILE *file) {
     // Load encrypted OTP data from a file
     fread(otpEncrypted, sizeof(uint32_t), 0x40, file);
+
+    // Use OTP data to seed the PRNG registers
+    for (int i = 0; i < 0x10; i++) {
+        prngSource[0] ^= otpEncrypted[0x00 + i];
+        prngSource[1] ^= otpEncrypted[0x10 + i];
+        prngSource[2] ^= otpEncrypted[0x20 + i];
+    }
 }
 
 void Memory::updateMap(bool arm9, uint32_t start, uint32_t end) {
@@ -1270,6 +1277,9 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x1000D80C, data = core->cartridge.readSpiFifoData()) // SPICARD_FIFO_DATA
                 DEF_IO32(0x1000D818, data = core->cartridge.readSpiFifoIntMask()) // SPICARD_FIFO_INT_MASK
                 DEF_IO32(0x1000D81C, data = core->cartridge.readSpiFifoIntStat()) // SPICARD_FIFO_INT_STAT
+                DEF_IO32(0x10011000, data = readPrngSource(0)) // PRNG_SOURCE0
+                DEF_IO32(0x10011010, data = readPrngSource(1)) // PRNG_SOURCE1
+                DEF_IO32(0x10011020, data = readPrngSource(2)) // PRNG_CONSTANT
                 DEF_IO32(0x10012000, data = readOtpEncrypted(0)) // OTP_ENCRYPTED0
                 DEF_IO32(0x10012004, data = readOtpEncrypted(1)) // OTP_ENCRYPTED1
                 DEF_IO32(0x10012008, data = readOtpEncrypted(2)) // OTP_ENCRYPTED2
@@ -2580,7 +2590,14 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
     }
 }
 
-void Memory::writeCfg11BrOverlayCnt(uint32_t mask, uint32_t value){
+uint32_t Memory::readPrngSource(int i) {
+    // Use a made-up pseudo-random formula to adjust PRNG registers in a reproducible way
+    // TODO: figure out what formula they actually use
+    if (i < 2) prngSource[i] = (((prngSource[i] >> 2) + 0x800000) ^ ((prngSource[i] << 3) - (i + 1))) * 3;
+    return prngSource[i];
+}
+
+void Memory::writeCfg11BrOverlayCnt(uint32_t mask, uint32_t value) {
     // Write to the CFG11_BR_OVERLAY_CNT register
     if (!core->n3dsMode) return; // N3DS-exclusive
     mask &= 0x1;
@@ -2592,7 +2609,7 @@ void Memory::writeCfg11BrOverlayCnt(uint32_t mask, uint32_t value){
     updateMap(false, 0xFFFF0000, 0xFFFF0FFF);
 }
 
-void Memory::writeCfg11BrOverlayVal(uint32_t mask, uint32_t value){
+void Memory::writeCfg11BrOverlayVal(uint32_t mask, uint32_t value) {
     // Write to the CFG11_BR_OVERLAY_VAL register
     if (!core->n3dsMode) return; // N3DS-exclusive
     cfg11BrOverlayVal = (cfg11BrOverlayVal & ~mask) | (value & mask);
