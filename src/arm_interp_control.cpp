@@ -20,6 +20,80 @@
 #include "arm_interp.h"
 #include "core.h"
 
+#if LOG_LEVEL > 3
+// Define SVC names and parameter counts for the 3DS OS
+static const struct {
+    const char *name;
+    uint8_t count;
+} svcInfo[0x80] = {
+    { "", 0 }, { "ControlMemory", 5 }, { "QueryMemory", 3 }, { "ExitProcess", 0 }, // 0x00-0x03
+    { "GetProcessAffinityMask", 3 }, { "SetProcessAffinityMask", 3 }, // 0x04-0x05
+    { "GetProcessIdealProcessor", 2 }, { "SetProcessIdealProcessor", 2 }, // 0x06-0x07
+    { "CreateThread", 5 }, { "ExitThread", 0 }, { "SleepThread", 2 }, { "GetThreadPriority", 2 }, // 0x08-0x0B
+    { "SetThreadPriority", 2 }, { "GetThreadAffinityMask", 3 }, // 0x0C-0x0D
+    { "SetThreadAffinityMask", 3 }, { "GetThreadIdealProcessor", 2 }, // 0x0E-0x0F
+    { "SetThreadIdealProcessor", 2 }, { "GetProcessorID", 0 }, { "Run", 2 }, { "CreateMutex", 2 }, // 0x10-0x13
+    { "ReleaseMutex", 1 }, { "CreateSemaphore", 3 }, { "ReleaseSemaphore", 3 }, { "CreateEvent", 2 }, // 0x14-0x17
+    { "SignalEvent", 1 }, { "ClearEvent", 1 }, { "CreateTimer", 2 }, { "SetTimer", 5 }, // 0x18-0x1B
+    { "CancelTimer", 1 }, { "ClearTimer", 1 }, { "CreateMemoryBlock", 5 }, { "MapMemoryBlock", 4 }, // 0x1C-0x1F
+    { "UnmapMemoryBlock", 2 }, { "CreateAddressArbiter", 1 }, // 0x20-0x21
+    { "ArbitrateAddress", 6 }, { "CloseHandle", 1 }, // 0x22-0x23
+    { "WaitSynchronization1", 4 }, { "WaitSynchronizationN", 6 }, // 0x24-0x25
+    { "SignalAndWait", 8 }, { "DuplicateHandle", 2 }, // 0x26-0x27
+    { "GetSystemTick", 0 }, { "GetHandleInfo", 3 }, { "GetSystemInfo", 3 }, { "GetProcessInfo", 3 }, // 0x28-0x2B
+    { "GetThreadInfo", 3 }, { "ConnectToPort", 2 }, { "SendSyncRequest1", 1 }, { "SendSyncRequest2", 1 }, // 0x2C-0x2F
+    { "SendSyncRequest3", 1 }, { "SendSyncRequest4", 1 }, { "SendSyncRequest", 1 }, { "OpenProcess", 2 }, // 0x30-0x33
+    { "OpenThread", 3 }, { "GetProcessId", 2 }, { "GetProcessIdOfThread", 2 }, { "GetThreadId", 2 }, // 0x34-0x37
+    { "GetResourceLimit", 2 }, { "GetResourceLimitLimitValues", 4 }, // 0x38-0x39
+    { "GetResourceLimitCurrentValues", 4 }, { "GetThreadContext", 2 }, // 0x3A-0x3B
+    { "Break", 1 }, { "OutputDebugString", 2 }, { "ControlPerformanceCounter", 6 }, { "", 0 }, // 0x3C-0x3F
+    { "", 0 }, { "", 0 }, { "", 0 }, { "", 0 }, // 0x40-0x43
+    { "", 0 }, { "", 0 }, { "", 0 }, { "CreatePort", 4 }, // 0x44-0x47
+    { "CreateSessionToPort", 2 }, { "CreateSession", 2 }, // 0x48-0x49
+    { "AcceptSession", 2 }, { "ReplyAndReceive1", 4 }, // 0x4A-0x4B
+    { "ReplyAndReceive2", 4 }, { "ReplyAndReceive3", 4 }, // 0x4C-0x4D
+    { "ReplyAndReceive4", 4 }, { "ReplyAndReceive", 4 }, // 0x4E-0x4F
+    { "BindInterrupt", 4 }, { "UnbindInterrupt", 2 }, // 0x50-0x51
+    { "InvalidateProcessDataCache", 3 }, { "StoreProcessDataCache", 3 }, // 0x52-0x53
+    { "FlushProcessDataCache", 3 }, { "StartInterProcessDma", 7 }, { "StopDma", 1 }, { "GetDmaState", 2 }, // 0x54-0x57
+    { "RestartDma", 5 }, { "SetGpuProt", 1 }, { "SetWifiEnabled", 1 }, { "", 0 }, // 0x58-0x5B
+    { "", 0 }, { "", 0 }, { "", 0 }, { "", 0 }, // 0x5C-0x5F
+    { "DebugActiveProcess", 2 }, { "BreakDebugProcess", 1 }, // 0x60-0x61
+    { "TerminateDebugProcess", 1 }, { "GetProcessDebugEvent", 2 }, // 0x62-0x63
+    { "ContinueDebugEvent", 2 }, { "GetProcessList", 3 }, // 0x64-0x65
+    { "GetThreadList", 4 }, { "GetDebugThreadContext", 4 }, // 0x66-0x67
+    { "SetDebugThreadContext", 4 }, { "QueryDebugProcessMemory", 4 }, // 0x68-0x69
+    { "ReadProcessMemory", 4 }, { "WriteProcessMemory", 4 }, // 0x6A-0x6B
+    { "SetHardwareBreakPoint", 3 }, { "GetDebugThreadParam", 5 }, { "", 0 }, { "", 0 }, // 0x6C-0x6F
+    { "ControlProcessMemory", 6 }, { "MapProcessMemory", 3 }, // 0x70-0x71
+    { "UnmapProcessMemory", 3 }, { "CreateCodeSet", 5 }, // 0x72-0x73
+    { "RandomStub", 0 }, { "CreateProcess", 4 }, // 0x74-0x75
+    { "TerminateProcess", 1 }, { "SetProcessResourceLimits", 2 }, // 0x76-0x77
+    { "CreateResourceLimit", 1 }, { "SetResourceLimitLimitValues", 4 }, // 0x78-0x79
+    { "AddCodeSegment", 2 }, { "Backdoor", 1 }, // 0x7A-0x7B
+    { "KernelSetState", 1 }, { "QueryProcessMemory", 4 }, { "", 0 }, { "", 0 } // 0x7C-0x7F
+};
+
+// Define a macro to log SVC information when called
+#define LOG_SVC(mask) \
+    uint32_t svc = (opcode & mask); \
+    std::string log = (id == ARM9) ? "ARM9" : ("ARM11 core " + std::to_string(id)); \
+    if (svc < 0x80 && svcInfo[svc].name[0]) { \
+        log = log + " calling svc" + svcInfo[svc].name + "("; \
+        for (int i = 0; i < svcInfo[svc].count; i++) { \
+            char buf[11]; \
+            sprintf(buf, "0x%X", *registers[i]); \
+            log = log + buf + ((i == svcInfo[svc].count - 1) ? "" : ", "); \
+        } \
+        LOG_OS("%s)\n", log.c_str()); \
+    } \
+    else { \
+        LOG_OS("%s calling unknown SVC: 0x%X\n", log.c_str(), svc); \
+    }
+#else
+#define LOG_SVC(mask)
+#endif
+
 int ArmInterp::bx(uint32_t opcode) { // BX Rn
     // Branch to address and switch to THUMB if bit 0 is set
     uint32_t op0 = *registers[opcode & 0xF];
@@ -68,10 +142,7 @@ int ArmInterp::blx(uint32_t opcode) { // BLX label
 
 int ArmInterp::swi(uint32_t opcode) { // SWI #i
     // Software interrupt
-    if (id == ARM9)
-        LOG_INFO("Triggering ARM9 software interrupt: 0x%X\n", opcode & 0xFFFFFF);
-    else
-        LOG_INFO("Triggering ARM11 core %d software interrupt: 0x%X\n", id, opcode & 0xFFFFFF);
+    LOG_SVC(0xFFFFFF)
     *registers[15] -= 4;
     return exception(0x08);
 }
@@ -390,10 +461,7 @@ int ArmInterp::blxOffT(uint16_t opcode) { // BLX label
 
 int ArmInterp::swiT(uint16_t opcode) { // SWI #i
     // Software interrupt (THUMB)
-    if (id == ARM9)
-        LOG_INFO("Triggering ARM9 software interrupt: 0x%X\n", opcode & 0xFF);
-    else
-        LOG_INFO("Triggering ARM11 core %d software interrupt: 0x%X\n", id, opcode & 0xFF);
+    LOG_SVC(0xFF)
     *registers[15] -= 4;
     return exception(0x08);
 }

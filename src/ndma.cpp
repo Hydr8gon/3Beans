@@ -146,8 +146,8 @@ void Ndma::writeCnt(int i, uint32_t mask, uint32_t value) {
 
     // Handle immediate transfers or catch unimplemented modes
     uint8_t mode = (ndmaCnt[i] >> 24) & 0x1F;
-    LOG_INFO("NDMA channel %d starting in mode 0x%X with size 0x%X in blocks of 0x%X\n",
-        i, mode, ndmaTcnt[i] << 2, ndmaWcnt[i] << 2);
+    LOG_INFO("NDMA channel %d starting in mode 0x%X, transferring from 0x%X to 0x%X with size 0x%X in blocks of 0x%X\n",
+        i, mode, ndmaSad[i], ndmaDad[i], ndmaTcnt[i] << 2, ndmaWcnt[i] << 2);
     if ((mode < 0x6 && mode != 0x4) || (mode > 0xC && mode < 0xF))
         LOG_CRIT("NDMA channel %d started in unimplemented mode: 0x%X\n", i, mode);
     else if (mode == 0xF)
