@@ -520,6 +520,12 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
         dstB = float((val >> 8) & 0xFF) / 0xFF;
         dstA = float((val >> 0) & 0xFF) / 0xFF;
         break;
+    case COL_RGB8:
+        dstR = float(core->memory.read<uint8_t>(ARM11, colbufAddr + ofs * 3 + 2)) / 0xFF;
+        dstG = float(core->memory.read<uint8_t>(ARM11, colbufAddr + ofs * 3 + 1)) / 0xFF;
+        dstB = float(core->memory.read<uint8_t>(ARM11, colbufAddr + ofs * 3 + 0)) / 0xFF;
+        dstA = 1.0f;
+        break;
     case COL_RGB565:
         val = core->memory.read<uint16_t>(ARM11, colbufAddr + ofs * 2);
         dstR = float((val >> 11) & 0x1F) / 0x1F;
@@ -637,6 +643,10 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
     case COL_RGBA8:
         val = (int(r * 255) << 24) | (int(g * 255) << 16) | (int(b * 255) << 8) | int(a * 255);
         return core->memory.write<uint32_t>(ARM11, colbufAddr + ofs * 4, val);
+    case COL_RGB8:
+        core->memory.write<uint8_t>(ARM11, colbufAddr + ofs * 3 + 2, r * 255);
+        core->memory.write<uint8_t>(ARM11, colbufAddr + ofs * 3 + 1, g * 255);
+        return core->memory.write<uint8_t>(ARM11, colbufAddr + ofs * 3 + 0, b * 255);
     case COL_RGB565:
         val = (int(r * 31) << 11) | (int(g * 63) << 5) | int(b * 31);
         return core->memory.write<uint16_t>(ARM11, colbufAddr + ofs * 2, val);

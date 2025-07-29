@@ -119,6 +119,7 @@ enum TexFmt {
 
 enum ColbufFmt {
     COL_RGBA8,
+    COL_RGB8,
     COL_RGB565,
     COL_RGB5A1,
     COL_RGBA4,

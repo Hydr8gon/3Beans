@@ -452,6 +452,7 @@ void Gpu::writeColbufFmt(uint32_t mask, uint32_t value) {
     // Set the format for the renderer if it's valid
     switch (gpuColbufFmt) {
         case 0x00002: return core->gpuRender.setColbufFmt(COL_RGBA8);
+        case 0x10001: return core->gpuRender.setColbufFmt(COL_RGB8);
         case 0x20000: return core->gpuRender.setColbufFmt(COL_RGB5A1);
         case 0x30000: return core->gpuRender.setColbufFmt(COL_RGB565);
         case 0x40000: return core->gpuRender.setColbufFmt(COL_RGBA4);
