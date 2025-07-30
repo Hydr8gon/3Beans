@@ -20,6 +20,7 @@
 #pragma once
 
 #include <cstdint>
+#include <deque>
 #include <queue>
 
 class Core;
@@ -39,6 +40,8 @@ public:
     uint16_t readData16Blklen() { return wifiData16Blklen; }
     uint32_t readErrDetail() { return wifiErrDetail; }
     uint16_t readData16Fifo();
+    uint16_t readCardIrqStat() { return wifiCardIrqStat; }
+    uint16_t readCardIrqMask() { return wifiCardIrqMask; }
     uint16_t readDataCtl() { return wifiDataCtl; }
     uint16_t readData32Irq() { return wifiData32Irq; }
     uint16_t readData32Blklen() { return wifiData32Blklen; }
@@ -50,6 +53,8 @@ public:
     void writeIrqMask(uint32_t mask, uint32_t value);
     void writeData16Blklen(uint16_t mask, uint16_t value);
     void writeData16Fifo(uint16_t mask, uint16_t value);
+    void writeCardIrqStat(uint16_t mask, uint16_t value);
+    void writeCardIrqMask(uint16_t mask, uint16_t value);
     void writeDataCtl(uint16_t mask, uint16_t value);
     void writeData32Irq(uint16_t mask, uint16_t value);
     void writeData32Blklen(uint16_t mask, uint16_t value);
@@ -70,14 +75,21 @@ private:
     uint8_t curFunc = 0;
     bool curInc = false;
 
+    uint32_t xtensaRam[0xC0000] = {};
+    uint8_t bootStage = 0;
+
     std::queue<uint16_t> dataFifo16;
     std::queue<uint32_t> dataFifo32;
-    std::queue<uint8_t> mboxes[8];
+    std::deque<uint8_t> mboxes[8];
 
+    uint8_t f0IntStat = 0;
+    uint8_t f0IntMask = 0;
+    uint8_t rxLookValid = 0;
+    uint32_t f1IntStat = 0;
+    uint32_t f1IntMask = 0;
     uint32_t winData = 0;
     uint32_t winWriteAddr = 0;
     uint32_t winReadAddr = 0;
-    uint32_t boardInited = 0;
 
     uint16_t wifiCmd = 0;
     uint32_t wifiCmdParam = 0;
@@ -87,12 +99,18 @@ private:
     uint16_t wifiData16Blklen = 0;
     uint32_t wifiErrDetail = 0;
     uint16_t wifiData16Fifo = 0;
+    uint16_t wifiCardIrqStat = 0;
+    uint16_t wifiCardIrqMask = 0;
     uint32_t wifiDataCtl = 0x1010;
     uint16_t wifiData32Irq = 0;
     uint32_t wifiData32Blklen = 0;
     uint32_t wifiData32Fifo = 0;
 
-    void sendInterrupt(int bit);
+    void extInterrupt(int bit);
+    void cardInterrupt(int bit);
+    void f0Interrupt(int bit);
+    void f1Interrupt(int bit);
+
     void startWrite();
     uint32_t popFifo();
     void pushFifo(uint32_t value);
@@ -103,8 +121,23 @@ private:
     uint32_t readXtensa(uint32_t address);
     void writeXtensa(uint32_t address, uint32_t value);
 
+    void bmiDone(int i);
+    void bmiReadMemory(int i);
+    void bmiWriteMemory(int i);
+    void bmiExecute(int i);
+    void bmiReadRegister(int i);
+    void bmiWriteRegister(int i);
+    void bmiTargetInfo(int i);
+    void htcConnectService(int i);
+    void htcSetupComplete(int i);
+    void wmiGetChanList(int i);
+
     template <typename T> T readMbox(int i);
-    void writeMbox(int i, uint8_t value, bool last);
+    uint8_t readRxLookahead(int i, int j);
+
+    void writeF0IntMask(uint8_t value);
+    template <typename T> void writeMbox(int i, T value, bool last = false);
+    void writeF1IntMask(int i, uint8_t value);
     void writeWinData(int i, uint8_t value);
     void writeWinWriteAddr(int i, uint8_t value);
     void writeWinReadAddr(int i, uint8_t value);

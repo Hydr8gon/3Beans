@@ -340,6 +340,8 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
             DEF_IO16(0x10122026, data = core->wifi.readData16Blklen()) // WIFI_DATA16_BLKLEN
             DEF_IO32(0x1012202C, data = core->wifi.readErrDetail()) // WIFI_ERR_DETAIL
             DEF_IO16(0x10122030, data = core->wifi.readData16Fifo()) // WIFI_DATA16_FIFO
+            DEF_IO16(0x10122036, data = core->wifi.readCardIrqStat()) // WIFI_CARD_IRQ_STAT
+            DEF_IO16(0x10122038, data = core->wifi.readCardIrqMask()) // WIFI_CARD_IRQ_MASK
             DEF_IO16(0x101220D8, data = core->wifi.readDataCtl()) // WIFI_DATA_CTL
             DEF_IO16(0x10122100, data = core->wifi.readData32Irq()) // WIFI_DATA32_IRQ
             DEF_IO16(0x10122104, data = core->wifi.readData32Blklen()) // WIFI_DATA32_BLKLEN
@@ -1681,6 +1683,8 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
             DEF_IO32(0x10122020, core->wifi.writeIrqMask(IO_PARAMS)) // WIFI_IRQ_MASK
             DEF_IO16(0x10122026, core->wifi.writeData16Blklen(IO_PARAMS)) // WIFI_DATA16_BLKLEN
             DEF_IO16(0x10122030, core->wifi.writeData16Fifo(IO_PARAMS)) // WIFI_DATA16_FIFO
+            DEF_IO16(0x10122036, core->wifi.writeCardIrqStat(IO_PARAMS)) // WIFI_CARD_IRQ_STAT
+            DEF_IO16(0x10122038, core->wifi.writeCardIrqMask(IO_PARAMS)) // WIFI_CARD_IRQ_MASK
             DEF_IO16(0x101220D8, core->wifi.writeDataCtl(IO_PARAMS)) // WIFI_DATA_CTL
             DEF_IO16(0x10122100, core->wifi.writeData32Irq(IO_PARAMS)) // WIFI_DATA32_IRQ
             DEF_IO16(0x10122104, core->wifi.writeData32Blklen(IO_PARAMS)) // WIFI_DATA32_BLKLEN

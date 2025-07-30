@@ -412,7 +412,12 @@ void SdMmc::writeIrqStatus(uint32_t mask, uint32_t value) {
 void SdMmc::writeIrqMask(uint32_t mask, uint32_t value) {
     // Write to the SD_IRQ_MASK register
     mask &= 0x8B7F031D;
+    uint32_t old = sdIrqMask;
     sdIrqMask = (sdIrqMask & ~mask) | (value & mask);
+
+    // Trigger an ARM9 interrupt if a requested bit was newly unmasked
+    if (sdIrqStatus & old & ~sdIrqMask)
+        core->interrupts.sendInterrupt(ARM9, 16 + (id << 1));
 }
 
 void SdMmc::writeData16Blklen(uint16_t mask, uint16_t value) {
