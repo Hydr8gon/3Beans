@@ -30,6 +30,7 @@ int TeakInterp::banke(uint16_t opcode) { // BANKE BankFlags6
     for (int i = 0; i < 2; i++) {
         if (opcode & BIT(3 + i * 2)) {
             std::swap(regCfg[i], shadCfg[i]);
+            (this->*writeCfgx[i])(regCfg[i]);
             if (regMod[1] & BIT(12)) // STP16
                 std::swap(regStep0[i], shadStep0[i]);
         }

@@ -21,8 +21,8 @@
 
 int TeakInterp::loadMod(uint16_t opcode) { // LOAD Imm9u, Mod
     // Load one of the mod values with a 9-bit immediate
-    uint16_t &value = regCfg[(opcode >> 11) & 0x1];
-    value = (value & ~0xFF80) | ((opcode << 7) & 0xFF80);
+    uint16_t value = regCfg[(opcode >> 11) & 0x1];
+    (this->*writeCfgx[(opcode >> 11) & 0x1])((value & ~0xFF80) | ((opcode << 7) & 0xFF80));
     return 1;
 }
 
@@ -52,8 +52,8 @@ int TeakInterp::loadPs01(uint16_t opcode) { // LOAD Imm4u, PS01
 
 int TeakInterp::loadStep(uint16_t opcode) { // LOAD Imm7s, Step
     // Load one of the step values with a 7-bit immediate
-    uint16_t &value = regCfg[(opcode >> 10) & 0x1];
-    value = (value & ~0x7F) | (opcode & 0x7F);
+    uint16_t value = regCfg[(opcode >> 10) & 0x1];
+    (this->*writeCfgx[(opcode >> 10) & 0x1])((value & ~0x7F) | (opcode & 0x7F));
     return 1;
 }
 
@@ -65,6 +65,9 @@ int TeakInterp::loadStep(uint16_t opcode) { // LOAD Imm7s, Step
 
 MOV_FUNC(movApc, regA[(opcode >> 8) & 0x1].v & 0x1FFFF, regPc=, 1) // MOV Ax, PC
 MOV_FUNC(movA0hstp, readAhS<0>(), regStep0[(opcode >> 8) & 0x1]=, 1) // MOV A0H, Step0
+MOV_FUNC(movAbp0, (this->*readAbS[opcode & 0x3])(), writeP33<0>, 1) // MOV Ab, P0
+MOV_FUNC(movAblx1, (this->*readAbS[opcode & 0x3])(), regX[1]=, 1) // MOV Abl, X1
+MOV_FUNC(movAbly1, (this->*readAbS[opcode & 0x3])(), regY[1]=, 1) // MOV Abl, Y1
 MOV_FUNC(movArapabl, *readArArp[opcode & 0x7], (this->*writeAblM[(opcode >> 3) & 0x3]), 1) // MOV ArArp, Abl
 MOV_FUNC(movI16arap, readParam(), (this->*writeArArp[opcode & 0x7]), 2) // MOV Imm16, ArArp
 MOV_FUNC(movI16b, readParam(), (this->*writeBx16M[(opcode >> 8) & 0x1]), 2) // MOV Imm16, Bx
@@ -219,3 +222,25 @@ PUSH_FUNC(pushY1, regY[1], 1) // PUSH Y1
 PUSHA_FUNC(pushP, readPxS[(opcode >> 1) & 0x1]) // PUSH Px
 PUSHA_FUNC(pushaA, readAxS[(opcode >> 6) & 0x1]) // PUSHA Ax
 PUSHA_FUNC(pushaB, readBxS[(opcode >> 1) & 0x1]) // PUSHA Bx
+
+int TeakInterp::swap(uint16_t opcode) { // SWAP SwapTypes4
+    // Swap accumulator values and set flags based on the type bits
+    int64_t temp;
+    switch (opcode & 0xF) {
+        case 0x4: temp = regB[1].v, writeB40<1>(regA[1].v), writeA40<1>(temp); // (A0, B0), (A1, B1)
+        case 0x0: temp = regB[0].v, writeB40<0>(regA[0].v), writeA40M<0>(temp); return 1; // (A0, B0)
+        case 0x5: temp = regB[0].v, writeB40<0>(regA[1].v), writeA40<1>(temp); // (A0, B1), (A1, B0)
+        case 0x1: temp = regB[1].v, writeB40<1>(regA[0].v), writeA40M<0>(temp); return 1; // (A0, B1)
+        case 0x2: temp = regB[0].v, writeB40<0>(regA[1].v), writeA40M<1>(temp); return 1; // (A1, B0)
+        case 0x3: temp = regB[1].v, writeB40<1>(regA[1].v), writeA40M<1>(temp); return 1; // (A1, B1)
+        case 0x6: writeA40M<1>(regB[0].v), writeB40<0>(regA[0].v); return 1; // (A0, B0, A1)
+        case 0x7: writeA40M<1>(regB[1].v), writeB40<1>(regA[0].v); return 1; // (A0, B1, A1)
+        case 0x8: writeA40M<0>(regB[0].v), writeB40<0>(regA[1].v); return 1; // (A1, B0, A0)
+        case 0x9: writeA40M<0>(regB[1].v), writeB40<1>(regA[1].v); return 1; // (A1, B1, A0)
+        case 0xA: writeB40<1>(regA[0].v), writeA40M<0>(regB[0].v); return 1; // (B0, A0, B1)
+        case 0xB: writeB40<1>(regA[1].v), writeA40M<1>(regB[0].v); return 1; // (B0, A1, B1)
+        case 0xC: writeB40<0>(regA[0].v), writeA40M<0>(regB[1].v); return 1; // (B1, A0, B0)
+        case 0xD: writeB40<0>(regA[1].v), writeA40M<1>(regB[1].v); return 1; // (B1, A1, B0)
+        default: return unkOp(opcode);
+    }
+}

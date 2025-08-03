@@ -84,6 +84,7 @@ private:
     static int (TeakInterp::*teakInstrs[0x10000])(uint16_t);
     static int64_t (TeakInterp::**readAxS)();
     static int64_t (TeakInterp::**readBxS)();
+    static void (TeakInterp::**writeCfgx)(uint16_t);
     static void (TeakInterp::**writeArArp)(uint16_t);
     static void (TeakInterp::**writeSttMod)(uint16_t);
     static void (TeakInterp::**writeAx40)(int64_t);
@@ -95,6 +96,7 @@ private:
     uint8_t arRn[0x4] = { 0, 4, 2, 5 };
     int8_t arCs[0x4] = { 0, 1, -1, 0 };
     int32_t arPm[0x4] = { 1, 2, -2, STEP_S };
+    uint16_t modMasks[2] = { 0x1, 0x1 };
     static int8_t offsTable[0x4];
     static int32_t stepTable[0x8];
 
@@ -138,7 +140,7 @@ private:
     bool checkCond(uint8_t cond);
     int64_t saturate(int64_t value);
     int64_t shift(int64_t value, int16_t amount);
-    void multiplyXY(bool x, bool y);
+    template <typename Tx, typename Ty> void multiplyXY(int i);
     static uint16_t calcZmne(int64_t res);
     static uint16_t revBits(uint16_t value);
 
@@ -222,6 +224,7 @@ private:
     int addM7i7a(uint16_t opcode);
     int addMrna(uint16_t opcode);
     int addPb(uint16_t opcode);
+    int addPpab(uint16_t opcode);
     int addRega(uint16_t opcode);
     int addR6a(uint16_t opcode);
     int addhMi8(uint16_t opcode);
@@ -236,6 +239,10 @@ private:
     int addvMrn(uint16_t opcode);
     int addvReg(uint16_t opcode);
     int addvR6(uint16_t opcode);
+    int adda(uint16_t opcode);
+    int add3(uint16_t opcode);
+    int add3a(uint16_t opcode);
+    int add3aa(uint16_t opcode);
     int andAbab(uint16_t opcode);
     int andI16(uint16_t opcode);
     int andI8(uint16_t opcode);
@@ -246,8 +253,16 @@ private:
     int andMrn(uint16_t opcode);
     int andReg(uint16_t opcode);
     int andR6(uint16_t opcode);
+    int chngMi8(uint16_t opcode);
+    int chngMrn(uint16_t opcode);
+    int chngReg(uint16_t opcode);
+    int chngR6(uint16_t opcode);
+    int chngSm(uint16_t opcode);
     int clrA(uint16_t opcode);
     int clrB(uint16_t opcode);
+    int clrp0(uint16_t opcode);
+    int clrp1(uint16_t opcode);
+    int clrp01(uint16_t opcode);
     int clrrA(uint16_t opcode);
     int clrrB(uint16_t opcode);
     int cmpAb(uint16_t opcode);
@@ -282,13 +297,38 @@ private:
     int expR6(uint16_t opcode);
     int expR6a(uint16_t opcode);
     int inc(uint16_t opcode);
+    int maaMrmr(uint16_t opcode);
+    int maaMrni16(uint16_t opcode);
+    int maaY0mi8(uint16_t opcode);
+    int maaY0mrn(uint16_t opcode);
+    int maaY0reg(uint16_t opcode);
+    int maaY0r6(uint16_t opcode);
     int maxGe(uint16_t opcode);
     int maxGt(uint16_t opcode);
     int minLe(uint16_t opcode);
     int minLt(uint16_t opcode);
+    int mma(uint16_t opcode);
+    int mmaa(uint16_t opcode);
+    int mma3(uint16_t opcode);
+    int mma3a(uint16_t opcode);
+    int mmsua3(uint16_t opcode);
+    int mmusa3(uint16_t opcode);
+    int mmsua3a(uint16_t opcode);
+    int mmusa3a(uint16_t opcode);
+    int msumsua3a(uint16_t opcode);
+    int msumusa3a(uint16_t opcode);
+    int msumsua3aa(uint16_t opcode);
+    int msumusa3aa(uint16_t opcode);
     int modrD2(uint16_t opcode);
+    int modrD2d(uint16_t opcode);
     int modrI2(uint16_t opcode);
+    int modrI2d(uint16_t opcode);
     int modrZids(uint16_t opcode);
+    int modrZidsd(uint16_t opcode);
+    int modrMrmr(uint16_t opcode);
+    int modrMrmrd(uint16_t opcode);
+    int modrMrdmr(uint16_t opcode);
+    int modrMrdmrd(uint16_t opcode);
     int movsMi8ab(uint16_t opcode);
     int movsMrnab(uint16_t opcode);
     int movsRegab(uint16_t opcode);
@@ -408,8 +448,11 @@ private:
     int movApc(uint16_t opcode);
     int movA0hstp(uint16_t opcode);
     int movAbab(uint16_t opcode);
+    int movAbp0(uint16_t opcode);
     int movAblarap(uint16_t opcode);
     int movAblsm(uint16_t opcode);
+    int movAblx1(uint16_t opcode);
+    int movAbly1(uint16_t opcode);
     int movAblhmi8(uint16_t opcode);
     int movAlmi16(uint16_t opcode);
     int movAlm7i16(uint16_t opcode);
@@ -471,4 +514,5 @@ private:
     int pushY1(uint16_t opcode);
     int pushaA(uint16_t opcode);
     int pushaB(uint16_t opcode);
+    int swap(uint16_t opcode);
 };

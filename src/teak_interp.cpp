@@ -19,6 +19,10 @@
 
 #include "core.h"
 
+template void TeakInterp::multiplyXY<int16_t, int16_t>(int);
+template void TeakInterp::multiplyXY<int16_t, uint16_t>(int);
+template void TeakInterp::multiplyXY<uint16_t, int16_t>(int);
+
 TEMPLATE2(int64_t TeakInterp::readA40S, 0)
 TEMPLATE2(uint16_t TeakInterp::readAlS, 0)
 TEMPLATE2(uint16_t TeakInterp::readAhS, 0)
@@ -222,18 +226,18 @@ int64_t TeakInterp::shift(int64_t value, int16_t amount) {
     return res;
 }
 
-void TeakInterp::multiplyXY(bool x, bool y) {
+template <typename Tx, typename Ty> void TeakInterp::multiplyXY(int i) {
     // Get the X and Y values to multiply, with Y modified based on HWM bits
-    int16_t valX = regX[x], valY;
+    Tx valX = regX[i]; Ty valY;
     switch ((regMod[0] >> 5) & 0x3) {
-        case 0x0: valY = regY[y]; break;
-        case 0x1: valY = (regY[y] >> 8); break;
-        case 0x2: valY = (regY[y] & 0xFF); break;
-        default: valY = y ? (regY[y] & 0xFF) : (regY[y] >> 8); break;
+        case 0x0: valY = regY[i]; break;
+        case 0x1: valY = (regY[i] >> 8); break;
+        case 0x2: valY = (regY[i] & 0xFF); break;
+        default: valY = i ? (regY[i] & 0xFF) : (regY[i] >> 8); break;
     }
 
-    // Multiply and store the product in P0
-    writeP33<0>(valX * valY);
+    // Multiply and store the result in a product register
+    (this->*writePx33[i])(valX * valY);
 }
 
 uint16_t TeakInterp::calcZmne(int64_t res) {
@@ -253,28 +257,58 @@ uint16_t TeakInterp::revBits(uint16_t value) {
 }
 
 uint16_t TeakInterp::offsReg(uint8_t reg, int8_t offs) {
-    // Apply an offset to an address register
-    if (regMod[2] & BIT(reg))
-        LOG_CRIT("Unhandled Teak DSP address offset modulo used\n");
+    // Apply an offset to an address register without modulo
+    if (!(regMod[2] & BIT(reg)) || (regMod[2] & BIT(reg + 8)))
+        return regR[reg] + offs;
+
+    // Apply an offset to an address register with modulo, wrapping at bounds
+    int i = (reg >> 2);
+    if (offs > 0 && (regR[reg] & modMasks[i]) == (regCfg[i] >> 7))
+        return (regR[reg] & ~modMasks[i]) | 0;
+    else if (offs < 0 && (regR[reg] & modMasks[i]) == 0)
+        return (regR[reg] & ~modMasks[i]) | (regCfg[i] >> 7);
     return regR[reg] + offs;
 }
 
 uint16_t TeakInterp::stepReg(uint8_t reg, int32_t step) {
     // Get the current address to return, bit-reversed if enabled
-    uint16_t value = (regMod[2] & BIT(reg + 8)) ? revBits(regR[reg]) : regR[reg];
-    if (regMod[2] & BIT(reg))
-        LOG_CRIT("Unhandled Teak DSP address step modulo used\n");
+    uint16_t address = (regMod[2] & BIT(reg + 8)) ? revBits(regR[reg]) : regR[reg];
+    int32_t value;
 
-    // Apply a step to the address register afterwards
-    if ((reg & 0x3) == 3 && (regMod[1] & BIT(14 + (reg >> 2))))
-        regR[reg] = 0; // Clear R3/R7
-    else if (step != STEP_S)
-        regR[reg] += step; // Constant step
+    // Clear R3/R7 instead of stepping them if enabled
+    if ((reg & 0x3) == 3 && (regMod[1] & BIT(14 + (reg >> 2)))) {
+        regR[reg] = 0;
+        return address;
+    }
+
+    // Get the actual value to step with based on configuration
+    if (step != STEP_S)
+        value = step; // Constant step
     else if ((regMod[1] & BIT(12)) || (regMod[2] & BIT(reg + 8)))
-        regR[reg] += regStep0[reg >> 2]; // 16-bit step
+        value = regStep0[reg >> 2]; // 16-bit step
     else
-        regR[reg] += int8_t(regCfg[reg >> 2] << 1) >> 1; // 7-bit step
-    return value;
+        value = int8_t(regCfg[reg >> 2] << 1) >> 1; // 7-bit step
+
+    // Apply the step to the address register without modulo
+    if (!(regMod[2] & BIT(reg)) || (regMod[2] & BIT(reg + 8))) {
+        regR[reg] += value;
+        return address;
+    }
+
+    // Break the step into two parts if it's a double constant
+    int count = 1, i = (reg >> 2);
+    if (step != STEP_S && step && !(step & 0x1))
+        value >>= 1, count++;
+
+    // Apply the step to the address register with modulo, wrapping at bounds
+    while (count--) {
+        if (step > 0 && (regR[reg] & modMasks[i]) == (regCfg[i] >> 7))
+            regR[reg] = (regR[reg] & ~modMasks[i]) | 0;
+        else if (step < 0 && (regR[reg] & modMasks[i]) == 0)
+            regR[reg] = (regR[reg] & ~modMasks[i]) | (regCfg[i] >> 7);
+        else regR[reg] += value;
+    }
+    return address;
 }
 
 template <int i> int64_t TeakInterp::readA40S() {
@@ -421,6 +455,16 @@ template <int i> void TeakInterp::writeP33(int64_t value) {
     regStt[1] = (regStt[1] & ~BIT(14 + i)) | ((regP[i].v >> (18 - i)) & BIT(14 + i));
 }
 
+template <int i> void TeakInterp::writeCfg(uint16_t value) {
+    // Write to one of the config registers
+    regCfg[i] = value;
+
+    // Calculate a modulo mask based on the base modulo value
+    modMasks[i] = 2;
+    while (modMasks[i] < (regCfg[i] >> 7)) modMasks[i] <<= 1;
+    modMasks[i]--;
+}
+
 template <int i> void TeakInterp::writeAr(uint16_t value) {
     // Write to one of the AR registers and reconfigure operands
     regAr[i] = value;
@@ -501,6 +545,7 @@ void TeakInterp::writeMod0(uint16_t value) {
 
 void TeakInterp::writeMod1(uint16_t value) {
     // Write to the MOD1 register and mirror the data page to ST1
+    // TODO: handle the modulo mode bit
     regMod[1] = (regMod[1] & ~0xF0FF) | (value & 0xF0FF);
     regSt[1] = (regSt[1] & ~0xFF) | (regMod[1] & 0xFF);
 }
@@ -532,7 +577,6 @@ WRITE_FUNC(template <int i> void TeakInterp::writeBl, regB[i].l)
 WRITE_FUNC(template <int i> void TeakInterp::writeBh, regB[i].h)
 WRITE_FUNC(template <int i> void TeakInterp::writeR, regR[i])
 WRITE_FUNC(template <int i> void TeakInterp::writeExt, regExt[i])
-WRITE_FUNC(template <int i> void TeakInterp::writeCfg, regCfg[i])
 WRITE_FUNC(void TeakInterp::writeY0, regY[0])
 WRITE_FUNC(void TeakInterp::writePc, regPc)
 WRITE_FUNC(void TeakInterp::writeSp, regSp)

@@ -537,10 +537,8 @@ template <typename T> void Wifi::writeMbox(int i, T value, bool last) {
         // TODO: actually process the header
         readMbox<uint32_t>(i), readMbox<uint16_t>(i);
         switch (uint16_t cmd = readMbox<uint16_t>(i)) {
-            case 0x2:
-                htcConnectService(i); break;
-            case 0x4:
-                htcSetupComplete(i); break;
+            case 0x2: htcConnectService(i); break;
+            case 0x4: htcSetupComplete(i); break;
 
         default:
             // Catch unknown HTC commands

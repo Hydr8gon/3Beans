@@ -122,6 +122,24 @@ ADDVM_FUNC(addvMrn, getRnStepZids(opcode)) // ADDV Imm16, MemRnStepZids
 ADDVR_FUNC(addvReg, *readReg[opcode & 0x1F], (this->*writeReg[opcode & 0x1F])) // ADDV Imm16, Register
 ADDVR_FUNC(addvR6, regR[6], regR[6]=) // ADDV Imm16, R6
 
+// Add the product registers with a base value in an accumulator and set flags
+#define ADD3_FUNC(name, base, p0a, p1a) int TeakInterp::name(uint16_t opcode) { \
+    int64_t val1 = (base) + (readP33S<0>() >> p0a); \
+    int64_t val2 = (readP33S<1>() >> p1a); \
+    int64_t res = ((val1 + val2) << 24) >> 24; \
+    bool v = (~(val2 ^ val1) & (res ^ val2)) >> 39; \
+    bool c = (uint64_t(val1) > uint64_t(res)); \
+    writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
+    (this->*writeAb40[(opcode >> 2) & 0x3])(res); \
+    return 1; \
+}
+
+ADD3_FUNC(addPpab, 0, 0, 0) // ADD P0, P1, Ab
+ADD3_FUNC(adda, 0, 0, 16) // ADDA P0, P1, Ab
+ADD3_FUNC(add3, *readAb[(opcode >> 2) & 0x3], 0, 0) // ADD3 P0, P1, Ab
+ADD3_FUNC(add3a, *readAb[(opcode >> 2) & 0x3], 0, 16) // ADD3A P0, P1, Ab
+ADD3_FUNC(add3aa, *readAb[(opcode >> 2) & 0x3], 16, 16) // ADD3AA P0, P1, Ab
+
 int TeakInterp::andAbab(uint16_t opcode) {
     // Bitwise and one accumulator with another and set flags
     int64_t res = *readAb[opcode & 0x3] & *readAb[(opcode >> 2) & 0x3];
@@ -148,6 +166,34 @@ AND_FUNC(andMrn, core->dsp.readData(getRnStepZids(opcode)), 8, 1) // AND MemRnSt
 AND_FUNC(andReg, *readRegP0[opcode & 0x1F], 8, 1) // AND RegisterP0, Ax
 AND_FUNC(andR6, regR[6], 4, 1) // AND R6, Ax
 
+// Change bits in a memory value using a 16-bit immediate mask and set flags
+#define CHNGM_FUNC(name, op1a) int TeakInterp::name(uint16_t opcode) { \
+    uint16_t addr = op1a; \
+    uint16_t res = core->dsp.readData(addr) ^ readParam(); \
+    bool z = (res == 0); \
+    bool m = (res & BIT(15)); \
+    writeStt0((regStt[0] & ~0xC0) | (z << 7) | (m << 6)); \
+    core->dsp.writeData(addr, res); \
+    return 2; \
+}
+
+CHNGM_FUNC(chngMi8, (regMod[1] << 8) | (opcode & 0xFF)) // CHNG Imm16, MemImm8
+CHNGM_FUNC(chngMrn, getRnStepZids(opcode)) // CHNG Imm16, MemRnStepZids
+
+// Change bits in a register value using a 16-bit immediate mask and set flags
+#define CHNGR_FUNC(name, op1r, op1w) int TeakInterp::name(uint16_t opcode) { \
+    uint16_t res = (op1r) ^ readParam(); \
+    bool z = (res == 0); \
+    bool m = (res & BIT(15)); \
+    writeStt0((regStt[0] & ~0xC0) | (z << 7) | (m << 6)); \
+    op1w(res); \
+    return 2; \
+}
+
+CHNGR_FUNC(chngReg, *readReg[opcode & 0x1F], (this->*writeReg[opcode & 0x1F])) // CHNG Imm16, Register
+CHNGR_FUNC(chngR6, regR[6], regR[6]=) // CHNG Imm16, R6
+CHNGR_FUNC(chngSm, *readSttMod[opcode & 0x7], (this->*writeSttMod[opcode & 0x7])) // CHNG Imm16, SttMod
+
 // Set an accumulator to zero and update flags if the condition is met
 #define CLR_FUNC(name, op0b) int TeakInterp::name(uint16_t opcode) { \
     if (checkCond(opcode)) { \
@@ -159,6 +205,22 @@ AND_FUNC(andR6, regR[6], 4, 1) // AND R6, Ax
 
 CLR_FUNC(clrA, writeAx40) // CLR Ax, Cond
 CLR_FUNC(clrB, writeBx40) // CLR Bx, Cond
+
+// Set a product register to zero
+#define CLRP_FUNC(name, op0) int TeakInterp::name(uint16_t opcode) { \
+    writeP33<op0>(0); \
+    return 1; \
+}
+
+CLRP_FUNC(clrp0, 0) // CLRP P0
+CLRP_FUNC(clrp1, 1) // CLRP P1
+
+int TeakInterp::clrp01(uint16_t opcode) { // CLRP P0, P1
+    // Set both product registers to zero
+    writeP33<0>(0);
+    writeP33<1>(0);
+    return 1;
+}
 
 // Set an accumulator to 0x8000 and update flags if the condition is met
 #define CLRR_FUNC(name, op0b) int TeakInterp::name(uint16_t opcode) { \
@@ -306,6 +368,43 @@ int TeakInterp::inc(uint16_t opcode) { // INC Ax, Cond
     return 1;
 }
 
+// Add shifted P0 to an A accumulator, set flags, load X0 and Y0, and multiply them
+#define MAA_FUNC(name, op0a, op1, cyc) int TeakInterp::name(uint16_t opcode) { \
+    int64_t val1 = regA[(opcode >> 11) & 0x1].v; \
+    int32_t val2 = (readP33S<0>() >> 16); \
+    int64_t res = ((val1 + val2) << 24) >> 24; \
+    bool v = (~(val2 ^ val1) & (res ^ val2)) >> 39; \
+    bool c = (uint64_t(val1) > uint64_t(res)); \
+    writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
+    (this->*writeAx40[(opcode >> 11) & 0x1])(res); \
+    regX[0] = op1; \
+    regY[0] = core->dsp.readData(getRnStepZids(op0a)); \
+    multiplyXY<int16_t, int16_t>(0); \
+    return cyc; \
+}
+
+MAA_FUNC(maaMrmr, ((opcode >> 2) & 0x19) + 4, core->dsp.readData(getRnStepZids(opcode & 0x1B)), 1) // MAA MR45, MR03, Ax
+MAA_FUNC(maaMrni16, (opcode & 0x1F), readParam(), 2) // MAA MemRnStepZids, Imm16, Ax
+
+// Add shifted P0 to an A accumulator, set flags, load X0, and multiply it with Y0
+#define MAAY_FUNC(name, op1, op2s) int TeakInterp::name(uint16_t opcode) { \
+    int64_t val1 = regA[(opcode >> op2s) & 0x1].v; \
+    int32_t val2 = (readP33S<0>() >> 16); \
+    int64_t res = ((val1 + val2) << 24) >> 24; \
+    bool v = (~(val2 ^ val1) & (res ^ val2)) >> 39; \
+    bool c = (uint64_t(val1) > uint64_t(res)); \
+    writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
+    (this->*writeAx40[(opcode >> op2s) & 0x1])(res); \
+    regX[0] = op1; \
+    multiplyXY<int16_t, int16_t>(0); \
+    return 1; \
+}
+
+MAAY_FUNC(maaY0mi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 11) // MAA Y0, MemImm8, Ax
+MAAY_FUNC(maaY0mrn, core->dsp.readData(getRnStepZids(opcode)), 11) // MAA Y0, MemRnStepZids, Ax
+MAAY_FUNC(maaY0reg, *readReg[opcode & 0x1F], 11) // MAA Y0, Register, Ax
+MAAY_FUNC(maaY0r6, regR[6], 0) // MAA Y0, R6, Ax
+
 // Take the min/max of A accumulators, set MIXP if changed, and post-adjust R0
 #define MINMAX_FUNC(name, op) int TeakInterp::name(uint16_t opcode) { \
     bool a = (opcode >> 8) & 0x1; \
@@ -326,6 +425,38 @@ MINMAX_FUNC(maxGt, >) // MAX Ax, R0StepZids, GT
 MINMAX_FUNC(minLe, <=) // MIN Ax, R0StepZids, LE
 MINMAX_FUNC(minLt, <) // MIN Ax, R0StepZids, LT
 
+// Add the previous product registers with a base value in an accumulator and set flags
+// Then, load memory values into both X and Y registers with offset and step and multiply them
+#define MMA_FUNC(n, b, p0a, p1a, x0u, y0u, x1u, y1u, ops, opm, op0s, op1s, op2s) int TeakInterp::n(uint16_t opcode) { \
+    int64_t val1 = (b) + (readP33S<0>() >> p0a); \
+    int64_t val2 = (readP33S<1>() >> p1a); \
+    int64_t res = ((val1 + val2) << 24) >> 24; \
+    bool v = (~(val2 ^ val1) & (res ^ val2)) >> 39; \
+    bool c = (uint64_t(val1) > uint64_t(res)); \
+    writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
+    (this->*writeAb40[(opcode >> op2s) & 0x3])(res); \
+    regX[1] = core->dsp.readData(offsReg(((opcode >> ops) & opm) + 0, arCs[(opcode >> 0) & opm])); \
+    regY[1] = core->dsp.readData(offsReg(((opcode >> ops) & opm) + 4, arCs[(opcode >> op0s) & opm])); \
+    regX[0] = core->dsp.readData(stepReg(((opcode >> ops) & opm) + 0, arPm[(opcode >> 0) & opm])); \
+    regY[0] = core->dsp.readData(stepReg(((opcode >> ops) & opm) + 4, arPm[(opcode >> op0s) & opm])); \
+    multiplyXY<x1u##int16_t, y1u##int16_t>(1); \
+    multiplyXY<x0u##int16_t, y0u##int16_t>(0); \
+    return 1; \
+}
+
+MMA_FUNC(mma, 0, 0, 0, ,,,, 2, 0x1, 1, 0, 10) // MMA MemR45StepAr1, MemR01StepAr1, Ab
+MMA_FUNC(mmaa, 0, 0, 16, ,,,, 2, 0x1, 1, 0, 10) // MMAA MemR45StepAr1, MemR01StepAr1, Ab
+MMA_FUNC(mma3, *readAb[(opcode >> 6) & 0x3], 0, 0, ,,,, 4, 0x3, 2, 0, 6) // MMA3 MemR4567StepAr2, MemR0123StepAr2, Ab
+MMA_FUNC(mma3a, *readAb[(opcode >> 10) & 0x3], 0, 16, ,,,, 0, 0x1, 9, 8, 10) // MMA3A MemR45StepAr1, MemR01StepAr1, Ab
+MMA_FUNC(mmsua3, *readAb[(opcode >> 6) & 0x3], 0, 0, ,,u,, 5, 0x1, 4, 3, 6) // MMSUA3 MemR45StepAr1, MemR01StepAr1, Ab
+MMA_FUNC(mmusa3, *readAb[(opcode >> 6) & 0x3], 0, 0, ,,,u, 5, 0x1, 4, 3, 6) // MMUSA3 MemR45StepAr1, MemR01StepAr1, Ab
+MMA_FUNC(mmsua3a, *readAb[(opcode >> 6) & 0x3], 0, 16, ,,u,, 5, 0x1, 4, 3, 6) // MMSUA3A MemR45StpAr1, MemR01StpAr1, Ab
+MMA_FUNC(mmusa3a, *readAb[(opcode >> 6) & 0x3], 0, 16, ,,,u, 5, 0x1, 4, 3, 6) // MMUSA3A MemR45StpAr1, MemR01StpAr1, Ab
+MMA_FUNC(msumsua3a, *readAb[(opcode >> 6) & 0x3], 0, 16, u,,u,, 5, 0x1, 4, 3, 6) // MSUMSUA3A MR45SAr1, MR01SAr1, Ab
+MMA_FUNC(msumusa3a, *readAb[(opcode >> 6) & 0x3], 0, 16, u,,,u, 5, 0x1, 4, 3, 6) // MSUMUSA3A MR45SAr1, MR01SAr1, Ab
+MMA_FUNC(msumsua3aa, *readAb[(opcode >> 6) & 0x3], 16, 16, u,,u,, 5, 0x1, 4, 3, 6) // MSUMSUA3AA MR45SAr1, MR01SAr1, Ab
+MMA_FUNC(msumusa3aa, *readAb[(opcode >> 6) & 0x3], 16, 16, u,,,u, 5, 0x1, 4, 3, 6) // MSUMUSA3AA MR45SAr1, MR01SAr1, Ab
+
 // Modify an address register as if memory was accessed and set the R flag if zero
 #define MODR_FUNC(name, op0) int TeakInterp::name(uint16_t opcode) { \
     op0; \
@@ -337,6 +468,60 @@ MINMAX_FUNC(minLt, <) // MIN Ax, R0StepZids, LT
 MODR_FUNC(modrD2, stepReg(opcode & 0x7, -2)) // MODR MemRnStepD2
 MODR_FUNC(modrI2, stepReg(opcode & 0x7, 2)) // MODR MemRnStepI2
 MODR_FUNC(modrZids, getRnStepZids(opcode)) // MODR MemRnStepZids
+
+// Modify an address register with modulo disabled and set the R flag if zero
+#define MODRD_FUNC(name, op0) int TeakInterp::name(uint16_t opcode) { \
+    uint16_t mod2 = regMod[2]; \
+    regMod[2] &= ~0xFF; \
+    op0; \
+    regMod[2] = mod2; \
+    bool r = (regR[opcode & 0x7] == 0); \
+    writeStt1((regStt[1] & ~0x10) | (r << 4)); \
+    return 1; \
+}
+
+MODRD_FUNC(modrD2d, stepReg(opcode & 0x7, -2)) // MODR MemRnStepD2, DMOD
+MODRD_FUNC(modrI2d, stepReg(opcode & 0x7, 2)) // MODR MemRnStepI2, DMOD
+MODRD_FUNC(modrZidsd, getRnStepZids(opcode)) // MODR MemRnStepZids, DMOD
+
+int TeakInterp::modrMrmr(uint16_t opcode) { // MODR MemR0123StepAr0, MemR4567StepAr0
+    // Modify an I address register and a J address register with a 16-bit step
+    uint16_t mod1 = regMod[1];
+    regMod[1] |= BIT(12); // STP16
+    stepReg(((opcode >> 10) & 0x3) + 0, arPm[opcode & 0x3]);
+    stepReg(((opcode >> 10) & 0x3) + 4, arPm[(opcode >> 5) & 0x3]);
+    regMod[1] = mod1;
+    return 1;
+}
+
+// Modify an I address register and a J address register with a 16-bit step and modulo disabled for one
+#define MODR2_FUNC(name, ops, op0s, op1s, swp) int TeakInterp::name(uint16_t opcode) { \
+    uint16_t mod1 = regMod[1]; \
+    regMod[1] |= BIT(12); \
+    stepReg(((opcode >> ops) & 0x3) + swp * 4, arPm[(opcode >> op0s) & 0x3]); \
+    uint16_t mod2 = regMod[2]; \
+    regMod[2] &= ~0xFF; \
+    stepReg(((opcode >> ops) & 0x3) + !swp * 4, arPm[(opcode >> op1s) & 0x3]); \
+    regMod[2] = mod2; \
+    regMod[1] = mod1; \
+    return 1; \
+}
+
+MODR2_FUNC(modrMrmrd, 5, 1, 3, 0) // MODR MemR0123StepAr0, MemR4567StepAr0, DMOD
+MODR2_FUNC(modrMrdmr, 8, 3, 0, 1) // MODR MemR0123StepAr0, DMOD, MemR4567StepAr0
+
+int TeakInterp::modrMrdmrd(uint16_t opcode) { // MODR MemR0123StepAr0, DMOD, MemR4567StepAr0, DMOD
+    // Modify an I address register and a J address register with a 16-bit step and modulo disabled for both
+    uint16_t mod1 = regMod[1];
+    regMod[1] |= BIT(12); // STP16
+    uint16_t mod2 = regMod[2];
+    regMod[2] &= ~0xFF;
+    stepReg(((opcode >> 5) & 0x3) + 0, arPm[(opcode >> 1) & 0x3]);
+    stepReg(((opcode >> 5) & 0x3) + 4, arPm[(opcode >> 3) & 0x3]);
+    regMod[2] = mod2;
+    regMod[1] = mod1;
+    return 1;
+}
 
 // Move a value shifted by the shift register into an accumulator and set flags
 #define MOVS_FUNC(name, op0, op1i) int TeakInterp::name(uint16_t opcode) { \
@@ -365,7 +550,7 @@ MOVS_FUNC(movsR6a, regR[6], (opcode & 0x1) + 2) // MOVS R6, Ax
 // Load a value into X0 and multiply it with Y0
 #define MPY_FUNC(name, op1) int TeakInterp::name(uint16_t opcode) { \
     regX[0] = op1; \
-    multiplyXY(false, false); \
+    multiplyXY<int16_t, int16_t>(0); \
     return 1; \
 }
 
