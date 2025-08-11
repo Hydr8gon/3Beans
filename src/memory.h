@@ -54,6 +54,8 @@ private:
     uint8_t *fcramExt = nullptr; // 128MB extended FCRAM
     uint8_t *vramExt = nullptr; // 4MB extended VRAM
 
+    uint8_t cfg11Wram32kCode[8] = {};
+    uint8_t cfg11Wram32kData[8] = {};
     uint32_t cfg11BrOverlayCnt = 0;
     uint32_t cfg11BrOverlayVal = 0;
     uint32_t cfg11MpCnt = 0;
@@ -69,6 +71,8 @@ private:
     template <typename T> T ioRead(CpuId id, uint32_t address);
     template <typename T> void ioWrite(CpuId id, uint32_t address, T value);
 
+    uint8_t readCfg11Wram32kCode(int i) { return cfg11Wram32kCode[i]; }
+    uint8_t readCfg11Wram32kData(int i) { return cfg11Wram32kData[i]; }
     uint32_t readCfg11BrOverlayCnt() { return cfg11BrOverlayCnt; }
     uint32_t readCfg11BrOverlayVal() { return cfg11BrOverlayVal; }
     uint32_t readCfg11MpCnt() { return cfg11MpCnt; }
@@ -78,6 +82,8 @@ private:
     uint32_t readPrngSource(int i);
     uint32_t readOtpEncrypted(int i) { return otpEncrypted[i]; }
 
+    void writeCfg11Wram32kCode(int i, uint8_t value);
+    void writeCfg11Wram32kData(int i, uint8_t value);
     void writeCfg11BrOverlayCnt(uint32_t mask, uint32_t value);
     void writeCfg11BrOverlayVal(uint32_t mask, uint32_t value);
     void writeCfg11MpCnt(uint32_t mask, uint32_t value);

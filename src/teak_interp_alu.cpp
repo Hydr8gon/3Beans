@@ -426,7 +426,7 @@ MINMAX_FUNC(minLe, <=) // MIN Ax, R0StepZids, LE
 MINMAX_FUNC(minLt, <) // MIN Ax, R0StepZids, LT
 
 // Add the previous product registers with a base value in an accumulator and set flags
-// Then, load memory values into both X and Y registers with offset and step and multiply them
+// Then, load memory values into both X and Y registers with offset/step and multiply them
 #define MMA_FUNC(n, b, p0a, p1a, x0u, y0u, x1u, y1u, ops, opm, op0s, op1s, op2s) int TeakInterp::n(uint16_t opcode) { \
     int64_t val1 = (b) + (readP33S<0>() >> p0a); \
     int64_t val2 = (readP33S<1>() >> p1a); \
@@ -435,9 +435,9 @@ MINMAX_FUNC(minLt, <) // MIN Ax, R0StepZids, LT
     bool c = (uint64_t(val1) > uint64_t(res)); \
     writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
     (this->*writeAb40[(opcode >> op2s) & 0x3])(res); \
-    regX[1] = core->dsp.readData(offsReg(((opcode >> ops) & opm) + 0, arCs[(opcode >> 0) & opm])); \
+    regX[1] = core->dsp.readData(offsReg(((opcode >> ops) & opm) + 0, arCs[(opcode >> op1s) & opm])); \
     regY[1] = core->dsp.readData(offsReg(((opcode >> ops) & opm) + 4, arCs[(opcode >> op0s) & opm])); \
-    regX[0] = core->dsp.readData(stepReg(((opcode >> ops) & opm) + 0, arPm[(opcode >> 0) & opm])); \
+    regX[0] = core->dsp.readData(stepReg(((opcode >> ops) & opm) + 0, arPm[(opcode >> op1s) & opm])); \
     regY[0] = core->dsp.readData(stepReg(((opcode >> ops) & opm) + 4, arPm[(opcode >> op0s) & opm])); \
     multiplyXY<x1u##int16_t, y1u##int16_t>(1); \
     multiplyXY<x0u##int16_t, y0u##int16_t>(0); \
@@ -456,6 +456,31 @@ MMA_FUNC(msumsua3a, *readAb[(opcode >> 6) & 0x3], 0, 16, u,,u,, 5, 0x1, 4, 3, 6)
 MMA_FUNC(msumusa3a, *readAb[(opcode >> 6) & 0x3], 0, 16, u,,,u, 5, 0x1, 4, 3, 6) // MSUMUSA3A MR45SAr1, MR01SAr1, Ab
 MMA_FUNC(msumsua3aa, *readAb[(opcode >> 6) & 0x3], 16, 16, u,,u,, 5, 0x1, 4, 3, 6) // MSUMSUA3AA MR45SAr1, MR01SAr1, Ab
 MMA_FUNC(msumusa3aa, *readAb[(opcode >> 6) & 0x3], 16, 16, u,,,u, 5, 0x1, 4, 3, 6) // MSUMUSA3AA MR45SAr1, MR01SAr1, Ab
+
+// Add the previous product registers with a base value in an accumulator and set flags
+// Then, load memory values into X registers with offset/step and multiply with Y registers
+#define MMAY_FUNC(name, p1a, x0u, y0u, x1u, y1u, ars0, ars1, op1s) int TeakInterp::name(uint16_t opcode) { \
+    int64_t val1 = regA[(opcode >> op1s) & 0x1].v + readP33S<0>(); \
+    int64_t val2 = (readP33S<1>() >> p1a); \
+    int64_t res = ((val1 + val2) << 24) >> 24; \
+    bool v = (~(val2 ^ val1) & (res ^ val2)) >> 39; \
+    bool c = (uint64_t(val1) > uint64_t(res)); \
+    writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
+    (this->*writeAx40[(opcode >> op1s) & 0x1])(res); \
+    uint8_t rar = ((opcode >> ars0) & 0x4) | ((opcode >> ars1) & 0x1); \
+    regX[1] = core->dsp.readData(getRarOffsAr(rar)); \
+    regX[0] = core->dsp.readData(getRarStepAr(rar)); \
+    multiplyXY<x1u##int16_t, y1u##int16_t>(1); \
+    multiplyXY<x0u##int16_t, y0u##int16_t>(0); \
+    return 1; \
+}
+
+MMAY_FUNC(mma3Y, 0, ,,,, 2, 3, 8) // MMA3 Y, MemRar1StepAr1, Ax
+MMAY_FUNC(mma3aY, 16, ,,,, 2, 3, 8) // MMA3A Y, MemRar1StepAr1, Ax
+MMAY_FUNC(mmsua3Y, 0, ,,u,, 2, 3, 8) // MMSUA3 Y, MemRar1StepAr1, Ax
+MMAY_FUNC(mmusa3Y, 0, ,,,u, 1, 2, 4) // MMUSA3 Y, MemRar1StepAr1, Ax
+MMAY_FUNC(mmsua3aY, 16, ,,u,, 2, 3, 8) // MMSUA3A Y, MemRar1StepAr1, Ax
+MMAY_FUNC(mmusa3aY, 16, ,,,u, 1, 2, 4) // MMUSA3A Y, MemRar1StepAr1, Ax
 
 // Modify an address register as if memory was accessed and set the R flag if zero
 #define MODR_FUNC(name, op0) int TeakInterp::name(uint16_t opcode) { \
@@ -692,6 +717,18 @@ SHLR_FUNC(shrA, regA, writeAx40, -1) // SHR Ax, Cond
 SHLR_FUNC(shrB, regB, writeBx40, -1) // SHR Bx, Cond
 SHLR_FUNC(shr4A, regA, writeAx40, -4) // SHR4 Ax, Cond
 SHLR_FUNC(shr4B, regB, writeBx40, -4) // SHR4 Bx, Cond
+
+// Load a value into both X0 and Y0 and multiply them
+#define SQR_FUNC(name, op0) int TeakInterp::name(uint16_t opcode) { \
+    regX[0] = regY[0] = op0; \
+    multiplyXY<int16_t, int16_t>(0); \
+    return 1; \
+}
+
+SQR_FUNC(sqrMi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF))) // SQR MemImm8
+SQR_FUNC(sqrMrn, core->dsp.readData(getRnStepZids(opcode))) // SQR MemRnStepZids
+SQR_FUNC(sqrReg, *readReg[opcode & 0x1F]) // SQR Register
+SQR_FUNC(sqrR6, regR[6]) // SQR R6
 
 // Subtract a 40-bit value from an accumulator and set flags
 #define SUB40_FUNC(name, op0, op1rb, op1wb, op1s) int TeakInterp::name(uint16_t opcode) { \

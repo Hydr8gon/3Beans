@@ -133,11 +133,11 @@ int TeakInterp::movSvmi8(uint16_t opcode) { // MOV SV, MemImm8
 }
 
 // Move the high and low parts of an accumulator to data memory
-#define MOVAM_FUNC(name, op0, op1s0, op1s1) int TeakInterp::name(uint16_t opcode) { \
+#define MOVAM_FUNC(name, op0, ars0, ars1) int TeakInterp::name(uint16_t opcode) { \
     int64_t value = op0; \
-    uint8_t op1 = ((opcode >> op1s0) & 0xC) | ((opcode >> op1s1) & 0x3); \
-    core->dsp.writeData(getRarOffsAr(op1), value >> 0); \
-    core->dsp.writeData(getRarStepAr(op1), value >> 16); \
+    uint8_t rar = ((opcode >> ars0) & 0xC) | ((opcode >> ars1) & 0x3); \
+    core->dsp.writeData(getRarOffsAr(rar), value >> 0); \
+    core->dsp.writeData(getRarStepAr(rar), value >> 16); \
     return 1; \
 }
 
@@ -146,10 +146,10 @@ MOVAM_FUNC(movPrars, (this->*readPxS[(opcode >> 1) & 0x1])(), 6, 2) // MOV Px, M
 MOVAM_FUNC(movaAbrar, (this->*readAbS[(opcode >> 4) & 0x3])(), 0, 0) // MOVA Ab, MemRarOffsStep
 
 // Move data memory to the high and low parts of an accumulator
-#define MOVMA_FUNC(name, op0s0, op0s1, op1) int TeakInterp::name(uint16_t opcode) { \
-    uint8_t op0 = ((opcode >> op0s0) & 0xC) | ((opcode >> op0s1) & 0x3); \
-    uint16_t l = core->dsp.readData(getRarOffsAr(op0)); \
-    uint16_t h = core->dsp.readData(getRarStepAr(op0)); \
+#define MOVMA_FUNC(name, ars0, ars1, op1) int TeakInterp::name(uint16_t opcode) { \
+    uint8_t rar = ((opcode >> ars0) & 0xC) | ((opcode >> ars1) & 0x3); \
+    uint16_t l = core->dsp.readData(getRarOffsAr(rar)); \
+    uint16_t h = core->dsp.readData(getRarStepAr(rar)); \
     (this->*op1)(int32_t(h << 16) | l); \
     return 1; \
 }

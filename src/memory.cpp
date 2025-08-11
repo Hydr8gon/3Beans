@@ -110,6 +110,26 @@ void Memory::updateMap(bool arm9, uint32_t start, uint32_t end) {
         uint8_t *&write = (arm9 ? writeMap9 : writeMap11)[address >> 12];
         read = write = nullptr;
 
+        // Map DSP WRAM based on the code and data 32KB block registers
+        if (address >= 0x1FF00000 && address < 0x1FF80000) { // 512KB area
+            uint8_t slot = (address >> 15) & 0x7;
+            if (address < 0x1FF40000) { // 256KB code
+                for (int i = 0; i < 8; i++) {
+                    if (!(cfg11Wram32kCode[i] & BIT(7)) || ((cfg11Wram32kCode[i] >> 2) & 0x7) != slot) continue;
+                    read = write = &dspWram[(i << 15) | (address & 0x7FFF)];
+                    break;
+                }
+            }
+            else { // 256KB data
+                for (int i = 0; i < 8; i++) {
+                    if (!(cfg11Wram32kData[i] & BIT(7)) || ((cfg11Wram32kData[i] >> 2) & 0x7) != slot) continue;
+                    read = write = &dspWram[(i << 15) | (address & 0x47FFF)];
+                    break;
+                }
+            }
+            continue;
+        }
+
         // Set a pointer to readable memory if it exists at the current address
         if (arm9 && address >= 0x8000000 && address < (cfg9Extmemcnt9 ? 0x8180000 : 0x8100000))
             read = &arm9Ram[address & 0x1FFFFF]; // 1.5MB ARM9 internal RAM
@@ -117,8 +137,6 @@ void Memory::updateMap(bool arm9, uint32_t start, uint32_t end) {
             read = &vram[address & 0x7FFFFF]; // 6MB VRAM
         else if (!arm9 && (cfg11MpCnt & BIT(0)) && address >= 0x1F000000 && address < 0x1F400000)
             read = &vramExt[address & 0x3FFFFF]; // 4MB extended VRAM
-        else if (address >= 0x1FF00000 && address < 0x1FF80000)
-            read = &dspWram[address & 0x7FFFF]; // 512KB DSP code/data RAM
         else if (address >= 0x1FF80000 && address < 0x20000000)
             read = &axiWram[address & 0x7FFFF]; // 512KB AXI WRAM
         else if (address >= 0x20000000 && address < 0x28000000)
@@ -137,8 +155,6 @@ void Memory::updateMap(bool arm9, uint32_t start, uint32_t end) {
             write = &vram[address & 0x7FFFFF]; // 6MB VRAM
         else if (!arm9 && (cfg11MpCnt & BIT(0)) && address >= 0x1F000000 && address < 0x1F400000)
             write = &vramExt[address & 0x3FFFFF]; // 4MB extended VRAM
-        else if (address >= 0x1FF00000 && address < 0x1FF80000)
-            write = &dspWram[address & 0x7FFFF]; // 512KB DSP code/data RAM
         else if (address >= 0x1FF80000 && address < 0x20000000)
             write = &axiWram[address & 0x7FFFF]; // 512KB AXI WRAM
         else if (address >= 0x20000000 && address < 0x28000000)
@@ -345,6 +361,22 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
             DEF_IO16(0x101220D8, data = core->wifi.readDataCtl()) // WIFI_DATA_CTL
             DEF_IO16(0x10122100, data = core->wifi.readData32Irq()) // WIFI_DATA32_IRQ
             DEF_IO16(0x10122104, data = core->wifi.readData32Blklen()) // WIFI_DATA32_BLKLEN
+            DEF_IO08(0x10140000, data = readCfg11Wram32kCode(0)) // CFG11_WRAM_32K_CODE0
+            DEF_IO08(0x10140001, data = readCfg11Wram32kCode(1)) // CFG11_WRAM_32K_CODE1
+            DEF_IO08(0x10140002, data = readCfg11Wram32kCode(2)) // CFG11_WRAM_32K_CODE2
+            DEF_IO08(0x10140003, data = readCfg11Wram32kCode(3)) // CFG11_WRAM_32K_CODE3
+            DEF_IO08(0x10140004, data = readCfg11Wram32kCode(4)) // CFG11_WRAM_32K_CODE4
+            DEF_IO08(0x10140005, data = readCfg11Wram32kCode(5)) // CFG11_WRAM_32K_CODE5
+            DEF_IO08(0x10140006, data = readCfg11Wram32kCode(6)) // CFG11_WRAM_32K_CODE6
+            DEF_IO08(0x10140007, data = readCfg11Wram32kCode(7)) // CFG11_WRAM_32K_CODE7
+            DEF_IO08(0x10140008, data = readCfg11Wram32kData(0)) // CFG11_WRAM_32K_DATA0
+            DEF_IO08(0x10140009, data = readCfg11Wram32kData(1)) // CFG11_WRAM_32K_DATA1
+            DEF_IO08(0x1014000A, data = readCfg11Wram32kData(2)) // CFG11_WRAM_32K_DATA2
+            DEF_IO08(0x1014000B, data = readCfg11Wram32kData(3)) // CFG11_WRAM_32K_DATA3
+            DEF_IO08(0x1014000C, data = readCfg11Wram32kData(4)) // CFG11_WRAM_32K_DATA4
+            DEF_IO08(0x1014000D, data = readCfg11Wram32kData(5)) // CFG11_WRAM_32K_DATA5
+            DEF_IO08(0x1014000E, data = readCfg11Wram32kData(6)) // CFG11_WRAM_32K_DATA6
+            DEF_IO08(0x1014000F, data = readCfg11Wram32kData(7)) // CFG11_WRAM_32K_DATA7
             DEF_IO32(0x10140420, data = readCfg11BrOverlayCnt()) // CFG11_BR_OVERLAY_CNT
             DEF_IO32(0x10140424, data = readCfg11BrOverlayVal()) // CFG11_BR_OVERLAY_VAL
             DEF_IO16(0x10140FFC, data = core->interrupts.readCfg11Socinfo()) // CFG11_SOCINFO
@@ -1688,6 +1720,22 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
             DEF_IO16(0x101220D8, core->wifi.writeDataCtl(IO_PARAMS)) // WIFI_DATA_CTL
             DEF_IO16(0x10122100, core->wifi.writeData32Irq(IO_PARAMS)) // WIFI_DATA32_IRQ
             DEF_IO16(0x10122104, core->wifi.writeData32Blklen(IO_PARAMS)) // WIFI_DATA32_BLKLEN
+            DEF_IO08(0x10140000, writeCfg11Wram32kCode(0, IO_PARAMS8)) // CFG11_WRAM_32K_CODE0
+            DEF_IO08(0x10140001, writeCfg11Wram32kCode(1, IO_PARAMS8)) // CFG11_WRAM_32K_CODE1
+            DEF_IO08(0x10140002, writeCfg11Wram32kCode(2, IO_PARAMS8)) // CFG11_WRAM_32K_CODE2
+            DEF_IO08(0x10140003, writeCfg11Wram32kCode(3, IO_PARAMS8)) // CFG11_WRAM_32K_CODE3
+            DEF_IO08(0x10140004, writeCfg11Wram32kCode(4, IO_PARAMS8)) // CFG11_WRAM_32K_CODE4
+            DEF_IO08(0x10140005, writeCfg11Wram32kCode(5, IO_PARAMS8)) // CFG11_WRAM_32K_CODE5
+            DEF_IO08(0x10140006, writeCfg11Wram32kCode(6, IO_PARAMS8)) // CFG11_WRAM_32K_CODE6
+            DEF_IO08(0x10140007, writeCfg11Wram32kCode(7, IO_PARAMS8)) // CFG11_WRAM_32K_CODE7
+            DEF_IO08(0x10140008, writeCfg11Wram32kData(0, IO_PARAMS8)) // CFG11_WRAM_32K_DATA0
+            DEF_IO08(0x10140009, writeCfg11Wram32kData(1, IO_PARAMS8)) // CFG11_WRAM_32K_DATA1
+            DEF_IO08(0x1014000A, writeCfg11Wram32kData(2, IO_PARAMS8)) // CFG11_WRAM_32K_DATA2
+            DEF_IO08(0x1014000B, writeCfg11Wram32kData(3, IO_PARAMS8)) // CFG11_WRAM_32K_DATA3
+            DEF_IO08(0x1014000C, writeCfg11Wram32kData(4, IO_PARAMS8)) // CFG11_WRAM_32K_DATA4
+            DEF_IO08(0x1014000D, writeCfg11Wram32kData(5, IO_PARAMS8)) // CFG11_WRAM_32K_DATA5
+            DEF_IO08(0x1014000E, writeCfg11Wram32kData(6, IO_PARAMS8)) // CFG11_WRAM_32K_DATA6
+            DEF_IO08(0x1014000F, writeCfg11Wram32kData(7, IO_PARAMS8)) // CFG11_WRAM_32K_DATA7
             DEF_IO32(0x10140420, writeCfg11BrOverlayCnt(IO_PARAMS)) // CFG11_BR_OVERLAY_CNT
             DEF_IO32(0x10140424, writeCfg11BrOverlayVal(IO_PARAMS)) // CFG11_BR_OVERLAY_VAL
             DEF_IO32(0x10141200, core->gpu.writeCfg11GpuCnt(IO_PARAMS)) // CFG11_GPU_CNT
@@ -2599,6 +2647,34 @@ uint32_t Memory::readPrngSource(int i) {
     // TODO: figure out what formula they actually use
     if (i < 2) prngSource[i] = (((prngSource[i] >> 2) + 0x800000) ^ ((prngSource[i] << 3) - (i + 1))) * 3;
     return prngSource[i];
+}
+
+void Memory::writeCfg11Wram32kCode(int i, uint8_t value) {
+    // Write to one of the CFG11_WRAM_32K_CODE registers
+    // TODO: handle the ARM-only bit
+    cfg11Wram32kCode[i] = (value & 0x9D);
+    if (value & BIT(7))
+        LOG_INFO("Remapping DSP WRAM code block %d to slot %d\n", i, (value >> 2) & 0x7);
+    else
+        LOG_INFO("Unmapping DSP WRAM code block %d\n", i);
+
+    // Update the ARM11 and ARM9 memory maps in DSP code regions
+    updateMap(false, 0x1FF00000, 0x1FF3FFFF);
+    updateMap(true, 0x1FF00000, 0x1FF3FFFF);
+}
+
+void Memory::writeCfg11Wram32kData(int i, uint8_t value) {
+    // Write to one of the CFG11_WRAM_32K_DATA registers
+    // TODO: handle the ARM-only bit
+    cfg11Wram32kData[i] = (value & 0x9D);
+    if (value & BIT(7))
+        LOG_INFO("Remapping DSP WRAM data block %d to slot %d\n", i, (value >> 2) & 0x7);
+    else
+        LOG_INFO("Unmapping DSP WRAM data block %d\n", i);
+
+    // Update the ARM11 and ARM9 memory maps in DSP data regions
+    updateMap(false, 0x1FF40000, 0x1FF7FFFF);
+    updateMap(true, 0x1FF40000, 0x1FF7FFFF);
 }
 
 void Memory::writeCfg11BrOverlayCnt(uint32_t mask, uint32_t value) {

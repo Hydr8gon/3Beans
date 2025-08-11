@@ -319,6 +319,12 @@ private:
     int msumusa3a(uint16_t opcode);
     int msumsua3aa(uint16_t opcode);
     int msumusa3aa(uint16_t opcode);
+    int mma3Y(uint16_t opcode);
+    int mma3aY(uint16_t opcode);
+    int mmsua3Y(uint16_t opcode);
+    int mmusa3Y(uint16_t opcode);
+    int mmsua3aY(uint16_t opcode);
+    int mmusa3aY(uint16_t opcode);
     int modrD2(uint16_t opcode);
     int modrD2d(uint16_t opcode);
     int modrI2(uint16_t opcode);
@@ -373,6 +379,10 @@ private:
     int shrB(uint16_t opcode);
     int shr4A(uint16_t opcode);
     int shr4B(uint16_t opcode);
+    int sqrMi8(uint16_t opcode);
+    int sqrMrn(uint16_t opcode);
+    int sqrReg(uint16_t opcode);
+    int sqrR6(uint16_t opcode);
     int subAbb(uint16_t opcode);
     int subBa(uint16_t opcode);
     int subI16a(uint16_t opcode);
