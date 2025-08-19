@@ -54,11 +54,6 @@ private:
         &regY[0], &regSt[0], &regSt[1], &regSt[2], &regP[0].h, (uint16_t*)&regPc, &regSp, &regCfg[0],
         &regCfg[1], &regB[0].h, &regB[1].h, &regB[0].l, &regB[1].l, &regExt[0], &regExt[1], &regExt[2],
         &regExt[3], &regA[0].l, &regA[1].l, &regA[0].l, &regA[1].l, &regA[0].h, &regA[1].h, &regLc, &regSv };
-    uint16_t *readRegP0[0x20] = { &regR[0], &regR[1], &regR[2], &regR[3], &regR[4], &regR[5], &regR[7],
-        &regY[0], &regSt[0], &regSt[1], &regSt[2], &regP[0].l, (uint16_t*)&regPc, &regSp, &regCfg[0],
-        &regCfg[1], &regB[0].h, &regB[1].h, &regB[0].l, &regB[1].l, &regExt[0], &regExt[1], &regExt[2],
-        &regExt[3], &regA[0].l, &regA[1].l, &regA[0].l, &regA[1].l, &regA[0].h, &regA[1].h, &regLc, &regSv };
-
     uint16_t *readArpMod[0x10] = { &regAr[0], &regAr[1], &regArp[0], &regArp[1], &regArp[2], &regArp[3], &regNone,
         &regNone, &regStt[0], &regStt[1], &regStt[2], &regNone, &regMod[0], &regMod[1], &regMod[2], &regMod[3] };
     int64_t *readAb[0x4] = { &regB[0].v, &regB[1].v, &regA[0].v, &regA[1].v };
@@ -66,11 +61,9 @@ private:
     uint16_t **readSttMod = &readArpMod[8];
 
     static uint16_t (TeakInterp::*readRegS[0x20])();
-    static uint16_t (TeakInterp::*readRegP0S[0x20])();
     static uint16_t (TeakInterp::*readAblhS[0x8])();
     static int64_t (TeakInterp::*readAbS[0x4])();
     static int64_t (TeakInterp::*readPxS[0x2])();
-
     static void (TeakInterp::*writeReg[0x20])(uint16_t);
     static void (TeakInterp::*writeRegM[0x20])(uint16_t);
     static void (TeakInterp::*writeArpMod[0x10])(uint16_t);
@@ -89,6 +82,7 @@ private:
     static void (TeakInterp::**writeSttMod)(uint16_t);
     static void (TeakInterp::**writeAx40)(int64_t);
     static void (TeakInterp::**writeBx40)(int64_t);
+    static void (TeakInterp::**writeBx40M)(int64_t);
     static void (TeakInterp::**writeAx16M)(uint16_t);
     static void (TeakInterp::**writeBx16M)(uint16_t);
     static void (TeakInterp::**writeAxlM)(uint16_t);
@@ -150,6 +144,9 @@ private:
     uint16_t getRarOffsAr(uint8_t rarOffs) { return offsReg(arRn[(rarOffs >> 2) & 0x3], arCs[rarOffs & 0x3]); }
     uint16_t getRarStepAr(uint8_t rarStep) { return stepReg(arRn[(rarStep >> 2) & 0x3], arPm[rarStep & 0x3]); }
 
+    int64_t readRegP0(int i, bool sign = true);
+    int64_t readRegP0S(int i);
+
     template <int i> int64_t readA40S();
     template <int i> uint16_t readAlS();
     template <int i> uint16_t readAhS();
@@ -163,7 +160,6 @@ private:
     template <int i> uint16_t readSt();
     template <int i> uint16_t readCfg();
 
-    uint16_t readP016S();
     uint16_t readP0hS();
     uint16_t readY0();
     uint16_t readPc();

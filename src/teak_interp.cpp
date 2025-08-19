@@ -311,6 +311,26 @@ uint16_t TeakInterp::stepReg(uint8_t reg, int32_t step) {
     return address;
 }
 
+int64_t TeakInterp::readRegP0(int i, bool sign) {
+    // Read a register operand with P0, substituting full-width values when applicable
+    switch (i) {
+        case 0x0B: return readP33S<0>();
+        case 0x18: return regA[0].v;
+        case 0x19: return regA[1].v;
+        default: return sign ? int16_t(*readReg[i]) : uint16_t(*readReg[i]);
+    }
+}
+
+int64_t TeakInterp::readRegP0S(int i) {
+    // Read a register operand with P0 and saturation, substituting full-width values when applicable
+    switch (i) {
+        case 0x0B: return readP33S<0>();
+        case 0x18: return readA40S<0>();
+        case 0x19: return readA40S<1>();
+        default: return int16_t((this->*readRegS[i])());
+    }
+}
+
 template <int i> int64_t TeakInterp::readA40S() {
     // Read from a full A accumulator and saturate if enabled
     return (regMod[0] & BIT(0)) ? regA[i].v : saturate(regA[i].v);
@@ -348,16 +368,6 @@ template <int i> int64_t TeakInterp::readP33S() {
         case 0x1: return regP[i].v >> 1;
         case 0x2: return regP[i].v << 1;
         default: return regP[i].v << 2;
-    }
-}
-
-uint16_t TeakInterp::readP016S() {
-    // Read a 16-bit value from P0 with its product shifter applied
-    switch ((regMod[0] >> 10) & 0x3) {
-        case 0x0: return regP[0].v >> 0;
-        case 0x1: return regP[0].v >> 1;
-        case 0x2: return regP[0].v << 1;
-        default: return regP[0].v << 2;
     }
 }
 

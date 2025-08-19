@@ -46,9 +46,12 @@ enum TexWrap {
 
 enum CombSrc {
     COMB_PRIM,
+    COMB_FRAG0,
+    COMB_FRAG1,
     COMB_TEX0,
     COMB_TEX1,
     COMB_TEX2,
+    COMB_TEX3,
     COMB_CONST,
     COMB_PREV,
     COMB_UNK

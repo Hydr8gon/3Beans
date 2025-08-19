@@ -287,7 +287,8 @@ void GpuRenderSoft::getSource(float &r, float &g, float &b, float &a, SoftVertex
         case COMB_TEX1: getTexel(r, g, b, a, v.s1 / v.w, v.t1 / v.w, 1); break;
         case COMB_TEX2: getTexel(r, g, b, a, v.s2 / v.w, v.t2 / v.w, 2); break;
         case COMB_CONST: r = combColors[i][0], g = combColors[i][1], b = combColors[i][2], a = combColors[i][3]; break;
-        case COMB_UNK: r = g = b = a = 1.0f; break;
+        case COMB_UNK: r = g = b = a = 0.0f; break;
+        default: r = g = b = a = 1.0f; break; // Stub
 
     case COMB_PREV:
         // Generate the previous combiner's output, or use the cache if already done
@@ -443,21 +444,23 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
 
     // Read a depth value to compare with based on buffer format
     float depth = 0.0f;
-    switch (depbufFmt) {
-    case DEP_16:
-        val = core->memory.read<uint16_t>(ARM11, depbufAddr + ofs * 2);
-        depth = -float(val) / 0xFFFF;
-        break;
-    case DEP_24:
-        val = core->memory.read<uint8_t>(ARM11, depbufAddr + ofs * 3 + 0) << 0;
-        val |= core->memory.read<uint8_t>(ARM11, depbufAddr + ofs * 3 + 1) << 8;
-        val |= core->memory.read<uint8_t>(ARM11, depbufAddr + ofs * 3 + 2) << 16;
-        depth = -float(val) / 0xFFFFFF;
-        break;
-    case DEP_24S8:
-        val = core->memory.read<uint32_t>(ARM11, depbufAddr + ofs * 4) & 0xFFFFFF;
-        depth = -float(val) / 0xFFFFFF;
-        break;
+    if (depthFunc >= TEST_EQ) {
+        switch (depbufFmt) {
+        case DEP_16:
+            val = core->memory.read<uint16_t>(ARM11, depbufAddr + ofs * 2);
+            depth = -float(val) / 0xFFFF;
+            break;
+        case DEP_24:
+            val = core->memory.read<uint8_t>(ARM11, depbufAddr + ofs * 3 + 0) << 0;
+            val |= core->memory.read<uint8_t>(ARM11, depbufAddr + ofs * 3 + 1) << 8;
+            val |= core->memory.read<uint8_t>(ARM11, depbufAddr + ofs * 3 + 2) << 16;
+            depth = -float(val) / 0xFFFFFF;
+            break;
+        case DEP_24S8:
+            val = core->memory.read<uint32_t>(ARM11, depbufAddr + ofs * 4) & 0xFFFFFF;
+            depth = -float(val) / 0xFFFFFF;
+            break;
+        }
     }
 
     // Compare the incoming depth value with the existing one

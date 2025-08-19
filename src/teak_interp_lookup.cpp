@@ -31,18 +31,6 @@ uint16_t (TeakInterp::*TeakInterp::readRegS[])() = {
     &TeakInterp::readAhS<0>, &TeakInterp::readAhS<1>, &TeakInterp::readLc, &TeakInterp::readSv
 };
 
-// Lookup table for register reads with P0 and accumulator saturation
-uint16_t (TeakInterp::*TeakInterp::readRegP0S[])() = {
-    &TeakInterp::readR<0>, &TeakInterp::readR<1>, &TeakInterp::readR<2>, &TeakInterp::readR<3>,
-    &TeakInterp::readR<4>, &TeakInterp::readR<5>, &TeakInterp::readR<7>, &TeakInterp::readY0,
-    &TeakInterp::readSt<0>, &TeakInterp::readSt<1>, &TeakInterp::readSt<2>, &TeakInterp::readP016S,
-    &TeakInterp::readPc, &TeakInterp::readSp, &TeakInterp::readCfg<0>, &TeakInterp::readCfg<1>,
-    &TeakInterp::readBhS<0>, &TeakInterp::readBhS<1>, &TeakInterp::readBlS<0>, &TeakInterp::readBlS<1>,
-    &TeakInterp::readExt<0>, &TeakInterp::readExt<1>, &TeakInterp::readExt<2>, &TeakInterp::readExt<3>,
-    &TeakInterp::readA16<0>, &TeakInterp::readA16<1>, &TeakInterp::readAlS<0>, &TeakInterp::readAlS<1>,
-    &TeakInterp::readAhS<0>, &TeakInterp::readAhS<1>, &TeakInterp::readLc, &TeakInterp::readSv
-};
-
 // Lookup table for partial accumulator reads with saturation
 uint16_t (TeakInterp::*TeakInterp::readAblhS[])()= {
     &TeakInterp::readBlS<0>, &TeakInterp::readBhS<0>, &TeakInterp::readBlS<1>, &TeakInterp::readBhS<1>,
@@ -130,6 +118,7 @@ void (TeakInterp::**TeakInterp::writeArArp)(uint16_t) = &writeArpMod[0];
 void (TeakInterp::**TeakInterp::writeSttMod)(uint16_t) = &writeArpMod[8];
 void (TeakInterp::**TeakInterp::writeAx40)(int64_t) = &writeAb40[2];
 void (TeakInterp::**TeakInterp::writeBx40)(int64_t) = &writeAb40[0];
+void (TeakInterp::**TeakInterp::writeBx40M)(int64_t) = &writeAb40M[0];
 void (TeakInterp::**TeakInterp::writeAx16M)(uint16_t) = &writeAb16M[2];
 void (TeakInterp::**TeakInterp::writeBx16M)(uint16_t) = &writeAb16M[0];
 void (TeakInterp::**TeakInterp::writeAxlM)(uint16_t) = &writeAblM[2];

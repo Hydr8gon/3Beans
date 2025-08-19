@@ -299,9 +299,12 @@ template <int i> void Gpu::writeCombSrc(uint32_t mask, uint32_t value) {
     for (int j = 0; j < 6; j++) {
         switch (uint8_t src = (gpuCombSrc[i] >> ((j + (j > 2)) * 4)) & 0xF) {
             case 0x0: core->gpuRender.setCombSrc(i, j, COMB_PRIM); continue;
+            case 0x1: core->gpuRender.setCombSrc(i, j, COMB_FRAG0); continue;
+            case 0x2: core->gpuRender.setCombSrc(i, j, COMB_FRAG1); continue;
             case 0x3: core->gpuRender.setCombSrc(i, j, COMB_TEX0); continue;
             case 0x4: core->gpuRender.setCombSrc(i, j, COMB_TEX1); continue;
             case 0x5: core->gpuRender.setCombSrc(i, j, COMB_TEX2); continue;
+            case 0x6: core->gpuRender.setCombSrc(i, j, COMB_TEX3); continue;
             case 0xE: core->gpuRender.setCombSrc(i, j, COMB_CONST); continue;
             case 0xF: core->gpuRender.setCombSrc(i, j, COMB_PREV); continue;
 

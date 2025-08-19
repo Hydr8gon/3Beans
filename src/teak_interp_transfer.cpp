@@ -80,7 +80,9 @@ MOV_FUNC(movI8ry, int8_t(opcode), (this->*writeRegM[(opcode >> 10) & 0x7]), 1) /
 MOV_FUNC(movI8sv, int8_t(opcode), regSv=, 1) // MOV Imm8s, SV
 MOV_FUNC(movMi8sv, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), regSv=, 1) // MOV MemImm8, SV
 MOV_FUNC(movMxpreg, regMixp, (this->*writeRegM[opcode & 0x1F]), 1) // MOV MIXP, Register
+MOV_FUNC(movRegb, readRegP0S(opcode & 0x1F), (this->*writeBx40M[(opcode >> 5) & 0x1]), 1) // MOV RegisterP0, Bx
 MOV_FUNC(movRegmxp, (this->*readRegS[opcode & 0x1F])(), regMixp=, 1) // MOV Register, MIXP
+MOV_FUNC(movRegreg, readRegP0S(opcode & 0x1F), (this->*writeRegM[(opcode >> 5) & 0x1F]), 1) // MOV RegisterP0, Register
 MOV_FUNC(movRegr6, (this->*readRegS[opcode & 0x1F])(), regR[6]=, 1) // MOV Register, R6
 MOV_FUNC(movR6reg, regR[6], (this->*writeRegM[opcode & 0x1F]), 1) // MOV R6, Register
 MOV_FUNC(movSmabl, *readSttMod[opcode & 0x7], (this->*writeAblM[(opcode >> 10) & 0x3]), 1) // MOV SttMod, Abl
@@ -95,8 +97,6 @@ MOV_FUNC(movStpa0h, regStep0[(opcode >> 8) & 0x1], writeAhM<0>, 1) // MOV Step0,
 MOVHH_FUNC(movAbab, readAbS[(opcode >> 10) & 0x3], writeAb40M[(opcode >> 5) & 0x3]) // MOV Ab, Ab
 MOVHH_FUNC(movAblarap, readAbS[(opcode >> 3) & 0x3], writeArArp[opcode & 0x7]) // MOV Abl, ArArp
 MOVHH_FUNC(movAblsm, readAbS[(opcode >> 3) & 0x3], writeSttMod[opcode & 0x7]) // MOV Abl, SttMod
-MOVHH_FUNC(movRegb, readRegP0S[opcode & 0x1F], writeBx16M[(opcode >> 5) & 0x1]) // MOV RegisterP0, Bx
-MOVHH_FUNC(movRegreg, readRegP0S[opcode & 0x1F], writeRegM[(opcode >> 5) & 0x1F]) // MOV RegisterP0, Register
 
 // Move a value from data memory to a write handler
 #define MOVMH_FUNC(name, op0a, op1, cyc) int TeakInterp::name(uint16_t opcode) { \
