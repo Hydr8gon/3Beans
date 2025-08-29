@@ -34,6 +34,8 @@ public:
 
     void underflowTmr(int i);
     void unsignalTmr(int i);
+    void sendAudio();
+    void setAudClock(DspClock clock);
     uint32_t getIcuVector();
     void updateIcuState();
 
@@ -57,6 +59,7 @@ public:
 private:
     Core *core;
 
+    std::queue<uint16_t> audOutFifo;
     std::queue<uint16_t> readFifo;
     uint8_t readLength = 0;
 
@@ -67,6 +70,8 @@ private:
     uint32_t miuBoundY = 0x10000;
     bool dmaSignals[3] = {};
     uint16_t icuState = 0;
+    uint32_t audCycles = 0;
+    bool audScheduled = false;
 
     uint16_t dspPadr = 0;
     uint16_t dspPcfg = 0x1;
@@ -104,9 +109,14 @@ private:
     uint32_t icuVector[16] = { 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00,
         0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00, 0x3FC00 };
     uint16_t icuDisable = 0;
+    uint16_t audOutCtrl = 0;
+    uint16_t audOutEnable = 0;
+    uint16_t audOutStatus = 0;
+    uint16_t audOutFlush = 0;
 
     uint32_t getMiuAddr(uint16_t address);
     void scheduleTmr(int i);
+    void flushAudOut();
 
     uint16_t dmaRead(uint8_t area, uint32_t address);
     void dmaWrite(uint8_t area, uint32_t address, uint16_t value);
@@ -151,4 +161,8 @@ private:
     void writeIcuVectorL(int i, uint16_t value);
     void writeIcuVectorH(int i, uint16_t value);
     void writeIcuDisable(uint16_t value);
+    void writeAudOutCtrl(uint16_t value);
+    void writeAudOutEnable(uint16_t value);
+    void writeAudOutFifo(uint16_t value);
+    void writeAudOutFlush(uint16_t value);
 };

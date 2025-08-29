@@ -128,6 +128,10 @@ uint16_t Dsp::readData(uint16_t address) {
         case 0x24E: return icuVector[15] >> 16;
         case 0x250: return icuVector[15] >> 0;
         case 0x252: return icuDisable;
+        case 0x2A0: return audOutCtrl;
+        case 0x2BE: return audOutEnable;
+        case 0x2C2: return audOutStatus;
+        case 0x2CA: return audOutFlush;
 
     default:
         // Catch reads from unknown I/O registers
@@ -215,6 +219,10 @@ void Dsp::writeData(uint16_t address, uint16_t value) {
         case 0x24E: return writeIcuVectorH(15, value);
         case 0x250: return writeIcuVectorL(15, value);
         case 0x252: return writeIcuDisable(value);
+        case 0x2A0: return writeAudOutCtrl(value);
+        case 0x2BE: return writeAudOutEnable(value);
+        case 0x2C6: return writeAudOutFifo(value);
+        case 0x2CA: return writeAudOutFlush(value);
 
     default:
         // Catch writes to unknown I/O registers
@@ -273,6 +281,46 @@ void Dsp::scheduleTmr(int i) {
     tmrCycles[i] = uint64_t(tmrCount[i]) << shift;
     core->schedule(Task(DSP_UNDERFLOW0 + i), tmrCycles[i]);
     tmrCycles[i] += core->globalCycles;
+}
+
+void Dsp::flushAudOut() {
+    // Empty the audio output FIFO, sending left and right samples to be mixed
+    while (audOutFifo.size() >= 2) {
+        uint16_t value = audOutFifo.front();
+        audOutFifo.pop();
+        core->csnd.sampleDsp(value, audOutFifo.front());
+        audOutFifo.pop();
+    }
+
+    // Clear the FIFO full bit and set the FIFO empty bit
+    audOutStatus = (audOutStatus & ~BIT(3)) | BIT(4);
+    updateIcuState();
+}
+
+void Dsp::sendAudio() {
+    // Ignore and unschedule the audio FIFO event if stopped
+    if (!audOutEnable || !audCycles) {
+        audScheduled = false;
+        return;
+    }
+
+    // Flush the audio output FIFO and reschedule the event
+    flushAudOut();
+    core->schedule(DSP_SEND_AUDIO, audCycles);
+}
+
+void Dsp::setAudClock(DspClock clock) {
+    // Stop the audio FIFO event if its clock is disabled
+    if (clock == CLK_OFF) {
+        audCycles = 0;
+        return;
+    }
+
+    // Set the audio FIFO event frequency and schedule it if newly enabled
+    audCycles = ((clock == CLK_32KHZ) ? 8192 : 5632) * 8;
+    if (audScheduled || !audOutEnable) return;
+    core->schedule(DSP_SEND_AUDIO, audCycles);
+    audScheduled = true;
 }
 
 uint32_t Dsp::getIcuVector() {
@@ -336,9 +384,10 @@ void Dsp::updateIcuState() {
     // Update ICU state bits and set pending for newly-enabled bits
     bool dma = (dmaSignals[0] || dmaSignals[1] || dmaSignals[2]);
     bool hpi = (hpiSts & BIT(9)) || (hpiSts & ~hpiCfg & 0x3100);
+    bool aud0 = (audOutCtrl & 0xF00) && (audOutStatus & BIT(4));
     bool tmr0 = tmrSignals[0] ^ ((tmrCtrl[0] >> 6) & 0x1);
     bool tmr1 = tmrSignals[1] ^ ((tmrCtrl[1] >> 6) & 0x1);
-    uint16_t state = ((dma << 15) | (hpi << 14) | (tmr0 << 10) | (tmr1 << 9) | icuTrigger) & ~icuDisable;
+    uint16_t state = ((dma << 15) | (hpi << 14) | (aud0 << 11) | (tmr0 << 10) | (tmr1 << 9) | icuTrigger) & ~icuDisable;
     icuPending |= (state & ~icuState);
     icuState = state;
 
@@ -627,6 +676,39 @@ void Dsp::writeIcuDisable(uint16_t value) {
     // Write to the ICU global disable mask
     icuDisable = value;
     updateIcuState();
+}
+
+void Dsp::writeAudOutCtrl(uint16_t value) {
+    // Write to the audio output control register
+    // TODO: handle bits other than interrupt enable?
+    audOutCtrl = value;
+    updateIcuState();
+}
+
+void Dsp::writeAudOutEnable(uint16_t value) {
+    // Write to the audio output enable register
+    audOutEnable = (value & 0x8000);
+
+    // Schedule the audio FIFO event at the current frequency if newly enabled
+    if (audScheduled || !audOutEnable || !audCycles) return;
+    core->schedule(DSP_SEND_AUDIO, audCycles);
+    audScheduled = true;
+}
+
+void Dsp::writeAudOutFifo(uint16_t value) {
+    // Write a 16-bit sample to the audio output FIFO if there's room
+    if (audOutFifo.size() >= 16) return;
+    audOutFifo.push(value);
+
+    // Clear the FIFO empty bit and set the FIFO full bit if full
+    audOutStatus = (audOutStatus & ~BIT(4)) | ((audOutFifo.size() >= 16) << 3);
+    updateIcuState();
+}
+
+void Dsp::writeAudOutFlush(uint16_t value) {
+    // Write to the audio output flush register and flush the FIFO if requested
+    audOutFlush = (value & 0x3);
+    if (value & BIT(2)) flushAudOut();
 }
 
 uint16_t Dsp::readPdata() {

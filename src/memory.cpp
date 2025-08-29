@@ -395,6 +395,7 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
             DEF_IO32(0x1014281C, data = core->input.readSpiFifoIntStat()) // SPIBUS1_FIFO_INT_STAT
             DEF_IO08(0x10144000, data = core->i2c.readBusData(1)) // I2C_BUS1_DATA
             DEF_IO08(0x10144001, data = core->i2c.readBusCnt(1)) // I2C_BUS1_CNT
+            DEF_IO32(0x10145000, data = core->csnd.readSndexcnt()) // CODEC_SNDEXCNT
             DEF_IO16(0x10146000, data = core->input.readHidPad()) // HID_PAD
             DEF_IO08(0x10148000, data = core->i2c.readBusData(2)) // I2C_BUS2_DATA
             DEF_IO08(0x10148001, data = core->i2c.readBusCnt(2)) // I2C_BUS2_CNT
@@ -1751,6 +1752,7 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
             DEF_IO32(0x1014281C, core->input.writeSpiFifoIntStat(IO_PARAMS)) // SPIBUS1_FIFO_INT_STAT
             DEF_IO08(0x10144000, core->i2c.writeBusData(1, IO_PARAMS8)) // I2C_BUS1_DATA
             DEF_IO08(0x10144001, core->i2c.writeBusCnt(1, IO_PARAMS8)) // I2C_BUS1_CNT
+            DEF_IO32(0x10145000, core->csnd.writeSndexcnt(IO_PARAMS)) // CODEC_SNDEXCNT
             DEF_IO08(0x10148000, core->i2c.writeBusData(2, IO_PARAMS8)) // I2C_BUS2_DATA
             DEF_IO08(0x10148001, core->i2c.writeBusCnt(2, IO_PARAMS8)) // I2C_BUS2_CNT
             DEF_IO08(0x10161000, core->i2c.writeBusData(0, IO_PARAMS8)) // I2C_BUS0_DATA

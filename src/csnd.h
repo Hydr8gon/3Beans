@@ -23,16 +23,24 @@
 #include <condition_variable>
 #include <cstdint>
 #include <mutex>
+#include <queue>
 
 class Core;
+
+enum DspClock {
+    CLK_OFF,
+    CLK_32KHZ,
+    CLK_47KHZ
+};
 
 class Csnd {
 public:
     Csnd(Core *core);
     ~Csnd();
 
-    uint32_t *getSamples(uint32_t count);
+    uint32_t *getSamples(uint32_t freq, uint32_t count);
     void runSample();
+    void sampleDsp(int16_t left, int16_t right);
 
     uint16_t readMainVol() { return csndMainVol; }
     uint16_t readMainCnt() { return csndMainCnt; }
@@ -40,6 +48,7 @@ public:
     uint16_t readChanRvol(int i) { return csndChanRvol[i]; }
     uint16_t readChanLvol(int i) { return csndChanLvol[i]; }
     uint32_t readChanStart(int i) { return csndChanStart[i] & ~0x3; }
+    uint16_t readSndexcnt() { return codecSndexcnt; }
 
     void writeMainVol(uint16_t mask, uint16_t value);
     void writeMainCnt(uint16_t mask, uint16_t value);
@@ -52,16 +61,22 @@ public:
     void writeChanLoop(int i, uint32_t mask, uint32_t value);
     void writeAdpcmStart(int i, uint32_t mask, uint32_t value);
     void writeAdpcmLoop(int i, uint32_t mask, uint32_t value);
+    void writeSndexcnt(uint32_t mask, uint32_t value);
 
 private:
     Core *core;
     std::condition_variable condVars[2];
-    std::mutex mutexes[2];
+    std::mutex mutexes[3];
     std::atomic<bool> ready;
 
-    uint32_t *buffers[2] = {};
-    uint32_t bufferSize = 0;
-    uint32_t bufferOfs = 0;
+    uint32_t *mixBuffer = nullptr;
+    uint32_t *csndBuffer[2] = {};
+    std::deque<uint32_t> dspBuffer;
+    uint32_t lastSample[2] = {};
+    uint32_t mixFreq = 0, mixSize = 0;
+    uint32_t csndSize = 0, csndOfs = 0;
+    uint32_t dspSize = 0;
+    DspClock dspClock = CLK_OFF;
 
     static const int8_t indexTable[8];
     static const int16_t adpcmTable[89];
@@ -87,7 +102,8 @@ private:
     uint32_t csndChanLoop[32] = {};
     uint32_t csndAdpcmStart[32] = {};
     uint32_t csndAdpcmLoop[32] = {};
+    uint32_t codecSndexcnt = 0;
 
-    void pushSample(int16_t sampleLeft, int16_t sampleRight);
+    void sampleCsnd(int16_t left, int16_t right);
     void startChannel(int i);
 };

@@ -64,6 +64,7 @@ Core::Core(std::string &cartPath): aes(this), arms { ArmInterp(this, ARM11A), Ar
     tasks[DSP_UNDERFLOW1] = std::bind(&Dsp::underflowTmr, &dsp, 1);
     tasks[DSP_UNSIGNAL0] = std::bind(&Dsp::unsignalTmr, &dsp, 0);
     tasks[DSP_UNSIGNAL1] = std::bind(&Dsp::unsignalTmr, &dsp, 1);
+    tasks[DSP_SEND_AUDIO] = std::bind(&Dsp::sendAudio, &dsp);
     tasks[AES_UPDATE] = std::bind(&Aes::update, &aes);
     tasks[CDMA0_UPDATE] = std::bind(&Cdma::update, &cdmas[CDMA0]);
     tasks[CDMA1_UPDATE] = std::bind(&Cdma::update, &cdmas[CDMA1]);

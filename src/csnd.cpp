@@ -39,20 +39,27 @@ Csnd::Csnd(Core *core): core(core) {
 }
 
 Csnd::~Csnd() {
-    // Free the buffers
+    // Free the audio buffers
+    delete[] mixBuffer;
     for (int i = 0; i < 2; i++)
-        delete[] buffers[i];
+        delete[] csndBuffer[i];
 }
 
-uint32_t *Csnd::getSamples(uint32_t count) {
-    // Initialize the buffers or resize them if necessary
-    if (bufferSize != count) {
+uint32_t *Csnd::getSamples(uint32_t freq, uint32_t count) {
+    // Check if parameters changed and update the buffer details if so
+    dspSize = count * ((dspClock == CLK_32KHZ) ? 32730 : 47610) / freq;
+    if (mixFreq != freq || mixSize != count) {
+        mixFreq = freq, mixSize = count;
+        csndSize = count * 130920 / freq;
+        csndOfs = 0;
+
+        // Initialize or resize the buffers themselves
+        delete[] mixBuffer;
+        mixBuffer = new uint32_t[mixSize];
         for (int i = 0; i < 2; i++) {
-            delete[] buffers[i];
-            buffers[i] = new uint32_t[count];
+            delete[] csndBuffer[i];
+            csndBuffer[i] = new uint32_t[csndSize];
         }
-        bufferSize = count;
-        bufferOfs = 0;
     }
 
     // Try to wait for buffer data, but don't starve if it takes too long
@@ -61,30 +68,44 @@ uint32_t *Csnd::getSamples(uint32_t count) {
         wait = !condVars[1].wait_for(lock, std::chrono::microseconds(1000000 / 60), [&]{ return ready.load(); });
     }
 
-    // Create and fill an output buffer
-    uint32_t *out = new uint32_t[count];
+    // Fill the output buffer depending on if it's still waiting
     if (wait) {
         // Repeat the last sample to prevent crackles when running slow
         for (int i = 0; i < count; i++)
-            out[i] = buffers[1][count - 1];
+            mixBuffer[i] = lastSample[0];
     }
     else {
-        // Fill the output buffer with new data
-        memcpy(out, buffers[1], count * sizeof(uint32_t));
+        // Resample and add CSND and DSP left/right samples together
+        mutexes[2].lock();
+        for (int i = 0; i < count; i++) {
+            int j = i * dspSize / count;
+            uint32_t csnd = csndBuffer[1][i * csndSize / count];
+            uint32_t dsp = (j < dspBuffer.size()) ? dspBuffer[j] : lastSample[1];
+            mixBuffer[i] = (((csnd >> 16) + (dsp >> 16)) << 16) | ((csnd + dsp) & 0xFFFF);
+        }
+
+        // Save the last sample and dequeue used DSP samples
+        lastSample[0] = mixBuffer[count - 1];
+        int j = std::min<int>(dspSize, dspBuffer.size());
+        if (j > 0) {
+            lastSample[1] = dspBuffer[j - 1];
+            dspBuffer.erase(dspBuffer.begin(), dspBuffer.begin() + j);
+        }
+        mutexes[2].unlock();
     }
 
-    { // Signal that the buffer was played
+    { // Signal that the buffer was processed
         std::lock_guard<std::mutex> guard(mutexes[0]);
         ready.store(false);
         condVars[0].notify_one();
     }
-    return out;
+    return mixBuffer;
 }
 
 void Csnd::runSample() {
     // Push a dummy sample if disabled and schedule the next one
     core->schedule(CSND_SAMPLE, 2048);
-    if (csndMainCnt & BIT(0)) return pushSample(0, 0);
+    if (csndMainCnt & BIT(0)) return sampleCsnd(0, 0);
 
     // Mix enabled sound channels in stereo
     int32_t sampleLeft = 0, sampleRight = 0;
@@ -197,14 +218,14 @@ void Csnd::runSample() {
     // Apply master volume and clip to signed 16-bit range for the sample buffer
     sampleLeft = std::max(-0x8000, std::min(0x7FFF, ((sampleLeft * csndMainVol) >> 15)));
     sampleRight = std::max(-0x8000, std::min(0x7FFF, ((sampleRight * csndMainVol) >> 15)));
-    pushSample(sampleLeft, sampleRight);
+    sampleCsnd(sampleLeft, sampleRight);
 }
 
-void Csnd::pushSample(int16_t sampleLeft, int16_t sampleRight) {
+void Csnd::sampleCsnd(int16_t left, int16_t right) {
     // Write samples to the buffer and check if full
-    if (!bufferSize) return;
-    buffers[0][bufferOfs++] = (sampleRight << 16) | (sampleLeft & 0xFFFF);
-    if (bufferOfs != bufferSize) return;
+    if (!csndSize) return;
+    csndBuffer[0][csndOfs++] = (right << 16) | (left & 0xFFFF);
+    if (csndOfs != csndSize) return;
 
     // Limit FPS to 60 if enabled by waiting for the previous buffer to play
     if (Settings::fpsLimiter) {
@@ -213,14 +234,24 @@ void Csnd::pushSample(int16_t sampleLeft, int16_t sampleRight) {
     }
 
     // Swap buffers and reset the pointer
-    std::swap(buffers[0], buffers[1]);
-    bufferOfs = 0;
+    std::swap(csndBuffer[0], csndBuffer[1]);
+    csndOfs = 0;
 
     { // Signal that a buffer is ready to play
         std::lock_guard<std::mutex> guard(mutexes[1]);
         ready.store(true);
         condVars[1].notify_one();
     }
+}
+
+void Csnd::sampleDsp(int16_t left, int16_t right) {
+    // Enqueue a volume-scaled DSP sample for mixing, up to twice the size of an output frame
+    mutexes[2].lock();
+    if (dspBuffer.size() < dspSize * 2) {
+        int vol = std::min<int>(0x20, codecSndexcnt & 0x3F);
+        dspBuffer.push_back((((right * vol) >> 5) << 16) | (((left * vol) >> 5) & 0xFFFF));
+    }
+    mutexes[2].unlock();
 }
 
 void Csnd::startChannel(int i) {
@@ -313,4 +344,19 @@ void Csnd::writeAdpcmLoop(int i, uint32_t mask, uint32_t value) {
     // Write to one of the CSND_ADPCMx_LOOP registers
     mask &= 0x80FFFFFF;
     csndAdpcmLoop[i] = (csndAdpcmLoop[i] & ~mask) | (value & mask);
+}
+
+void Csnd::writeSndexcnt(uint32_t mask, uint32_t value) {
+    // Write to the CODEC_SNDEXCNT register with a mask based on the clock enable bit
+    mask &= (codecSndexcnt & BIT(31)) ? 0x80008FFF : 0xE000FFFF;
+    codecSndexcnt = (codecSndexcnt & ~mask) | (value & mask);
+
+    // Disable or set the DSP clock speed based on register bits
+    if ((codecSndexcnt & 0x80008000) != 0x80008000) // Clock/timing enable
+        dspClock = CLK_OFF;
+    else if (codecSndexcnt & BIT(13)) // Frequency
+        dspClock = CLK_47KHZ;
+    else
+        dspClock = CLK_32KHZ;
+    core->dsp.setAudClock(dspClock);
 }
