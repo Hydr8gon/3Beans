@@ -579,6 +579,14 @@ MPY_FUNC(mpyY0reg, *readReg[opcode & 0x1F]) // MPY Y0, Register
 MPY_FUNC(mpyY0r6, regR[6]) // MPY Y0, R6
 MPY_FUNC(mpyi, int8_t(opcode)) // MPYI Y0, Imm8s
 
+int TeakInterp::mpysuMrmr(uint16_t opcode) { // MPYSU MemR45StepZids, MemR0123StepZids
+    // Load memory values into X0/Y0 and multiply them, treating X as unsigned
+    regX[0] = core->dsp.readData(getRnStepZids(opcode & 0x1B));
+    regY[0] = core->dsp.readData(getRnStepZids(((opcode >> 2) & 0x19) + 4));
+    multiplyXY<uint16_t, int16_t>(0);
+    return 1;
+}
+
 int TeakInterp::neg(uint16_t opcode) { // NEG Ax, Cond
     // Negate an A accumulator by subtracting it from 0 and set flags if the condition is met
     if (checkCond(opcode)) {
@@ -623,6 +631,19 @@ OR_FUNC(orM7i7, core->dsp.readData(regR[7] + (int8_t(opcode << 1) >> 1)), regA, 
 OR_FUNC(orMrn, core->dsp.readData(getRnStepZids(opcode)), regA, 8, 8, 1) // OR MemRnStepZids, Ax
 OR_FUNC(orReg, readRegP0(opcode & 0x1F, false), regA, 8, 8, 1) // OR RegisterP0, Ax
 OR_FUNC(orR6, regR[6], regA, 4, 4, 1) // OR R6, Ax
+
+int TeakInterp::rnd(uint16_t opcode) { // RND Ax, Cond
+    // Round the upper part of an A accumulator and set flags if the condition is met
+    if (checkCond(opcode)) {
+        int64_t val = regA[(opcode >> 12) & 0x1].v;
+        int64_t res = ((val + 0x8000) << 24) >> 24;
+        bool v = (~val & res) >> 39;
+        bool c = (uint64_t(val) > uint64_t(res));
+        writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1));
+        (this->*writeAx40[(opcode >> 12) & 0x1])(res);
+    }
+    return 1;
+}
 
 // Clear bits in a memory value using a 16-bit immediate and set flags
 #define RSTM_FUNC(name, op1a) int TeakInterp::name(uint16_t opcode) { \
@@ -777,6 +798,23 @@ SUBH_FUNC(subhMi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF))) // SU
 SUBH_FUNC(subhMrn, core->dsp.readData(getRnStepZids(opcode))) // SUBH MemRnStepZids, Ax
 SUBH_FUNC(subhReg, *readReg[opcode & 0x1F]) // SUBH Register, Ax
 SUBH_FUNC(subhR6, regR[6]) // SUBH R6, Ax
+
+// Subtract a value from the low part of an A accumulator and set flags
+#define SUBL_FUNC(name, op0) int TeakInterp::name(uint16_t opcode) { \
+    int64_t val1 = regA[(opcode >> 8) & 0x1].v; \
+    uint16_t val2 = op0; \
+    int64_t res = ((val1 - val2) << 24) >> 24; \
+    bool v = ((val2 ^ val1) & ~(res ^ val2)) >> 39; \
+    bool c = (uint64_t(val1) >= uint64_t(res)); \
+    writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
+    (this->*writeAx40[(opcode >> 8) & 0x1])(res); \
+    return 1; \
+}
+
+SUBL_FUNC(sublMi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF))) // SUBL MemImm8, Ax
+SUBL_FUNC(sublMrn, core->dsp.readData(getRnStepZids(opcode))) // SUBL MemRnStepZids, Ax
+SUBL_FUNC(sublReg, *readReg[opcode & 0x1F]) // SUBL Register, Ax
+SUBL_FUNC(sublR6, regR[6]) // SUBL R6, Ax
 
 // Set the Z flag to a specified bit in a register or memory value
 #define TSTB_FUNC(name, op0, op1, cyc) int TeakInterp::name(uint16_t opcode) { \

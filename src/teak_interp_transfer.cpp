@@ -164,6 +164,14 @@ int TeakInterp::movpPmareg(uint16_t opcode) { // MOVP ProgMemAx, Register
     return 1;
 }
 
+int TeakInterp::mov2Abhabh(uint16_t opcode) { // MOV2 Abh, Abh, MemRar1StepAr1
+    // Move the high parts of two accumulators to data memory
+    uint8_t rar = ((opcode << 1) & 0x4) | (opcode & 0x1);
+    core->dsp.writeData(getRarOffsAr(rar), (this->*readAbS[(opcode >> 2) & 0x3])() >> 16);
+    core->dsp.writeData(getRarStepAr(rar), (this->*readAbS[(opcode >> 4) & 0x3])() >> 16);
+    return 1;
+}
+
 // Pop a value from the stack
 #define POP_FUNC(name, op0) int TeakInterp::name(uint16_t opcode) { \
     op0(core->dsp.readData(regSp++)); \

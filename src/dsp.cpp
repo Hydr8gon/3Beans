@@ -86,6 +86,12 @@ uint16_t Dsp::readData(uint16_t address) {
         case 0x1C8: return dmaSize[0][dmaSelect];
         case 0x1CA: return dmaSize[1][dmaSelect];
         case 0x1CC: return dmaSize[2][dmaSelect];
+        case 0x1CE: return dmaSrcStep[0][dmaSelect];
+        case 0x1D0: return dmaSrcStep[1][dmaSelect];
+        case 0x1D2: return dmaSrcStep[2][dmaSelect];
+        case 0x1D4: return dmaDstStep[0][dmaSelect];
+        case 0x1D6: return dmaDstStep[1][dmaSelect];
+        case 0x1D8: return dmaDstStep[2][dmaSelect];
         case 0x1DA: return dmaAreaCfg[dmaSelect];
         case 0x1DE: return dmaCtrl[dmaSelect];
         case 0x200: return icuPending;
@@ -177,6 +183,12 @@ void Dsp::writeData(uint16_t address, uint16_t value) {
         case 0x1C8: return writeDmaSize(0, value);
         case 0x1CA: return writeDmaSize(1, value);
         case 0x1CC: return writeDmaSize(2, value);
+        case 0x1CE: return writeDmaSrcStep(0, value);
+        case 0x1D0: return writeDmaSrcStep(1, value);
+        case 0x1D2: return writeDmaSrcStep(2, value);
+        case 0x1D4: return writeDmaDstStep(0, value);
+        case 0x1D6: return writeDmaDstStep(1, value);
+        case 0x1D8: return writeDmaDstStep(2, value);
         case 0x1DA: return writeDmaAreaCfg(value);
         case 0x1DE: return writeDmaCtrl(value);
         case 0x202: return writeIcuAck(value);
@@ -333,7 +345,9 @@ uint32_t Dsp::getIcuVector() {
 
 uint16_t Dsp::dmaRead(uint8_t area, uint32_t address) {
     // Read a 16-bit value from a DMA area if it exists
+    // TODO: handle restricted AHBM addresses
     switch (area) {
+        case 7: return core->memory.read<uint16_t>(ARM11, address); // AHBM
         case 5: return core->memory.read<uint16_t>(ARM11, 0x1FF00000 + ((address << 1) & 0x3FFFE)); // Code
         case 0: return core->memory.read<uint16_t>(ARM11, 0x1FF40000 + ((address << 1) & 0x3FFFE)); // Data
         case 1: return readData(miuIoBase + (address & 0x7FF)); // MMIO
@@ -347,7 +361,9 @@ uint16_t Dsp::dmaRead(uint8_t area, uint32_t address) {
 
 void Dsp::dmaWrite(uint8_t area, uint32_t address, uint16_t value) {
     // Write a 16-bit value to a DMA area if it exists
+    // TODO: handle restricted AHBM addresses
     switch (area) {
+        case 7: return core->memory.write<uint16_t>(ARM11, address, value); // AHBM
         case 5: return core->memory.write<uint16_t>(ARM11, 0x1FF00000 + ((address << 1) & 0x3FFFE), value); // Code
         case 0: return core->memory.write<uint16_t>(ARM11, 0x1FF40000 + ((address << 1) & 0x3FFFE), value); // Data
         case 1: return writeData(miuIoBase + (address & 0x7FF), value); // MMIO
@@ -363,13 +379,24 @@ void Dsp::dmaTransfer(int i) {
     // Get the source and destination parameters
     uint8_t srcArea = (dmaAreaCfg[i] >> 0) & 0xF;
     uint8_t dstArea = (dmaAreaCfg[i] >> 4) & 0xF;
+    uint32_t srcAddr = dmaSrcAddr[i], dstAddr = dmaDstAddr[i];
     LOG_INFO("Performing DSP DMA%d transfer from 0x%X in area 0x%X to 0x%X in area 0x%X with size 0x%X * 0x%X * 0x%X\n",
-        i, dmaSrcAddr[i], srcArea, dmaDstAddr[i], dstArea, dmaSize[0][i], dmaSize[1][i], dmaSize[2][i]);
+        i, srcAddr, srcArea, dstAddr, dstArea, dmaSize[0][i], dmaSize[1][i], dmaSize[2][i]);
 
-    // Perform a DSP DMA transfer all at once using its 3D size
-    uint32_t size = dmaSize[0][i] * dmaSize[1][i] * dmaSize[2][i];
-    for (uint32_t j = 0; j < size; j++)
-        dmaWrite(dstArea, dmaDstAddr[i] + j, dmaRead(srcArea, dmaSrcAddr[i] + j));
+    // Perform a DSP DMA transfer all at once using its 3D size and steps
+    for (int z = 0; z < dmaSize[2][i]; z++) {
+        for (int y = 0; y < dmaSize[1][i]; y++) {
+            for (int x = 0; x < dmaSize[0][i]; x++) {
+                dmaWrite(dstArea, dstAddr, dmaRead(srcArea, srcAddr));
+                srcAddr += dmaSrcStep[0][i];
+                dstAddr += dmaDstStep[0][i];
+            }
+            srcAddr += dmaSrcStep[1][i] - dmaSrcStep[0][i];
+            dstAddr += dmaDstStep[1][i] - dmaDstStep[0][i];
+        }
+        srcAddr += dmaSrcStep[2][i] - dmaSrcStep[1][i];
+        dstAddr += dmaDstStep[2][i] - dmaDstStep[1][i];
+    }
 
     // Set end bits for each size and signal interrupts if enabled
     for (int j = 0; j < 3; j++) {
@@ -624,6 +651,16 @@ void Dsp::writeDmaDstAddrH(uint16_t value) {
 void Dsp::writeDmaSize(int i, uint16_t value) {
     // Write to one of the selected DMA size registers with a minimum of 1
     dmaSize[i][dmaSelect] = std::max<uint16_t>(0x1, value);
+}
+
+void Dsp::writeDmaSrcStep(int i, uint16_t value) {
+    // Write to one of the selected DMA source step registers
+    dmaSrcStep[i][dmaSelect] = value;
+}
+
+void Dsp::writeDmaDstStep(int i, uint16_t value) {
+    // Write to one of the selected DMA destination step registers
+    dmaDstStep[i][dmaSelect] = value;
 }
 
 void Dsp::writeDmaAreaCfg(uint16_t value) {

@@ -100,6 +100,8 @@ private:
     uint32_t dmaSrcAddr[8] = {};
     uint32_t dmaDstAddr[8] = {};
     uint16_t dmaSize[3][8] = { {1,1,1,1,1,1,1,1}, {1,1,1,1,1,1,1,1}, {1,1,1,1,1,1,1,1} };
+    uint16_t dmaSrcStep[3][8] = {};
+    uint16_t dmaDstStep[3][8] = {};
     uint16_t dmaAreaCfg[8] = {};
     uint16_t dmaCtrl[8] = {};
     uint16_t icuPending = 0;
@@ -152,6 +154,8 @@ private:
     void writeDmaDstAddrL(uint16_t value);
     void writeDmaDstAddrH(uint16_t value);
     void writeDmaSize(int i, uint16_t value);
+    void writeDmaSrcStep(int i, uint16_t value);
+    void writeDmaDstStep(int i, uint16_t value);
     void writeDmaAreaCfg(uint16_t value);
     void writeDmaCtrl(uint16_t value);
     void writeIcuAck(uint16_t value);
