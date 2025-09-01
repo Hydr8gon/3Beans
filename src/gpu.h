@@ -52,6 +52,7 @@ enum CombSrc {
     COMB_TEX1,
     COMB_TEX2,
     COMB_TEX3,
+    COMB_PRVBUF,
     COMB_CONST,
     COMB_PREV,
     COMB_UNK
@@ -179,6 +180,7 @@ public:
     uint32_t readCombOper(int i) { return gpuCombOper[i]; }
     uint32_t readCombMode(int i) { return gpuCombMode[i]; }
     uint32_t readCombColor(int i) { return gpuCombColor[i]; }
+    uint32_t readCombBufCol() { return gpuCombBufCol; }
     uint32_t readBlendFunc() { return gpuBlendFunc; }
     uint32_t readBlendColor() { return gpuBlendColor; }
     uint32_t readAlphaTest() { return gpuAlphaTest; }
@@ -248,6 +250,7 @@ public:
     template <int i> void writeCombOper(uint32_t mask, uint32_t value);
     template <int i> void writeCombMode(uint32_t mask, uint32_t value);
     template <int i> void writeCombColor(uint32_t mask, uint32_t value);
+    void writeCombBufCol(uint32_t mask, uint32_t value);
     void writeBlendFunc(uint32_t mask, uint32_t value);
     void writeBlendColor(uint32_t mask, uint32_t value);
     void writeAlphaTest(uint32_t mask, uint32_t value);
@@ -347,6 +350,7 @@ private:
     uint32_t gpuCombOper[6] = {};
     uint32_t gpuCombMode[6] = {};
     uint32_t gpuCombColor[6] = {};
+    uint32_t gpuCombBufCol = 0;
     uint32_t gpuBlendFunc = 0;
     uint32_t gpuBlendColor = 0;
     uint32_t gpuAlphaTest = 0;

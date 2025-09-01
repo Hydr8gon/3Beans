@@ -299,6 +299,18 @@ void GpuRenderSoft::getSource(float &r, float &g, float &b, float &a, SoftVertex
         else
             getCombine(r, g, b, a, v, i - 1);
         break;
+
+    case COMB_PRVBUF:
+        // Generate the buffered previous output, using buffer color for the first update
+        if (i == 0)
+            r = g = b = a = 0.0f;
+        else if (i == 1)
+            r = combBufColor[0], g = combBufColor[1], b = combBufColor[2], a = combBufColor[3];
+        else if (combMask & BIT(i - 2))
+            r = rc[i - 2], g = gc[i - 2], b = bc[i - 2], a = ac[i - 2];
+        else
+            getCombine(r, g, b, a, v, i - 2);
+        break;
     }
 
     // Modify the source color based on its operand type
@@ -1290,6 +1302,14 @@ void GpuRenderSoft::setCombColor(int i, float r, float g, float b, float a) {
     combColors[i][1] = g;
     combColors[i][2] = b;
     combColors[i][3] = a;
+}
+
+void GpuRenderSoft::setCombBufColor(float r, float g, float b, float a) {
+    // Set the texture combiner initial buffer color
+    combBufColor[0] = r;
+    combBufColor[1] = g;
+    combBufColor[2] = b;
+    combBufColor[3] = a;
 }
 
 void GpuRenderSoft::setBlendColor(float r, float g, float b, float a) {

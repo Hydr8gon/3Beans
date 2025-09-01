@@ -305,6 +305,7 @@ template <int i> void Gpu::writeCombSrc(uint32_t mask, uint32_t value) {
             case 0x4: core->gpuRender.setCombSrc(i, j, COMB_TEX1); continue;
             case 0x5: core->gpuRender.setCombSrc(i, j, COMB_TEX2); continue;
             case 0x6: core->gpuRender.setCombSrc(i, j, COMB_TEX3); continue;
+            case 0xD: core->gpuRender.setCombSrc(i, j, COMB_PRVBUF); continue;
             case 0xE: core->gpuRender.setCombSrc(i, j, COMB_CONST); continue;
             case 0xF: core->gpuRender.setCombSrc(i, j, COMB_PREV); continue;
 
@@ -358,6 +359,16 @@ template <int i> void Gpu::writeCombColor(uint32_t mask, uint32_t value) {
     float b = float((gpuCombColor[i] >> 16) & 0xFF) / 0xFF;
     float a = float((gpuCombColor[i] >> 24) & 0xFF) / 0xFF;
     core->gpuRender.setCombColor(i, r, g, b, a);
+}
+
+void Gpu::writeCombBufCol(uint32_t mask, uint32_t value) {
+    // Write to the texture combiner buffer color and send it to the renderer
+    gpuCombBufCol = (gpuCombBufCol & ~mask) | (value & mask);
+    float r = float((gpuCombBufCol >> 0) & 0xFF) / 0xFF;
+    float g = float((gpuCombBufCol >> 8) & 0xFF) / 0xFF;
+    float b = float((gpuCombBufCol >> 16) & 0xFF) / 0xFF;
+    float a = float((gpuCombBufCol >> 24) & 0xFF) / 0xFF;
+    core->gpuRender.setCombBufColor(r, g, b, a);
 }
 
 void Gpu::writeBlendFunc(uint32_t mask, uint32_t value) {
