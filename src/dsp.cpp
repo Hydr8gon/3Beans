@@ -87,10 +87,10 @@ uint16_t Dsp::readData(uint16_t address) {
         case 0x1CA: return dmaSize[1][dmaSelect];
         case 0x1CC: return dmaSize[2][dmaSelect];
         case 0x1CE: return dmaSrcStep[0][dmaSelect];
-        case 0x1D0: return dmaSrcStep[1][dmaSelect];
-        case 0x1D2: return dmaSrcStep[2][dmaSelect];
-        case 0x1D4: return dmaDstStep[0][dmaSelect];
-        case 0x1D6: return dmaDstStep[1][dmaSelect];
+        case 0x1D0: return dmaDstStep[0][dmaSelect];
+        case 0x1D2: return dmaSrcStep[1][dmaSelect];
+        case 0x1D4: return dmaDstStep[1][dmaSelect];
+        case 0x1D6: return dmaSrcStep[2][dmaSelect];
         case 0x1D8: return dmaDstStep[2][dmaSelect];
         case 0x1DA: return dmaAreaCfg[dmaSelect];
         case 0x1DE: return dmaCtrl[dmaSelect];
@@ -184,10 +184,10 @@ void Dsp::writeData(uint16_t address, uint16_t value) {
         case 0x1CA: return writeDmaSize(1, value);
         case 0x1CC: return writeDmaSize(2, value);
         case 0x1CE: return writeDmaSrcStep(0, value);
-        case 0x1D0: return writeDmaSrcStep(1, value);
-        case 0x1D2: return writeDmaSrcStep(2, value);
-        case 0x1D4: return writeDmaDstStep(0, value);
-        case 0x1D6: return writeDmaDstStep(1, value);
+        case 0x1D0: return writeDmaDstStep(0, value);
+        case 0x1D2: return writeDmaSrcStep(1, value);
+        case 0x1D4: return writeDmaDstStep(1, value);
+        case 0x1D6: return writeDmaSrcStep(2, value);
         case 0x1D8: return writeDmaDstStep(2, value);
         case 0x1DA: return writeDmaAreaCfg(value);
         case 0x1DE: return writeDmaCtrl(value);
@@ -347,7 +347,7 @@ uint16_t Dsp::dmaRead(uint8_t area, uint32_t address) {
     // Read a 16-bit value from a DMA area if it exists
     // TODO: handle restricted AHBM addresses
     switch (area) {
-        case 7: return core->memory.read<uint16_t>(ARM11, address); // AHBM
+        case 7: return core->memory.read<uint16_t>(ARM11, address & ~0x1); // AHBM
         case 5: return core->memory.read<uint16_t>(ARM11, 0x1FF00000 + ((address << 1) & 0x3FFFE)); // Code
         case 0: return core->memory.read<uint16_t>(ARM11, 0x1FF40000 + ((address << 1) & 0x3FFFE)); // Data
         case 1: return readData(miuIoBase + (address & 0x7FF)); // MMIO
@@ -363,7 +363,7 @@ void Dsp::dmaWrite(uint8_t area, uint32_t address, uint16_t value) {
     // Write a 16-bit value to a DMA area if it exists
     // TODO: handle restricted AHBM addresses
     switch (area) {
-        case 7: return core->memory.write<uint16_t>(ARM11, address, value); // AHBM
+        case 7: return core->memory.write<uint16_t>(ARM11, address & ~0x1, value); // AHBM
         case 5: return core->memory.write<uint16_t>(ARM11, 0x1FF00000 + ((address << 1) & 0x3FFFE), value); // Code
         case 0: return core->memory.write<uint16_t>(ARM11, 0x1FF40000 + ((address << 1) & 0x3FFFE), value); // Data
         case 1: return writeData(miuIoBase + (address & 0x7FF), value); // MMIO
@@ -386,10 +386,24 @@ void Dsp::dmaTransfer(int i) {
     // Perform a DSP DMA transfer all at once using its 3D size and steps
     for (int z = 0; z < dmaSize[2][i]; z++) {
         for (int y = 0; y < dmaSize[1][i]; y++) {
-            for (int x = 0; x < dmaSize[0][i]; x++) {
-                dmaWrite(dstArea, dstAddr, dmaRead(srcArea, srcAddr));
-                srcAddr += dmaSrcStep[0][i];
-                dstAddr += dmaDstStep[0][i];
+            if (dmaAreaCfg[i] & BIT(10)) {
+                // Transfer two 16-bit words at once, with addresses aligned to 32-bit
+                uint32_t srcI = (srcArea == 7) ? 2 : 1, dstI = (dstArea == 7) ? 2 : 1;
+                uint32_t srcM = ~((1 << srcI) - 1), dstM = ~((1 << dstI) - 1);
+                for (int x = 0; x < dmaSize[0][i]; x += 2) {
+                    dmaWrite(dstArea, (dstAddr & dstM), dmaRead(srcArea, (srcAddr & srcM)));
+                    dmaWrite(dstArea, (dstAddr & dstM) + dstI, dmaRead(srcArea, (srcAddr & srcM) + srcI));
+                    srcAddr += dmaSrcStep[0][i];
+                    dstAddr += dmaDstStep[0][i];
+                }
+            }
+            else {
+                // Transfer 16-bit words individually
+                for (int x = 0; x < dmaSize[0][i]; x++) {
+                    dmaWrite(dstArea, dstAddr, dmaRead(srcArea, srcAddr));
+                    srcAddr += dmaSrcStep[0][i];
+                    dstAddr += dmaDstStep[0][i];
+                }
             }
             srcAddr += dmaSrcStep[1][i] - dmaSrcStep[0][i];
             dstAddr += dmaDstStep[1][i] - dmaDstStep[0][i];
@@ -665,7 +679,6 @@ void Dsp::writeDmaDstStep(int i, uint16_t value) {
 
 void Dsp::writeDmaAreaCfg(uint16_t value) {
     // Write to the selected DMA area config register
-    // TODO: handle bits other than area selection?
     dmaAreaCfg[dmaSelect] = (value & 0xF7FF);
 }
 
