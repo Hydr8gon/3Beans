@@ -541,6 +541,18 @@ void TeakInterp::initLookup() {
             teakInstrs[op] = &TeakInterp::mpyi;
         else if ((op & 0xFF80) == 0xD100)
             teakInstrs[op] = &TeakInterp::mpysuMrmr;
+        else if ((op & 0xFE80) == 0xD080)
+            teakInstrs[op] = &TeakInterp::msuMrmr;
+        else if ((op & 0xFEE0) == 0x90C0)
+            teakInstrs[op] = &TeakInterp::msuMrni16;
+        else if ((op & 0xFE00) == 0xB000)
+            teakInstrs[op] = &TeakInterp::msuY0mi8;
+        else if ((op & 0xFEE0) == 0x9080)
+            teakInstrs[op] = &TeakInterp::msuY0mrn;
+        else if ((op & 0xFEE0) == 0x90A0)
+            teakInstrs[op] = &TeakInterp::msuY0reg;
+        else if ((op & 0xFFFE) == 0x9462)
+            teakInstrs[op] = &TeakInterp::msuY0r6;
         else if ((op & 0xEFF0) == 0x6790)
             teakInstrs[op] = &TeakInterp::neg;
         else if (op == 0x0000)
@@ -743,6 +755,24 @@ void TeakInterp::initLookup() {
             teakInstrs[op] = &TeakInterp::tst0I16r6;
         else if ((op & 0xFFF8) == 0x9470)
             teakInstrs[op] = &TeakInterp::tst0I16sm;
+        else if ((op & 0xFE00) == 0xAA00)
+            teakInstrs[op] = &TeakInterp::tst1Almi8;
+        else if ((op & 0xFEE0) == 0x8A80)
+            teakInstrs[op] = &TeakInterp::tst1Almrn;
+        else if ((op & 0xFEE0) == 0x8AA0)
+            teakInstrs[op] = &TeakInterp::tst1Alreg;
+        else if ((op & 0xFFEF) == 0xD38D)
+            teakInstrs[op] = &TeakInterp::tst1Alr6;
+        else if ((op & 0xFF00) == 0xEB00)
+            teakInstrs[op] = &TeakInterp::tst1I16mi8;
+        else if ((op & 0xFFE0) == 0x8AE0)
+            teakInstrs[op] = &TeakInterp::tst1I16mrn;
+        else if ((op & 0xFFE0) == 0x8BE0)
+            teakInstrs[op] = &TeakInterp::tst1I16reg;
+        else if (op == 0x47BD)
+            teakInstrs[op] = &TeakInterp::tst1I16r6;
+        else if ((op & 0xFFF8) == 0x9470)
+            teakInstrs[op] = &TeakInterp::tst1I16sm;
         else if ((op & 0xFEFF) == 0x84C0)
             teakInstrs[op] = &TeakInterp::xorI16;
         else if ((op & 0xFE00) == 0xC400)

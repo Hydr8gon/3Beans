@@ -587,6 +587,43 @@ int TeakInterp::mpysuMrmr(uint16_t opcode) { // MPYSU MemR45StepZids, MemR0123St
     return 1;
 }
 
+// Subtract the previous product from an A accumulator, set flags, load X0 and Y0, and multiply them
+#define MSU_FUNC(name, op0a, op1, cyc) int TeakInterp::name(uint16_t opcode) { \
+    int64_t val1 = regA[(opcode >> 8) & 0x1].v; \
+    int64_t val2 = readP33S<0>(); \
+    int64_t res = ((val1 - val2) << 24) >> 24; \
+    bool v = ((val2 ^ val1) & ~(res ^ val2)) >> 39; \
+    bool c = (uint64_t(val1) >= uint64_t(res)); \
+    writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
+    (this->*writeAx40[(opcode >> 8) & 0x1])(res); \
+    regX[0] = op1; \
+    regY[0] = core->dsp.readData(getRnStepZids(op0a)); \
+    multiplyXY<int16_t, int16_t>(0); \
+    return cyc; \
+}
+
+MSU_FUNC(msuMrmr, ((opcode >> 2) & 0x19) + 4, core->dsp.readData(getRnStepZids(opcode & 0x1B)), 1) // MSU MR45, MR03, Ax
+MSU_FUNC(msuMrni16, (opcode & 0x1F), readParam(), 2) // MSU MemRnStepZids, Imm16, Ax
+
+// Subtract the previous product from an A accumulator, set flags, load X0, and multiply it with Y0
+#define MSUY_FUNC(name, op1, op2s) int TeakInterp::name(uint16_t opcode) { \
+    int64_t val1 = regA[(opcode >> op2s) & 0x1].v; \
+    int64_t val2 = readP33S<0>(); \
+    int64_t res = ((val1 - val2) << 24) >> 24; \
+    bool v = ((val2 ^ val1) & ~(res ^ val2)) >> 39; \
+    bool c = (uint64_t(val1) >= uint64_t(res)); \
+    writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
+    (this->*writeAx40[(opcode >> op2s) & 0x1])(res); \
+    regX[0] = op1; \
+    multiplyXY<int16_t, int16_t>(0); \
+    return 1; \
+}
+
+MSUY_FUNC(msuY0mi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 8) // MSU Y0, MemImm8, Ax
+MSUY_FUNC(msuY0mrn, core->dsp.readData(getRnStepZids(opcode)), 8) // MSU Y0, MemRnStepZids, Ax
+MSUY_FUNC(msuY0reg, *readReg[opcode & 0x1F], 8) // MSU Y0, Register, Ax
+MSUY_FUNC(msuY0r6, regR[6], 0) // MSU Y0, R6, Ax
+
 int TeakInterp::neg(uint16_t opcode) { // NEG Ax, Cond
     // Negate an A accumulator by subtracting it from 0 and set flags if the condition is met
     if (checkCond(opcode)) {
@@ -853,6 +890,31 @@ TST0I_FUNC(tst0I16mrn, getRnStepZids(opcode)) // TST0 Imm16, MemRnStepZids
 TST0I_FUNC(tst0I16reg, *readReg[opcode & 0x1F]) // TST0 Imm16, Register
 TST0I_FUNC(tst0I16r6, regR[6]) // TST0 Imm16, R6
 TST0I_FUNC(tst0I16sm, *readSttMod[opcode & 0x7]) // TST0 Imm16, SttMod
+
+// Set the Z flag if the bits in a value masked by an A accumulator are 1
+#define TST1A_FUNC(name, op0s, op1) int TeakInterp::name(uint16_t opcode) { \
+    bool z = !(~(op1) & regA[(opcode >> op0s) & 0x1].l); \
+    writeStt0((regStt[0] & ~0x80) | (z << 7)); \
+    return 1; \
+}
+
+TST1A_FUNC(tst1Almi8, 8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF))) // TST1 Axl, MemImm8
+TST1A_FUNC(tst1Almrn, 8, getRnStepZids(opcode)) // TST1 Axl, MemRnStepZids
+TST1A_FUNC(tst1Alreg, 8, *readReg[opcode & 0x1F]) // TST1 Axl, Register
+TST1A_FUNC(tst1Alr6, 4, regR[6]) // TST1 Axl, R6
+
+// Set the Z flag if the bits in a value masked by a 16-bit immediate are 1
+#define TST1I_FUNC(name, op1) int TeakInterp::name(uint16_t opcode) { \
+    bool z = !(~(op1) & readParam()); \
+    writeStt0((regStt[0] & ~0x80) | (z << 7)); \
+    return 2; \
+}
+
+TST1I_FUNC(tst1I16mi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF))) // TST1 Imm16, MemImm8
+TST1I_FUNC(tst1I16mrn, getRnStepZids(opcode)) // TST1 Imm16, MemRnStepZids
+TST1I_FUNC(tst1I16reg, *readReg[opcode & 0x1F]) // TST1 Imm16, Register
+TST1I_FUNC(tst1I16r6, regR[6]) // TST1 Imm16, R6
+TST1I_FUNC(tst1I16sm, *readSttMod[opcode & 0x7]) // TST1 Imm16, SttMod
 
 // Bitwise exclusive or a value with an A accumulator and set flags
 #define XOR_FUNC(name, op0, op1s, cyc) int TeakInterp::name(uint16_t opcode) { \

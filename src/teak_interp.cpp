@@ -421,15 +421,17 @@ template <int i> void TeakInterp::writeA16M(uint16_t value) {
 }
 
 template <int i> void TeakInterp::writeAlM(uint16_t value) {
-    // Write a 16-bit value to the low part of an A accumulator and clear high bits for MOV
+    // Write a 16-bit value to the low part of an A accumulator, clear high bits, and set flags for MOV
     regA[i].v = value;
     regSt[i] &= ~0xF000;
+    writeStt0((regStt[0] & ~0xE4) | calcZmne(regA[i].v));
 }
 
 template <int i> void TeakInterp::writeAhM(uint16_t value) {
-    // Write a 16-bit value to the high part of an A accumulator, sign-extend, and clear low bits for MOV
+    // Write a 16-bit value to the high part of an A accumulator, sign-extend, clear low bits, and set flags for MOV
     regA[i].v = int32_t(value << 16);
     regSt[i] = (regSt[i] & ~0xF000) | ((regA[i].v >> 20) & 0xF000);
+    writeStt0((regStt[0] & ~0xE4) | calcZmne(regA[i].v));
 }
 
 template <int i> void TeakInterp::writeB40(int64_t value) {
@@ -450,13 +452,15 @@ template <int i> void TeakInterp::writeB16M(uint16_t value) {
 }
 
 template <int i> void TeakInterp::writeBlM(uint16_t value) {
-    // Write a 16-bit value to the low part of a B accumulator and clear high bits for MOV
+    // Write a 16-bit value to the low part of a B accumulator, clear high bits, and set flags for MOV
     regB[i].v = value;
+    writeStt0((regStt[0] & ~0xE4) | calcZmne(regB[i].v));
 }
 
 template <int i> void TeakInterp::writeBhM(uint16_t value) {
-    // Write a 16-bit value to the high part of a B accumulator, sign-extend, and clear low bits for MOV
+    // Write a 16-bit value to the high part of a B accumulator, sign-extend, clear low bits, and set flags for MOV
     regB[i].v = int32_t(value << 16);
+    writeStt0((regStt[0] & ~0xE4) | calcZmne(regB[i].v));
 }
 
 template <int i> void TeakInterp::writeP33(int64_t value) {

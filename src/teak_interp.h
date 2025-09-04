@@ -342,6 +342,12 @@ private:
     int mpyY0r6(uint16_t opcode);
     int mpyi(uint16_t opcode);
     int mpysuMrmr(uint16_t opcode);
+    int msuMrmr(uint16_t opcode);
+    int msuMrni16(uint16_t opcode);
+    int msuY0mi8(uint16_t opcode);
+    int msuY0mrn(uint16_t opcode);
+    int msuY0reg(uint16_t opcode);
+    int msuY0r6(uint16_t opcode);
     int neg(uint16_t opcode);
     int _not(uint16_t opcode);
     int orAba(uint16_t opcode);
@@ -414,6 +420,15 @@ private:
     int tst0I16reg(uint16_t opcode);
     int tst0I16r6(uint16_t opcode);
     int tst0I16sm(uint16_t opcode);
+    int tst1Almi8(uint16_t opcode);
+    int tst1Almrn(uint16_t opcode);
+    int tst1Alreg(uint16_t opcode);
+    int tst1Alr6(uint16_t opcode);
+    int tst1I16mi8(uint16_t opcode);
+    int tst1I16mrn(uint16_t opcode);
+    int tst1I16reg(uint16_t opcode);
+    int tst1I16r6(uint16_t opcode);
+    int tst1I16sm(uint16_t opcode);
     int xorI16(uint16_t opcode);
     int xorI8(uint16_t opcode);
     int xorMi16(uint16_t opcode);
