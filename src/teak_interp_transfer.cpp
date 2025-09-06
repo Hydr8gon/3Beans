@@ -235,20 +235,20 @@ int TeakInterp::swap(uint16_t opcode) { // SWAP SwapTypes4
     // Swap accumulator values and set flags based on the type bits
     int64_t temp;
     switch (opcode & 0xF) {
-        case 0x4: temp = regB[1].v, writeB40<1>(regA[1].v), writeA40<1>(temp); // (A0, B0), (A1, B1)
-        case 0x0: temp = regB[0].v, writeB40<0>(regA[0].v), writeA40M<0>(temp); return 1; // (A0, B0)
-        case 0x5: temp = regB[0].v, writeB40<0>(regA[1].v), writeA40<1>(temp); // (A0, B1), (A1, B0)
-        case 0x1: temp = regB[1].v, writeB40<1>(regA[0].v), writeA40M<0>(temp); return 1; // (A0, B1)
-        case 0x2: temp = regB[0].v, writeB40<0>(regA[1].v), writeA40M<1>(temp); return 1; // (A1, B0)
-        case 0x3: temp = regB[1].v, writeB40<1>(regA[1].v), writeA40M<1>(temp); return 1; // (A1, B1)
-        case 0x6: writeA40M<1>(regB[0].v), writeB40<0>(regA[0].v); return 1; // (A0, B0, A1)
-        case 0x7: writeA40M<1>(regB[1].v), writeB40<1>(regA[0].v); return 1; // (A0, B1, A1)
-        case 0x8: writeA40M<0>(regB[0].v), writeB40<0>(regA[1].v); return 1; // (A1, B0, A0)
-        case 0x9: writeA40M<0>(regB[1].v), writeB40<1>(regA[1].v); return 1; // (A1, B1, A0)
-        case 0xA: writeB40<1>(regA[0].v), writeA40M<0>(regB[0].v); return 1; // (B0, A0, B1)
-        case 0xB: writeB40<1>(regA[1].v), writeA40M<1>(regB[0].v); return 1; // (B0, A1, B1)
-        case 0xC: writeB40<0>(regA[0].v), writeA40M<0>(regB[1].v); return 1; // (B1, A0, B0)
-        case 0xD: writeB40<0>(regA[1].v), writeA40M<1>(regB[1].v); return 1; // (B1, A1, B0)
+        case 0x4: temp = regB[1].v, writeB40S<1>(regA[1].v), writeA40S<1>(temp); // (A0, B0), (A1, B1)
+        case 0x0: temp = regB[0].v, writeB40S<0>(regA[0].v), writeA40M<0>(temp); return 1; // (A0, B0)
+        case 0x5: temp = regB[0].v, writeB40S<0>(regA[1].v), writeA40S<1>(temp); // (A0, B1), (A1, B0)
+        case 0x1: temp = regB[1].v, writeB40S<1>(regA[0].v), writeA40M<0>(temp); return 1; // (A0, B1)
+        case 0x2: temp = regB[0].v, writeB40S<0>(regA[1].v), writeA40M<1>(temp); return 1; // (A1, B0)
+        case 0x3: temp = regB[1].v, writeB40S<1>(regA[1].v), writeA40M<1>(temp); return 1; // (A1, B1)
+        case 0x6: writeA40M<1>(regB[0].v), writeB40S<0>(regA[0].v); return 1; // (A0, B0, A1)
+        case 0x7: writeA40M<1>(regB[1].v), writeB40S<1>(regA[0].v); return 1; // (A0, B1, A1)
+        case 0x8: writeA40M<0>(regB[0].v), writeB40S<0>(regA[1].v); return 1; // (A1, B0, A0)
+        case 0x9: writeA40M<0>(regB[1].v), writeB40S<1>(regA[1].v); return 1; // (A1, B1, A0)
+        case 0xA: writeB40S<1>(regA[0].v), writeA40M<0>(regB[0].v); return 1; // (B0, A0, B1)
+        case 0xB: writeB40S<1>(regA[1].v), writeA40M<1>(regB[0].v); return 1; // (B0, A1, B1)
+        case 0xC: writeB40S<0>(regA[0].v), writeA40M<0>(regB[1].v); return 1; // (B1, A0, B0)
+        case 0xD: writeB40S<0>(regA[1].v), writeA40M<1>(regB[1].v); return 1; // (B1, A1, B0)
         default: return unkOp(opcode);
     }
 }

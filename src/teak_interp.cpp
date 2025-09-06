@@ -24,11 +24,14 @@ template void TeakInterp::multiplyXY<int16_t, uint16_t>(int);
 template void TeakInterp::multiplyXY<uint16_t, int16_t>(int);
 
 TEMPLATE2(int64_t TeakInterp::readA40S, 0)
+TEMPLATE2(uint16_t TeakInterp::readAl, 0)
 TEMPLATE2(uint16_t TeakInterp::readAlS, 0)
+TEMPLATE2(uint16_t TeakInterp::readAh, 0)
 TEMPLATE2(uint16_t TeakInterp::readAhS, 0)
-TEMPLATE2(uint16_t TeakInterp::readA16, 0)
 TEMPLATE2(int64_t TeakInterp::readB40S, 0)
+TEMPLATE2(uint16_t TeakInterp::readBl, 0)
 TEMPLATE2(uint16_t TeakInterp::readBlS, 0)
+TEMPLATE2(uint16_t TeakInterp::readBh, 0)
 TEMPLATE2(uint16_t TeakInterp::readBhS, 0)
 TEMPLATE2(int64_t TeakInterp::readP33S, 0)
 TEMPLATE4(uint16_t TeakInterp::readR, 0)
@@ -37,19 +40,21 @@ TEMPLATE4(uint16_t TeakInterp::readExt, 0)
 TEMPLATE3(uint16_t TeakInterp::readSt, 0)
 TEMPLATE2(uint16_t TeakInterp::readCfg, 0)
 TEMPLATE2(void TeakInterp::writeA40, 0, int64_t)
-TEMPLATE2(void TeakInterp::writeA16, 0, uint16_t)
-TEMPLATE2(void TeakInterp::writeAl, 0, uint16_t)
-TEMPLATE2(void TeakInterp::writeAh, 0, uint16_t)
+TEMPLATE2(void TeakInterp::writeA40S, 0, int64_t)
 TEMPLATE2(void TeakInterp::writeA40M, 0, int64_t)
+TEMPLATE2(void TeakInterp::writeA16, 0, uint16_t)
 TEMPLATE2(void TeakInterp::writeA16M, 0, uint16_t)
+TEMPLATE2(void TeakInterp::writeAl, 0, uint16_t)
 TEMPLATE2(void TeakInterp::writeAlM, 0, uint16_t)
+TEMPLATE2(void TeakInterp::writeAh, 0, uint16_t)
 TEMPLATE2(void TeakInterp::writeAhM, 0, uint16_t)
 TEMPLATE2(void TeakInterp::writeB40, 0, int64_t)
-TEMPLATE2(void TeakInterp::writeBl, 0, uint16_t)
-TEMPLATE2(void TeakInterp::writeBh, 0, uint16_t)
+TEMPLATE2(void TeakInterp::writeB40S, 0, int64_t)
 TEMPLATE2(void TeakInterp::writeB40M, 0, int64_t)
 TEMPLATE2(void TeakInterp::writeB16M, 0, uint16_t)
+TEMPLATE2(void TeakInterp::writeBl, 0, uint16_t)
 TEMPLATE2(void TeakInterp::writeBlM, 0, uint16_t)
+TEMPLATE2(void TeakInterp::writeBh, 0, uint16_t)
 TEMPLATE2(void TeakInterp::writeBhM, 0, uint16_t)
 TEMPLATE2(void TeakInterp::writeP33, 0, int64_t)
 TEMPLATE4(void TeakInterp::writeR, 0, uint16_t)
@@ -197,9 +202,9 @@ bool TeakInterp::checkCond(uint8_t cond) {
 int64_t TeakInterp::saturate(int64_t value) {
     // Clamp an accumulator value within a signed 32-bit range
     if (value > 0x7FFFFFFFLL)
-        value = 0x7FFFFFFF;
+        value = 0x7FFFFFFFLL;
     else if (value < -0x80000000LL)
-        value = -0x80000000;
+        value = -0x80000000LL;
     else
         return value;
 
@@ -210,20 +215,29 @@ int64_t TeakInterp::saturate(int64_t value) {
 }
 
 int64_t TeakInterp::shift(int64_t value, int16_t amount) {
-    // Shift a 40-bit value left or right based on mode and set flags
-    int64_t res = value;
-    if (regMod[0] & BIT(7)) { // Logical
-        res = (amount > 0) ? ((res & 0xFFFFFFFFFF) << amount) : ((res & 0xFFFFFFFFFF) >> -amount);
-        bool c = (res >> 40) & 0x1;
+    // Limit the shift amount to well-defined values
+    amount = std::min<int16_t>(63, std::max<int16_t>(-63, amount));
+    int64_t res;
+
+    // If enabled, logically shift a 40-bit value left or right and set flags
+    if (regMod[0] & BIT(7)) {
+        res = (amount > 0) ? ((value & 0xFFFFFFFFFF) << amount) : ((value & 0xFFFFFFFFFF) >> -amount);
+        bool c = (amount > 0 && (res & BITL(40))) || (amount < 0 && (value & 0xFFFFFFFFFF & BITL(-1 - amount)));
         writeStt0((regStt[0] & ~0xEC) | calcZmne(res) | (c << 3));
+        return res;
     }
-    else { // Arithmetic
-        res = (amount > 0) ? (res << amount) : (res >> -amount);
-        bool v = (res != ((res << 24) >> 24));
-        bool c = (res >> 40) & 0x1;
-        writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1));
-    }
-    return res;
+
+    // Otherwise, arithmetically shift the value left or right and set flags
+    res = (amount > 0) ? (value << amount) : (value >> -amount);
+    bool v = amount > 0 && (((res << 24) >> (24 + amount)) != value);
+    bool c = (amount > 0 && (res & BITL(40))) || (amount < 0 && (value & BITL(-1 - amount)));
+    writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1));
+
+    // Perform special saturation using shift details and set the limit flag
+    if ((regMod[0] & BIT(1)) || (!v && res == int32_t(res))) return res;
+    regStt[0] |= BIT(0);
+    regSt[0] |= BIT(5);
+    return (value < 0) ? -0x80000000LL : 0x7FFFFFFFLL;
 }
 
 template <typename Tx, typename Ty> void TeakInterp::multiplyXY(int i) {
@@ -258,7 +272,7 @@ uint16_t TeakInterp::revBits(uint16_t value) {
 
 uint16_t TeakInterp::offsReg(uint8_t reg, int8_t offs) {
     // Apply an offset to an address register without modulo
-    if (!(regMod[2] & BIT(reg)) || (regMod[2] & BIT(reg + 8)))
+    if (!(regMod[2] & BIT(reg)) || (regMod[2] & BIT(reg + 8)) || dmod)
         return regR[reg] + offs;
 
     // Apply an offset to an address register with modulo, wrapping at bounds
@@ -272,35 +286,45 @@ uint16_t TeakInterp::offsReg(uint8_t reg, int8_t offs) {
 
 uint16_t TeakInterp::stepReg(uint8_t reg, int32_t step) {
     // Get the current address to return, bit-reversed if enabled
-    uint16_t address = (regMod[2] & BIT(reg + 8)) ? revBits(regR[reg]) : regR[reg];
-    int32_t value;
+    bool md = (regMod[2] & BIT(reg));
+    bool br = (regMod[2] & BIT(reg + 8));
+    uint16_t address = (br && !md) ? revBits(regR[reg]) : regR[reg];
 
     // Clear R3/R7 instead of stepping them if enabled
-    if ((reg & 0x3) == 3 && (regMod[1] & BIT(14 + (reg >> 2)))) {
+    int i = (reg >> 2);
+    if ((reg & 0x3) == 3 && (regMod[1] & BIT(14 + i))) {
         regR[reg] = 0;
         return address;
     }
 
     // Get the actual value to step with based on configuration
-    if (step != STEP_S)
-        value = step; // Constant step
-    else if ((regMod[1] & BIT(12)) || (regMod[2] & BIT(reg + 8)))
-        value = regStep0[reg >> 2]; // 16-bit step
-    else
-        value = int8_t(regCfg[reg >> 2] << 1) >> 1; // 7-bit step
+    int32_t value;
+    if (step != STEP_S) {
+        // Use a constant step value directly
+        value = step;
+    }
+    else if ((regMod[1] & 0x3000) == 0x1000 || (br && !md)) {
+        // Use a 16-bit step register, truncated to 9-bit with modulo
+        value = md ? (int16_t(regStep0[i] << 7) >> 7) : regStep0[i];
+    }
+    else {
+        // Use a 7-bit step register in TL1 mode or when 16-bit is disabled
+        value = int8_t(regCfg[i] << 1) >> 1;
+    }
 
     // Apply the step to the address register without modulo
-    if (!(regMod[2] & BIT(reg)) || (regMod[2] & BIT(reg + 8))) {
+    if (!md || br || dmod) {
         regR[reg] += value;
         return address;
     }
 
     // Break the step into two parts if it's a double constant
-    int count = 1, i = (reg >> 2);
+    int count = 1;
     if (step != STEP_S && step && !(step & 0x1))
         value >>= 1, count++;
 
     // Apply the step to the address register with modulo, wrapping at bounds
+    // TODO: handle TL1/TL2 modes properly
     while (count--) {
         if (step > 0 && (regR[reg] & modMasks[i]) == (regCfg[i] >> 7))
             regR[reg] = (regR[reg] & ~modMasks[i]) | 0;
@@ -383,7 +407,10 @@ uint16_t TeakInterp::readP0hS() {
 
 // Define read functions for registers with no special cases
 #define READ_FUNC(id, reg) id() { return reg; }
-READ_FUNC(template <int i> uint16_t TeakInterp::readA16, regA[i].l)
+READ_FUNC(template <int i> uint16_t TeakInterp::readAl, regA[i].l)
+READ_FUNC(template <int i> uint16_t TeakInterp::readAh, regA[i].h)
+READ_FUNC(template <int i> uint16_t TeakInterp::readBl, regB[i].l)
+READ_FUNC(template <int i> uint16_t TeakInterp::readBh, regB[i].h)
 READ_FUNC(template <int i> uint16_t TeakInterp::readR, regR[i])
 READ_FUNC(template <int i> uint16_t TeakInterp::readExt, regExt[i])
 READ_FUNC(template <int i> uint16_t TeakInterp::readSt, regSt[i])
@@ -395,14 +422,14 @@ READ_FUNC(uint16_t TeakInterp::readSv, regSv)
 READ_FUNC(uint16_t TeakInterp::readLc, regLc)
 
 template <int i> void TeakInterp::writeA40(int64_t value) {
-    // Write a 40-bit value to an A accumulator, saturate if enabled, and mirror extension bits to ST
-    regA[i].v = (regMod[0] & BIT(1)) ? ((value << 24) >> 24) : saturate((value << 24) >> 24);
+    // Write a 40-bit value to an A accumulator and mirror extension bits to ST
+    regA[i].v = (value << 24) >> 24;
     regSt[i] = (regSt[i] & ~0xF000) | ((regA[i].v >> 20) & 0xF000);
 }
 
-template <int i> void TeakInterp::writeA16(uint16_t value) {
-    // Write a 16-bit value to an A accumulator and mirror extension bits to ST
-    regA[i].v = int16_t(value);
+template <int i> void TeakInterp::writeA40S(int64_t value) {
+    // Write a 40-bit value to an A accumulator, saturate if enabled, and mirror extension bits to ST
+    regA[i].v = (regMod[0] & BIT(1)) ? ((value << 24) >> 24) : saturate((value << 24) >> 24);
     regSt[i] = (regSt[i] & ~0xF000) | ((regA[i].v >> 20) & 0xF000);
 }
 
@@ -411,6 +438,12 @@ template <int i> void TeakInterp::writeA40M(int64_t value) {
     regA[i].v = (regMod[0] & BIT(1)) ? ((value << 24) >> 24) : saturate((value << 24) >> 24);
     regSt[i] = (regSt[i] & ~0xF000) | ((regA[i].v >> 20) & 0xF000);
     writeStt0((regStt[0] & ~0xE4) | calcZmne(regA[i].v));
+}
+
+template <int i> void TeakInterp::writeA16(uint16_t value) {
+    // Write a 16-bit value to an A accumulator and mirror extension bits to ST
+    regA[i].v = int16_t(value);
+    regSt[i] = (regSt[i] & ~0xF000) | ((regA[i].v >> 20) & 0xF000);
 }
 
 template <int i> void TeakInterp::writeA16M(uint16_t value) {
@@ -435,6 +468,11 @@ template <int i> void TeakInterp::writeAhM(uint16_t value) {
 }
 
 template <int i> void TeakInterp::writeB40(int64_t value) {
+    // Write a 40-bit value to a B accumulator
+    regB[i].v = (value << 24) >> 24;
+}
+
+template <int i> void TeakInterp::writeB40S(int64_t value) {
     // Write a 40-bit value to a B accumulator and saturate if enabled
     regB[i].v = (regMod[0] & BIT(1)) ? ((value << 24) >> 24) : saturate((value << 24) >> 24);
 }
@@ -559,7 +597,6 @@ void TeakInterp::writeMod0(uint16_t value) {
 
 void TeakInterp::writeMod1(uint16_t value) {
     // Write to the MOD1 register and mirror the data page to ST1
-    // TODO: handle the modulo mode bit
     regMod[1] = (regMod[1] & ~0xF0FF) | (value & 0xF0FF);
     regSt[1] = (regSt[1] & ~0xFF) | (regMod[1] & 0xFF);
 }

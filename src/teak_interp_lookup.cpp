@@ -19,7 +19,19 @@
 
 #include "core.h"
 
-// Lookup table for register reads with accumulator saturation
+// Lookup table for register reads with product shifting
+uint16_t (TeakInterp::*TeakInterp::readRegP[])() = {
+    &TeakInterp::readR<0>, &TeakInterp::readR<1>, &TeakInterp::readR<2>, &TeakInterp::readR<3>,
+    &TeakInterp::readR<4>, &TeakInterp::readR<5>, &TeakInterp::readR<7>, &TeakInterp::readY0,
+    &TeakInterp::readSt<0>, &TeakInterp::readSt<1>, &TeakInterp::readSt<2>, &TeakInterp::readP0hS,
+    &TeakInterp::readPc, &TeakInterp::readSp, &TeakInterp::readCfg<0>, &TeakInterp::readCfg<1>,
+    &TeakInterp::readBh<0>, &TeakInterp::readBh<1>, &TeakInterp::readBl<0>, &TeakInterp::readBl<1>,
+    &TeakInterp::readExt<0>, &TeakInterp::readExt<1>, &TeakInterp::readExt<2>, &TeakInterp::readExt<3>,
+    &TeakInterp::readAl<0>, &TeakInterp::readAl<1>, &TeakInterp::readAl<0>, &TeakInterp::readAl<1>,
+    &TeakInterp::readAh<0>, &TeakInterp::readAh<1>, &TeakInterp::readLc, &TeakInterp::readSv
+};
+
+// Lookup table for register reads with accumulator saturation and product shifting
 uint16_t (TeakInterp::*TeakInterp::readRegS[])() = {
     &TeakInterp::readR<0>, &TeakInterp::readR<1>, &TeakInterp::readR<2>, &TeakInterp::readR<3>,
     &TeakInterp::readR<4>, &TeakInterp::readR<5>, &TeakInterp::readR<7>, &TeakInterp::readY0,
@@ -27,7 +39,7 @@ uint16_t (TeakInterp::*TeakInterp::readRegS[])() = {
     &TeakInterp::readPc, &TeakInterp::readSp, &TeakInterp::readCfg<0>, &TeakInterp::readCfg<1>,
     &TeakInterp::readBhS<0>, &TeakInterp::readBhS<1>, &TeakInterp::readBlS<0>, &TeakInterp::readBlS<1>,
     &TeakInterp::readExt<0>, &TeakInterp::readExt<1>, &TeakInterp::readExt<2>, &TeakInterp::readExt<3>,
-    &TeakInterp::readA16<0>, &TeakInterp::readA16<1>, &TeakInterp::readAlS<0>, &TeakInterp::readAlS<1>,
+    &TeakInterp::readAl<0>, &TeakInterp::readAl<1>, &TeakInterp::readAlS<0>, &TeakInterp::readAlS<1>,
     &TeakInterp::readAhS<0>, &TeakInterp::readAhS<1>, &TeakInterp::readLc, &TeakInterp::readSv
 };
 
@@ -85,9 +97,14 @@ void (TeakInterp::*TeakInterp::writeAblhM[])(uint16_t) = {
     &TeakInterp::writeAlM<0>, &TeakInterp::writeAhM<0>, &TeakInterp::writeAlM<1>, &TeakInterp::writeAhM<1>
 };
 
-// Lookup table for 40-bit accumulator writes
+// Lookup table for unmodified 40-bit accumulator writes
 void (TeakInterp::*TeakInterp::writeAb40[])(int64_t) = {
     &TeakInterp::writeB40<0>, &TeakInterp::writeB40<1>, &TeakInterp::writeA40<0>, &TeakInterp::writeA40<1>
+};
+
+// Lookup table for 40-bit accumulator writes with saturation
+void (TeakInterp::*TeakInterp::writeAb40S[])(int64_t) = {
+    &TeakInterp::writeB40S<0>, &TeakInterp::writeB40S<1>, &TeakInterp::writeA40S<0>, &TeakInterp::writeA40S<1>
 };
 
 // Lookup table for 40-bit accumulator writes with MOV rules
@@ -118,6 +135,8 @@ void (TeakInterp::**TeakInterp::writeArArp)(uint16_t) = &writeArpMod[0];
 void (TeakInterp::**TeakInterp::writeSttMod)(uint16_t) = &writeArpMod[8];
 void (TeakInterp::**TeakInterp::writeAx40)(int64_t) = &writeAb40[2];
 void (TeakInterp::**TeakInterp::writeBx40)(int64_t) = &writeAb40[0];
+void (TeakInterp::**TeakInterp::writeAx40S)(int64_t) = &writeAb40S[2];
+void (TeakInterp::**TeakInterp::writeBx40S)(int64_t) = &writeAb40S[0];
 void (TeakInterp::**TeakInterp::writeBx40M)(int64_t) = &writeAb40M[0];
 void (TeakInterp::**TeakInterp::writeAx16M)(uint16_t) = &writeAb16M[2];
 void (TeakInterp::**TeakInterp::writeBx16M)(uint16_t) = &writeAb16M[0];

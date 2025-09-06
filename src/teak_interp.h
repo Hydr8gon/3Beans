@@ -60,6 +60,7 @@ private:
     uint16_t **readArArp = &readArpMod[0];
     uint16_t **readSttMod = &readArpMod[8];
 
+    static uint16_t (TeakInterp::*readRegP[0x20])();
     static uint16_t (TeakInterp::*readRegS[0x20])();
     static uint16_t (TeakInterp::*readAblhS[0x8])();
     static int64_t (TeakInterp::*readAbS[0x4])();
@@ -69,6 +70,7 @@ private:
     static void (TeakInterp::*writeArpMod[0x10])(uint16_t);
     static void (TeakInterp::*writeAblhM[0x8])(uint16_t);
     static void (TeakInterp::*writeAb40[0x4])(int64_t);
+    static void (TeakInterp::*writeAb40S[0x4])(int64_t);
     static void (TeakInterp::*writeAb40M[0x4])(int64_t);
     static void (TeakInterp::*writeAb16M[0x4])(uint16_t);
     static void (TeakInterp::*writeAblM[0x4])(uint16_t);
@@ -82,17 +84,20 @@ private:
     static void (TeakInterp::**writeSttMod)(uint16_t);
     static void (TeakInterp::**writeAx40)(int64_t);
     static void (TeakInterp::**writeBx40)(int64_t);
+    static void (TeakInterp::**writeAx40S)(int64_t);
+    static void (TeakInterp::**writeBx40S)(int64_t);
     static void (TeakInterp::**writeBx40M)(int64_t);
     static void (TeakInterp::**writeAx16M)(uint16_t);
     static void (TeakInterp::**writeBx16M)(uint16_t);
     static void (TeakInterp::**writeAxlM)(uint16_t);
 
+    static int8_t offsTable[0x4];
+    static int32_t stepTable[0x8];
     uint8_t arRn[0x4] = { 0, 4, 2, 5 };
     int8_t arCs[0x4] = { 0, 1, -1, 0 };
     int32_t arPm[0x4] = { 1, 2, -2, STEP_S };
     uint16_t modMasks[2] = { 0x1, 0x1 };
-    static int8_t offsTable[0x4];
-    static int32_t stepTable[0x8];
+    bool dmod = false;
 
     SplitReg regA[2] = {};
     SplitReg regB[2] = {};
@@ -148,11 +153,14 @@ private:
     int64_t readRegP0S(int i);
 
     template <int i> int64_t readA40S();
+    template <int i> uint16_t readAl();
     template <int i> uint16_t readAlS();
+    template <int i> uint16_t readAh();
     template <int i> uint16_t readAhS();
-    template <int i> uint16_t readA16();
     template <int i> int64_t readB40S();
+    template <int i> uint16_t readBl();
     template <int i> uint16_t readBlS();
+    template <int i> uint16_t readBh();
     template <int i> uint16_t readBhS();
     template <int i> int64_t readP33S();
     template <int i> uint16_t readR();
@@ -168,19 +176,21 @@ private:
     uint16_t readLc();
 
     template <int i> void writeA40(int64_t value);
-    template <int i> void writeA16(uint16_t value);
-    template <int i> void writeAl(uint16_t value);
-    template <int i> void writeAh(uint16_t value);
+    template <int i> void writeA40S(int64_t value);
     template <int i> void writeA40M(int64_t value);
+    template <int i> void writeA16(uint16_t value);
     template <int i> void writeA16M(uint16_t value);
+    template <int i> void writeAl(uint16_t value);
     template <int i> void writeAlM(uint16_t value);
+    template <int i> void writeAh(uint16_t value);
     template <int i> void writeAhM(uint16_t value);
     template <int i> void writeB40(int64_t value);
-    template <int i> void writeBl(uint16_t value);
-    template <int i> void writeBh(uint16_t value);
+    template <int i> void writeB40S(int64_t value);
     template <int i> void writeB40M(int64_t value);
     template <int i> void writeB16M(uint16_t value);
+    template <int i> void writeBl(uint16_t value);
     template <int i> void writeBlM(uint16_t value);
+    template <int i> void writeBh(uint16_t value);
     template <int i> void writeBhM(uint16_t value);
     template <int i> void writeP33(int64_t value);
     template <int i> void writeR(uint16_t value);
