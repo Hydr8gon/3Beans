@@ -529,8 +529,14 @@ template <int i> void TeakInterp::writeAr(uint16_t value) {
 }
 
 template <int i> void TeakInterp::writeArp(uint16_t value) {
-    // Write to one of the ARP registers
-    regArp[i] = (regArp[i] & ~0x6FFF) | (value & 0x6FFF);
+    // Write to one of the ARP registers and reconfigure operands
+    regArp[i] = (value & 0x6FFF);
+    arpRi[i] = ((value >> 10) & 0x3);
+    arpRj[i] = ((value >> 13) & 0x3) + 4;
+    arpCi[i] = offsTable[(value >> 3) & 0x3];
+    arpCj[i] = offsTable[(value >> 8) & 0x3];
+    arpPi[i] = stepTable[(value >> 0) & 0x7];
+    arpPj[i] = stepTable[(value >> 5) & 0x7];
 }
 
 void TeakInterp::writeP0h(uint16_t value) {

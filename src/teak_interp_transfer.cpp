@@ -79,6 +79,7 @@ MOV_FUNC(movI8al, (opcode & 0xFF), (this->*writeAxlM[(opcode >> 12) & 0x1]), 1) 
 MOV_FUNC(movI8ry, int8_t(opcode), (this->*writeRegM[(opcode >> 10) & 0x7]), 1) // MOV Imm8s, R0123457y0
 MOV_FUNC(movI8sv, int8_t(opcode), regSv=, 1) // MOV Imm8s, SV
 MOV_FUNC(movMi8sv, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), regSv=, 1) // MOV MemImm8, SV
+MOV_FUNC(movMrnr6, core->dsp.readData(getRnStepZids(opcode)), regR[6]=, 1) // MOV MemRnStepZids, R6
 MOV_FUNC(movMxpreg, regMixp, (this->*writeRegM[opcode & 0x1F]), 1) // MOV MIXP, Register
 MOV_FUNC(movRegb, readRegP0S(opcode & 0x1F), (this->*writeBx40M[(opcode >> 5) & 0x1]), 1) // MOV RegisterP0, Bx
 MOV_FUNC(movRegmxp, (this->*readRegS[opcode & 0x1F])(), regMixp=, 1) // MOV Register, MIXP
@@ -87,6 +88,15 @@ MOV_FUNC(movRegr6, (this->*readRegS[opcode & 0x1F])(), regR[6]=, 1) // MOV Regis
 MOV_FUNC(movR6reg, regR[6], (this->*writeRegM[opcode & 0x1F]), 1) // MOV R6, Register
 MOV_FUNC(movSmabl, *readSttMod[opcode & 0x7], (this->*writeAblM[(opcode >> 10) & 0x3]), 1) // MOV SttMod, Abl
 MOV_FUNC(movStpa0h, regStep0[(opcode >> 8) & 0x1], writeAhM<0>, 1) // MOV Step0, A0H
+
+// Move a value directly to memory
+#define MOVM_FUNC(name, op0, op1a) int TeakInterp::name(uint16_t opcode) { \
+    core->dsp.writeData(op1a, op0); \
+    return 1; \
+}
+
+MOVM_FUNC(movR6mrn, regR[6], getRnStepZids(opcode)) // MOV R6, MemRnStepZids
+MOVM_FUNC(movSvmi8, regSv, (regMod[1] << 8) | (opcode & 0xFF)) // MOV SV, MemImm8
 
 // Move a value from a read handler to a write handler
 #define MOVHH_FUNC(name, op0, op1) int TeakInterp::name(uint16_t opcode) { \
@@ -125,12 +135,6 @@ MOVHM_FUNC(movAlm7i16, readAxS[(opcode >> 8) & 0x1], regR[7] + readParam(), 2) /
 MOVHM_FUNC(movAlm7i7, readAxS[(opcode >> 8) & 0x1], regR[7] + (int8_t(opcode << 1) >> 1), 1) // MOV Axl, MemR7Imm7s
 MOVHM_FUNC(movRegmrn, readRegS[(opcode >> 5) & 0x1F], getRnStepZids(opcode), 1) // MOV Register, MemRnStepZids
 MOVHM_FUNC(movRymi8, readRegS[(opcode >> 9) & 0x7], (regMod[1] << 8) | (opcode & 0xFF), 1) // MOV R0123457y0, MemImm8
-
-int TeakInterp::movSvmi8(uint16_t opcode) { // MOV SV, MemImm8
-    // Move the shift value to memory addressed by an 8-bit immediate
-    core->dsp.writeData((regMod[1] << 8) | (opcode & 0xFF), regSv);
-    return 1;
-}
 
 // Move the high and low parts of an accumulator to data memory
 #define MOVAM_FUNC(name, op0, ars0, ars1) int TeakInterp::name(uint16_t opcode) { \

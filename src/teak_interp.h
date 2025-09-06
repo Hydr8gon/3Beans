@@ -93,11 +93,18 @@ private:
 
     static int8_t offsTable[0x4];
     static int32_t stepTable[0x8];
-    uint8_t arRn[0x4] = { 0, 4, 2, 5 };
-    int8_t arCs[0x4] = { 0, 1, -1, 0 };
-    int32_t arPm[0x4] = { 1, 2, -2, STEP_S };
     uint16_t modMasks[2] = { 0x1, 0x1 };
     bool dmod = false;
+
+    uint8_t arRn[4] = { 0, 4, 2, 5 };
+    uint8_t arpRi[4] = { 0, 1, 2, 3 };
+    uint8_t arpRj[4] = { 4, 5, 6, 7 };
+    int8_t arCs[4] = { 0, 1, -1, 0 };
+    int8_t arpCi[4] = { 0, 1, -1, 0 };
+    int8_t arpCj[4] = { 0, 1, -1, 0 };
+    int32_t arPm[4] = { 1, 2, -2, STEP_S };
+    int32_t arpPi[4] = { 1, 2, -2, STEP_S };
+    int32_t arpPj[4] = { 1, 2, -2, STEP_S };
 
     SplitReg regA[2] = {};
     SplitReg regB[2] = {};
@@ -118,7 +125,7 @@ private:
     uint16_t regCfg[2] = {};
     uint16_t regStep0[2] = {};
     uint16_t regAr[2] = { 0x102C, 0x56A3 };
-    uint16_t regArp[4] = {};
+    uint16_t regArp[4] = { 0x21, 0x258C, 0x4AB5, 0x6F7B };
     uint16_t regNone = 0;
 
     uint16_t shadR[4] = {};
@@ -513,6 +520,7 @@ private:
     int movM7i7a(uint16_t opcode);
     int movMrnb(uint16_t opcode);
     int movMrnreg(uint16_t opcode);
+    int movMrnr6(uint16_t opcode);
     int movMxpreg(uint16_t opcode);
     int movPrar(uint16_t opcode);
     int movPrars(uint16_t opcode);
@@ -523,6 +531,7 @@ private:
     int movRegreg(uint16_t opcode);
     int movRegr6(uint16_t opcode);
     int movRymi8(uint16_t opcode);
+    int movR6mrn(uint16_t opcode);
     int movR6reg(uint16_t opcode);
     int movSmabl(uint16_t opcode);
     int movStpa0h(uint16_t opcode);
