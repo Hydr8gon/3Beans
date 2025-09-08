@@ -95,10 +95,10 @@ ADDL_FUNC(addlR6, regR[6], 0) // ADDL R6, Ax
 #define ADDVM_FUNC(name, op1a) int TeakInterp::name(uint16_t opcode) { \
     uint16_t addr = op1a; \
     uint16_t val = core->dsp.readData(addr); \
-    uint16_t res = val + readParam(); \
-    bool z = (res == 0); \
-    bool m = (res & BIT(15)); \
-    bool c = (val > res); \
+    uint32_t res = int16_t(val) + int16_t(readParam()); \
+    bool z = !(res & 0xFFFF); \
+    bool m = (res & BIT(31)); \
+    bool c = (val > uint16_t(res)); \
     writeStt0((regStt[0] & ~0xC8) | (z << 7) | (m << 6) | (c << 3)); \
     core->dsp.writeData(addr, res); \
     return 2; \
@@ -110,16 +110,16 @@ ADDVM_FUNC(addvMrn, getRnStepZids(opcode)) // ADDV Imm16, MemRnStepZids
 // Add a 16-bit immediate to a register value and set flags
 #define ADDVR_FUNC(name, op1r, op1w) int TeakInterp::name(uint16_t opcode) { \
     uint16_t val = op1r; \
-    uint16_t res = val + readParam(); \
-    bool z = (res == 0); \
-    bool m = (res & BIT(15)); \
-    bool c = (val > res); \
+    uint32_t res = int16_t(val) + int16_t(readParam()); \
+    bool z = !(res & 0xFFFF); \
+    bool m = (res & BIT(31)); \
+    bool c = (val > uint16_t(res)); \
     writeStt0((regStt[0] & ~0xC8) | (z << 7) | (m << 6) | (c << 3)); \
     op1w(res); \
     return 2; \
 }
 
-ADDVR_FUNC(addvReg, *readReg[opcode & 0x1F], (this->*writeReg[opcode & 0x1F])) // ADDV Imm16, Register
+ADDVR_FUNC(addvReg, (this->*readRegP[opcode & 0x1F])(), (this->*writeReg[opcode & 0x1F])) // ADDV Imm16, Register
 ADDVR_FUNC(addvR6, regR[6], regR[6]=) // ADDV Imm16, R6
 
 // Add the product registers with a base value in an accumulator and set flags
@@ -240,7 +240,7 @@ CLRR_FUNC(clrrB, writeBx40) // CLRR Bx, Cond
     int64_t val2 = op0; \
     int64_t res = ((val1 - val2) << 24) >> 24; \
     bool v = ((val2 ^ val1) & ~(res ^ val2)) >> 39; \
-    bool c = (uint64_t(val1) >= uint64_t(res)); \
+    bool c = (uint64_t(val1) < uint64_t(res)); \
     writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
     return 1; \
 }
@@ -257,7 +257,7 @@ CMP40_FUNC(cmpRega, readRegP0(opcode & 0x1F), regA[(opcode >> 8) & 0x1].v) // CM
     int16_t val2 = op0; \
     int64_t res = ((val1 - val2) << 24) >> 24; \
     bool v = ((val2 ^ val1) & ~(res ^ val2)) >> 39; \
-    bool c = (uint64_t(val1) >= uint64_t(res)); \
+    bool c = (uint64_t(val1) < uint64_t(res)); \
     writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
     return cyc; \
 }
@@ -277,7 +277,7 @@ CMP16_FUNC(cmpR6a, regR[6], 4, 1) // CMP R6, Ax
     uint16_t val2 = op0; \
     int64_t res = ((val1 - val2) << 24) >> 24; \
     bool v = ((val2 ^ val1) & ~(res ^ val2)) >> 39; \
-    bool c = (uint64_t(val1) >= uint64_t(res)); \
+    bool c = (uint64_t(val1) < uint64_t(res)); \
     writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
     return 1; \
 }
@@ -290,17 +290,17 @@ CMPU_FUNC(cmpuR6, regR[6], 3) // CMPU R6, Ax
 // Compare a 16-bit immediate with a register or memory value and set flags
 #define CMPV_FUNC(name, op1) int TeakInterp::name(uint16_t opcode) { \
     uint16_t val = op1; \
-    uint16_t res = val - readParam(); \
-    bool z = (res == 0); \
-    bool m = (res & BIT(15)); \
-    bool c = (val >= res); \
+    uint32_t res = int16_t(val) - int16_t(readParam()); \
+    bool z = !(res & 0xFFFF); \
+    bool m = (res & BIT(31)); \
+    bool c = (val < uint16_t(res)); \
     writeStt0((regStt[0] & ~0xC8) | (z << 7) | (m << 6) | (c << 3)); \
     return 2; \
 }
 
 CMPV_FUNC(cmpvMi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF))) // CMPV Imm16, MemImm8
 CMPV_FUNC(cmpvMrn, core->dsp.readData(getRnStepZids(opcode))) // CMPV Imm16, MemRnStepZids
-CMPV_FUNC(cmpvReg, *readReg[opcode & 0x1F]) // CMPV Imm16, Register
+CMPV_FUNC(cmpvReg, (this->*readRegP[opcode & 0x1F])()) // CMPV Imm16, Register
 CMPV_FUNC(cmpvR6, regR[6]) // CMPV Imm16, R6
 
 int TeakInterp::copy(uint16_t opcode) { // COPY Ax, Cond
@@ -319,7 +319,7 @@ int TeakInterp::dec(uint16_t opcode) { // DEC Ax, Cond
         int64_t val = regA[(opcode >> 12) & 0x1].v;
         int64_t res = ((val - 1) << 24) >> 24;
         bool v = ((1 ^ val) & ~(res ^ 1)) >> 39;
-        bool c = (uint64_t(val) >= uint64_t(res));
+        bool c = (uint64_t(val) < uint64_t(res));
         writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1));
         (this->*writeAx40S[(opcode >> 12) & 0x1])(res);
     }
@@ -583,7 +583,7 @@ int TeakInterp::mpysuMrmr(uint16_t opcode) { // MPYSU MemR45StepZids, MemR0123St
     int64_t val2 = readP33S<0>(); \
     int64_t res = ((val1 - val2) << 24) >> 24; \
     bool v = ((val2 ^ val1) & ~(res ^ val2)) >> 39; \
-    bool c = (uint64_t(val1) >= uint64_t(res)); \
+    bool c = (uint64_t(val1) < uint64_t(res)); \
     writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
     (this->*writeAx40S[(opcode >> 8) & 0x1])(res); \
     regX[0] = op1; \
@@ -601,7 +601,7 @@ MSU_FUNC(msuMrni16, (opcode & 0x1F), readParam(), 2) // MSU MemRnStepZids, Imm16
     int64_t val2 = readP33S<0>(); \
     int64_t res = ((val1 - val2) << 24) >> 24; \
     bool v = ((val2 ^ val1) & ~(res ^ val2)) >> 39; \
-    bool c = (uint64_t(val1) >= uint64_t(res)); \
+    bool c = (uint64_t(val1) < uint64_t(res)); \
     writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
     (this->*writeAx40S[(opcode >> op2s) & 0x1])(res); \
     regX[0] = op1; \
@@ -621,7 +621,7 @@ int TeakInterp::neg(uint16_t opcode) { // NEG Ax, Cond
         int64_t val2 = regA[(opcode >> 12) & 0x1].v;
         int64_t res = ((val1 - val2) << 24) >> 24;
         bool v = ((val2 ^ val1) & ~(res ^ val2)) >> 39;
-        bool c = (uint64_t(val1) >= uint64_t(res));
+        bool c = (uint64_t(val1) < uint64_t(res));
         writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1));
         (this->*writeAx40S[(opcode >> 12) & 0x1])(res);
     }
@@ -675,7 +675,7 @@ int TeakInterp::rnd(uint16_t opcode) { // RND Ax, Cond
 // Clear bits in a memory value using a 16-bit immediate and set flags
 #define RSTM_FUNC(name, op1a) int TeakInterp::name(uint16_t opcode) { \
     uint16_t addr = op1a; \
-    uint16_t res = core->dsp.readData(op1a) & ~readParam(); \
+    uint16_t res = core->dsp.readData(addr) & ~readParam(); \
     bool z = (res == 0); \
     bool m = (res & BIT(15)); \
     writeStt0((regStt[0] & ~0xC0) | (z << 7) | (m << 6)); \
@@ -703,7 +703,7 @@ RSTR_FUNC(rstSm, *readSttMod[opcode & 0x7], (this->*writeSttMod[opcode & 0x7])) 
 // Set bits in a memory value using a 16-bit immediate and set flags
 #define SETM_FUNC(name, op1a) int TeakInterp::name(uint16_t opcode) { \
     uint16_t addr = op1a; \
-    uint16_t res = core->dsp.readData(op1a) | readParam(); \
+    uint16_t res = core->dsp.readData(addr) | readParam(); \
     bool z = (res == 0); \
     bool m = (res & BIT(15)); \
     writeStt0((regStt[0] & ~0xC0) | (z << 7) | (m << 6)); \
@@ -778,7 +778,7 @@ SQR_FUNC(sqrR6, regR[6]) // SQR R6
     int64_t val2 = op0; \
     int64_t res = ((val1 - val2) << 24) >> 24; \
     bool v = ((val2 ^ val1) & ~(res ^ val2)) >> 39; \
-    bool c = (uint64_t(val1) >= uint64_t(res)); \
+    bool c = (uint64_t(val1) < uint64_t(res)); \
     writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
     (this->*op1wb[(opcode >> op1s) & 0x1])(res); \
     return 1; \
@@ -794,7 +794,7 @@ SUB40_FUNC(subRega, readRegP0(opcode & 0x1F), regA, writeAx40S, 8) // SUB Regist
     int16_t val2 = op0; \
     int64_t res = ((val1 - val2) << 24) >> 24; \
     bool v = ((val2 ^ val1) & ~(res ^ val2)) >> 39; \
-    bool c = (uint64_t(val1) >= uint64_t(res)); \
+    bool c = (uint64_t(val1) < uint64_t(res)); \
     writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
     (this->*writeAx40S[(opcode >> op1s) & 0x1])(res); \
     return cyc; \
@@ -815,7 +815,7 @@ SUB16_FUNC(subR6a, regR[6], 4, 1) // SUB R6, Ax
     int32_t val2 = (op0) << 16; \
     int64_t res = ((val1 - val2) << 24) >> 24; \
     bool v = ((val2 ^ val1) & ~(res ^ val2)) >> 39; \
-    bool c = (uint64_t(val1) >= uint64_t(res)); \
+    bool c = (uint64_t(val1) < uint64_t(res)); \
     writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
     (this->*writeAx40S[(opcode >> 8) & 0x1])(res); \
     return 1; \
@@ -832,7 +832,7 @@ SUBH_FUNC(subhR6, regR[6]) // SUBH R6, Ax
     uint16_t val2 = op0; \
     int64_t res = ((val1 - val2) << 24) >> 24; \
     bool v = ((val2 ^ val1) & ~(res ^ val2)) >> 39; \
-    bool c = (uint64_t(val1) >= uint64_t(res)); \
+    bool c = (uint64_t(val1) < uint64_t(res)); \
     writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
     (this->*writeAx40S[(opcode >> 8) & 0x1])(res); \
     return 1; \
