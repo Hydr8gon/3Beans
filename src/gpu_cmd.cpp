@@ -422,22 +422,22 @@ void Gpu::writeDepcolMask(uint32_t mask, uint32_t value) {
     mask &= 0x1F71;
     gpuDepcolMask = (gpuDepcolMask & ~mask) | (value & mask);
     core->gpuRender.setDepthFunc((gpuDepcolMask & BIT(0)) ? TestFunc((gpuDepcolMask >> 4) & 0x7) : TEST_AL);
-    core->gpuRender.setColbufMask(gpuColbufWrite & (gpuDepcolMask >> 8) & 0xF);
-    core->gpuRender.setDepbufMask(gpuDepbufWrite & (((gpuDepcolMask >> 12) & 0x1) | ((gpuDepcolMask >> 11) & 0x2)));
+    core->gpuRender.setColbufMask(gpuColbufWrite ? ((gpuDepcolMask >> 8) & 0xF) : 0);
+    core->gpuRender.setDepbufMask(gpuDepbufWrite ? ((gpuDepcolMask >> 11) & 0x2) : 0);
 }
 
 void Gpu::writeColbufWrite(uint32_t mask, uint32_t value) {
     // Write to the color buffer write enable and update the renderer's color mask
     mask &= 0xF;
     gpuColbufWrite = (gpuColbufWrite & ~mask) | (value & mask);
-    core->gpuRender.setColbufMask(gpuColbufWrite & (gpuDepcolMask >> 8) & 0xF);
+    core->gpuRender.setColbufMask(gpuColbufWrite ? ((gpuDepcolMask >> 8) & 0xF) : 0);
 }
 
 void Gpu::writeDepbufWrite(uint32_t mask, uint32_t value) {
     // Write to the depth buffer write enable and update the renderer's depth mask
     mask &= 0x3;
     gpuDepbufWrite = (gpuDepbufWrite & ~mask) | (value & mask);
-    core->gpuRender.setDepbufMask(gpuDepbufWrite & (((gpuDepcolMask >> 12) & 0x1) | ((gpuDepcolMask >> 11) & 0x2)));
+    core->gpuRender.setDepbufMask(gpuDepbufWrite ? ((gpuDepcolMask >> 11) & 0x2) : 0);
 }
 
 void Gpu::writeDepbufFmt(uint32_t mask, uint32_t value) {
