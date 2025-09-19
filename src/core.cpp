@@ -39,6 +39,7 @@ Core::Core(std::string &cartPath): aes(this), arms { ArmInterp(this, ARM11A), Ar
     tasks[END_FRAME] = std::bind(&Core::endFrame, this);
     tasks[TOGGLE_RUN_FUNC] = std::bind(&Core::toggleRunFunc, this);
     tasks[ARM_STOP_CYCLES] = std::bind(&ArmInterp::stopCycles, this);
+    tasks[TEAK_STOP_CYCLES] = std::bind(&TeakInterp::stopCycles, &teak);
     tasks[ARM11A_INTERRUPT] = std::bind(&Interrupts::interrupt, &interrupts, ARM11A);
     tasks[ARM11B_INTERRUPT] = std::bind(&Interrupts::interrupt, &interrupts, ARM11B);
     tasks[ARM11C_INTERRUPT] = std::bind(&Interrupts::interrupt, &interrupts, ARM11C);

@@ -76,6 +76,12 @@ void TeakInterp::resetCycles() {
         cycles -= std::min(core->globalCycles, cycles);
 }
 
+void TeakInterp::stopCycles() {
+    // Halt by setting the next cycle to an unreachable value
+    cycles = -1;
+    halted = true;
+}
+
 void TeakInterp::incrementPc() {
     // Increment the program counter and check if it's at the end of a loop
     regPc = (regPc + 1) & 0x1FFFF;
@@ -117,17 +123,15 @@ uint16_t TeakInterp::readParam() {
 }
 
 void TeakInterp::setPendingIrqs(uint8_t mask) {
-    // Set interrupt pending bits in the status registers if enabled
-    if (~regMod[3] & BIT(7)) return;
-    mask &= (regMod[3] >> 8);
+    // Set interrupt pending bits in the status registers
     regStt[2] |= (mask & 0xF);
     regSt[2] |= ((mask & 0x4) << 11) | ((mask & 0x3) << 14);
 
-    // Schedule an interrupt if one is pending
-    if (scheduled) return;
+    // Schedule an interrupt if one is enabled and pending
+    if (!(regMod[3] & BIT(7)) || scheduled) return;
     for (int i = 0; i < 4; i++) {
-        if (~regStt[2] & BIT(i)) continue;
-        core->schedule(Task(TEAK_INTERRUPT0 + i), 1);
+        if (!(regStt[2] & (regMod[3] >> 8) & BIT(i))) continue;
+        core->schedule(Task(TEAK_INTERRUPT0 + i), 2);
         scheduled = true;
         return;
     }
@@ -136,8 +140,14 @@ void TeakInterp::setPendingIrqs(uint8_t mask) {
 void TeakInterp::interrupt(int i) {
     // Ensure the interrupt condition still holds
     scheduled = false;
-    if (!(regMod[3] & BIT(7)) || !(regStt[2] & BIT(i))) return;
+    if (!(regMod[3] & BIT(7)) || !(regStt[2] & (regMod[3] >> 8) & BIT(i))) return;
     LOG_INFO("Triggering Teak DSP interrupt %d\n", i);
+
+    // Resume execution after an idle loop
+    if (cycles == -1 && halted) {
+        cycles = 0;
+        halted = false;
+    }
 
     // Run until not repeating an opcode to avoid dealing with it
     while (repAddr != -1)

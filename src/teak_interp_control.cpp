@@ -107,6 +107,10 @@ int TeakInterp::br(uint16_t opcode) { // BR Address18, Cond
 }
 
 int TeakInterp::brr(uint16_t opcode) { // BRR RelAddr7, Cond
+    // Catch idle loops and halt instead of executing them
+    if (opcode == 0x57F0)
+        core->schedule(TEAK_STOP_CYCLES, 0);
+
     // Branch to a relative 7-bit signed offset if the condition is met
     if (checkCond(opcode))
         regPc += int8_t(opcode >> 3) >> 1;
@@ -146,36 +150,93 @@ int TeakInterp::callr(uint16_t opcode) { // CALLR RelAddr7, Cond
 }
 
 int TeakInterp::cntxR(uint16_t opcode) { // CNTX R
-    // Pop status bits from shadow registers and swap page bits
-    uint8_t page = regSt[1];
-    writeSt0((regSt[0] & ~0xFFD) | (shadSt[0] & 0xFFD));
-    writeSt1((regSt[1] & ~0xCFF) | (shadSt[1] & 0xCFF));
-    writeSt2((regSt[2] & ~0xFF) | (shadSt[2] & 0xFF));
-    shadSt[1] = (shadSt[1] & ~0xFF) | page;
+    // Pop status flags from shadow STT registers and swap program bank bits
+    writeStt0(shadStt[0]);
+    writeStt1((regStt[1] & ~0x10) | (shadStt[1] & 0x10));
+    uint16_t temp = regStt[2];
+    writeStt2(shadStt[2]);
+    shadStt[2] = temp;
 
-    // Swap AR/ARP registers and A1/B1 accumulators
-    for (int i = 0; i < 2; i++)
+    // Swap MOD bits with shadow registers, except for outputs and context control
+    temp = regMod[0];
+    writeMod0((regMod[0] & ~0x6CE3) | (shadMod[0] & 0x6CE3));
+    shadMod[0] = temp;
+    std::swap(regMod[1], shadMod[1]);
+    writeMod1(regMod[1]);
+    std::swap(regMod[2], shadMod[2]);
+    writeMod2(regMod[2]);
+    temp = regMod[3];
+    writeMod3((regMod[3] & ~0xF00) | (shadMod[3] & 0xF00));
+    shadMod[3] = temp;
+
+    // Swap AR/ARP registers with their shadows
+    for (int i = 0; i < 2; i++) {
         std::swap(regAr[i], shadAr[i]);
-    for (int i = 0; i < 4; i++)
+        (this->*writeArArp[i])(regAr[i]);
+    }
+    for (int i = 0; i < 4; i++) {
         std::swap(regArp[i], shadArp[i]);
-    std::swap(regA[1].v, regB[1].v);
+        (this->*writeArArp[i + 2])(regArp[i]);
+    }
+
+    // Swap A1 and B1, or pop them from shadows based on the CCNTA bit
+    if (regMod[3] & BIT(13)) {
+        std::swap(regA[1].v, regB[1].v);
+    }
+    else {
+        regA[1].v = shadA[0].v;
+        regB[1].v = shadA[1].v;
+    }
+
+    // Pop REPC from its shadow register if the CREP bit is clear
+    if (~regMod[3] & BIT(15))
+        regRepc = shadRepc;
     return 1;
 }
 
 int TeakInterp::cntxS(uint16_t opcode) { // CNTX S
-    // Push status bits to shadow registers and swap page bits
-    uint8_t page = shadSt[1];
-    for (int i = 0; i < 3; i++)
-        shadSt[i] = regSt[i];
-    writeSt1((regSt[1] & ~0xFF) | page);
+    // Push status flags to shadow STT registers and swap program bank bits
+    shadStt[0] = regStt[0];
+    shadStt[1] = regStt[1];
+    uint16_t temp = regStt[2];
+    writeStt2(shadStt[2]);
+    shadStt[2] = temp;
 
-    // Swap AR/ARP registers and A1/B1 accumulators, and set flags
-    for (int i = 0; i < 2; i++)
+    // Swap MOD bits with shadow registers, except for outputs and context control
+    temp = regMod[0];
+    writeMod0((regMod[0] & ~0x6CE3) | (shadMod[0] & 0x6CE3));
+    shadMod[0] = temp;
+    std::swap(regMod[1], shadMod[1]);
+    writeMod1(regMod[1]);
+    std::swap(regMod[2], shadMod[2]);
+    writeMod2(regMod[2]);
+    temp = regMod[3];
+    writeMod3((regMod[3] & ~0xF00) | (shadMod[3] & 0xF00));
+    shadMod[3] = temp;
+
+    // Swap AR/ARP registers with their shadows
+    for (int i = 0; i < 2; i++) {
         std::swap(regAr[i], shadAr[i]);
-    for (int i = 0; i < 4; i++)
+        (this->*writeArArp[i])(regAr[i]);
+    }
+    for (int i = 0; i < 4; i++) {
         std::swap(regArp[i], shadArp[i]);
-    std::swap(regA[1].v, regB[1].v);
-    writeStt0((regStt[0] & ~0xE4) | calcZmne(regA[1].v));
+        (this->*writeArArp[i + 2])(regArp[i]);
+    }
+
+    // Swap A1/B1 and set flags, or push them to shadows based on the CCNTA bit
+    if (regMod[3] & BIT(13)) {
+        std::swap(regA[1].v, regB[1].v);
+        writeStt0((regStt[0] & ~0xE4) | calcZmne(regA[1].v));
+    }
+    else {
+        shadA[0].v = regA[1].v;
+        shadA[1].v = regB[1].v;
+    }
+
+    // Push REPC to its shadow register if the CREP bit is clear
+    if (~regMod[3] & BIT(15))
+        shadRepc = regRepc;
     return 1;
 }
 

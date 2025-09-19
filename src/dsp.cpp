@@ -429,13 +429,14 @@ void Dsp::updateIcuState() {
     bool tmr0 = tmrSignals[0] ^ ((tmrCtrl[0] >> 6) & 0x1);
     bool tmr1 = tmrSignals[1] ^ ((tmrCtrl[1] >> 6) & 0x1);
     uint16_t state = ((dma << 15) | (hpi << 14) | (aud0 << 11) | (tmr0 << 10) | (tmr1 << 9) | icuTrigger) & ~icuDisable;
-    icuPending |= (state & ~icuState);
+    uint16_t edge = (state & ~icuState);
+    icuPending |= edge;
     icuState = state;
 
     // Set Teak interrupts to pending if they have enabled and pending bits
     uint8_t mask = 0;
     for (int i = 0; i < 4; i++)
-        if (icuEnable[i] & icuPending)
+        if (icuEnable[i] & edge)
             mask |= BIT(i);
     core->teak.setPendingIrqs(mask);
 }
@@ -812,7 +813,7 @@ void Dsp::writePcfg(uint16_t mask, uint16_t value) {
         core->teak.cycles = -1;
         core->teak.regPc = 0;
     }
-    else if (core->teak.cycles == -1) {
+    else if (core->teak.cycles == -1 && !core->teak.halted) {
         LOG_INFO("Starting Teak DSP execution\n");
         core->teak.cycles = 0;
     }

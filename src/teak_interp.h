@@ -38,9 +38,11 @@ class TeakInterp {
 public:
     uint64_t cycles = -1;
     uint32_t regPc = 0;
+    bool halted = false;
 
     TeakInterp(Core *core);
     void resetCycles();
+    void stopCycles();
 
     int runOpcode();
     void setPendingIrqs(uint8_t mask);
@@ -128,8 +130,11 @@ private:
     uint16_t regArp[4] = { 0x21, 0x258C, 0x4AB5, 0x6F7B };
     uint16_t regNone = 0;
 
+    SplitReg shadA[2] = {};
     uint16_t shadR[4] = {};
-    uint16_t shadSt[3] = {};
+    uint16_t shadRepc = 0;
+    uint16_t shadStt[3] = {};
+    uint16_t shadMod[4] = {};
     uint16_t shadCfg[2] = {};
     uint16_t shadStep0[2] = {};
     uint16_t shadAr[2] = {};
