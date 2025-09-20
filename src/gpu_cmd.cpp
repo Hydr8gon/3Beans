@@ -96,17 +96,16 @@ void Gpu::runCommands() {
 void Gpu::drawAttrIdx(uint32_t idx) {
     // Update the base shader input list using fixed attributes if dirty
     if (fixedDirty) {
-        fixedDirty = false;
+        memset(fixedBase, 0, sizeof(fixedBase));
         for (uint32_t i = 0, f; i < 12; i++) {
-            if (~gpuAttrFmt & BITL(48 + i)) {
-                memset(fixedBase[i], 0, sizeof(fixedBase[i]));
-                continue;
-            }
-            fixedBase[i][0] = *(float*)&(f = flt24e7to32e8(attrFixedData[i][2]));
-            fixedBase[i][1] = *(float*)&(f = flt24e7to32e8((attrFixedData[i][1] << 8) | (attrFixedData[i][2] >> 24)));
-            fixedBase[i][2] = *(float*)&(f = flt24e7to32e8((attrFixedData[i][0] << 16) | (attrFixedData[i][1] >> 16)));
-            fixedBase[i][3] = *(float*)&(f = flt24e7to32e8(attrFixedData[i][0] >> 8));
+            if (~gpuAttrFmt & BITL(48 + i)) continue;
+            uint8_t id = (gpuVshAttrIds >> (i << 2)) & 0xF;
+            fixedBase[id][0] = *(float*)&(f = flt24e7to32e8(attrFixedData[i][2]));
+            fixedBase[id][1] = *(float*)&(f = flt24e7to32e8((attrFixedData[i][1] << 8) | (attrFixedData[i][2] >> 24)));
+            fixedBase[id][2] = *(float*)&(f = flt24e7to32e8((attrFixedData[i][0] << 16) | (attrFixedData[i][1] >> 16)));
+            fixedBase[id][3] = *(float*)&(f = flt24e7to32e8(attrFixedData[i][0] >> 8));
         }
+        fixedDirty = false;
     }
 
     // Build an input list on top of the base by parsing attribute arrays at the given index
@@ -675,6 +674,7 @@ void Gpu::writeVshEntry(uint32_t mask, uint32_t value) {
 void Gpu::writeVshAttrIdsL(uint32_t mask, uint32_t value) {
     // Write to the lower vertex shader attribute IDs
     gpuVshAttrIds = (gpuVshAttrIds & ~mask) | (value & mask);
+    fixedDirty = true;
 }
 
 void Gpu::writeVshAttrIdsH(uint32_t mask, uint32_t value) {
