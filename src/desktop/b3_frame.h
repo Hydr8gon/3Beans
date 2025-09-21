@@ -52,6 +52,7 @@ private:
     void pause(wxCommandEvent &event);
     void restart(wxCommandEvent &event);
     void stop(wxCommandEvent &event);
+    void cartAutoBoot(wxCommandEvent &event);
     void fpsLimiter(wxCommandEvent &event);
     void pathSettings(wxCommandEvent &event);
     void inputBindings(wxCommandEvent &event);

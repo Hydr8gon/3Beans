@@ -50,7 +50,9 @@ public:
 
 private:
     Core *core;
+
     bool scheduled = false;
+    int iconOffset = 0;
 
     uint8_t fsBox[0x100];
     uint8_t rsBox[0x100];

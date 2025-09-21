@@ -256,6 +256,18 @@ void Aes::update() {
             break;
         }
 
+        // Detect icon data and force the auto-boot flag to be set if enabled
+        if (Settings::cartAutoBoot) {
+            if (dst[3] == 0x534D4448) // SMDH
+                iconOffset = 0x2028;
+            if (iconOffset > 0 && (iconOffset -= 16) < 0) {
+                LOG_INFO("Overriding icon flags to force auto-boot: 0x%X to 0x%X\n",
+                    BSWAP32(dst[1]), BSWAP32(dst[1] | BIT(25)));
+                core->shas[1].iconFlags = dst[1];
+                dst[1] |= BIT(25);
+            }
+        }
+
         // Send an output block to the read FIFO based on endian settings
         for (int i = 0; i < 4; i++)
             readFifo.push(dst[(aesCnt & BIT(24)) ? (3 - i) : i]);

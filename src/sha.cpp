@@ -177,6 +177,12 @@ void Sha::update() {
             inFifo.pop();
         }
 
+        // Restore icon flags if modified by cart auto-boot so that verification passes
+        if (iconFlags != -1 && src[10] == (iconFlags | BIT(25))) {
+            src[10] = iconFlags;
+            iconFlags = -1;
+        }
+
         // Hash the block and update input length
         if (shaCnt & BIT(5)) // SHA1
             hash1(src);

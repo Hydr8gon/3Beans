@@ -22,6 +22,7 @@
 
 namespace Settings {
     int fpsLimiter = 1;
+    int cartAutoBoot = 0;
     std::string boot11Path = "boot11.bin";
     std::string boot9Path = "boot9.bin";
     std::string nandPath = "nand.bin";
@@ -30,6 +31,7 @@ namespace Settings {
 
     std::vector<Setting> settings = {
         Setting("fpsLimiter", &fpsLimiter, false),
+        Setting("cartAutoBoot", &cartAutoBoot, false),
         Setting("boot11Path", &boot11Path, true),
         Setting("boot9Path", &boot9Path, true),
         Setting("nandPath", &nandPath, true),

@@ -31,6 +31,7 @@ enum FrameEvent {
     RESTART,
     STOP,
     FPS_LIMITER,
+    CART_AUTO_BOOT,
     PATH_SETTINGS,
     INPUT_BINDINGS
 };
@@ -43,6 +44,7 @@ EVT_MENU(PAUSE, b3Frame::pause)
 EVT_MENU(RESTART, b3Frame::restart)
 EVT_MENU(STOP, b3Frame::stop)
 EVT_MENU(FPS_LIMITER, b3Frame::fpsLimiter)
+EVT_MENU(CART_AUTO_BOOT, b3Frame::cartAutoBoot)
 EVT_MENU(PATH_SETTINGS, b3Frame::pathSettings)
 EVT_MENU(INPUT_BINDINGS, b3Frame::inputBindings)
 EVT_CLOSE(b3Frame::close)
@@ -66,12 +68,14 @@ b3Frame::b3Frame(): wxFrame(nullptr, wxID_ANY, "3Beans") {
     // Set up the settings menu
     wxMenu *settingsMenu = new wxMenu();
     settingsMenu->AppendCheckItem(FPS_LIMITER, "&FPS Limiter");
+    settingsMenu->AppendCheckItem(CART_AUTO_BOOT, "&Cart Auto-Boot");
     settingsMenu->AppendSeparator();
     settingsMenu->Append(PATH_SETTINGS, "&Path Settings");
     settingsMenu->Append(INPUT_BINDINGS, "&Input Bindings");
 
     // Set the initial settings checkbox states
     settingsMenu->Check(FPS_LIMITER, Settings::fpsLimiter);
+    settingsMenu->Check(CART_AUTO_BOOT, Settings::cartAutoBoot);
 
     // Set up the menu bar
     wxMenuBar *menuBar = new wxMenuBar();
@@ -211,6 +215,12 @@ void b3Frame::stop(wxCommandEvent &event) {
 void b3Frame::fpsLimiter(wxCommandEvent &event) {
     // Toggle the FPS limiter setting
     Settings::fpsLimiter = !Settings::fpsLimiter;
+    Settings::save();
+}
+
+void b3Frame::cartAutoBoot(wxCommandEvent &event) {
+    // Toggle the cart auto-boot setting
+    Settings::cartAutoBoot = !Settings::cartAutoBoot;
     Settings::save();
 }
 

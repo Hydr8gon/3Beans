@@ -26,6 +26,8 @@ class Core;
 
 class Sha {
 public:
+    uint32_t iconFlags = -1;
+
     Sha(Core *core, bool arm9): core(core), arm9(arm9) {}
     void update();
 
