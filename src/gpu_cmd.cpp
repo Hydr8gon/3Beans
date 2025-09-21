@@ -416,13 +416,30 @@ void Gpu::writeAlphaTest(uint32_t mask, uint32_t value) {
     core->gpuRender.setAlphaValue(float(gpuAlphaTest >> 8) / 0xFF);
 }
 
+void Gpu::writeStencilTest(uint32_t mask, uint32_t value) {
+    // Write to the stencil test register and update the renderer's state
+    mask &= 0xFFFFFF71;
+    gpuStencilTest = (gpuStencilTest & ~mask) | (value & mask);
+    core->gpuRender.setStencilTest(TestFunc((gpuStencilTest >> 4) & 0x7), gpuStencilTest & BIT(0));
+    core->gpuRender.setStencilMasks(gpuStencilTest >> 8, gpuStencilTest >> 24);
+    core->gpuRender.setStencilValue(gpuStencilTest >> 16);
+}
+
+void Gpu::writeStencilOp(uint32_t mask, uint32_t value) {
+    // Write to the stencil operation register and update the renderer's state
+    mask &= 0x777;
+    gpuStencilOp = (gpuStencilOp & ~mask) | (value & mask);
+    core->gpuRender.setStencilOps(StenOper(gpuStencilOp & 0x7),
+        StenOper((gpuStencilOp >> 4) & 0x7), StenOper((gpuStencilOp >> 8) & 0x7));
+}
+
 void Gpu::writeDepcolMask(uint32_t mask, uint32_t value) {
     // Write to the depth/color mask register and update the renderer's state
     mask &= 0x1F71;
     gpuDepcolMask = (gpuDepcolMask & ~mask) | (value & mask);
     core->gpuRender.setDepthFunc((gpuDepcolMask & BIT(0)) ? TestFunc((gpuDepcolMask >> 4) & 0x7) : TEST_AL);
     core->gpuRender.setColbufMask(gpuColbufWrite ? ((gpuDepcolMask >> 8) & 0xF) : 0);
-    core->gpuRender.setDepbufMask(gpuDepbufWrite ? ((gpuDepcolMask >> 11) & 0x2) : 0);
+    core->gpuRender.setDepbufMask(gpuDepbufWrite ? (((gpuDepcolMask >> 11) & 0x2) | 0x1) : 0);
 }
 
 void Gpu::writeColbufWrite(uint32_t mask, uint32_t value) {

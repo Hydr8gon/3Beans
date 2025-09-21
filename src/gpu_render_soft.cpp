@@ -110,6 +110,20 @@ SoftVertex GpuRenderSoft::intersect(SoftVertex &v1, SoftVertex &v2, float x1, fl
     return v;
 }
 
+uint8_t GpuRenderSoft::stencilOp(uint8_t value, StenOper oper) {
+    // Adjust a stencil value based on the given operation
+    switch (oper) {
+        case STEN_KEEP: return value;
+        case STEN_ZERO: return 0;
+        case STEN_REPLACE: return stencilValue & stencilMasks[0];
+        case STEN_INCR: return std::min(0xFF, int(value) + 1) & stencilMasks[0];
+        case STEN_DECR: return std::max(0x00, int(value) - 1) & stencilMasks[0];
+        case STEN_INVERT: return ~value & stencilMasks[0];
+        case STEN_INCWR: return (value + 1) & stencilMasks[0];
+        case STEN_DECWR: return (value - 1) & stencilMasks[0];
+    }
+}
+
 void GpuRenderSoft::getTexel(float &r, float &g, float &b, float &a, float s, float t, int i) {
     // Scale the S-coordinate to texels and handle wrapping based on mode
     uint32_t u = uint32_t(s * texWidths[i]);
@@ -287,8 +301,9 @@ void GpuRenderSoft::getSource(float &r, float &g, float &b, float &a, SoftVertex
         case COMB_TEX1: getTexel(r, g, b, a, v.s1 / v.w, v.t1 / v.w, 1); break;
         case COMB_TEX2: getTexel(r, g, b, a, v.s2 / v.w, v.t2 / v.w, 2); break;
         case COMB_CONST: r = combColors[i][0], g = combColors[i][1], b = combColors[i][2], a = combColors[i][3]; break;
+        case COMB_FRAG0: case COMB_FRAG1: r = g = b = a = 0.5f; break; // Stub
+        case COMB_TEX3: r = g = b = a = 1.0f; break; // Stub
         case COMB_UNK: r = g = b = a = 0.0f; break;
-        default: r = g = b = a = 1.0f; break; // Stub
 
     case COMB_PREV:
         // Generate the previous combiner's output, or use the cache if already done
@@ -454,6 +469,35 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
     ofs |= ((y << 3) & 0x20) | ((y << 2) & 0x8) | ((y << 1) & 0x2);
     ofs |= ((x << 2) & 0x10) | ((x << 1) & 0x4) | (x & 0x1);
 
+    // Perform stencil testing on the pixel if enabled
+    uint8_t stencil = 0;
+    if (stencilEnable) {
+        // Read and mask the buffer and reference values
+        if (depbufFmt == DEP_24S8)
+            stencil = core->memory.read<uint8_t>(ARM11, depbufAddr + ofs * 4 + 3) & stencilMasks[0];
+        uint8_t ref = (stencilValue & stencilMasks[1]);
+
+        // Compare the incoming stencil value with the reference
+        bool pass;
+        switch (stencilFunc) {
+            case TEST_NV: pass = false; break;
+            case TEST_AL: pass = true; break;
+            case TEST_EQ: pass = (stencil == ref); break;
+            case TEST_NE: pass = (stencil != ref); break;
+            case TEST_LT: pass = (stencil < ref); break;
+            case TEST_LE: pass = (stencil <= ref); break;
+            case TEST_GT: pass = (stencil > ref); break;
+            case TEST_GE: pass = (stencil >= ref); break;
+        }
+
+        // If failed, perform the fail operation on the buffer and don't draw
+        if (!pass) {
+            if (depbufFmt == DEP_24S8)
+                core->memory.write<uint8_t>(ARM11, depbufAddr + ofs * 4 + 3, stencilOp(stencil, stencilFail));
+            return;
+        }
+    }
+
     // Read a depth value to compare with based on buffer format
     float depth = 0.0f;
     if (depthFunc >= TEST_EQ) {
@@ -476,15 +520,26 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
     }
 
     // Compare the incoming depth value with the existing one
+    bool pass;
     switch (depthFunc) {
-        case TEST_NV: return;
-        case TEST_AL: break;
-        case TEST_EQ: if (depth == p.z) break; return;
-        case TEST_NE: if (depth != p.z) break; return;
-        case TEST_LT: if (depth < p.z) break; return;
-        case TEST_LE: if (depth <= p.z) break; return;
-        case TEST_GT: if (depth > p.z) break; return;
-        case TEST_GE: if (depth >= p.z) break; return;
+        case TEST_NV: pass = false; break;
+        case TEST_AL: pass = true; break;
+        case TEST_EQ: pass = (depth == p.z); break;
+        case TEST_NE: pass = (depth != p.z); break;
+        case TEST_LT: pass = (depth < p.z); break;
+        case TEST_LE: pass = (depth <= p.z); break;
+        case TEST_GT: pass = (depth > p.z); break;
+        case TEST_GE: pass = (depth >= p.z); break;
+    }
+
+    // Perform the stencil depth pass/fail operation if enabled, and don't draw if failed
+    if (!pass) {
+        if (stencilEnable && depbufFmt == DEP_24S8)
+            core->memory.write<uint8_t>(ARM11, depbufAddr + ofs * 4 + 3, stencilOp(stencil, stenDepFail));
+        return;
+    }
+    else if (stencilEnable && depbufFmt == DEP_24S8) {
+        core->memory.write<uint8_t>(ARM11, depbufAddr + ofs * 4 + 3, stencilOp(stencil, stenDepPass));
     }
 
     // Get source color values from the texture combiner
@@ -1318,6 +1373,25 @@ void GpuRenderSoft::setBlendColor(float r, float g, float b, float a) {
     blendG = g;
     blendB = b;
     blendA = a;
+}
+
+void GpuRenderSoft::setStencilTest(TestFunc func, bool enable) {
+    // Set the stencil test function and toggle
+    stencilFunc = func;
+    stencilEnable = enable;
+}
+
+void GpuRenderSoft::setStencilOps(StenOper fail, StenOper depFail, StenOper depPass) {
+    // Set the stencil test result operations
+    stencilFail = fail;
+    stenDepFail = depFail;
+    stenDepPass = depPass;
+}
+
+void GpuRenderSoft::setStencilMasks(uint8_t bufMask, uint8_t refMask) {
+    // Set the stencil buffer and reference value masks
+    stencilMasks[0] = bufMask;
+    stencilMasks[1] = refMask;
 }
 
 void GpuRenderSoft::setBufferDims(uint16_t width, uint16_t height, bool flip) {

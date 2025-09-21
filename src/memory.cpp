@@ -729,6 +729,8 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x10401404, data = core->gpu.readBlendFunc()) // GPU_BLEND_FUNC
                 DEF_IO32(0x1040140C, data = core->gpu.readBlendColor()) // GPU_BLEND_COLOR
                 DEF_IO32(0x10401410, data = core->gpu.readAlphaTest()) // GPU_ALPHA_TEST
+                DEF_IO32(0x10401414, data = core->gpu.readStencilTest()) // GPU_STENCIL_TEST
+                DEF_IO32(0x10401418, data = core->gpu.readStencilOp()) // GPU_STENCIL_OP
                 DEF_IO32(0x1040141C, data = core->gpu.readDepcolMask()) // GPU_DEPCOL_MASK
                 DEF_IO32(0x1040144C, data = core->gpu.readColbufWrite()) // GPU_COLBUF_WRITE
                 DEF_IO32(0x10401454, data = core->gpu.readDepbufWrite()) // GPU_DEPBUF_WRITE
@@ -1942,6 +1944,8 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x10401404, core->gpu.writeBlendFunc(IO_PARAMS)) // GPU_BLEND_FUNC
                 DEF_IO32(0x1040140C, core->gpu.writeBlendColor(IO_PARAMS)) // GPU_BLEND_COLOR
                 DEF_IO32(0x10401410, core->gpu.writeAlphaTest(IO_PARAMS)) // GPU_ALPHA_TEST
+                DEF_IO32(0x10401414, core->gpu.writeStencilTest(IO_PARAMS)) // GPU_STENCIL_TEST
+                DEF_IO32(0x10401418, core->gpu.writeStencilOp(IO_PARAMS)) // GPU_STENCIL_OP
                 DEF_IO32(0x1040141C, core->gpu.writeDepcolMask(IO_PARAMS)) // GPU_DEPCOL_MASK
                 DEF_IO32(0x1040144C, core->gpu.writeColbufWrite(IO_PARAMS)) // GPU_COLBUF_WRITE
                 DEF_IO32(0x10401454, core->gpu.writeDepbufWrite(IO_PARAMS)) // GPU_DEPBUF_WRITE

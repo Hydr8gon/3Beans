@@ -103,6 +103,17 @@ enum TestFunc {
     TEST_GE
 };
 
+enum StenOper {
+    STEN_KEEP,
+    STEN_ZERO,
+    STEN_REPLACE,
+    STEN_INCR,
+    STEN_DECR,
+    STEN_INVERT,
+    STEN_INCWR,
+    STEN_DECWR
+};
+
 enum TexFmt {
     TEX_RGBA8,
     TEX_RGB8,
@@ -184,6 +195,8 @@ public:
     uint32_t readBlendFunc() { return gpuBlendFunc; }
     uint32_t readBlendColor() { return gpuBlendColor; }
     uint32_t readAlphaTest() { return gpuAlphaTest; }
+    uint32_t readStencilTest() { return gpuStencilTest; }
+    uint32_t readStencilOp() { return gpuStencilOp; }
     uint32_t readDepcolMask() { return gpuDepcolMask; }
     uint32_t readColbufWrite() { return gpuColbufWrite; }
     uint32_t readDepbufWrite() { return gpuDepbufWrite; }
@@ -254,6 +267,8 @@ public:
     void writeBlendFunc(uint32_t mask, uint32_t value);
     void writeBlendColor(uint32_t mask, uint32_t value);
     void writeAlphaTest(uint32_t mask, uint32_t value);
+    void writeStencilTest(uint32_t mask, uint32_t value);
+    void writeStencilOp(uint32_t mask, uint32_t value);
     void writeDepcolMask(uint32_t mask, uint32_t value);
     void writeColbufWrite(uint32_t mask, uint32_t value);
     void writeDepbufWrite(uint32_t mask, uint32_t value);
@@ -354,6 +369,8 @@ private:
     uint32_t gpuBlendFunc = 0;
     uint32_t gpuBlendColor = 0;
     uint32_t gpuAlphaTest = 0;
+    uint32_t gpuStencilTest = 0;
+    uint32_t gpuStencilOp = 0;
     uint32_t gpuDepcolMask = 0;
     uint32_t gpuColbufWrite = 0;
     uint32_t gpuDepbufWrite = 0;

@@ -59,6 +59,10 @@ public:
     void setBlendColor(float r, float g, float b, float a);
     void setAlphaFunc(TestFunc func) { alphaFunc = func; }
     void setAlphaValue(float value) { alphaValue = value; }
+    void setStencilTest(TestFunc Func, bool enable);
+    void setStencilOps(StenOper fail, StenOper depFail, StenOper depPass);
+    void setStencilMasks(uint8_t bufMask, uint8_t refMask);
+    void setStencilValue(uint8_t value) { stencilValue = value; }
 
     void setOutMap(uint8_t (*map)[2]);
     void setCullMode(CullMode mode) { cullMode = mode; }
@@ -149,9 +153,17 @@ private:
     DepbufFmt depbufFmt = DEP_UNK;
     uint8_t depbufMask = 0;
     TestFunc depthFunc = TEST_AL;
+    TestFunc stencilFunc = TEST_NV;
+    StenOper stencilFail = STEN_KEEP;
+    StenOper stenDepFail = STEN_KEEP;
+    StenOper stenDepPass = STEN_KEEP;
+    uint8_t stencilMasks[2] = {};
+    uint8_t stencilValue = 0;
+    bool stencilEnable = false;
 
     template <bool doX> static SoftVertex interpolate(SoftVertex &v1, SoftVertex &v2, float x1, float x, float x2);
     static SoftVertex intersect(SoftVertex &v1, SoftVertex &v2, float x1, float x2);
+    uint8_t stencilOp(uint8_t value, StenOper oper);
 
     void getTexel(float &r, float &g, float &b, float &a, float s, float t, int i);
     void getSource(float &r, float &g, float &b, float &a, SoftVertex &v, int i, int j);
