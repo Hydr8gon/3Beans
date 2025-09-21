@@ -131,12 +131,6 @@ void Cdma::dmaLd(int i) { // DMALD
     if (i == 8) return fault(i, 0); // Channel-exclusive
     uint8_t size = 1 << ((ccrs[i] >> 1) & 0x7);
     uint8_t len = burstReq ? (((ccrs[i] >> 4) & 0xF) + 1) : 1;
-    if (id == XDMA)
-        LOG_INFO("XDMA channel %d loading from 0x%X with size 0x%X in 0x%X units\n",
-            i, sars[i], size * len, size);
-    else
-        LOG_INFO("CDMA%d channel %d loading from 0x%X with size 0x%X in 0x%X units\n",
-            id, i, sars[i], size * len, size);
 
     // Load values depending on size and increment the address if enabled
     // TODO: handle the access type bits
@@ -190,12 +184,6 @@ void Cdma::dmaSt(int i) { // DMAST
     if (i == 8) return fault(i, 0); // Channel-exclusive
     uint8_t size = 1 << ((ccrs[i] >> 15) & 0x7);
     uint8_t len = burstReq ? (((ccrs[i] >> 18) & 0xF) + 1) : 1;
-    if (id == XDMA)
-        LOG_INFO("XDMA channel %d storing to 0x%X with size 0x%X in 0x%X units\n",
-            i, dars[i], size * len, size);
-    else
-        LOG_INFO("CDMA%d channel %d storing to 0x%X with size 0x%X in 0x%X units\n",
-            id, i, dars[i], size * len, size);
 
     // Store values depending on size and increment the address if enabled
     // TODO: handle the access type bits

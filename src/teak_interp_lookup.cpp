@@ -748,7 +748,7 @@ void TeakInterp::initLookup() {
             teakInstrs[op] = &TeakInterp::sublReg;
         else if ((op & 0xFEFF) == 0x5E22)
             teakInstrs[op] = &TeakInterp::sublR6;
-        else if ((op & 0xFFC0) == 0x4980)
+        else if ((op & 0xFFF0) == 0x4980)
             teakInstrs[op] = &TeakInterp::swap;
         else if ((op & 0xF000) == 0xF000)
             teakInstrs[op] = &TeakInterp::tstbMi8;

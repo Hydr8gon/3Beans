@@ -95,6 +95,7 @@ uint16_t Dsp::readData(uint16_t address) {
         case 0x1DA: return dmaAreaCfg[dmaSelect];
         case 0x1DE: return dmaCtrl[dmaSelect];
         case 0x200: return icuPending;
+        case 0x202: return 0; // Prevent log spam
         case 0x204: return icuTrigger;
         case 0x206: return icuEnable[0];
         case 0x208: return icuEnable[1];

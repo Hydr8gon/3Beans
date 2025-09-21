@@ -141,7 +141,6 @@ void TeakInterp::interrupt(int i) {
     // Ensure the interrupt condition still holds
     scheduled = false;
     if (!(regMod[3] & BIT(7)) || !(regStt[2] & (regMod[3] >> 8) & BIT(i))) return;
-    LOG_INFO("Triggering Teak DSP interrupt %d\n", i);
 
     // Resume execution after an idle loop
     if (cycles == -1 && halted) {

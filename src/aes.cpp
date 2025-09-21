@@ -278,7 +278,7 @@ void Aes::update() {
         uint32_t mask[4] = {};
         uint8_t len = std::max(4U, ((aesCnt >> 15) & 0xE) + 2);
         for (int i = 0; i < len; i += 2)
-            mask[i / 2] |= 0xFFFF << ((i << 4) & 0x10);
+            mask[i / 4] |= 0xFFFF << ((i << 3) & 0x10);
 
         // Handle final verification steps for CCM modes
         if (mode == 1) { // Encrypt

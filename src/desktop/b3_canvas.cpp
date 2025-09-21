@@ -113,7 +113,7 @@ void b3Canvas::draw(wxPaintEvent &event) {
         if (fb) {
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 400, 480, 0, GL_RGBA, GL_UNSIGNED_BYTE, fb);
             frameCount = 0;
-            delete fb;
+            delete[] fb;
         }
     }
 
