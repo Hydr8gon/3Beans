@@ -34,14 +34,18 @@ jobs:
   build-mac:
     runs-on: macos-latest
     steps:
-    - name: Install wxWidgets and PortAudio
-      run: brew install wxmac portaudio
+    - name: Install Nix
+      uses: cachix/install-nix-action@v31
+      with:
+        nix_path: nixpkgs=channel:nixpkgs-25.05-darwin
     - name: Checkout
       uses: actions/checkout@v4
     - name: Compile
+      shell: 'nix-shell -p wxGTK32 portaudio libGL pkg-config --run "bash {0}"'
       run: |
         make -j$(sysctl -n hw.logicalcpu)
-        ./mac-bundle.sh --dmg
+    - name: Bundle
+      run: ./mac-bundle.sh --dmg
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
@@ -68,3 +72,28 @@ jobs:
       with:
         name: 3beans-linux
         path: 3beans.flatpak
+
+  update-release:
+    runs-on: ubuntu-latest
+    needs: [build-windows, build-mac, build-linux]
+
+    steps:
+    - name: Delete old release
+      uses: dev-drprasad/delete-tag-and-release@v0.2.1
+      with:
+        delete_release: true
+        tag_name: release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Get artifacts
+      uses: actions/download-artifact@v4
+    - name: Package artifacts
+      run: for i in ./*; do zip -r -j ${i}.zip $i; done
+    - name: Create new release
+      uses: ncipollo/release-action@v1
+      with:
+        name: Rolling Release
+        body: These are automatically updated builds of the latest commit.
+        artifacts: "*.zip"
+        tag: release
+        token: ${{ secrets.GITHUB_TOKEN }}

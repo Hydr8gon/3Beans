@@ -7,6 +7,10 @@ the early stages of playing commercial games, but the home menu still doesn't fu
 interpreted and software-rendered, which makes it portable but slow. If the project matures enough, I might try to
 incorporate hardware acceleration or high-level elements to achieve reasonable speeds.
 
+### Downloads
+3Beans is available for Windows, macOS, and Linux. The latest builds are automatically provided via GitHub Actions,
+and can be downloaded from the [releases page](https://github.com/Hydr8gon/3Beans/releases).
+
 ### Setup
 Currently, 3Beans is only fully compatible with old 3DS systems that have
 [boot9strap](https://github.com/SciresM/boot9strap) installed. New 3DS mode has trouble booting the OS, and bootloaders
