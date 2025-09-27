@@ -19,14 +19,36 @@
 
 #include "core.h"
 
-void Ndma::triggerMode(uint8_t mode) {
-    // Schedule transfers on enabled channels of the requested mode
+bool Ndma::shouldTransfer(int i, uint8_t type) {
+    // Check if a channel is enabled and using the triggered DRQ type
+    if (~ndmaCnt[i] & BIT(31)) return false;
+    uint8_t mode = (ndmaCnt[i] >> 24) & 0x1F;
+    if (mode == type) return true;
+    if (mode != 0xF) return false;
+
+    // Check if multiple DRQ types are active for channel sub-modes
+    switch (ndmaCnt[i] & 0x1F) {
+        case 0x08: return (BIT(type) & 0x140) && (drqMask & 0x140) == 0x140; // MMC to AES
+        case 0x10: return (BIT(type) & 0x600) && (drqMask & 0x600) == 0x600; // AES to SHA
+        default: return false;
+    }
+}
+
+void Ndma::setDrq(uint8_t type) {
+    // Set a DRQ type's active bit
+    drqMask |= BIT(type);
     bool scheduled = runMask;
+
+    // Schedule transfers on newly activated channels
     for (int i = 0; i < 8; i++)
-        if (((ndmaCnt[i] >> 24) & 0x9F) == (0x80 | mode))
-            runMask |= BIT(i);
+        if (shouldTransfer(i, type)) runMask |= BIT(i);
     if (!scheduled && runMask)
         core->schedule(NDMA_UPDATE, 1);
+}
+
+void Ndma::clearDrq(uint8_t type) {
+    // Clear a DRQ type's active bit
+    drqMask &= ~BIT(type);
 }
 
 void Ndma::update() {
@@ -134,23 +156,30 @@ void Ndma::writeFdata(int i, uint32_t mask, uint32_t value) {
 }
 
 void Ndma::writeCnt(int i, uint32_t mask, uint32_t value) {
-    // Write to one of the NDMAxCNT registers
+    // Write to one of the NDMAxCNT registers and check if a transfer started
     mask &= 0xFF0FFFFF;
     uint32_t old = ndmaCnt[i];
     ndmaCnt[i] = (ndmaCnt[i] & ~mask) | (value & mask);
-
-    // Reload internal addresses if a channel is newly started
     if (!(~old & ndmaCnt[i] & BIT(31))) return;
+
+    // Reload internal addresses and trigger immediate transfers right away
     srcAddrs[i] = ndmaSad[i];
     dstAddrs[i] = ndmaDad[i];
-
-    // Handle immediate transfers or catch unimplemented modes
     uint8_t mode = (ndmaCnt[i] >> 24) & 0x1F;
-    LOG_INFO("NDMA channel %d starting in mode 0x%X, transferring from 0x%X to 0x%X with size 0x%X in blocks of 0x%X\n",
-        i, mode, ndmaSad[i], ndmaDad[i], ndmaTcnt[i] << 2, ndmaWcnt[i] << 2);
-    if ((mode < 0x6 && mode != 0x4) || (mode > 0xC && mode < 0xF))
-        LOG_CRIT("NDMA channel %d started in unimplemented mode: 0x%X\n", i, mode);
-    else if (mode == 0xF)
-        LOG_CRIT("NDMA channel %d started in unimplemented sub-mode: 0x%X\n", i, ndmaCnt[i] & 0x1F);
-    if (mode >= 0x10) transferBlock(i); // Immediate
+    if (mode >= 0x10) setDrq(mode);
+
+    // Log started channel information and catch unimplemented modes
+    if (mode == 0xF) {
+        uint8_t sub = (ndmaCnt[i] & 0x1F);
+        LOG_INFO("NDMA channel %d starting in sub-mode 0x%X, transferring from 0x%X to 0x%X with size "
+            "0x%X in blocks of 0x%X\n", i, sub, ndmaSad[i], ndmaDad[i], ndmaTcnt[i] << 2, ndmaWcnt[i] << 2);
+        if (sub != 0x8 && sub != 0x10)
+            LOG_CRIT("NDMA channel %d started in unimplemented sub-mode: 0x%X\n", i, sub);
+    }
+    else {
+        LOG_INFO("NDMA channel %d starting in mode 0x%X, transferring from 0x%X to 0x%X with size "
+            "0x%X in blocks of 0x%X\n", i, mode, ndmaSad[i], ndmaDad[i], ndmaTcnt[i] << 2, ndmaWcnt[i] << 2);
+        if ((mode < 0x6 && mode != 0x4) || (mode > 0xC && mode < 0xF))
+            LOG_CRIT("NDMA channel %d started in unimplemented mode: 0x%X\n", i, mode);
+    }
 }

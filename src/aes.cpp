@@ -313,12 +313,10 @@ void Aes::update() {
         }
     }
 
-    // Update FIFO sizes and check NDMA conditions
+    // Update FIFO sizes and NDMA request conditions
     aesCnt = (aesCnt & ~0x3FF) | (std::min<uint8_t>(16, readFifo.size()) << 5) | writeFifo.size();
-    if (writeFifo.size() <= ((aesCnt >> 10) & 0xC))
-        core->ndma.triggerMode(0x8); // AES in
-    if (readFifo.size() >= ((aesCnt >> 12) & 0xC) + 4)
-        core->ndma.triggerMode(0x9); // AES out
+    (writeFifo.size() <= ((aesCnt >> 10) & 0xC)) ? core->ndma.setDrq(0x8) : core->ndma.clearDrq(0x8); // AES in
+    (readFifo.size() >= ((aesCnt >> 12) & 0xC) + 4) ? core->ndma.setDrq(0x9) : core->ndma.clearDrq(0x9); // AES out
     scheduled = false;
 }
 

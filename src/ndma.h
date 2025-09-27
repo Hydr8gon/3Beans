@@ -26,7 +26,9 @@ class Core;
 class Ndma {
 public:
     Ndma(Core *core): core(core) {}
-    void triggerMode(uint8_t mode);
+
+    void setDrq(uint8_t type);
+    void clearDrq(uint8_t type);
     void update();
 
     uint32_t readSad(int i) { return ndmaSad[i]; }
@@ -45,10 +47,11 @@ public:
 
 private:
     Core *core;
-    uint8_t runMask = 0;
 
     uint32_t srcAddrs[8] = {};
     uint32_t dstAddrs[8] = {};
+    uint32_t drqMask = 0xFFFF0000;
+    uint8_t runMask = 0;
 
     uint32_t ndmaSad[8] = {};
     uint32_t ndmaDad[8] = {};
@@ -57,5 +60,6 @@ private:
     uint32_t ndmaFdata[8] = {};
     uint32_t ndmaCnt[8] = {};
 
+    bool shouldTransfer(int i, uint8_t type);
     void transferBlock(int i);
 };

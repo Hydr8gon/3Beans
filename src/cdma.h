@@ -34,8 +34,9 @@ class Cdma {
 public:
     Cdma(Core *core, CdmaId id);
 
+    void setDrq(uint8_t type);
+    void clearDrq(uint8_t type);
     void update();
-    void sendInterrupt(int type);
 
     uint32_t readInten() { return inten; }
     uint32_t readIntEventRis() { return intEventRis; }
@@ -66,6 +67,7 @@ private:
     CpuId cpu;
 
     std::queue<uint8_t> fifos[8];
+    uint32_t drqMask = 0;
     uint8_t dbgId = 0;
     bool burstReq = false;
     bool scheduled = false;
@@ -93,7 +95,11 @@ private:
 
     void dmaEnd(int i);
     void dmaLd(int i);
+    void dmaLds(int i);
+    void dmaLdb(int i);
     void dmaSt(int i);
+    void dmaSts(int i);
+    void dmaStb(int i);
     void dmaLp0(int i);
     void dmaLp1(int i);
     void dmaLdps(int i);

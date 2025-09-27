@@ -124,9 +124,9 @@ void Cartridge::updateSave() {
 }
 
 void Cartridge::ntrWordReady() {
-    // Indicate that a NTRCARD word is ready and trigger DMAs
+    // Indicate that a NTRCARD word is ready and trigger DRQs
     ntrRomcnt |= BIT(23);
-    core->ndma.triggerMode(0xC);
+    core->ndma.setDrq(0xC);
 }
 
 void Cartridge::ctrWordReady() {
@@ -136,10 +136,10 @@ void Cartridge::ctrWordReady() {
     else if (ctrFifo.size() < 7 && (ctrCnt & BIT(31)))
         core->schedule(CTR_WORD_READY, ctrClocks[(ctrCnt >> 24) & 0x7]);
 
-    // Set the ready bit and trigger DMAs every 8 words
+    // Set the ready bit and trigger DRQs every 8 words
     if ((ctrReadCount & 0x1F) == 0) {
         ctrCnt |= BIT(27);
-        core->ndma.triggerMode(0x4);
+        core->ndma.setDrq(0x4);
     }
 
     // Push a value to the FIFO based on the current CTRCARD reply state
@@ -260,6 +260,7 @@ uint32_t Cartridge::readNtrData() {
     // Wait until a word is ready and then clear the ready bit
     if (~ntrRomcnt & BIT(23)) return 0xFFFFFFFF;
     ntrRomcnt &= ~BIT(23);
+    core->ndma.clearDrq(0xC);
 
     // Decrement the read counter and check if finished
     if ((ntrCount -= 4) == 0) {
@@ -302,7 +303,9 @@ uint32_t Cartridge::readCtrFifo() {
     if (ctrFifo.empty()) return 0xFFFFFFFF;
     uint32_t value = ctrFifo.front();
     ctrFifo.pop();
-    ctrCnt &= ~(ctrFifo.empty() << 27);
+    if (!ctrFifo.empty()) return value;
+    ctrCnt &= ~BIT(27);
+    core->ndma.clearDrq(0x4);
     return value;
 }
 
@@ -442,12 +445,12 @@ void Cartridge::writeCtrCnt(uint32_t mask, uint32_t value) {
             break;
 
         case 0xC3: // Cart write
-            // Set parameters for a cart write and trigger DMAs right away
+            // Set parameters for a cart write and trigger DRQs right away
             ctrAddress = cmdH;
             ctrWriteCount = blkSize * uint32_t(cmdL);
             LOG_INFO("Starting CTRCARD write to address 0x%X with size 0x%X\n", ctrAddress, ctrWriteCount);
             ctrCnt |= BIT(27); // Ready
-            core->ndma.triggerMode(0x4);
+            core->ndma.setDrq(0x4);
 
             // Override the typical read response
             ctrCnt &= ~BIT(31); // Not busy
@@ -524,9 +527,9 @@ void Cartridge::writeCtrFifo(uint32_t mask, uint32_t value) {
             core->interrupts.sendInterrupt(ARM9, 23);
     }
     else if ((ctrWriteCount & 0x1F) == 0) {
-        // Set the ready bit and trigger DMAs every 8 words
+        // Set the ready bit and trigger DRQs every 8 words
         ctrCnt |= BIT(27);
-        core->ndma.triggerMode(0x4);
+        core->ndma.setDrq(0x4);
     }
 }
 

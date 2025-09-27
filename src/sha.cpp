@@ -192,15 +192,26 @@ void Sha::update() {
 
     // Check ARM9 DMA conditions
     if (arm9) {
-        if (outFifo.size() == 16) { // SHA out
-            core->ndma.triggerMode(0xB);
-            if (shaCnt & BIT(10))
-                core->cdmas[XDMA].sendInterrupt(0x7);
-        }
-        else if (outFifo.empty() && inFifo.empty()) { // SHA in
-            core->ndma.triggerMode(0xA);
+        // Set or clear the SHA in DRQs
+        if (inFifo.empty() && outFifo.empty()) {
+            core->ndma.setDrq(0xA);
             if (shaCnt & BIT(2))
-                core->cdmas[XDMA].sendInterrupt(0x6);
+                core->cdmas[XDMA].setDrq(0x6);
+        }
+        else {
+            core->ndma.clearDrq(0xA);
+            core->cdmas[XDMA].clearDrq(0x6);
+        }
+
+        // Set or clear the SHA out DRQs
+        if (outFifo.size() >= 16) {
+            core->ndma.setDrq(0xB);
+            if (shaCnt & BIT(10))
+                core->cdmas[XDMA].setDrq(0x7);
+        }
+        else {
+            core->ndma.clearDrq(0xB);
+            core->cdmas[XDMA].clearDrq(0x7);
         }
     }
 

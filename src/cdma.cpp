@@ -24,13 +24,19 @@ Cdma::Cdma(Core *core, CdmaId id): core(core), id(id) {
     cpu = (id == XDMA) ? ARM9 : ARM11;
 }
 
-void Cdma::sendInterrupt(int type) {
-    // Unhalt any CDMA channels that are waiting for this interrupt
-    for (int i = 0; i < 8; i++) {
-        if ((csrs[i] & 0x1FF) != ((type << 4) | 0x7)) continue;
-        csrs[i] = (csrs[i] & ~0xC1FF) | 0x1; // Executing
-        triggerUpdate();
-    }
+void Cdma::setDrq(uint8_t type) {
+    // Set a DRQ type's active bit
+    drqMask |= BIT(type);
+
+    // Update if a channel should be unhalted
+    for (int i = 0; i < 8; i++)
+        if ((csrs[i] & 0x1FF) == ((type << 4) | 0x7))
+            return triggerUpdate();
+}
+
+void Cdma::clearDrq(uint8_t type) {
+    // Clear a DRQ type's active bit
+    drqMask &= ~BIT(type);
 }
 
 void Cdma::triggerUpdate() {
@@ -41,11 +47,15 @@ void Cdma::triggerUpdate() {
 }
 
 void Cdma::update() {
-    // Run CDMA channels that are currently executing
+    // Unhalt any channels that were waiting for an active DRQ
+    for (int i = 0; i < 8; i++)
+        if ((csrs[i] & 0xF) == 0x7 && (drqMask & BIT((csrs[i] >> 4) & 0x1F)))
+            csrs[i] = (csrs[i] & ~0xC1FF) | 0x1; // Executing
+
+    // Run any channels that are now executing
     scheduled = false;
     for (int i = 0; i < 9; i++)
-        if ((csrs[i] & 0xF) == 0x1)
-            runOpcodes(i);
+        if ((csrs[i] & 0xF) == 0x1) runOpcodes(i);
 }
 
 void Cdma::runOpcodes(int i) {
@@ -62,7 +72,11 @@ void Cdma::runOpcodes(int i) {
             case 0x00: dmaEnd(i); break; // DMAEND
             case 0x01: dmaEnd(i); break; // DMAKILL (stub)
             case 0x04: dmaLd(i); break; // DMALD
+            case 0x05: dmaLds(i); break; // DMALDS
+            case 0x07: dmaLdb(i); break; // DMALDB
             case 0x08: dmaSt(i); break; // DMAST
+            case 0x09: dmaSts(i); break; // DMASTS
+            case 0x0B: dmaStb(i); break; // DMASTB
             case 0x12: dmaStubC(i, 0); break; // DMARMB (stub)
             case 0x13: dmaStubC(i, 0); break; // DMAWMB (stub)
             case 0x18: break; // DMANOP
@@ -179,6 +193,18 @@ void Cdma::dmaLd(int i) { // DMALD
     }
 }
 
+void Cdma::dmaLds(int i) { // DMALDS
+    // Perform a single load if requested
+    if (i == 8) return fault(i, 0); // Channel-exclusive
+    if (!burstReq) dmaLd(i);
+}
+
+void Cdma::dmaLdb(int i) { // DMALDB
+    // Perform a burst load if requested
+    if (i == 8) return fault(i, 0); // Channel-exclusive
+    if (burstReq) dmaLd(i);
+}
+
 void Cdma::dmaSt(int i) { // DMAST
     // Get the configured store size and length
     if (i == 8) return fault(i, 0); // Channel-exclusive
@@ -242,6 +268,18 @@ void Cdma::dmaSt(int i) { // DMAST
     }
 }
 
+void Cdma::dmaSts(int i) { // DMASTS
+    // Perform a single store if requested
+    if (i == 8) return fault(i, 0); // Channel-exclusive
+    if (!burstReq) dmaSt(i);
+}
+
+void Cdma::dmaStb(int i) { // DMASTB
+    // Perform a burst store if requested
+    if (i == 8) return fault(i, 0); // Channel-exclusive
+    if (burstReq) dmaSt(i);
+}
+
 void Cdma::dmaLp0(int i) { // DMALP lpc0,len
     // Set a channel's loop count 0 register
     if (i == 8) return fault(i, 0); // Channel-exclusive
@@ -254,7 +292,7 @@ void Cdma::dmaLp1(int i) { // DMALP lpc1,len
     lc1s[i] = core->memory.read<uint8_t>(cpu, cpcs[i]++);
 }
 
-void Cdma::dmaLdps(int i) {
+void Cdma::dmaLdps(int i) { // DMALDPS periph
     // Stub notifying a peripheral and perform a single load if requested
     if (i == 8) return fault(i, 0); // Channel-exclusive
     uint8_t periph = core->memory.read<uint8_t>(cpu, cpcs[i]++) >> 3;
@@ -262,7 +300,7 @@ void Cdma::dmaLdps(int i) {
     if (!burstReq) dmaLd(i);
 }
 
-void Cdma::dmaLdpb(int i) {
+void Cdma::dmaLdpb(int i) { // DMALDPB periph
     // Stub notifying a peripheral and perform a burst load if requested
     if (i == 8) return fault(i, 0); // Channel-exclusive
     uint8_t periph = core->memory.read<uint8_t>(cpu, cpcs[i]++) >> 3;
@@ -270,7 +308,7 @@ void Cdma::dmaLdpb(int i) {
     if (burstReq) dmaLd(i);
 }
 
-void Cdma::dmaStps(int i) {
+void Cdma::dmaStps(int i) { // DMASTPS periph
     // Stub notifying a peripheral and perform a single store if requested
     if (i == 8) return fault(i, 0); // Channel-exclusive
     uint8_t periph = core->memory.read<uint8_t>(cpu, cpcs[i]++) >> 3;
@@ -278,7 +316,7 @@ void Cdma::dmaStps(int i) {
     if (!burstReq) dmaSt(i);
 }
 
-void Cdma::dmaStpb(int i) {
+void Cdma::dmaStpb(int i) { // DMASTPB periph
     // Stub notifying a peripheral and perform a burst store if requested
     if (i == 8) return fault(i, 0); // Channel-exclusive
     uint8_t periph = core->memory.read<uint8_t>(cpu, cpcs[i]++) >> 3;
@@ -294,7 +332,11 @@ void Cdma::dmaWfp(int i, uint16_t burst) { // DMAWFP periph,type
     csrs[i] = (csrs[i] & ~0xC1FF) | burst | (periph << 4) | 0x7;
     burstReq = burst; // Assume burst for peripheral
 
-    // Log unimplemented peripheral interrupts
+    // Update right away if the DRQ is already active
+    if (drqMask & BIT(periph))
+        triggerUpdate();
+
+    // Log unimplemented peripheral DRQs
     if (id == XDMA) {
         if (periph >= 0x6) return;
         LOG_CRIT("XDMA channel %d waiting for unimplemented DRQ type: 0x%X\n", i, periph);
@@ -305,7 +347,7 @@ void Cdma::dmaWfp(int i, uint16_t burst) { // DMAWFP periph,type
     }
 }
 
-void Cdma::dmaSev(int i) {
+void Cdma::dmaSev(int i) { // DMASEV event
     // Send an event and check if it's in interrupt mode
     uint8_t event = core->memory.read<uint8_t>(cpu, cpcs[i]++) >> 3;
     if ((id == XDMA && event >= 12) || (id == CDMA0 && event >= 16)) return fault(i, 1);
@@ -322,14 +364,14 @@ void Cdma::dmaSev(int i) {
         core->interrupts.sendInterrupt(ARM11, 0x3A);
 }
 
-void Cdma::dmaLpend0(int i) {
+void Cdma::dmaLpend0(int i) { // DMALPEND lpc0
     // Decrement a channel's loop count 0 register and jump backwards if non-zero
     if (i == 8) return fault(i, 0); // Channel-exclusive
     uint8_t jump = core->memory.read<uint8_t>(cpu, cpcs[i]++);
     if (lc0s[i]-- != 0) cpcs[i] -= jump + 2;
 }
 
-void Cdma::dmaLpend1(int i) {
+void Cdma::dmaLpend1(int i) { // DMALPEND lpc1
     // Decrement a channel's loop count 1 register and jump backwards if non-zero
     if (i == 8) return fault(i, 0); // Channel-exclusive
     uint8_t jump = core->memory.read<uint8_t>(cpu, cpcs[i]++);
