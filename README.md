@@ -12,21 +12,19 @@ incorporate hardware acceleration or high-level elements to achieve reasonable s
 and can be downloaded from the [releases page](https://github.com/Hydr8gon/3Beans/releases).
 
 ### Setup
-Currently, 3Beans is only fully compatible with old 3DS systems that have
-[boot9strap](https://github.com/SciresM/boot9strap) installed. New 3DS mode has trouble booting the OS, and bootloaders
-like [fastboot3DS](https://github.com/derrekr/fastboot3DS) are completely broken. If you have a suitable setup, you can
-use [GodMode9](https://github.com/d0k3/GodMode9) to dump `boot9.bin`, `boot11.bin`, and `nand.bin`, which are required
-for 3Beans to do anything. You might also want to create `sd.img`, which can be any
+Currently, 3Beans is only fully compatible with old 3DS systems. New 3DS mode has trouble booting the OS, although it
+does work for bare-metal homebrew. If you have a console with homebrew access, you can use
+[GodMode9](https://github.com/d0k3/GodMode9) to dump `boot9.bin`, `boot11.bin`, and `nand.bin`, which are required for
+3Beans to do anything. You might also want to create `sd.img`, which can be any
 [FAT-formatted image file](https://kuribo64.net/get.php?id=mRJJ5GggXOPbKUMZ) to serve as an SD card. These files can be
 configured in the path settings.
 
 ### Usage
-Once the necessary files are present, 3Beans should function like the system they were dumped from. If you have
-[Luma3DS](https://github.com/LumaTeam/Luma3DS) installed, you can open the chainloader for bare-metal homebrew by
-holding the start button on boot. If you start the OS normally, you'll find that the home menu never shows up. This
-means that digital titles are inaccessible, but cartridges can still be used if the "Cart Auto-Boot" setting is enabled.
-Note that 3Beans requires encrypted cartridge dumps, unlike high-level emulators which typically expect decrypted ones.
-GodMode9 can dump both encrypted and decrypted ROMs, so make sure you get the right one.
+Once the necessary files are present, 3Beans should function like the system they were dumped from. Controls can be
+viewed and changed in the settings. If you try to boot the official OS, you'll find that the home menu never shows up.
+This means that digital titles are inaccessible, but cartridges can still be used if the "Cart Auto-Boot" setting is
+enabled. Note that 3Beans requires encrypted cartridge dumps, unlike high-level emulators which typically expect
+decrypted ones. GodMode9 can dump both encrypted and decrypted ROMs, so make sure you get the right one.
 
 ### Contributing
 This is a personal project, and I've decided to not review or accept pull requests for it. If you want to help, you can

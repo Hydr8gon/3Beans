@@ -28,6 +28,18 @@ bool Gpu::checkInterrupt(int i) {
     return true;
 }
 
+void Gpu::setReady(int i) {
+    // Trigger a GPU set ready interrupt after some time
+    gpuMemsetCnt[i] |= BIT(1);
+    core->interrupts.sendInterrupt(ARM11, 0x28 + i);
+}
+
+void Gpu::cpyReady() {
+    // Trigger a GPU copy ready interrupt after some time
+    gpuMemcpyCnt |= BIT(8);
+    core->interrupts.sendInterrupt(ARM11, 0x2C);
+}
+
 void Gpu::writeCfg11GpuCnt(uint32_t mask, uint32_t value) {
     // Write to the CFG11_GPU_CNT register
     mask &= 0x1007F;
@@ -60,14 +72,13 @@ void Gpu::writeMemsetCnt(int i, uint32_t mask, uint32_t value) {
     if ((mask & BIT(1)) && !(value & BIT(1)))
         gpuMemsetCnt[i] &= ~BIT(1);
 
-    // Check the start and enable bits and trigger an interrupt if running
+    // Check if a set should start and schedule the ready signal based on size
     if (!(value & mask & BIT(0)) || !(cfg11GpuCnt & BIT(1))) return;
-    gpuMemsetCnt[i] |= BIT(1);
-    core->interrupts.sendInterrupt(ARM11, 0x28 + i);
+    uint32_t start = (gpuMemsetDstAddr[i] << 3), end = (gpuMemsetDstEnd[i] << 3);
+    core->schedule(Task(GPU_SET0_READY + i), (end - start) / 8);
+    LOG_INFO("Performing GPU memory set at 0x%X with size 0x%X\n", start, end - start);
 
     // Perform a memory set with the selected data width
-    uint32_t start = (gpuMemsetDstAddr[i] << 3), end = (gpuMemsetDstEnd[i] << 3);
-    LOG_INFO("Performing GPU memory set at 0x%X with size 0x%X\n", start, end - start);
     switch ((gpuMemsetCnt[i] >> 8) & 0x3) {
     case 0: // 16-bit
         for (uint32_t addr = start; addr < end; addr += 2)
@@ -122,12 +133,8 @@ void Gpu::writeMemcpyCnt(uint32_t mask, uint32_t value) {
     if ((mask & BIT(8)) && !(value & BIT(8)))
         gpuMemcpyCnt &= ~BIT(8);
 
-    // Check the start and enable bits and trigger an interrupt if running
+    // Check if a copy should start and get common parameters
     if (!(value & mask & BIT(0)) || !(cfg11GpuCnt & BIT(4))) return;
-    gpuMemcpyCnt |= BIT(8);
-    core->interrupts.sendInterrupt(ARM11, 0x2C);
-
-    // Get the common parameters for texture copy and display copy
     uint32_t srcAddr = (gpuMemcpySrcAddr << 3);
     uint32_t dstAddr = (gpuMemcpyDstAddr << 3);
 
@@ -139,8 +146,11 @@ void Gpu::writeMemcpyCnt(uint32_t mask, uint32_t value) {
         uint32_t dstWidth = (gpuMemcpyTexDstWidth << 4) & 0xFFFF0;
         uint32_t dstGap = (gpuMemcpyTexDstWidth >> 12) & 0xFFFF0;
 
-        // Perform a texture copy, applying address gaps when widths are reached
+        // Schedule the ready signal based on texture size
+        core->schedule(GPU_CPY_READY, gpuMemcpyTexSize / 4);
         LOG_INFO("Performing GPU texture copy from 0x%X to 0x%X with size 0x%X\n", srcAddr, dstAddr, gpuMemcpyTexSize);
+
+        // Perform a texture copy, applying address gaps when widths are reached
         for (uint32_t i = 0; i < gpuMemcpyTexSize; i += 4) {
             core->memory.write<uint32_t>(ARM11, dstAddr + i, core->memory.read<uint32_t>(ARM11, srcAddr + i));
             if (srcWidth && !((i + 4) % srcWidth)) srcAddr += srcGap;
@@ -167,6 +177,9 @@ void Gpu::writeMemcpyCnt(uint32_t mask, uint32_t value) {
         yStart = dstHeight - 1, yInc = -1;
     else // Normal
         yStart = 0, yInc = 1;
+
+    // Schedule the ready signal based on display size
+    core->schedule(GPU_CPY_READY, dstWidth * dstHeight);
 
     // Check for unimplemented display copy flags
     LOG_INFO("Performing GPU display copy from 0x%X to 0x%X with width %d and height %d\n",

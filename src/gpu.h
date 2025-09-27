@@ -152,6 +152,9 @@ class Gpu {
 public:
     Gpu(Core *core): core(core) {}
 
+    void setReady(int i);
+    void cpyReady();
+
     uint32_t readCfg11GpuCnt() { return cfg11GpuCnt; }
     uint32_t readMemsetDstAddr(int i) { return gpuMemsetDstAddr[i]; }
     uint32_t readMemsetDstEnd(int i) { return gpuMemsetDstEnd[i]; }
