@@ -24,6 +24,11 @@
 
 class Core;
 
+struct MmuMap {
+    uint32_t addr;
+    uint32_t tag;
+};
+
 class Cp15 {
 public:
     uint32_t exceptAddrs[MAX_CPUS] = {};
@@ -39,7 +44,10 @@ public:
 private:
     Core *core;
 
+    MmuMap mmuMaps[MAX_CPUS - 1][0x100000] = {};
+    uint32_t mmuTags[MAX_CPUS - 1] = { 1, 1, 1, 1 };
     bool mmuEnables[MAX_CPUS - 1] = {};
+
     bool dtcmRead = false, dtcmWrite = false;
     bool itcmRead = false, itcmWrite = false;
     uint32_t dtcmAddr = 0, dtcmSize = 0;
@@ -58,6 +66,7 @@ private:
     uint32_t itcmReg = 0;
 
     uint32_t mmuTranslate(CpuId id, uint32_t address);
+    void mmuInvalidate(CpuId id);
 
     void writeCtrl11(CpuId id, uint32_t value);
     void writeCtrl9(CpuId id, uint32_t value);

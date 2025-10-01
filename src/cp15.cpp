@@ -17,6 +17,7 @@
     along with 3Beans. If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <cstring>
 #include "core.h"
 
 template uint8_t Cp15::read(CpuId, uint32_t);
@@ -27,6 +28,11 @@ template void Cp15::write(CpuId, uint32_t, uint16_t);
 template void Cp15::write(CpuId, uint32_t, uint32_t);
 
 uint32_t Cp15::mmuTranslate(CpuId id, uint32_t address) {
+    // Use a cached MMU address if its tag matches
+    MmuMap &map = mmuMaps[id][address >> 12];
+    if (map.tag == mmuTags[id])
+        return map.addr | (address & 0xFFF);
+
     // Check control value X to determine the table base address
     uint32_t base;
     if (tlbCtrlRegs[id]) {
@@ -47,22 +53,38 @@ uint32_t Cp15::mmuTranslate(CpuId id, uint32_t address) {
         entry = core->memory.read<uint32_t>(id, (entry & 0xFFFFFC00) + ((address >> 10) & 0x3FC));
         switch (entry & 0x3) {
         case 0x1: // 64KB large page
-            return (entry & 0xFFFF0000) | (address & 0xFFFF);
+            entry = (entry & 0xFFFF0000) | (address & 0xFFFF);
+            goto finish;
         case 0x2: case 0x3: // 4KB small page
-            return (entry & 0xFFFFF000) | (address & 0xFFF);
+            entry = (entry & 0xFFFFF000) | (address & 0xFFF);
+            goto finish;
         }
         break;
 
     case 0x2: // Section
         if (entry & BIT(18)) // 16MB supersection
-            return (entry & 0xFF000000) | (address & 0xFFFFFF);
+            entry = (entry & 0xFF000000) | (address & 0xFFFFFF);
         else // 1MB section
-            return (entry & 0xFFF00000) | (address & 0xFFFFF);
+            entry = (entry & 0xFFF00000) | (address & 0xFFFFF);
+        goto finish;
     }
 
     // Catch unhandled translation table entries
     LOG_CRIT("Unhandled ARM11 core %d MMU translation fault at 0x%X\n", id, address);
     return address;
+
+finish:
+    // Cache an address mapping with the current tag
+    map.addr = (entry & ~0xFFF);
+    map.tag = mmuTags[id];
+    return entry;
+}
+
+void Cp15::mmuInvalidate(CpuId id) {
+    // Increment the MMU tag to invalidate maps and reset on overflow to avoid false positives
+    if (++mmuTags[id]) return;
+    memset(mmuMaps[id], 0, sizeof(mmuMaps[id]));
+    mmuTags[id] = 1;
 }
 
 template <typename T> T Cp15::read(CpuId id, uint32_t address) {
@@ -192,6 +214,18 @@ void Cp15::writeReg(CpuId id, uint8_t cn, uint8_t cm, uint8_t cp, uint32_t value
             case 0x070A04: return; // Data sync barrier (stub)
             case 0x070A05: return; // Data memory barrier (stub)
             case 0x070E01: return; // Clean+invalidate d-cache line (stub)
+            case 0x080500: return mmuInvalidate(id); // Invalidate i-TLB (stub)
+            case 0x080501: return mmuInvalidate(id); // Invalidate i-TLB by MVA+ASID (stub)
+            case 0x080502: return mmuInvalidate(id); // Invalidate i-TLB by ASID (stub)
+            case 0x080503: return mmuInvalidate(id); // Invalidate i-TLB by MVA (stub)
+            case 0x080600: return mmuInvalidate(id); // Invalidate d-TLB (stub)
+            case 0x080601: return mmuInvalidate(id); // Invalidate d-TLB by MVA+ASID (stub)
+            case 0x080602: return mmuInvalidate(id); // Invalidate d-TLB by ASID (stub)
+            case 0x080603: return mmuInvalidate(id); // Invalidate d-TLB by MVA (stub)
+            case 0x080700: return mmuInvalidate(id); // Invalidate TLB (stub)
+            case 0x080701: return mmuInvalidate(id); // Invalidate TLB by MVA+ASID (stub)
+            case 0x080702: return mmuInvalidate(id); // Invalidate TLB by ASID (stub)
+            case 0x080703: return mmuInvalidate(id); // Invalidate TLB by MVA (stub)
             case 0x0D0002: return writeThreadId(id, 0, value); // Thread ID 0
             case 0x0D0003: return writeThreadId(id, 1, value); // Thread ID 1
             case 0x0D0004: return writeThreadId(id, 2, value); // Thread ID 2
@@ -240,18 +274,21 @@ void Cp15::writeTlbBase0(CpuId id, uint32_t value) {
     // Set a core's translation table base 0 register
     tlbBase0Regs[id] = value;
     LOG_INFO("Changing ARM11 core %d translation table base 0 to 0x%X\n", id, tlbBase0Regs[id] & 0xFFFFFF80);
+    mmuInvalidate(id);
 }
 
 void Cp15::writeTlbBase1(CpuId id, uint32_t value) {
     // Set a core's translation table base 1 register
     tlbBase1Regs[id] = value;
     LOG_INFO("Changing ARM11 core %d translation table base 1 to 0x%X\n", id, tlbBase1Regs[id] & 0xFFFFC000);
+    mmuInvalidate(id);
 }
 
 void Cp15::writeTlbCtrl(CpuId id, uint32_t value) {
     // Set a core's translation table control register
     tlbCtrlRegs[id] = value & 0x7;
     LOG_INFO("Changing ARM11 core %d translation table control to %d\n", id, tlbCtrlRegs[id]);
+    mmuInvalidate(id);
 }
 
 void Cp15::writeAddrTrans(CpuId id, uint32_t value) {
