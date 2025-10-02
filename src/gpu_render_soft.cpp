@@ -825,58 +825,66 @@ void GpuRenderSoft::clipTriangle(SoftVertex &a, SoftVertex &b, SoftVertex &c) {
     }
 }
 
-void GpuRenderSoft::runShader(float (*input)[4], PrimMode mode) {
-    // Update source registers and reset the shader state
-    for (int i = 0x0; i < 0x10; i++)
-        srcRegs[i] = input[i];
-    memset(shdTmp, 0, sizeof(shdTmp));
-    memset(shdOut, 0, sizeof(shdOut));
-    memset(shdAddr, 0, sizeof(shdAddr));
-    memset(shdCond, 0, sizeof(shdCond));
-    ifStack = callStack = {};
-    shdPc = vshEntry;
+void GpuRenderSoft::runShader(float (*input)[4], PrimMode mode, uint32_t idx) {
+    // Get an entry in the vertex cache, up to the first 256 in a list
+    idx = std::min<uint32_t>(0x100, idx);
+    VertexCache &cache = vtxCache[idx];
+    SoftVertex &vertex = cache.vtx;
 
-    // Execute the vertex shader until completion
-    while (shdPc != vshEnd) {
-        // Run an opcode and increment the program counter
-        uint32_t opcode = vshCode[shdPc & 0x1FF];
-        uint16_t cmpPc = ++shdPc;
-        (this->*vshInstrs[opcode >> 26])(opcode);
+    // Process a vertex if it can't be cached or is outdated
+    if (idx >= 0x100 || cache.tag != vtxTag) {
+        // Update source registers and reset the shader state
+        for (int i = 0x0; i < 0x10; i++)
+            srcRegs[i] = input[i];
+        memset(shdTmp, 0, sizeof(shdTmp));
+        memset(shdOut, 0, sizeof(shdOut));
+        memset(shdAddr, 0, sizeof(shdAddr));
+        memset(shdCond, 0, sizeof(shdCond));
+        ifStack = callStack = {};
+        shdPc = vshEntry;
 
-        // Check the program counter against flow stacks and pop on match
-        while (!callStack.empty() && !((cmpPc ^ callStack.front()) & 0x1FF))
-            shdPc = (callStack.front() >> 16), callStack.pop_front(); // Multiple checks
-        if (!ifStack.empty() && !((cmpPc ^ ifStack.front()) & 0x1FF))
-            shdPc = (ifStack.front() >> 16), ifStack.pop_front(); // Single check
+        // Execute the vertex shader until completion
+        while (shdPc != vshEnd) {
+            // Run an opcode and increment the program counter
+            uint32_t opcode = vshCode[shdPc & 0x1FF];
+            uint16_t cmpPc = ++shdPc;
+            (this->*vshInstrs[opcode >> 26])(opcode);
 
-        // Adjust the loop counter and loop again or end on program counter match
-        if (!loopStack.empty() && !((cmpPc ^ loopStack.front()) & 0x1FF)) {
-            opcode = vshCode[((loopStack.front() >> 12) - 1) & 0x1FF];
-            shdAddr[2] += shdInts[(opcode >> 22) & 0x3][2];
-            shdPc = (loopStack.front() >> 12) & 0xFFF;
-            if (loopStack.front() >> 24)
-                loopStack[loopStack.size() - 1] -= BIT(24);
-            else
-                loopStack.pop_front();
+            // Check the program counter against flow stacks and pop on match
+            while (!callStack.empty() && !((cmpPc ^ callStack.front()) & 0x1FF))
+                shdPc = (callStack.front() >> 16), callStack.pop_front(); // Multiple checks
+            if (!ifStack.empty() && !((cmpPc ^ ifStack.front()) & 0x1FF))
+                shdPc = (ifStack.front() >> 16), ifStack.pop_front(); // Single check
+
+            // Adjust the loop counter and loop again or end on program counter match
+            if (!loopStack.empty() && !((cmpPc ^ loopStack.front()) & 0x1FF)) {
+                opcode = vshCode[((loopStack.front() >> 12) - 1) & 0x1FF];
+                shdAddr[2] += shdInts[(opcode >> 22) & 0x3][2];
+                shdPc = (loopStack.front() >> 12) & 0xFFF;
+                if (loopStack.front() >> 24)
+                    loopStack[loopStack.size() - 1] -= BIT(24);
+                else
+                    loopStack.pop_front();
+            }
         }
-    }
 
-    // Build a vertex using the shader output map
-    SoftVertex vertex;
-    vertex.x = shdOut[outMap[0x0][0]][outMap[0x0][1]];
-    vertex.y = shdOut[outMap[0x1][0]][outMap[0x1][1]];
-    vertex.z = shdOut[outMap[0x2][0]][outMap[0x2][1]];
-    vertex.w = shdOut[outMap[0x3][0]][outMap[0x3][1]];
-    vertex.r = shdOut[outMap[0x8][0]][outMap[0x8][1]];
-    vertex.g = shdOut[outMap[0x9][0]][outMap[0x9][1]];
-    vertex.b = shdOut[outMap[0xA][0]][outMap[0xA][1]];
-    vertex.a = shdOut[outMap[0xB][0]][outMap[0xB][1]];
-    vertex.s0 = shdOut[outMap[0xC][0]][outMap[0xC][1]];
-    vertex.t0 = shdOut[outMap[0xD][0]][outMap[0xD][1]];
-    vertex.s1 = shdOut[outMap[0xE][0]][outMap[0xE][1]];
-    vertex.t1 = shdOut[outMap[0xF][0]][outMap[0xF][1]];
-    vertex.s2 = shdOut[outMap[0x16][0]][outMap[0x16][1]];
-    vertex.t2 = shdOut[outMap[0x17][0]][outMap[0x17][1]];
+        // Build a vertex using the shader output map
+        vertex.x = shdOut[outMap[0x0][0]][outMap[0x0][1]];
+        vertex.y = shdOut[outMap[0x1][0]][outMap[0x1][1]];
+        vertex.z = shdOut[outMap[0x2][0]][outMap[0x2][1]];
+        vertex.w = shdOut[outMap[0x3][0]][outMap[0x3][1]];
+        vertex.r = shdOut[outMap[0x8][0]][outMap[0x8][1]];
+        vertex.g = shdOut[outMap[0x9][0]][outMap[0x9][1]];
+        vertex.b = shdOut[outMap[0xA][0]][outMap[0xA][1]];
+        vertex.a = shdOut[outMap[0xB][0]][outMap[0xB][1]];
+        vertex.s0 = shdOut[outMap[0xC][0]][outMap[0xC][1]];
+        vertex.t0 = shdOut[outMap[0xD][0]][outMap[0xD][1]];
+        vertex.s1 = shdOut[outMap[0xE][0]][outMap[0xE][1]];
+        vertex.t1 = shdOut[outMap[0xF][0]][outMap[0xF][1]];
+        vertex.s2 = shdOut[outMap[0x16][0]][outMap[0x16][1]];
+        vertex.t2 = shdOut[outMap[0x17][0]][outMap[0x17][1]];
+        cache.tag = vtxTag;
+    }
 
     // Reset the vertex count if the primitive mode changed
     if (mode != SAME_PRIM) {
@@ -936,6 +944,13 @@ void GpuRenderSoft::runShader(float (*input)[4], PrimMode mode) {
             return clipTriangle(vertices[0], vertices[2], vertices[1]);
         }
     }
+}
+
+void GpuRenderSoft::startList() {
+    // Increment the vertex tag to invalidate cache and reset on overflow to avoid false positives
+    if (++vtxTag) return;
+    memset(vtxCache, 0, sizeof(vtxCache));
+    vtxTag = 1;
 }
 
 float *GpuRenderSoft::getSrc(uint8_t src, uint32_t desc, uint8_t idx) {

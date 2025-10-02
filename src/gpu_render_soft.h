@@ -31,10 +31,17 @@ struct SoftVertex {
     float t0, t1, t2;
 };
 
+struct VertexCache {
+    SoftVertex vtx;
+    uint32_t tag;
+};
+
 class GpuRenderSoft {
 public:
     GpuRenderSoft(Core *core);
-    void runShader(float (*input)[4], PrimMode mode);
+
+    void runShader(float (*input)[4], PrimMode mode, uint32_t idx = -1);
+    void startList();
 
     void writeVshCode(int i, uint32_t value) { vshCode[i] = value; }
     void writeVshDesc(int i, uint32_t value) { vshDesc[i] = value; }
@@ -86,8 +93,10 @@ private:
     static int16_t etc1Tables[8][4];
 
     uint8_t outMap[0x18][2] = {};
-    SoftVertex vertices[3];
+    VertexCache vtxCache[0x101] = {};
+    SoftVertex vertices[3] = {};
     uint32_t vtxCount = 0;
+    uint32_t vtxTag = 1;
     PrimMode primMode = SAME_PRIM;
     CullMode cullMode = CULL_NONE;
 

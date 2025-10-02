@@ -161,7 +161,7 @@ void Gpu::drawAttrIdx(uint32_t idx) {
     }
 
     // Run the finished input through the shader and handle primitive restarts
-    core->gpuRender.runShader(input, restart ? PrimMode(((gpuPrimConfig >> 8) & 0x3) + 1) : SAME_PRIM);
+    core->gpuRender.runShader(input, restart ? PrimMode(((gpuPrimConfig >> 8) & 0x3) + 1) : SAME_PRIM, idx);
     restart = false;
 }
 
@@ -567,6 +567,7 @@ void Gpu::writeAttrFirstIdx(uint32_t mask, uint32_t value) {
 void Gpu::writeAttrDrawArrays(uint32_t mask, uint32_t value) {
     // Draw vertices from the attribute buffer using increasing indices
     LOG_INFO("GPU sending %d linear vertices to be rendered\n", gpuAttrNumVerts);
+    core->gpuRender.startList();
     for (uint32_t i = 0; i < gpuAttrNumVerts; i++)
         drawAttrIdx(gpuAttrFirstIdx + i);
 }
@@ -574,6 +575,7 @@ void Gpu::writeAttrDrawArrays(uint32_t mask, uint32_t value) {
 void Gpu::writeAttrDrawElems(uint32_t mask, uint32_t value) {
     // Draw vertices from the attribute buffer using indices from a list
     LOG_INFO("GPU sending %d indexed vertices to be rendered\n", gpuAttrNumVerts);
+    core->gpuRender.startList();
     uint32_t base = (gpuAttrBase << 3) + (gpuAttrIdxList & 0xFFFFFFF);
     if (gpuAttrIdxList & BIT(31)) // 16-bit
         for (uint32_t i = 0; i < gpuAttrNumVerts; i++)
