@@ -165,6 +165,12 @@ void GpuRenderSoft::getTexel(float &r, float &g, float &b, float &a, float s, fl
         }
     }
 
+    // Use the cached texel if coordinates are unchanged
+    if (lastU[i] == u && lastV[i] == v) {
+        r = rt[i], g = gt[i], b = bt[i], a = at[i];
+        return;
+    }
+
     // Convert the texture coordinates to a swizzled memory offset
     uint32_t value, ofs = (u & 0x1) | ((u << 1) & 0x4) | ((u << 2) & 0x10);
     ofs |= ((v << 1) & 0x2) | ((v << 2) & 0x8) | ((v << 3) & 0x20);
@@ -178,119 +184,125 @@ void GpuRenderSoft::getTexel(float &r, float &g, float &b, float &a, float s, fl
         g = float((value >> 16) & 0xFF) / 0xFF;
         b = float((value >> 8) & 0xFF) / 0xFF;
         a = float((value >> 0) & 0xFF) / 0xFF;
-        return;
+        break;
     case TEX_RGB8:
         r = float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs * 3 + 2)) / 0xFF;
         g = float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs * 3 + 1)) / 0xFF;
         b = float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs * 3 + 0)) / 0xFF;
         a = 1.0f;
-        return;
+        break;
     case TEX_RGB5A1:
         value = core->memory.read<uint16_t>(ARM11, texAddrs[i] + ofs * 2);
         r = float((value >> 11) & 0x1F) / 0x1F;
         g = float((value >> 6) & 0x1F) / 0x1F;
         b = float((value >> 1) & 0x1F) / 0x1F;
         a = (value & BIT(0)) ? 1.0f : 0.0f;
-        return;
+        break;
     case TEX_RGB565:
         value = core->memory.read<uint16_t>(ARM11, texAddrs[i] + ofs * 2);
         r = float((value >> 11) & 0x1F) / 0x1F;
         g = float((value >> 5) & 0x3F) / 0x3F;
         b = float((value >> 0) & 0x1F) / 0x1F;
         a = 1.0f;
-        return;
+        break;
     case TEX_RGBA4:
         value = core->memory.read<uint16_t>(ARM11, texAddrs[i] + ofs * 2);
         r = float((value >> 12) & 0xF) / 0xF;
         g = float((value >> 8) & 0xF) / 0xF;
         b = float((value >> 4) & 0xF) / 0xF;
         a = float((value >> 0) & 0xF) / 0xF;
-        return;
+        break;
     case TEX_LA8:
         value = core->memory.read<uint16_t>(ARM11, texAddrs[i] + ofs * 2);
         r = g = b = float((value >> 8) & 0xFF) / 0xFF;
         a = float((value >> 0) & 0xFF) / 0xFF;
-        return;
+        break;
     case TEX_RG8:
         value = core->memory.read<uint16_t>(ARM11, texAddrs[i] + ofs * 2);
         r = float((value >> 8) & 0xFF) / 0xFF;
         g = float((value >> 0) & 0xFF) / 0xFF;
         b = 0.0f, a = 1.0f;
-        return;
+        break;
     case TEX_L8:
         r = g = b = float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs)) / 0xFF;
         a = 1.0f;
-        return;
+        break;
     case TEX_A8:
         r = g = b = 0.0f;
         a = float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs)) / 0xFF;
-        return;
+        break;
     case TEX_LA4:
         value = core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs);
         r = g = b = float((value >> 4) & 0xF) / 0xF;
         a = float((value >> 0) & 0xF) / 0xF;
-        return;
+        break;
     case TEX_L4:
         value = core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs / 2);
         r = g = b = float((value >> ((ofs & 0x1) * 4)) & 0xF) / 0xF;
         a = 1.0f;
-        return;
+        break;
     case TEX_A4:
         value = core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs / 2);
         r = g = b = 0.0f;
         a = float((value >> ((ofs & 0x1) * 4)) & 0xF) / 0xF;
-        return;
+        break;
     case TEX_UNK:
         r = g = b = a = 1.0f;
-        return;
+        break;
+
+    case TEX_ETC1: case TEX_ETC1A4:
+        // Adjust the offset for 4x4 ETC1 tiles and read alpha if provided
+        uint8_t idx = (u & 0x3) * 4 + (v & 0x3);
+        if (texFmts[i] == TEX_ETC1A4) {
+            ofs = (ofs & ~0xF) + 8;
+            value = core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs - 8 + idx / 2);
+            a = float((value >> ((idx & 0x1) * 4)) & 0xF) / 0xF;
+        }
+        else {
+            ofs = (ofs & ~0xF) >> 1;
+            a = 1.0f;
+        }
+
+        // Decode an ETC1 texel based on the block it falls in and the base color mode
+        int32_t val1 = core->memory.read<uint32_t>(ARM11, texAddrs[i] + ofs + 0);
+        int32_t val2 = core->memory.read<uint32_t>(ARM11, texAddrs[i] + ofs + 4);
+        if ((((val2 & BIT(0)) ? v : u) & 0x3) < 2) { // Block 1
+            int16_t tbl = etc1Tables[(val2 >> 5) & 0x7][((val1 >> (idx + 15)) & 0x2) | ((val1 >> idx) & 0x1)];
+            if (val2 & BIT(1)) { // Differential
+                r = float(((val2 >> 27) & 0x1F) * 0x21 / 4 + tbl);
+                g = float(((val2 >> 19) & 0x1F) * 0x21 / 4 + tbl);
+                b = float(((val2 >> 11) & 0x1F) * 0x21 / 4 + tbl);
+            }
+            else { // Individual
+                r = float(((val2 >> 28) & 0xF) * 0x11 + tbl);
+                g = float(((val2 >> 20) & 0xF) * 0x11 + tbl);
+                b = float(((val2 >> 12) & 0xF) * 0x11 + tbl);
+            }
+        }
+        else { // Block 2
+            int16_t tbl = etc1Tables[(val2 >> 2) & 0x7][((val1 >> (idx + 15)) & 0x2) | ((val1 >> idx) & 0x1)];
+            if (val2 & BIT(1)) { // Differential
+                r = float((((val2 >> 27) & 0x1F) + (int8_t(val2 >> 19) >> 5)) * 0x21 / 4 + tbl);
+                g = float((((val2 >> 19) & 0x1F) + (int8_t(val2 >> 11) >> 5)) * 0x21 / 4 + tbl);
+                b = float((((val2 >> 11) & 0x1F) + (int8_t(val2 >> 3) >> 5)) * 0x21 / 4 + tbl);
+            }
+            else { // Individual
+                r = float(((val2 >> 24) & 0xF) * 0x11 + tbl);
+                g = float(((val2 >> 16) & 0xF) * 0x11 + tbl);
+                b = float(((val2 >> 8) & 0xF) * 0x11 + tbl);
+            }
+        }
+
+        // Normalize and clamp the final color values
+        r = std::min(1.0f, std::max(0.0f, r / 255));
+        g = std::min(1.0f, std::max(0.0f, g / 255));
+        b = std::min(1.0f, std::max(0.0f, b / 255));
+        break;
     }
 
-    // Adjust the offset for 4x4 ETC1 tiles and read alpha if provided
-    uint8_t idx = (u & 0x3) * 4 + (v & 0x3);
-    if (texFmts[i] == TEX_ETC1A4) {
-        ofs = (ofs & ~0xF) + 8;
-        value = core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs - 8 + idx / 2);
-        a = float((value >> ((idx & 0x1) * 4)) & 0xF) / 0xF;
-    }
-    else {
-        ofs = (ofs & ~0xF) >> 1;
-        a = 1.0f;
-    }
-
-    // Decode an ETC1 texel based on the block it falls in and the base color mode
-    int32_t val1 = core->memory.read<uint32_t>(ARM11, texAddrs[i] + ofs + 0);
-    int32_t val2 = core->memory.read<uint32_t>(ARM11, texAddrs[i] + ofs + 4);
-    if ((((val2 & BIT(0)) ? v : u) & 0x3) < 2) { // Block 1
-        int16_t tbl = etc1Tables[(val2 >> 5) & 0x7][((val1 >> (idx + 15)) & 0x2) | ((val1 >> idx) & 0x1)];
-        if (val2 & BIT(1)) { // Differential
-            r = float(((val2 >> 27) & 0x1F) * 0x21 / 4 + tbl);
-            g = float(((val2 >> 19) & 0x1F) * 0x21 / 4 + tbl);
-            b = float(((val2 >> 11) & 0x1F) * 0x21 / 4 + tbl);
-        }
-        else { // Individual
-            r = float(((val2 >> 28) & 0xF) * 0x11 + tbl);
-            g = float(((val2 >> 20) & 0xF) * 0x11 + tbl);
-            b = float(((val2 >> 12) & 0xF) * 0x11 + tbl);
-        }
-    }
-    else { // Block 2
-        int16_t tbl = etc1Tables[(val2 >> 2) & 0x7][((val1 >> (idx + 15)) & 0x2) | ((val1 >> idx) & 0x1)];
-        if (val2 & BIT(1)) { // Differential
-            r = float((((val2 >> 27) & 0x1F) + (int8_t(val2 >> 19) >> 5)) * 0x21 / 4 + tbl);
-            g = float((((val2 >> 19) & 0x1F) + (int8_t(val2 >> 11) >> 5)) * 0x21 / 4 + tbl);
-            b = float((((val2 >> 11) & 0x1F) + (int8_t(val2 >> 3) >> 5)) * 0x21 / 4 + tbl);
-        }
-        else { // Individual
-            r = float(((val2 >> 24) & 0xF) * 0x11 + tbl);
-            g = float(((val2 >> 16) & 0xF) * 0x11 + tbl);
-            b = float(((val2 >> 8) & 0xF) * 0x11 + tbl);
-        }
-    }
-
-    // Normalize and clamp the final color values
-    r = std::min(1.0f, std::max(0.0f, r / 255));
-    g = std::min(1.0f, std::max(0.0f, g / 255));
-    b = std::min(1.0f, std::max(0.0f, b / 255));
+    // Cache the texel to avoid decoding multiple times
+    rt[i] = r, gt[i] = g, bt[i] = b, at[i] = a;
+    lastU[i] = u, lastV[i] = v;
 }
 
 void GpuRenderSoft::getSource(float &r, float &g, float &b, float &a, SoftVertex &v, int i, int j) {
@@ -1334,10 +1346,17 @@ void GpuRenderSoft::setOutMap(uint8_t (*map)[2]) {
     memcpy(outMap, map, sizeof(outMap));
 }
 
+void GpuRenderSoft::setTexAddr(int i, uint32_t address) {
+    // Set one of the texture addresses and invalidate its cache
+    texAddrs[i] = address;
+    lastU[i] = lastV[i] = -1;
+}
+
 void GpuRenderSoft::setTexDims(int i, uint16_t width, uint16_t height) {
-    // Set one of the texture unit widths and heights
+    // Set one of the texture unit widths/heights and invalidate its cache
     texWidths[i] = width;
     texHeights[i] = height;
+    lastU[i] = lastV[i] = -1;
 }
 
 void GpuRenderSoft::setTexBorder(int i, float r, float g, float b, float a) {
@@ -1346,6 +1365,12 @@ void GpuRenderSoft::setTexBorder(int i, float r, float g, float b, float a) {
     texBorders[i][1] = g;
     texBorders[i][2] = b;
     texBorders[i][3] = a;
+}
+
+void GpuRenderSoft::setTexFmt(int i, TexFmt format) {
+    // Set one of the texture formats and invalidate its cache
+    texFmts[i] = format;
+    lastU[i] = lastV[i] = -1;
 }
 
 void GpuRenderSoft::setCombSrc(int i, int j, CombSrc src) {

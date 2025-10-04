@@ -50,10 +50,10 @@ public:
     void setVshInt(int i, int j, uint8_t value) { vshInts[i][j] = value; }
     void setVshFloat(int i, int j, float value) { vshFloats[i][j] = value; }
 
-    void setTexAddr(int i, uint32_t address) { texAddrs[i] = address; }
+    void setTexAddr(int i, uint32_t address);
     void setTexDims(int i, uint16_t width, uint16_t height);
     void setTexBorder(int i, float r, float g, float b, float a);
-    void setTexFmt(int i, TexFmt format) { texFmts[i] = format; }
+    void setTexFmt(int i, TexFmt format);
     void setTexWrapS(int i, TexWrap wrap) { texWrapS[i] = wrap; }
     void setTexWrapT(int i, TexWrap wrap) { texWrapT[i] = wrap; }
     void setCombSrc(int i, int j, CombSrc src);
@@ -101,6 +101,9 @@ private:
     CullMode cullMode = CULL_NONE;
 
     float rc[6], gc[6], bc[6], ac[6];
+    float rt[3], gt[3], bt[3], at[3];
+    int64_t lastU[3] = { -1, -1, -1 };
+    int64_t lastV[3] = { -1, -1, -1 };
     uint8_t combStart = -1;
     uint8_t combMask = 0;
 
