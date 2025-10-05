@@ -157,7 +157,6 @@ int TeakInterp::andAbab(uint16_t opcode) {
 }
 
 AND_FUNC(andI16, readParam(), 8, 2) // AND Imm16, Ax
-AND_FUNC(andI8, (opcode & 0xFF), 8, 1) // AND Imm8u, Ax
 AND_FUNC(andMi16, core->dsp.readData(readParam()), 8, 2) // AND MemImm16, Ax
 AND_FUNC(andMi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 8, 1) // AND MemImm8, Ax
 AND_FUNC(andM7i16, core->dsp.readData(regR[7] + readParam()), 8, 2) // AND MemR7Imm16, Ax
@@ -165,6 +164,14 @@ AND_FUNC(andM7i7, core->dsp.readData(regR[7] + (int8_t(opcode << 1) >> 1)), 8, 1
 AND_FUNC(andMrn, core->dsp.readData(getRnStepZids(opcode)), 8, 1) // AND MemRnStepZids, Ax
 AND_FUNC(andReg, readRegP0(opcode & 0x1F, false), 8, 1) // AND RegisterP0, Ax
 AND_FUNC(andR6, regR[6], 4, 1) // AND R6, Ax
+
+int TeakInterp::andI8(uint16_t opcode) { // AND Imm8u, Ax
+    // Bitwise and an 8-bit immediate with an A accumulator and set flags, but preserve bits 8-15
+    int64_t res = regA[(opcode >> 8) & 0x1].v & (0xFF00 | (opcode & 0xFF));
+    writeStt0((regStt[0] & ~0xE4) | calcZmne(res & 0xFF));
+    (this->*writeAx40[(opcode >> 8) & 0x1])(res);
+    return 1;
+}
 
 // Change bits in a memory value using a 16-bit immediate mask and set flags
 #define CHNGM_FUNC(name, op1a) int TeakInterp::name(uint16_t opcode) { \
@@ -190,7 +197,7 @@ CHNGM_FUNC(chngMrn, getRnStepZids(opcode)) // CHNG Imm16, MemRnStepZids
     return 2; \
 }
 
-CHNGR_FUNC(chngReg, *readReg[opcode & 0x1F], (this->*writeReg[opcode & 0x1F])) // CHNG Imm16, Register
+CHNGR_FUNC(chngReg, (this->*readRegP[opcode & 0x1F])(), (this->*writeReg[opcode & 0x1F])) // CHNG Imm16, Register
 CHNGR_FUNC(chngR6, regR[6], regR[6]=) // CHNG Imm16, R6
 CHNGR_FUNC(chngSm, *readSttMod[opcode & 0x7], (this->*writeSttMod[opcode & 0x7])) // CHNG Imm16, SttMod
 
@@ -326,35 +333,32 @@ int TeakInterp::dec(uint16_t opcode) { // DEC Ax, Cond
     return 1;
 }
 
-// Get a value from either an A accumulator or a register as a sign-extended high word
-#define EXP_REG ((opcode & 0x1E) == 0x18) ? regA[opcode & 0x1].v : int32_t(readRegP0(opcode & 0x1F) << 16)
-
 // Calculate the shift that would normalize a value and store it in the shift register
 #define EXP_FUNC(name, op0) int TeakInterp::name(uint16_t opcode) { \
     int64_t value = op0; \
     int16_t exp = 1; \
-    while (!((value ^ (value << exp)) & BITL(40)) && exp < 40) exp++; \
+    while (!((value ^ (value << exp)) & BITL(40)) && exp <= 40) exp++; \
     regSv = (exp - 10); \
     return 1; \
 }
 
 EXP_FUNC(expB, regB[opcode & 0x1].v) // EXP Bx
 EXP_FUNC(expMrn, int32_t(core->dsp.readData(getRnStepZids(opcode)) << 16)) // EXP MemRnStepZids
-EXP_FUNC(expReg, EXP_REG) // EXP RegisterP0
+EXP_FUNC(expReg, readRegExp(opcode & 0x1F)) // EXP RegisterP0
 EXP_FUNC(expR6, int32_t(regR[6] << 16)) // EXP R6
 
 // Calculate the shift that would normalize a value and store it in the shift register and an A accumulator
 #define EXPA_FUNC(name, op0, op1s) int TeakInterp::name(uint16_t opcode) { \
     int64_t value = op0; \
     int16_t exp = 1; \
-    while (!((value ^ (value << exp)) & BITL(40)) && exp < 40) exp++; \
-    (this->*writeAx40[(opcode >> op1s) & 0x1])(regSv = exp - 10); \
+    while (!((value ^ (value << exp)) & BITL(40)) && exp <= 40) exp++; \
+    (this->*writeAx16[(opcode >> op1s) & 0x1])(regSv = exp - 10); \
     return 1; \
 }
 
 EXPA_FUNC(expBa, regB[opcode & 0x1].v, 8) // EXP Bx, Ax
 EXPA_FUNC(expMrna, int32_t(core->dsp.readData(getRnStepZids(opcode)) << 16), 8) // EXP MemRnStepZids, Ax
-EXPA_FUNC(expRega, EXP_REG, 8) // EXP RegisterP0, Ax
+EXPA_FUNC(expRega, readRegExp(opcode & 0x1F), 8) // EXP RegisterP0, Ax
 EXPA_FUNC(expR6a, int32_t(regR[6] << 16), 4) // EXP R6, Ax
 
 int TeakInterp::inc(uint16_t opcode) { // INC Ax, Cond
@@ -377,10 +381,10 @@ int TeakInterp::inc(uint16_t opcode) { // INC Ax, Cond
     int64_t res = ((val1 + val2) << 24) >> 24; \
     bool v = (~(val2 ^ val1) & (res ^ val2)) >> 39; \
     bool c = (uint64_t(val1) > uint64_t(res)); \
-    writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
-    (this->*writeAx40S[(opcode >> 11) & 0x1])(res); \
     regX[0] = op1; \
     regY[0] = core->dsp.readData(getRnStepZids(op0a)); \
+    writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
+    (this->*writeAx40S[(opcode >> 11) & 0x1])(res); \
     multiplyXY<int16_t, int16_t>(0); \
     return cyc; \
 }
@@ -395,8 +399,8 @@ MAA_FUNC(maaMrni16, (opcode & 0x1F), readParam(), 2) // MAA MemRnStepZids, Imm16
     int64_t res = ((val1 + val2) << 24) >> 24; \
     bool v = (~(val2 ^ val1) & (res ^ val2)) >> 39; \
     bool c = (uint64_t(val1) > uint64_t(res)); \
-    writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
     regX[0] = op1; \
+    writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
     (this->*writeAx40S[(opcode >> op2s) & 0x1])(res); \
     multiplyXY<int16_t, int16_t>(0); \
     return 1; \
@@ -435,12 +439,12 @@ MINMAX_FUNC(minLt, <) // MIN Ax, R0StepZids, LT
     int64_t res = ((val1 + val2) << 24) >> 24; \
     bool v = (~(val2 ^ val1) & (res ^ val2)) >> 39; \
     bool c = (uint64_t(val1) > uint64_t(res)); \
-    writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
-    (this->*writeAb40S[(opcode >> op2s) & 0x3])(res); \
     regX[1] = core->dsp.readData(offsReg(arpRi[(opcode >> ops) & opm], arpCi[(opcode >> op1s) & opm])); \
     regY[1] = core->dsp.readData(offsReg(arpRj[(opcode >> ops) & opm], arpCj[(opcode >> op0s) & opm])); \
     regX[0] = core->dsp.readData(stepReg(arpRi[(opcode >> ops) & opm], arpPi[(opcode >> op1s) & opm])); \
     regY[0] = core->dsp.readData(stepReg(arpRj[(opcode >> ops) & opm], arpPj[(opcode >> op0s) & opm])); \
+    writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
+    (this->*writeAb40S[(opcode >> op2s) & 0x3])(res); \
     multiplyXY<x1u##int16_t, y1u##int16_t>(1); \
     multiplyXY<x0u##int16_t, y0u##int16_t>(0); \
     return 1; \
@@ -467,11 +471,11 @@ MMA_FUNC(msumusa3aa, *readAb[(opcode >> 6) & 0x3], 16, 16, u,,,u, 5, 1, 4, 3, 6)
     int64_t res = ((val1 + val2) << 24) >> 24; \
     bool v = (~(val2 ^ val1) & (res ^ val2)) >> 39; \
     bool c = (uint64_t(val1) > uint64_t(res)); \
-    writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
-    (this->*writeAx40S[(opcode >> op1s) & 0x1])(res); \
     uint8_t rar = ((opcode >> ars0) & 0x4) | ((opcode >> ars1) & 0x1); \
     regX[1] = core->dsp.readData(getRarOffsAr(rar)); \
     regX[0] = core->dsp.readData(getRarStepAr(rar)); \
+    writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
+    (this->*writeAx40S[(opcode >> op1s) & 0x1])(res); \
     multiplyXY<x1u##int16_t, y1u##int16_t>(1); \
     multiplyXY<x0u##int16_t, y0u##int16_t>(0); \
     return 1; \
@@ -565,7 +569,7 @@ MOVSR_FUNC(movsR6a, regR[6], writeAx40[opcode & 0x1]) // MOVS R6, Ax
 
 MPY_FUNC(mpyY0mi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF))) // MPY Y0, MemImm8
 MPY_FUNC(mpyY0mrn, core->dsp.readData(getRnStepZids(opcode))) // MPY Y0, MemRnStepZids
-MPY_FUNC(mpyY0reg, *readReg[opcode & 0x1F]) // MPY Y0, Register
+MPY_FUNC(mpyY0reg, (this->*readRegP[opcode & 0x1F])()) // MPY Y0, Register
 MPY_FUNC(mpyY0r6, regR[6]) // MPY Y0, R6
 MPY_FUNC(mpyi, int8_t(opcode)) // MPYI Y0, Imm8s
 
@@ -584,10 +588,10 @@ int TeakInterp::mpysuMrmr(uint16_t opcode) { // MPYSU MemR45StepZids, MemR0123St
     int64_t res = ((val1 - val2) << 24) >> 24; \
     bool v = ((val2 ^ val1) & ~(res ^ val2)) >> 39; \
     bool c = (uint64_t(val1) < uint64_t(res)); \
-    writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
-    (this->*writeAx40S[(opcode >> 8) & 0x1])(res); \
     regX[0] = op1; \
     regY[0] = core->dsp.readData(getRnStepZids(op0a)); \
+    writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
+    (this->*writeAx40S[(opcode >> 8) & 0x1])(res); \
     multiplyXY<int16_t, int16_t>(0); \
     return cyc; \
 }
@@ -602,16 +606,16 @@ MSU_FUNC(msuMrni16, (opcode & 0x1F), readParam(), 2) // MSU MemRnStepZids, Imm16
     int64_t res = ((val1 - val2) << 24) >> 24; \
     bool v = ((val2 ^ val1) & ~(res ^ val2)) >> 39; \
     bool c = (uint64_t(val1) < uint64_t(res)); \
+    regX[0] = op1; \
     writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
     (this->*writeAx40S[(opcode >> op2s) & 0x1])(res); \
-    regX[0] = op1; \
     multiplyXY<int16_t, int16_t>(0); \
     return 1; \
 }
 
 MSUY_FUNC(msuY0mi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 8) // MSU Y0, MemImm8, Ax
 MSUY_FUNC(msuY0mrn, core->dsp.readData(getRnStepZids(opcode)), 8) // MSU Y0, MemRnStepZids, Ax
-MSUY_FUNC(msuY0reg, *readReg[opcode & 0x1F], 8) // MSU Y0, Register, Ax
+MSUY_FUNC(msuY0reg, (this->*readRegP[opcode & 0x1F])(), 8) // MSU Y0, Register, Ax
 MSUY_FUNC(msuY0r6, regR[6], 0) // MSU Y0, R6, Ax
 
 int TeakInterp::neg(uint16_t opcode) { // NEG Ax, Cond

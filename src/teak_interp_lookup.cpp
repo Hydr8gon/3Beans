@@ -135,8 +135,10 @@ void (TeakInterp::**TeakInterp::writeArArp)(uint16_t) = &writeArpMod[0];
 void (TeakInterp::**TeakInterp::writeSttMod)(uint16_t) = &writeArpMod[8];
 void (TeakInterp::**TeakInterp::writeAx40)(int64_t) = &writeAb40[2];
 void (TeakInterp::**TeakInterp::writeBx40)(int64_t) = &writeAb40[0];
+void (TeakInterp::**TeakInterp::writeAx16)(uint16_t) = &writeReg[24];
 void (TeakInterp::**TeakInterp::writeAx40S)(int64_t) = &writeAb40S[2];
 void (TeakInterp::**TeakInterp::writeBx40S)(int64_t) = &writeAb40S[0];
+void (TeakInterp::**TeakInterp::writeAx40M)(int64_t) = &writeAb40M[2];
 void (TeakInterp::**TeakInterp::writeBx40M)(int64_t) = &writeAb40M[0];
 void (TeakInterp::**TeakInterp::writeAx16M)(uint16_t) = &writeAb16M[2];
 void (TeakInterp::**TeakInterp::writeBx16M)(uint16_t) = &writeAb16M[0];
@@ -520,6 +522,8 @@ void TeakInterp::initLookup() {
             teakInstrs[op] = &TeakInterp::movRegmrn;
         else if ((op & 0xFFE0) == 0x5E80)
             teakInstrs[op] = &TeakInterp::movRegmxp;
+        else if ((op & 0xFFDF) == 0x5B0B) // Override
+            teakInstrs[op] = &TeakInterp::movP0a;
         else if ((op & 0xFC00) == 0x5800)
             teakInstrs[op] = &TeakInterp::movRegreg;
         else if ((op & 0xFFE0) == 0x5F60)

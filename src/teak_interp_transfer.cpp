@@ -65,6 +65,7 @@ int TeakInterp::loadStep(uint16_t opcode) { // LOAD Imm7s, Step
 
 MOV_FUNC(movApc, regA[(opcode >> 8) & 0x1].v & 0x1FFFF, regPc=, 1) // MOV Ax, PC
 MOV_FUNC(movA0hstp, readAhS<0>(), regStep0[(opcode >> 8) & 0x1]=, 1) // MOV A0H, Step0
+MOV_FUNC(movAbab, *readAb[(opcode >> 10) & 0x3], (this->*writeAb40M[(opcode >> 5) & 0x3]), 1) // MOV Ab, Ab
 MOV_FUNC(movAbp0, (this->*readAbS[opcode & 0x3])(), writeP33<0>, 1) // MOV Ab, P0
 MOV_FUNC(movAblx1, (this->*readAbS[opcode & 0x3])(), regX[1]=, 1) // MOV Abl, X1
 MOV_FUNC(movAbly1, (this->*readAbS[opcode & 0x3])(), regY[1]=, 1) // MOV Abl, Y1
@@ -81,6 +82,7 @@ MOV_FUNC(movI8sv, int8_t(opcode), regSv=, 1) // MOV Imm8s, SV
 MOV_FUNC(movMi8sv, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), regSv=, 1) // MOV MemImm8, SV
 MOV_FUNC(movMrnr6, core->dsp.readData(getRnStepZids(opcode)), regR[6]=, 1) // MOV MemRnStepZids, R6
 MOV_FUNC(movMxpreg, regMixp, (this->*writeRegM[opcode & 0x1F]), 1) // MOV MIXP, Register
+MOV_FUNC(movP0a, readP33S<0>(), (this->*writeAx40M[(opcode >> 5) & 0x1]), 1) // MOV P0, Ax
 MOV_FUNC(movRegb, readRegP0S(opcode & 0x1F), (this->*writeBx40M[(opcode >> 5) & 0x1]), 1) // MOV RegisterP0, Bx
 MOV_FUNC(movRegmxp, (this->*readRegS[opcode & 0x1F])(), regMixp=, 1) // MOV Register, MIXP
 MOV_FUNC(movRegreg, readRegP0S(opcode & 0x1F), (this->*writeRegM[(opcode >> 5) & 0x1F]), 1) // MOV RegisterP0, Register
@@ -104,7 +106,6 @@ MOVM_FUNC(movSvmi8, regSv, (regMod[1] << 8) | (opcode & 0xFF)) // MOV SV, MemImm
     return 1; \
 }
 
-MOVHH_FUNC(movAbab, readAbS[(opcode >> 10) & 0x3], writeAb40M[(opcode >> 5) & 0x3]) // MOV Ab, Ab
 MOVHH_FUNC(movAblarap, readAbS[(opcode >> 3) & 0x3], writeArArp[opcode & 0x7]) // MOV Abl, ArArp
 MOVHH_FUNC(movAblsm, readAbS[(opcode >> 3) & 0x3], writeSttMod[opcode & 0x7]) // MOV Abl, SttMod
 

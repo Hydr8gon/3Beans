@@ -86,8 +86,10 @@ private:
     static void (TeakInterp::**writeSttMod)(uint16_t);
     static void (TeakInterp::**writeAx40)(int64_t);
     static void (TeakInterp::**writeBx40)(int64_t);
+    static void (TeakInterp::**writeAx16)(uint16_t);
     static void (TeakInterp::**writeAx40S)(int64_t);
     static void (TeakInterp::**writeBx40S)(int64_t);
+    static void (TeakInterp::**writeAx40M)(int64_t);
     static void (TeakInterp::**writeBx40M)(int64_t);
     static void (TeakInterp::**writeAx16M)(uint16_t);
     static void (TeakInterp::**writeBx16M)(uint16_t);
@@ -163,6 +165,7 @@ private:
 
     int64_t readRegP0(int i, bool sign = true);
     int64_t readRegP0S(int i);
+    int64_t readRegExp(int i);
 
     template <int i> int64_t readA40S();
     template <int i> uint16_t readAl();
@@ -529,6 +532,7 @@ private:
     int movMxpreg(uint16_t opcode);
     int movPrar(uint16_t opcode);
     int movPrars(uint16_t opcode);
+    int movP0a(uint16_t opcode);
     int movRarp(uint16_t opcode);
     int movRegb(uint16_t opcode);
     int movRegmrn(uint16_t opcode);
