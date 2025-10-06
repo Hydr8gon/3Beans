@@ -34,6 +34,7 @@
 ADD40_FUNC(addAbb, *readAb[(opcode >> 10) & 0x3], regB, writeBx40S, 0) // ADD Ab, Bx
 ADD40_FUNC(addBa, regB[(opcode >> 1) & 0x1].v, regA, writeAx40S, 0) // ADD Bx, Ax
 ADD40_FUNC(addPb, (this->*readPxS[(opcode >> 1) & 0x1])(), regB, writeBx40S, 0) // ADD Px, Bx
+ADD40_FUNC(addP1a, readP33S<1>(), regA, writeAx40S, 0) // ADD P1, Ax
 ADD40_FUNC(addRega, readRegP0(opcode & 0x1F), regA, writeAx40S, 8) // ADD RegisterP0, Ax
 
 // Add a 16-bit value to an accumulator and set flags
@@ -374,6 +375,19 @@ int TeakInterp::inc(uint16_t opcode) { // INC Ax, Cond
     return 1;
 }
 
+// Saturate an A accumulator and set flags
+#define LIM_FUNC(name, i0, i1) int TeakInterp::name(uint16_t opcode) { \
+    int64_t res = saturate(regA[i0].v); \
+    writeStt0((regStt[0] & ~0xE4) | calcZmne(res)); \
+    writeA40<i1>(res); \
+    return 1; \
+}
+
+LIM_FUNC(limA0, 0, 0) // LIM A0, A0
+LIM_FUNC(limA1, 1, 1) // LIM A1, A1
+LIM_FUNC(limA0a1, 0, 1) // LIM A0, A1
+LIM_FUNC(limA1a0, 1, 0) // LIM A1, A0
+
 // Add shifted P0 to an A accumulator, set flags, load X0 and Y0, and multiply them
 #define MAA_FUNC(name, op0a, op1, cyc) int TeakInterp::name(uint16_t opcode) { \
     int64_t val1 = regA[(opcode >> 11) & 0x1].v; \
@@ -572,6 +586,17 @@ MPY_FUNC(mpyY0mrn, core->dsp.readData(getRnStepZids(opcode))) // MPY Y0, MemRnSt
 MPY_FUNC(mpyY0reg, (this->*readRegP[opcode & 0x1F])()) // MPY Y0, Register
 MPY_FUNC(mpyY0r6, regR[6]) // MPY Y0, R6
 MPY_FUNC(mpyi, int8_t(opcode)) // MPYI Y0, Imm8s
+
+// Load a value into X0 and multiply it with Y0, treating X as unsigned
+#define MPYSU_FUNC(name, op1) int TeakInterp::name(uint16_t opcode) { \
+    regX[0] = op1; \
+    multiplyXY<uint16_t, int16_t>(0); \
+    return 1; \
+}
+
+MPYSU_FUNC(mpysuY0mrn, core->dsp.readData(getRnStepZids(opcode))) // MPYSU Y0, MemRnStepZids
+MPYSU_FUNC(mpysuY0reg, (this->*readRegP[opcode & 0x1F])()) // MPYSU Y0, Register
+MPYSU_FUNC(mpysuY0r6, regR[6]) // MPYSU Y0, R6
 
 int TeakInterp::mpysuMrmr(uint16_t opcode) { // MPYSU MemR45StepZids, MemR0123StepZids
     // Load memory values into X0/Y0 and multiply them, treating X as unsigned

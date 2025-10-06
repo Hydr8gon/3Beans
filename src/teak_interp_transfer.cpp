@@ -19,6 +19,20 @@
 
 #include "core.h"
 
+// Store an upper A accumulator to memory and load it with another value, without changing flags
+#define EXCH_FUNC(name, i, j, ops, op0s, op1s, op2s) int TeakInterp::name(uint16_t opcode) { \
+    bool l = (regStt[0] & BIT(0)); \
+    uint16_t value = (this->*readAxS[(opcode >> op0s) & 0x1])() >> 16; \
+    core->dsp.writeData(stepReg(arpR##i[(opcode >> ops) & 0x3], arpP##i[(opcode >> op1s) & 0x3]), value); \
+    value = core->dsp.readData(stepReg(arpR##j[(opcode >> ops) & 0x3], arpP##j[(opcode >> op2s) & 0x3])); \
+    (this->*writeAx40[(opcode >> op0s) & 0x1])(int32_t(value << 16)); \
+    if (regStt[0] & !l) writeStt0(regStt[0] & ~BIT(0)); \
+    return 1; \
+}
+
+EXCH_FUNC(exchIj, i, j, 4, 6, 0, 2) // EXCH Axh, MemRiStepArp, MemRjStepArp
+EXCH_FUNC(exchJi, j, i, 8, 4, 2, 0) // EXCH Axh, MemRjStepArp, MemRiStepArp
+
 int TeakInterp::loadMod(uint16_t opcode) { // LOAD Imm9u, Mod
     // Load one of the mod values with a 9-bit immediate
     uint16_t value = regCfg[(opcode >> 11) & 0x1];
@@ -83,6 +97,7 @@ MOV_FUNC(movMi8sv, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), regSv
 MOV_FUNC(movMrnr6, core->dsp.readData(getRnStepZids(opcode)), regR[6]=, 1) // MOV MemRnStepZids, R6
 MOV_FUNC(movMxpreg, regMixp, (this->*writeRegM[opcode & 0x1F]), 1) // MOV MIXP, Register
 MOV_FUNC(movP0a, readP33S<0>(), (this->*writeAx40M[(opcode >> 5) & 0x1]), 1) // MOV P0, Ax
+MOV_FUNC(movP1ab, readP33S<1>(), (this->*writeAb40M[opcode & 0x3]), 1) // MOV P1, Ab
 MOV_FUNC(movRegb, readRegP0S(opcode & 0x1F), (this->*writeBx40M[(opcode >> 5) & 0x1]), 1) // MOV RegisterP0, Bx
 MOV_FUNC(movRegmxp, (this->*readRegS[opcode & 0x1F])(), regMixp=, 1) // MOV Register, MIXP
 MOV_FUNC(movRegreg, readRegP0S(opcode & 0x1F), (this->*writeRegM[(opcode >> 5) & 0x1F]), 1) // MOV RegisterP0, Register

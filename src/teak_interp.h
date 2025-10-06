@@ -245,6 +245,7 @@ private:
     int addM7i7a(uint16_t opcode);
     int addMrna(uint16_t opcode);
     int addPb(uint16_t opcode);
+    int addP1a(uint16_t opcode);
     int addPpab(uint16_t opcode);
     int addRega(uint16_t opcode);
     int addR6a(uint16_t opcode);
@@ -318,6 +319,10 @@ private:
     int expR6(uint16_t opcode);
     int expR6a(uint16_t opcode);
     int inc(uint16_t opcode);
+    int limA0(uint16_t opcode);
+    int limA1(uint16_t opcode);
+    int limA0a1(uint16_t opcode);
+    int limA1a0(uint16_t opcode);
     int maaMrmr(uint16_t opcode);
     int maaMrni16(uint16_t opcode);
     int maaY0mi8(uint16_t opcode);
@@ -367,6 +372,9 @@ private:
     int mpyY0r6(uint16_t opcode);
     int mpyi(uint16_t opcode);
     int mpysuMrmr(uint16_t opcode);
+    int mpysuY0mrn(uint16_t opcode);
+    int mpysuY0reg(uint16_t opcode);
+    int mpysuY0r6(uint16_t opcode);
     int msuMrmr(uint16_t opcode);
     int msuMrni16(uint16_t opcode);
     int msuY0mi8(uint16_t opcode);
@@ -491,6 +499,8 @@ private:
     int reti(uint16_t opcode);
     int rets(uint16_t opcode);
 
+    int exchIj(uint16_t opcode);
+    int exchJi(uint16_t opcode);
     int loadMod(uint16_t opcode);
     int loadMpd(uint16_t opcode);
     int loadPage(uint16_t opcode);
@@ -533,6 +543,7 @@ private:
     int movPrar(uint16_t opcode);
     int movPrars(uint16_t opcode);
     int movP0a(uint16_t opcode);
+    int movP1ab(uint16_t opcode);
     int movRarp(uint16_t opcode);
     int movRegb(uint16_t opcode);
     int movRegmrn(uint16_t opcode);
