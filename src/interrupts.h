@@ -37,6 +37,7 @@ public:
     uint8_t readCfg11MpBootcnt(int i);
     uint32_t readMpScuConfig();
     uint32_t readMpIle(CpuId id) { return mpIle[id]; }
+    uint32_t readMpPrioMask(CpuId id) { return mpPrioMask[id]; }
     uint32_t readMpAck(CpuId id);
     uint32_t readMpPending(CpuId id);
     uint32_t readMpIge() { return mpIge; }
@@ -44,6 +45,8 @@ public:
     uint32_t readMpIe(int i) { return mpIe[i]; }
     uint32_t readMpIp(CpuId id, int i) { return mpIp[id][i]; }
     uint32_t readMpIa(CpuId id, int i) { return mpIa[id][i]; }
+    uint8_t readMpPriorityL(CpuId id, int i) { return mpPriorityL[id][i]; }
+    uint8_t readMpPriorityG(int i) { return mpPriorityG[i]; }
     uint8_t readMpTarget(CpuId id, int i);
     uint32_t readIrqIe() { return irqIe; }
     uint32_t readIrqIf() { return irqIf; }
@@ -51,12 +54,15 @@ public:
     void writeCfg11MpClkcnt(uint32_t mask, uint32_t value);
     void writeCfg11MpBootcnt(int i, uint8_t value);
     void writeMpIle(CpuId id, uint32_t mask, uint32_t value);
+    void writeMpPrioMask(CpuId id, uint32_t mask, uint32_t value);
     void writeMpEoi(CpuId id, uint32_t mask, uint32_t value);
     void writeMpIge(uint32_t mask, uint32_t value);
     void writeMpIeSet(int i, uint32_t mask, uint32_t value);
     void writeMpIeClear(int i, uint32_t mask, uint32_t value);
     void writeMpIpSet(int i, uint32_t mask, uint32_t value);
     void writeMpIpClear(int i, uint32_t mask, uint32_t value);
+    void writeMpPriorityL(CpuId id, int i, uint8_t value);
+    void writeMpPriorityG(int i, uint8_t value);
     void writeMpTarget(int i, uint8_t value);
     void writeMpSoftIrq(CpuId id, uint32_t mask, uint32_t value);
     void writeIrqIe(uint32_t mask, uint32_t value);
@@ -71,10 +77,13 @@ private:
     uint32_t cfg11MpClkcnt = 0;
     uint8_t cfg11MpBootcnt[2] = {};
     uint32_t mpIle[MAX_CPUS - 1] = {};
+    uint32_t mpPrioMask[MAX_CPUS - 1] = { 0xF0, 0xF0, 0xF0, 0xF0 };
     uint32_t mpIge = 0;
     uint32_t mpIe[4] = { 0xFFFF };
     uint32_t mpIp[MAX_CPUS - 1][4] = {};
     uint32_t mpIa[MAX_CPUS - 1][4] = {};
+    uint8_t mpPriorityL[MAX_CPUS - 1][0x20] = {};
+    uint8_t mpPriorityG[0x60] = {};
     uint8_t mpTarget[0x80] = {};
     uint32_t irqIe = 0;
     uint32_t irqIf = 0;

@@ -799,6 +799,7 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x10401AF4, data = core->gpu.readVshOutMask()) // GPU_VSH_OUT_MASK
                 DEF_IO32(0x17E00004, data = core->interrupts.readMpScuConfig()) // MP_SCU_CONFIG
                 DEF_IO32(0x17E00100, data = core->interrupts.readMpIle(id)) // MP_ILE
+                DEF_IO32(0x17E00104, data = core->interrupts.readMpPrioMask(id)) // MP_PRIO_MASK
                 DEF_IO32(0x17E0010C, data = core->interrupts.readMpAck(id)) // MP_ACK
                 DEF_IO32(0x17E00118, data = core->interrupts.readMpPending(id)) // MP_PENDING
                 DEF_IO32(0x17E00600, data = core->timers.readMpReload(id, 0)) // MP_RELOAD0
@@ -863,6 +864,134 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x17E01304, data = core->interrupts.readMpIa(id, 1)) // MP_IA1
                 DEF_IO32(0x17E01308, data = core->interrupts.readMpIa(id, 2)) // MP_IA2
                 DEF_IO32(0x17E0130C, data = core->interrupts.readMpIa(id, 3)) // MP_IA3
+                DEF_IO08(0x17E01400, data = core->interrupts.readMpPriorityL(id, 0)) // MP_PRIORITY0
+                DEF_IO08(0x17E01401, data = core->interrupts.readMpPriorityL(id, 1)) // MP_PRIORITY1
+                DEF_IO08(0x17E01402, data = core->interrupts.readMpPriorityL(id, 2)) // MP_PRIORITY2
+                DEF_IO08(0x17E01403, data = core->interrupts.readMpPriorityL(id, 3)) // MP_PRIORITY3
+                DEF_IO08(0x17E01404, data = core->interrupts.readMpPriorityL(id, 4)) // MP_PRIORITY4
+                DEF_IO08(0x17E01405, data = core->interrupts.readMpPriorityL(id, 5)) // MP_PRIORITY5
+                DEF_IO08(0x17E01406, data = core->interrupts.readMpPriorityL(id, 6)) // MP_PRIORITY6
+                DEF_IO08(0x17E01407, data = core->interrupts.readMpPriorityL(id, 7)) // MP_PRIORITY7
+                DEF_IO08(0x17E01408, data = core->interrupts.readMpPriorityL(id, 8)) // MP_PRIORITY8
+                DEF_IO08(0x17E01409, data = core->interrupts.readMpPriorityL(id, 9)) // MP_PRIORITY9
+                DEF_IO08(0x17E0140A, data = core->interrupts.readMpPriorityL(id, 10)) // MP_PRIORITY10
+                DEF_IO08(0x17E0140B, data = core->interrupts.readMpPriorityL(id, 11)) // MP_PRIORITY11
+                DEF_IO08(0x17E0140C, data = core->interrupts.readMpPriorityL(id, 12)) // MP_PRIORITY12
+                DEF_IO08(0x17E0140D, data = core->interrupts.readMpPriorityL(id, 13)) // MP_PRIORITY13
+                DEF_IO08(0x17E0140E, data = core->interrupts.readMpPriorityL(id, 14)) // MP_PRIORITY14
+                DEF_IO08(0x17E0140F, data = core->interrupts.readMpPriorityL(id, 15)) // MP_PRIORITY15
+                DEF_IO08(0x17E01410, data = core->interrupts.readMpPriorityL(id, 16)) // MP_PRIORITY16
+                DEF_IO08(0x17E01411, data = core->interrupts.readMpPriorityL(id, 17)) // MP_PRIORITY17
+                DEF_IO08(0x17E01412, data = core->interrupts.readMpPriorityL(id, 18)) // MP_PRIORITY18
+                DEF_IO08(0x17E01413, data = core->interrupts.readMpPriorityL(id, 19)) // MP_PRIORITY19
+                DEF_IO08(0x17E01414, data = core->interrupts.readMpPriorityL(id, 20)) // MP_PRIORITY20
+                DEF_IO08(0x17E01415, data = core->interrupts.readMpPriorityL(id, 21)) // MP_PRIORITY21
+                DEF_IO08(0x17E01416, data = core->interrupts.readMpPriorityL(id, 22)) // MP_PRIORITY22
+                DEF_IO08(0x17E01417, data = core->interrupts.readMpPriorityL(id, 23)) // MP_PRIORITY23
+                DEF_IO08(0x17E01418, data = core->interrupts.readMpPriorityL(id, 24)) // MP_PRIORITY24
+                DEF_IO08(0x17E01419, data = core->interrupts.readMpPriorityL(id, 25)) // MP_PRIORITY25
+                DEF_IO08(0x17E0141A, data = core->interrupts.readMpPriorityL(id, 26)) // MP_PRIORITY26
+                DEF_IO08(0x17E0141B, data = core->interrupts.readMpPriorityL(id, 27)) // MP_PRIORITY27
+                DEF_IO08(0x17E0141C, data = core->interrupts.readMpPriorityL(id, 28)) // MP_PRIORITY28
+                DEF_IO08(0x17E0141D, data = core->interrupts.readMpPriorityL(id, 29)) // MP_PRIORITY29
+                DEF_IO08(0x17E0141E, data = core->interrupts.readMpPriorityL(id, 30)) // MP_PRIORITY30
+                DEF_IO08(0x17E0141F, data = core->interrupts.readMpPriorityL(id, 31)) // MP_PRIORITY31
+                DEF_IO08(0x17E01420, data = core->interrupts.readMpPriorityG(32)) // MP_PRIORITY32
+                DEF_IO08(0x17E01421, data = core->interrupts.readMpPriorityG(33)) // MP_PRIORITY33
+                DEF_IO08(0x17E01422, data = core->interrupts.readMpPriorityG(34)) // MP_PRIORITY34
+                DEF_IO08(0x17E01423, data = core->interrupts.readMpPriorityG(35)) // MP_PRIORITY35
+                DEF_IO08(0x17E01424, data = core->interrupts.readMpPriorityG(36)) // MP_PRIORITY36
+                DEF_IO08(0x17E01425, data = core->interrupts.readMpPriorityG(37)) // MP_PRIORITY37
+                DEF_IO08(0x17E01426, data = core->interrupts.readMpPriorityG(38)) // MP_PRIORITY38
+                DEF_IO08(0x17E01427, data = core->interrupts.readMpPriorityG(39)) // MP_PRIORITY39
+                DEF_IO08(0x17E01428, data = core->interrupts.readMpPriorityG(40)) // MP_PRIORITY40
+                DEF_IO08(0x17E01429, data = core->interrupts.readMpPriorityG(41)) // MP_PRIORITY41
+                DEF_IO08(0x17E0142A, data = core->interrupts.readMpPriorityG(42)) // MP_PRIORITY42
+                DEF_IO08(0x17E0142B, data = core->interrupts.readMpPriorityG(43)) // MP_PRIORITY43
+                DEF_IO08(0x17E0142C, data = core->interrupts.readMpPriorityG(44)) // MP_PRIORITY44
+                DEF_IO08(0x17E0142D, data = core->interrupts.readMpPriorityG(45)) // MP_PRIORITY45
+                DEF_IO08(0x17E0142E, data = core->interrupts.readMpPriorityG(46)) // MP_PRIORITY46
+                DEF_IO08(0x17E0142F, data = core->interrupts.readMpPriorityG(47)) // MP_PRIORITY47
+                DEF_IO08(0x17E01430, data = core->interrupts.readMpPriorityG(48)) // MP_PRIORITY48
+                DEF_IO08(0x17E01431, data = core->interrupts.readMpPriorityG(49)) // MP_PRIORITY49
+                DEF_IO08(0x17E01432, data = core->interrupts.readMpPriorityG(50)) // MP_PRIORITY50
+                DEF_IO08(0x17E01433, data = core->interrupts.readMpPriorityG(51)) // MP_PRIORITY51
+                DEF_IO08(0x17E01434, data = core->interrupts.readMpPriorityG(52)) // MP_PRIORITY52
+                DEF_IO08(0x17E01435, data = core->interrupts.readMpPriorityG(53)) // MP_PRIORITY53
+                DEF_IO08(0x17E01436, data = core->interrupts.readMpPriorityG(54)) // MP_PRIORITY54
+                DEF_IO08(0x17E01437, data = core->interrupts.readMpPriorityG(55)) // MP_PRIORITY55
+                DEF_IO08(0x17E01438, data = core->interrupts.readMpPriorityG(56)) // MP_PRIORITY56
+                DEF_IO08(0x17E01439, data = core->interrupts.readMpPriorityG(57)) // MP_PRIORITY57
+                DEF_IO08(0x17E0143A, data = core->interrupts.readMpPriorityG(58)) // MP_PRIORITY58
+                DEF_IO08(0x17E0143B, data = core->interrupts.readMpPriorityG(59)) // MP_PRIORITY59
+                DEF_IO08(0x17E0143C, data = core->interrupts.readMpPriorityG(60)) // MP_PRIORITY60
+                DEF_IO08(0x17E0143D, data = core->interrupts.readMpPriorityG(61)) // MP_PRIORITY61
+                DEF_IO08(0x17E0143E, data = core->interrupts.readMpPriorityG(62)) // MP_PRIORITY62
+                DEF_IO08(0x17E0143F, data = core->interrupts.readMpPriorityG(63)) // MP_PRIORITY63
+                DEF_IO08(0x17E01440, data = core->interrupts.readMpPriorityG(64)) // MP_PRIORITY64
+                DEF_IO08(0x17E01441, data = core->interrupts.readMpPriorityG(65)) // MP_PRIORITY65
+                DEF_IO08(0x17E01442, data = core->interrupts.readMpPriorityG(66)) // MP_PRIORITY66
+                DEF_IO08(0x17E01443, data = core->interrupts.readMpPriorityG(67)) // MP_PRIORITY67
+                DEF_IO08(0x17E01444, data = core->interrupts.readMpPriorityG(68)) // MP_PRIORITY68
+                DEF_IO08(0x17E01445, data = core->interrupts.readMpPriorityG(69)) // MP_PRIORITY69
+                DEF_IO08(0x17E01446, data = core->interrupts.readMpPriorityG(70)) // MP_PRIORITY70
+                DEF_IO08(0x17E01447, data = core->interrupts.readMpPriorityG(71)) // MP_PRIORITY71
+                DEF_IO08(0x17E01448, data = core->interrupts.readMpPriorityG(72)) // MP_PRIORITY72
+                DEF_IO08(0x17E01449, data = core->interrupts.readMpPriorityG(73)) // MP_PRIORITY73
+                DEF_IO08(0x17E0144A, data = core->interrupts.readMpPriorityG(74)) // MP_PRIORITY74
+                DEF_IO08(0x17E0144B, data = core->interrupts.readMpPriorityG(75)) // MP_PRIORITY75
+                DEF_IO08(0x17E0144C, data = core->interrupts.readMpPriorityG(76)) // MP_PRIORITY76
+                DEF_IO08(0x17E0144D, data = core->interrupts.readMpPriorityG(77)) // MP_PRIORITY77
+                DEF_IO08(0x17E0144E, data = core->interrupts.readMpPriorityG(78)) // MP_PRIORITY78
+                DEF_IO08(0x17E0144F, data = core->interrupts.readMpPriorityG(79)) // MP_PRIORITY79
+                DEF_IO08(0x17E01450, data = core->interrupts.readMpPriorityG(80)) // MP_PRIORITY80
+                DEF_IO08(0x17E01451, data = core->interrupts.readMpPriorityG(81)) // MP_PRIORITY81
+                DEF_IO08(0x17E01452, data = core->interrupts.readMpPriorityG(82)) // MP_PRIORITY82
+                DEF_IO08(0x17E01453, data = core->interrupts.readMpPriorityG(83)) // MP_PRIORITY83
+                DEF_IO08(0x17E01454, data = core->interrupts.readMpPriorityG(84)) // MP_PRIORITY84
+                DEF_IO08(0x17E01455, data = core->interrupts.readMpPriorityG(85)) // MP_PRIORITY85
+                DEF_IO08(0x17E01456, data = core->interrupts.readMpPriorityG(86)) // MP_PRIORITY86
+                DEF_IO08(0x17E01457, data = core->interrupts.readMpPriorityG(87)) // MP_PRIORITY87
+                DEF_IO08(0x17E01458, data = core->interrupts.readMpPriorityG(88)) // MP_PRIORITY88
+                DEF_IO08(0x17E01459, data = core->interrupts.readMpPriorityG(89)) // MP_PRIORITY89
+                DEF_IO08(0x17E0145A, data = core->interrupts.readMpPriorityG(90)) // MP_PRIORITY90
+                DEF_IO08(0x17E0145B, data = core->interrupts.readMpPriorityG(91)) // MP_PRIORITY91
+                DEF_IO08(0x17E0145C, data = core->interrupts.readMpPriorityG(92)) // MP_PRIORITY92
+                DEF_IO08(0x17E0145D, data = core->interrupts.readMpPriorityG(93)) // MP_PRIORITY93
+                DEF_IO08(0x17E0145E, data = core->interrupts.readMpPriorityG(94)) // MP_PRIORITY94
+                DEF_IO08(0x17E0145F, data = core->interrupts.readMpPriorityG(95)) // MP_PRIORITY95
+                DEF_IO08(0x17E01460, data = core->interrupts.readMpPriorityG(96)) // MP_PRIORITY96
+                DEF_IO08(0x17E01461, data = core->interrupts.readMpPriorityG(97)) // MP_PRIORITY97
+                DEF_IO08(0x17E01462, data = core->interrupts.readMpPriorityG(98)) // MP_PRIORITY98
+                DEF_IO08(0x17E01463, data = core->interrupts.readMpPriorityG(99)) // MP_PRIORITY99
+                DEF_IO08(0x17E01464, data = core->interrupts.readMpPriorityG(100)) // MP_PRIORITY100
+                DEF_IO08(0x17E01465, data = core->interrupts.readMpPriorityG(101)) // MP_PRIORITY101
+                DEF_IO08(0x17E01466, data = core->interrupts.readMpPriorityG(102)) // MP_PRIORITY102
+                DEF_IO08(0x17E01467, data = core->interrupts.readMpPriorityG(103)) // MP_PRIORITY103
+                DEF_IO08(0x17E01468, data = core->interrupts.readMpPriorityG(104)) // MP_PRIORITY104
+                DEF_IO08(0x17E01469, data = core->interrupts.readMpPriorityG(105)) // MP_PRIORITY105
+                DEF_IO08(0x17E0146A, data = core->interrupts.readMpPriorityG(106)) // MP_PRIORITY106
+                DEF_IO08(0x17E0146B, data = core->interrupts.readMpPriorityG(107)) // MP_PRIORITY107
+                DEF_IO08(0x17E0146C, data = core->interrupts.readMpPriorityG(108)) // MP_PRIORITY108
+                DEF_IO08(0x17E0146D, data = core->interrupts.readMpPriorityG(109)) // MP_PRIORITY109
+                DEF_IO08(0x17E0146E, data = core->interrupts.readMpPriorityG(110)) // MP_PRIORITY110
+                DEF_IO08(0x17E0146F, data = core->interrupts.readMpPriorityG(111)) // MP_PRIORITY111
+                DEF_IO08(0x17E01470, data = core->interrupts.readMpPriorityG(112)) // MP_PRIORITY112
+                DEF_IO08(0x17E01471, data = core->interrupts.readMpPriorityG(113)) // MP_PRIORITY113
+                DEF_IO08(0x17E01472, data = core->interrupts.readMpPriorityG(114)) // MP_PRIORITY114
+                DEF_IO08(0x17E01473, data = core->interrupts.readMpPriorityG(115)) // MP_PRIORITY115
+                DEF_IO08(0x17E01474, data = core->interrupts.readMpPriorityG(116)) // MP_PRIORITY116
+                DEF_IO08(0x17E01475, data = core->interrupts.readMpPriorityG(117)) // MP_PRIORITY117
+                DEF_IO08(0x17E01476, data = core->interrupts.readMpPriorityG(118)) // MP_PRIORITY118
+                DEF_IO08(0x17E01477, data = core->interrupts.readMpPriorityG(119)) // MP_PRIORITY119
+                DEF_IO08(0x17E01478, data = core->interrupts.readMpPriorityG(120)) // MP_PRIORITY120
+                DEF_IO08(0x17E01479, data = core->interrupts.readMpPriorityG(121)) // MP_PRIORITY121
+                DEF_IO08(0x17E0147A, data = core->interrupts.readMpPriorityG(122)) // MP_PRIORITY122
+                DEF_IO08(0x17E0147B, data = core->interrupts.readMpPriorityG(123)) // MP_PRIORITY123
+                DEF_IO08(0x17E0147C, data = core->interrupts.readMpPriorityG(124)) // MP_PRIORITY124
+                DEF_IO08(0x17E0147D, data = core->interrupts.readMpPriorityG(125)) // MP_PRIORITY125
+                DEF_IO08(0x17E0147E, data = core->interrupts.readMpPriorityG(126)) // MP_PRIORITY126
+                DEF_IO08(0x17E0147F, data = core->interrupts.readMpPriorityG(127)) // MP_PRIORITY127
                 DEF_IO08(0x17E01800, data = core->interrupts.readMpTarget(id, 0)) // MP_TARGET0
                 DEF_IO08(0x17E01801, data = core->interrupts.readMpTarget(id, 1)) // MP_TARGET1
                 DEF_IO08(0x17E01802, data = core->interrupts.readMpTarget(id, 2)) // MP_TARGET2
@@ -2048,6 +2177,7 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x10401B70, core->gpu.writeVshDescData(IO_PARAMS)) // GPU_VSH_DESC_DATA
                 DEF_IO32(0x10401B74, core->gpu.writeVshDescData(IO_PARAMS)) // GPU_VSH_DESC_DATA
                 DEF_IO32(0x17E00100, core->interrupts.writeMpIle(id, IO_PARAMS)) // MP_ILE
+                DEF_IO32(0x17E00104, core->interrupts.writeMpPrioMask(id, IO_PARAMS)) // MP_PRIO_MASK
                 DEF_IO32(0x17E00110, core->interrupts.writeMpEoi(id, IO_PARAMS)) // MP_EOI
                 DEF_IO32(0x17E00600, core->timers.writeMpReload(id, 0, IO_PARAMS)) // MP_RELOAD0
                 DEF_IO32(0x17E00604, core->timers.writeMpCounter(id, 0, IO_PARAMS)) // MP_COUNTER0
@@ -2106,6 +2236,134 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x17E01284, core->interrupts.writeMpIpClear(1, IO_PARAMS)) // MP_IP1_CLEAR
                 DEF_IO32(0x17E01288, core->interrupts.writeMpIpClear(2, IO_PARAMS)) // MP_IP2_CLEAR
                 DEF_IO32(0x17E0128C, core->interrupts.writeMpIpClear(3, IO_PARAMS)) // MP_IP3_CLEAR
+                DEF_IO08(0x17E01400, core->interrupts.writeMpPriorityL(id, 0, IO_PARAMS8)) // MP_PRIORITY0
+                DEF_IO08(0x17E01401, core->interrupts.writeMpPriorityL(id, 1, IO_PARAMS8)) // MP_PRIORITY1
+                DEF_IO08(0x17E01402, core->interrupts.writeMpPriorityL(id, 2, IO_PARAMS8)) // MP_PRIORITY2
+                DEF_IO08(0x17E01403, core->interrupts.writeMpPriorityL(id, 3, IO_PARAMS8)) // MP_PRIORITY3
+                DEF_IO08(0x17E01404, core->interrupts.writeMpPriorityL(id, 4, IO_PARAMS8)) // MP_PRIORITY4
+                DEF_IO08(0x17E01405, core->interrupts.writeMpPriorityL(id, 5, IO_PARAMS8)) // MP_PRIORITY5
+                DEF_IO08(0x17E01406, core->interrupts.writeMpPriorityL(id, 6, IO_PARAMS8)) // MP_PRIORITY6
+                DEF_IO08(0x17E01407, core->interrupts.writeMpPriorityL(id, 7, IO_PARAMS8)) // MP_PRIORITY7
+                DEF_IO08(0x17E01408, core->interrupts.writeMpPriorityL(id, 8, IO_PARAMS8)) // MP_PRIORITY8
+                DEF_IO08(0x17E01409, core->interrupts.writeMpPriorityL(id, 9, IO_PARAMS8)) // MP_PRIORITY9
+                DEF_IO08(0x17E0140A, core->interrupts.writeMpPriorityL(id, 10, IO_PARAMS8)) // MP_PRIORITY10
+                DEF_IO08(0x17E0140B, core->interrupts.writeMpPriorityL(id, 11, IO_PARAMS8)) // MP_PRIORITY11
+                DEF_IO08(0x17E0140C, core->interrupts.writeMpPriorityL(id, 12, IO_PARAMS8)) // MP_PRIORITY12
+                DEF_IO08(0x17E0140D, core->interrupts.writeMpPriorityL(id, 13, IO_PARAMS8)) // MP_PRIORITY13
+                DEF_IO08(0x17E0140E, core->interrupts.writeMpPriorityL(id, 14, IO_PARAMS8)) // MP_PRIORITY14
+                DEF_IO08(0x17E0140F, core->interrupts.writeMpPriorityL(id, 15, IO_PARAMS8)) // MP_PRIORITY15
+                DEF_IO08(0x17E01410, core->interrupts.writeMpPriorityL(id, 16, IO_PARAMS8)) // MP_PRIORITY16
+                DEF_IO08(0x17E01411, core->interrupts.writeMpPriorityL(id, 17, IO_PARAMS8)) // MP_PRIORITY17
+                DEF_IO08(0x17E01412, core->interrupts.writeMpPriorityL(id, 18, IO_PARAMS8)) // MP_PRIORITY18
+                DEF_IO08(0x17E01413, core->interrupts.writeMpPriorityL(id, 19, IO_PARAMS8)) // MP_PRIORITY19
+                DEF_IO08(0x17E01414, core->interrupts.writeMpPriorityL(id, 20, IO_PARAMS8)) // MP_PRIORITY20
+                DEF_IO08(0x17E01415, core->interrupts.writeMpPriorityL(id, 21, IO_PARAMS8)) // MP_PRIORITY21
+                DEF_IO08(0x17E01416, core->interrupts.writeMpPriorityL(id, 22, IO_PARAMS8)) // MP_PRIORITY22
+                DEF_IO08(0x17E01417, core->interrupts.writeMpPriorityL(id, 23, IO_PARAMS8)) // MP_PRIORITY23
+                DEF_IO08(0x17E01418, core->interrupts.writeMpPriorityL(id, 24, IO_PARAMS8)) // MP_PRIORITY24
+                DEF_IO08(0x17E01419, core->interrupts.writeMpPriorityL(id, 25, IO_PARAMS8)) // MP_PRIORITY25
+                DEF_IO08(0x17E0141A, core->interrupts.writeMpPriorityL(id, 26, IO_PARAMS8)) // MP_PRIORITY26
+                DEF_IO08(0x17E0141B, core->interrupts.writeMpPriorityL(id, 27, IO_PARAMS8)) // MP_PRIORITY27
+                DEF_IO08(0x17E0141C, core->interrupts.writeMpPriorityL(id, 28, IO_PARAMS8)) // MP_PRIORITY28
+                DEF_IO08(0x17E0141D, core->interrupts.writeMpPriorityL(id, 29, IO_PARAMS8)) // MP_PRIORITY29
+                DEF_IO08(0x17E0141E, core->interrupts.writeMpPriorityL(id, 30, IO_PARAMS8)) // MP_PRIORITY30
+                DEF_IO08(0x17E0141F, core->interrupts.writeMpPriorityL(id, 31, IO_PARAMS8)) // MP_PRIORITY31
+                DEF_IO08(0x17E01420, core->interrupts.writeMpPriorityG(32, IO_PARAMS8)) // MP_PRIORITY32
+                DEF_IO08(0x17E01421, core->interrupts.writeMpPriorityG(33, IO_PARAMS8)) // MP_PRIORITY33
+                DEF_IO08(0x17E01422, core->interrupts.writeMpPriorityG(34, IO_PARAMS8)) // MP_PRIORITY34
+                DEF_IO08(0x17E01423, core->interrupts.writeMpPriorityG(35, IO_PARAMS8)) // MP_PRIORITY35
+                DEF_IO08(0x17E01424, core->interrupts.writeMpPriorityG(36, IO_PARAMS8)) // MP_PRIORITY36
+                DEF_IO08(0x17E01425, core->interrupts.writeMpPriorityG(37, IO_PARAMS8)) // MP_PRIORITY37
+                DEF_IO08(0x17E01426, core->interrupts.writeMpPriorityG(38, IO_PARAMS8)) // MP_PRIORITY38
+                DEF_IO08(0x17E01427, core->interrupts.writeMpPriorityG(39, IO_PARAMS8)) // MP_PRIORITY39
+                DEF_IO08(0x17E01428, core->interrupts.writeMpPriorityG(40, IO_PARAMS8)) // MP_PRIORITY40
+                DEF_IO08(0x17E01429, core->interrupts.writeMpPriorityG(41, IO_PARAMS8)) // MP_PRIORITY41
+                DEF_IO08(0x17E0142A, core->interrupts.writeMpPriorityG(42, IO_PARAMS8)) // MP_PRIORITY42
+                DEF_IO08(0x17E0142B, core->interrupts.writeMpPriorityG(43, IO_PARAMS8)) // MP_PRIORITY43
+                DEF_IO08(0x17E0142C, core->interrupts.writeMpPriorityG(44, IO_PARAMS8)) // MP_PRIORITY44
+                DEF_IO08(0x17E0142D, core->interrupts.writeMpPriorityG(45, IO_PARAMS8)) // MP_PRIORITY45
+                DEF_IO08(0x17E0142E, core->interrupts.writeMpPriorityG(46, IO_PARAMS8)) // MP_PRIORITY46
+                DEF_IO08(0x17E0142F, core->interrupts.writeMpPriorityG(47, IO_PARAMS8)) // MP_PRIORITY47
+                DEF_IO08(0x17E01430, core->interrupts.writeMpPriorityG(48, IO_PARAMS8)) // MP_PRIORITY48
+                DEF_IO08(0x17E01431, core->interrupts.writeMpPriorityG(49, IO_PARAMS8)) // MP_PRIORITY49
+                DEF_IO08(0x17E01432, core->interrupts.writeMpPriorityG(50, IO_PARAMS8)) // MP_PRIORITY50
+                DEF_IO08(0x17E01433, core->interrupts.writeMpPriorityG(51, IO_PARAMS8)) // MP_PRIORITY51
+                DEF_IO08(0x17E01434, core->interrupts.writeMpPriorityG(52, IO_PARAMS8)) // MP_PRIORITY52
+                DEF_IO08(0x17E01435, core->interrupts.writeMpPriorityG(53, IO_PARAMS8)) // MP_PRIORITY53
+                DEF_IO08(0x17E01436, core->interrupts.writeMpPriorityG(54, IO_PARAMS8)) // MP_PRIORITY54
+                DEF_IO08(0x17E01437, core->interrupts.writeMpPriorityG(55, IO_PARAMS8)) // MP_PRIORITY55
+                DEF_IO08(0x17E01438, core->interrupts.writeMpPriorityG(56, IO_PARAMS8)) // MP_PRIORITY56
+                DEF_IO08(0x17E01439, core->interrupts.writeMpPriorityG(57, IO_PARAMS8)) // MP_PRIORITY57
+                DEF_IO08(0x17E0143A, core->interrupts.writeMpPriorityG(58, IO_PARAMS8)) // MP_PRIORITY58
+                DEF_IO08(0x17E0143B, core->interrupts.writeMpPriorityG(59, IO_PARAMS8)) // MP_PRIORITY59
+                DEF_IO08(0x17E0143C, core->interrupts.writeMpPriorityG(60, IO_PARAMS8)) // MP_PRIORITY60
+                DEF_IO08(0x17E0143D, core->interrupts.writeMpPriorityG(61, IO_PARAMS8)) // MP_PRIORITY61
+                DEF_IO08(0x17E0143E, core->interrupts.writeMpPriorityG(62, IO_PARAMS8)) // MP_PRIORITY62
+                DEF_IO08(0x17E0143F, core->interrupts.writeMpPriorityG(63, IO_PARAMS8)) // MP_PRIORITY63
+                DEF_IO08(0x17E01440, core->interrupts.writeMpPriorityG(64, IO_PARAMS8)) // MP_PRIORITY64
+                DEF_IO08(0x17E01441, core->interrupts.writeMpPriorityG(65, IO_PARAMS8)) // MP_PRIORITY65
+                DEF_IO08(0x17E01442, core->interrupts.writeMpPriorityG(66, IO_PARAMS8)) // MP_PRIORITY66
+                DEF_IO08(0x17E01443, core->interrupts.writeMpPriorityG(67, IO_PARAMS8)) // MP_PRIORITY67
+                DEF_IO08(0x17E01444, core->interrupts.writeMpPriorityG(68, IO_PARAMS8)) // MP_PRIORITY68
+                DEF_IO08(0x17E01445, core->interrupts.writeMpPriorityG(69, IO_PARAMS8)) // MP_PRIORITY69
+                DEF_IO08(0x17E01446, core->interrupts.writeMpPriorityG(70, IO_PARAMS8)) // MP_PRIORITY70
+                DEF_IO08(0x17E01447, core->interrupts.writeMpPriorityG(71, IO_PARAMS8)) // MP_PRIORITY71
+                DEF_IO08(0x17E01448, core->interrupts.writeMpPriorityG(72, IO_PARAMS8)) // MP_PRIORITY72
+                DEF_IO08(0x17E01449, core->interrupts.writeMpPriorityG(73, IO_PARAMS8)) // MP_PRIORITY73
+                DEF_IO08(0x17E0144A, core->interrupts.writeMpPriorityG(74, IO_PARAMS8)) // MP_PRIORITY74
+                DEF_IO08(0x17E0144B, core->interrupts.writeMpPriorityG(75, IO_PARAMS8)) // MP_PRIORITY75
+                DEF_IO08(0x17E0144C, core->interrupts.writeMpPriorityG(76, IO_PARAMS8)) // MP_PRIORITY76
+                DEF_IO08(0x17E0144D, core->interrupts.writeMpPriorityG(77, IO_PARAMS8)) // MP_PRIORITY77
+                DEF_IO08(0x17E0144E, core->interrupts.writeMpPriorityG(78, IO_PARAMS8)) // MP_PRIORITY78
+                DEF_IO08(0x17E0144F, core->interrupts.writeMpPriorityG(79, IO_PARAMS8)) // MP_PRIORITY79
+                DEF_IO08(0x17E01450, core->interrupts.writeMpPriorityG(80, IO_PARAMS8)) // MP_PRIORITY80
+                DEF_IO08(0x17E01451, core->interrupts.writeMpPriorityG(81, IO_PARAMS8)) // MP_PRIORITY81
+                DEF_IO08(0x17E01452, core->interrupts.writeMpPriorityG(82, IO_PARAMS8)) // MP_PRIORITY82
+                DEF_IO08(0x17E01453, core->interrupts.writeMpPriorityG(83, IO_PARAMS8)) // MP_PRIORITY83
+                DEF_IO08(0x17E01454, core->interrupts.writeMpPriorityG(84, IO_PARAMS8)) // MP_PRIORITY84
+                DEF_IO08(0x17E01455, core->interrupts.writeMpPriorityG(85, IO_PARAMS8)) // MP_PRIORITY85
+                DEF_IO08(0x17E01456, core->interrupts.writeMpPriorityG(86, IO_PARAMS8)) // MP_PRIORITY86
+                DEF_IO08(0x17E01457, core->interrupts.writeMpPriorityG(87, IO_PARAMS8)) // MP_PRIORITY87
+                DEF_IO08(0x17E01458, core->interrupts.writeMpPriorityG(88, IO_PARAMS8)) // MP_PRIORITY88
+                DEF_IO08(0x17E01459, core->interrupts.writeMpPriorityG(89, IO_PARAMS8)) // MP_PRIORITY89
+                DEF_IO08(0x17E0145A, core->interrupts.writeMpPriorityG(90, IO_PARAMS8)) // MP_PRIORITY90
+                DEF_IO08(0x17E0145B, core->interrupts.writeMpPriorityG(91, IO_PARAMS8)) // MP_PRIORITY91
+                DEF_IO08(0x17E0145C, core->interrupts.writeMpPriorityG(92, IO_PARAMS8)) // MP_PRIORITY92
+                DEF_IO08(0x17E0145D, core->interrupts.writeMpPriorityG(93, IO_PARAMS8)) // MP_PRIORITY93
+                DEF_IO08(0x17E0145E, core->interrupts.writeMpPriorityG(94, IO_PARAMS8)) // MP_PRIORITY94
+                DEF_IO08(0x17E0145F, core->interrupts.writeMpPriorityG(95, IO_PARAMS8)) // MP_PRIORITY95
+                DEF_IO08(0x17E01460, core->interrupts.writeMpPriorityG(96, IO_PARAMS8)) // MP_PRIORITY96
+                DEF_IO08(0x17E01461, core->interrupts.writeMpPriorityG(97, IO_PARAMS8)) // MP_PRIORITY97
+                DEF_IO08(0x17E01462, core->interrupts.writeMpPriorityG(98, IO_PARAMS8)) // MP_PRIORITY98
+                DEF_IO08(0x17E01463, core->interrupts.writeMpPriorityG(99, IO_PARAMS8)) // MP_PRIORITY99
+                DEF_IO08(0x17E01464, core->interrupts.writeMpPriorityG(100, IO_PARAMS8)) // MP_PRIORITY100
+                DEF_IO08(0x17E01465, core->interrupts.writeMpPriorityG(101, IO_PARAMS8)) // MP_PRIORITY101
+                DEF_IO08(0x17E01466, core->interrupts.writeMpPriorityG(102, IO_PARAMS8)) // MP_PRIORITY102
+                DEF_IO08(0x17E01467, core->interrupts.writeMpPriorityG(103, IO_PARAMS8)) // MP_PRIORITY103
+                DEF_IO08(0x17E01468, core->interrupts.writeMpPriorityG(104, IO_PARAMS8)) // MP_PRIORITY104
+                DEF_IO08(0x17E01469, core->interrupts.writeMpPriorityG(105, IO_PARAMS8)) // MP_PRIORITY105
+                DEF_IO08(0x17E0146A, core->interrupts.writeMpPriorityG(106, IO_PARAMS8)) // MP_PRIORITY106
+                DEF_IO08(0x17E0146B, core->interrupts.writeMpPriorityG(107, IO_PARAMS8)) // MP_PRIORITY107
+                DEF_IO08(0x17E0146C, core->interrupts.writeMpPriorityG(108, IO_PARAMS8)) // MP_PRIORITY108
+                DEF_IO08(0x17E0146D, core->interrupts.writeMpPriorityG(109, IO_PARAMS8)) // MP_PRIORITY109
+                DEF_IO08(0x17E0146E, core->interrupts.writeMpPriorityG(110, IO_PARAMS8)) // MP_PRIORITY110
+                DEF_IO08(0x17E0146F, core->interrupts.writeMpPriorityG(111, IO_PARAMS8)) // MP_PRIORITY111
+                DEF_IO08(0x17E01470, core->interrupts.writeMpPriorityG(112, IO_PARAMS8)) // MP_PRIORITY112
+                DEF_IO08(0x17E01471, core->interrupts.writeMpPriorityG(113, IO_PARAMS8)) // MP_PRIORITY113
+                DEF_IO08(0x17E01472, core->interrupts.writeMpPriorityG(114, IO_PARAMS8)) // MP_PRIORITY114
+                DEF_IO08(0x17E01473, core->interrupts.writeMpPriorityG(115, IO_PARAMS8)) // MP_PRIORITY115
+                DEF_IO08(0x17E01474, core->interrupts.writeMpPriorityG(116, IO_PARAMS8)) // MP_PRIORITY116
+                DEF_IO08(0x17E01475, core->interrupts.writeMpPriorityG(117, IO_PARAMS8)) // MP_PRIORITY117
+                DEF_IO08(0x17E01476, core->interrupts.writeMpPriorityG(118, IO_PARAMS8)) // MP_PRIORITY118
+                DEF_IO08(0x17E01477, core->interrupts.writeMpPriorityG(119, IO_PARAMS8)) // MP_PRIORITY119
+                DEF_IO08(0x17E01478, core->interrupts.writeMpPriorityG(120, IO_PARAMS8)) // MP_PRIORITY120
+                DEF_IO08(0x17E01479, core->interrupts.writeMpPriorityG(121, IO_PARAMS8)) // MP_PRIORITY121
+                DEF_IO08(0x17E0147A, core->interrupts.writeMpPriorityG(122, IO_PARAMS8)) // MP_PRIORITY122
+                DEF_IO08(0x17E0147B, core->interrupts.writeMpPriorityG(123, IO_PARAMS8)) // MP_PRIORITY123
+                DEF_IO08(0x17E0147C, core->interrupts.writeMpPriorityG(124, IO_PARAMS8)) // MP_PRIORITY124
+                DEF_IO08(0x17E0147D, core->interrupts.writeMpPriorityG(125, IO_PARAMS8)) // MP_PRIORITY125
+                DEF_IO08(0x17E0147E, core->interrupts.writeMpPriorityG(126, IO_PARAMS8)) // MP_PRIORITY126
+                DEF_IO08(0x17E0147F, core->interrupts.writeMpPriorityG(127, IO_PARAMS8)) // MP_PRIORITY127
                 DEF_IO08(0x17E01800, core->interrupts.writeMpTarget(0, IO_PARAMS8)) // MP_TARGET0
                 DEF_IO08(0x17E01801, core->interrupts.writeMpTarget(1, IO_PARAMS8)) // MP_TARGET1
                 DEF_IO08(0x17E01802, core->interrupts.writeMpTarget(2, IO_PARAMS8)) // MP_TARGET2
