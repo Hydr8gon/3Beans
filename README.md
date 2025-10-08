@@ -12,8 +12,8 @@ incorporate hardware acceleration or high-level elements to achieve reasonable s
 and can be downloaded from the [releases page](https://github.com/Hydr8gon/3Beans/releases).
 
 ### Setup
-Currently, 3Beans is only fully compatible with old 3DS systems. New 3DS mode has trouble booting the OS, although it
-does work for bare-metal homebrew. If you have a console with homebrew access, you can use
+Currently, 3Beans works best when using files from an old 3DS system. New 3DS mode is (more) unstable, and it's rare for
+anything to fully boot. If you have either of these consoles with homebrew access, you can use
 [GodMode9](https://github.com/d0k3/GodMode9) to dump `boot9.bin`, `boot11.bin`, and `nand.bin`, which are required for
 3Beans to do anything. You might also want to create `sd.img`, which can be any
 [FAT-formatted image file](https://kuribo64.net/get.php?id=mRJJ5GggXOPbKUMZ) to serve as an SD card. These files can be

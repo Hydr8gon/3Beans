@@ -137,6 +137,11 @@ template <bool decrypt> void Aes::cryptBlock(uint32_t *src, uint32_t *dst) {
     dst[3] = rKey[43] ^ (decrypt ? scatter8(rsBox, y2, y1, y0, y3) : scatter8(fsBox, y0, y1, y2, y3));
 }
 
+void Aes::autoBoot() {
+    // Enable the auto-boot hack for the next 2 processed icons
+    hackCount = 2;
+}
+
 void Aes::initFifo() {
     // Get the current AES mode and reload block counters
     uint8_t mode = (aesCnt >> 27) & 0x7;
@@ -257,7 +262,7 @@ void Aes::update() {
         }
 
         // Detect icon data and force the auto-boot flag to be set if enabled
-        if (Settings::cartAutoBoot) {
+        if (hackCount > 0) {
             if (dst[3] == 0x534D4448) // SMDH
                 iconOffset = 0x2028;
             if (iconOffset > 0 && (iconOffset -= 16) < 0) {
@@ -265,6 +270,7 @@ void Aes::update() {
                     BSWAP32(dst[1]), BSWAP32(dst[1] | BIT(25)));
                 core->shas[1].iconFlags = dst[1];
                 dst[1] |= BIT(25);
+                hackCount--;
             }
         }
 

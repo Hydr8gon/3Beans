@@ -27,6 +27,8 @@ class Core;
 class Aes {
 public:
     Aes(Core *core);
+
+    void autoBoot();
     void update();
 
     uint32_t readCnt() { return aesCnt; }
@@ -51,8 +53,9 @@ public:
 private:
     Core *core;
 
+    int16_t iconOffset = 0;
+    uint8_t hackCount = 0;
     bool scheduled = false;
-    int iconOffset = 0;
 
     uint8_t fsBox[0x100];
     uint8_t rsBox[0x100];

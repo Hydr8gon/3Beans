@@ -25,6 +25,7 @@ const uint16_t Cartridge::ctrClocks[] = { 64, 80, 96, 128, 160, 256, 256, 256 };
 Cartridge::Cartridge(Core *core, std::string &cartPath): core(core) {
     // Open a cartridge file if a path was provided
     if (cartPath.empty() || !(cartFile = fopen(cartPath.c_str(), "rb"))) return;
+    if (Settings::cartAutoBoot) core->aes.autoBoot();
     cfg9CardPower &= ~BIT(0); // Inserted
 
     // Determine a primary 3DS cartridge ID based on ROM size, from 128MB to 4GB
