@@ -438,14 +438,26 @@ private:
     int rev16(uint32_t opcode);
     int revsh(uint32_t opcode);
     int rev(uint32_t opcode);
-    int qsub8(uint32_t opcode);
-    int uqsub8(uint32_t opcode);
-    int uqsub16(uint32_t opcode);
-    int uadd8(uint32_t opcode);
-    int uadd16(uint32_t opcode);
-    int sel(uint32_t opcode);
     int pkhbt(uint32_t opcode);
     int pkhtb(uint32_t opcode);
+
+    int sadd8(uint32_t opcode);
+    int uadd8(uint32_t opcode);
+    int uqadd8(uint32_t opcode);
+    int uhadd8(uint32_t opcode);
+    int sadd16(uint32_t opcode);
+    int uadd16(uint32_t opcode);
+    int uqadd16(uint32_t opcode);
+    int uhadd16(uint32_t opcode);
+    int ssub8(uint32_t opcode);
+    int qsub8(uint32_t opcode);
+    int usub8(uint32_t opcode);
+    int uqsub8(uint32_t opcode);
+    int ssub16(uint32_t opcode);
+    int qsub16(uint32_t opcode);
+    int usub16(uint32_t opcode);
+    int uqsub16(uint32_t opcode);
+    int sel(uint32_t opcode);
 
     int ssat(uint32_t opcode, uint32_t op2);
     int usat(uint32_t opcode, uint32_t op2);
