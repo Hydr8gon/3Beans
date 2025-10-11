@@ -93,6 +93,8 @@ void Cdma::runOpcodes(int i) {
             case 0x35: dmaStubC(i, 1); break; // DMAFLUSHP (stub)
             case 0x38: dmaLpend0(i); break; // DMALPEND lpc0
             case 0x3C: dmaLpend1(i); break; // DMALPEND lpc1
+            case 0x54: dmaAddhS(i); break; // DMAADDH SAR,imm16
+            case 0x56: dmaAddhD(i); break; // DMAADDH DAR,imm16
             case 0xA0: dmaGoNs(i); break; // DMAGO chan,imm32 (stub)
             case 0xA2: dmaGoNs(i); break; // DMAGO chan,imm32,ns
             case 0xBC: dmaMov(i); break; // DMAMOV reg,imm32
@@ -342,7 +344,7 @@ void Cdma::dmaWfp(int i, uint16_t burst) { // DMAWFP periph,type
         LOG_CRIT("XDMA channel %d waiting for unimplemented DRQ type: 0x%X\n", i, periph);
     }
     else {
-        if (periph == 0x4) return;
+        if (periph == 0x4 || (periph >= 0x6 && periph <= 0x8) || periph == 0xA) return;
         LOG_CRIT("CDMA%d channel %d waiting for unimplemented DRQ type: 0x%X\n", id, i, periph);
     }
 }
@@ -376,6 +378,20 @@ void Cdma::dmaLpend1(int i) { // DMALPEND lpc1
     if (i == 8) return fault(i, 0); // Channel-exclusive
     uint8_t jump = core->memory.read<uint8_t>(cpu, cpcs[i]++);
     if (lc1s[i]-- != 0) cpcs[i] -= jump + 2;
+}
+
+void Cdma::dmaAddhS(int i) { // DMAADDH SAR,imm16
+    // Add a positive 16-bit immediate to a channel's source address register
+    if (i == 8) return fault(i, 0); // Channel-exclusive
+    sars[i] += core->memory.read<uint16_t>(cpu, cpcs[i]);
+    cpcs[i] += 2;
+}
+
+void Cdma::dmaAddhD(int i) { // DMAADDH DAR,imm16
+    // Add a positive 16-bit immediate to a channel's destination address register
+    if (i == 8) return fault(i, 0); // Channel-exclusive
+    dars[i] += core->memory.read<uint16_t>(cpu, cpcs[i]);
+    cpcs[i] += 2;
 }
 
 void Cdma::dmaGoNs(int i) { // DMAGO chan,imm32,ns

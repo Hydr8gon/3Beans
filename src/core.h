@@ -49,6 +49,7 @@
 #include "timers.h"
 #include "vfp11_interp.h"
 #include "wifi.h"
+#include "y2r.h"
 
 enum CoreError {
     ERROR_BOOTROM
@@ -91,8 +92,10 @@ enum Task {
     CDMA1_UPDATE,
     XDMA_UPDATE,
     NDMA_UPDATE,
-    SHA11_UPDATE,
-    SHA9_UPDATE,
+    SHA0_UPDATE,
+    SHA1_UPDATE,
+    Y2R0_UPDATE,
+    Y2R1_UPDATE,
     GPU_SET0_READY,
     GPU_SET1_READY,
     GPU_CPY_READY,
@@ -144,6 +147,7 @@ public:
     Timers timers;
     Vfp11Interp vfp11s[MAX_CPUS - 1];
     Wifi wifi;
+    Y2r y2rs[2];
 
     std::atomic<bool> running;
     std::vector<Event> events;

@@ -125,6 +125,12 @@ uint8_t GpuRenderSoft::stencilOp(uint8_t value, StenOper oper) {
 }
 
 void GpuRenderSoft::getTexel(float &r, float &g, float &b, float &a, float s, float t, int i) {
+    // Catch silly invalid textures like in Pokemon X/Y
+    if (!texWidths[i] || !texHeights[i]) {
+        r = g = b = a = 0.0f;
+        return;
+    }
+
     // Scale the S-coordinate to texels and handle wrapping based on mode
     uint32_t u = uint32_t(s * texWidths[i]);
     if (u >= texWidths[i]) {

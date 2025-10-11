@@ -491,6 +491,7 @@ private:
     int cntxS(uint16_t opcode);
     int dint(uint16_t opcode);
     int eint(uint16_t opcode);
+    int movpdw(uint16_t opcode);
     int nop(uint16_t opcode);
     int repI8(uint16_t opcode);
     int repReg(uint16_t opcode);

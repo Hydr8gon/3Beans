@@ -46,7 +46,7 @@ public:
     uint32_t readMpIp(CpuId id, int i) { return mpIp[id][i]; }
     uint32_t readMpIa(CpuId id, int i) { return mpIa[id][i]; }
     uint8_t readMpPriorityL(CpuId id, int i) { return mpPriorityL[id][i]; }
-    uint8_t readMpPriorityG(int i) { return mpPriorityG[i]; }
+    uint8_t readMpPriorityG(int i) { return mpPriorityG[i - 0x20]; }
     uint8_t readMpTarget(CpuId id, int i);
     uint32_t readIrqIe() { return irqIe; }
     uint32_t readIrqIf() { return irqIf; }

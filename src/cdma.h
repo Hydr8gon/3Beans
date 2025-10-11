@@ -110,6 +110,8 @@ private:
     void dmaSev(int i);
     void dmaLpend0(int i);
     void dmaLpend1(int i);
+    void dmaAddhS(int i);
+    void dmaAddhD(int i);
     void dmaGoNs(int i);
     void dmaMov(int i);
 };

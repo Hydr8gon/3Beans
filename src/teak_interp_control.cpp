@@ -255,6 +255,15 @@ int TeakInterp::eint(uint16_t opcode) { // EINT
     return 1;
 }
 
+int TeakInterp::movpdw(uint16_t opcode) { // MOVPDW ProgMemAx, PC
+    // Branch to an address from program memory addressed by an A accumulator
+    uint32_t address = 0x1FF00000 + ((regA[(opcode >> 8) & 0x1].v & 0x1FFFF) << 1);
+    uint16_t h = core->memory.read<uint16_t>(ARM11, address + 0);
+    uint16_t l = core->memory.read<uint16_t>(ARM11, address + 2);
+    regPc = ((h << 16) | l) & 0x1FFFF;
+    return 1;
+}
+
 int TeakInterp::nop(uint16_t opcode) { // NOP
     // Do nothing
     return 1;

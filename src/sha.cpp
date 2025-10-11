@@ -140,7 +140,7 @@ void Sha::pushFifo() {
 void Sha::triggerFifo() {
     // Schedule a FIFO update if one hasn't been already
     if (scheduled) return;
-    core->schedule(Task(SHA11_UPDATE + arm9), 1);
+    core->schedule(Task(SHA0_UPDATE + arm9), 1);
     scheduled = true;
 }
 

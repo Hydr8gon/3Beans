@@ -560,6 +560,8 @@ void TeakInterp::initLookup() {
             teakInstrs[op] = &TeakInterp::movaRarab;
         else if ((op & 0xFFC0) == 0x0D40)
             teakInstrs[op] = &TeakInterp::movpPmareg;
+        else if ((op & 0xFEFF) == 0xD499)
+            teakInstrs[op] = &TeakInterp::movpdw;
         else if ((op & 0xFFC0) == 0x9D40)
             teakInstrs[op] = &TeakInterp::mov2Abhabh;
         else if ((op & 0xE700) == 0x6300)

@@ -205,16 +205,19 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
 
         // Check registers that are shared between CPUs
         switch (base) {
-            DEF_IO32(0x10101000, data = core->shas[0].readCnt()) // SHA_CNT11
-            DEF_IO32(0x10101004, data = core->shas[0].readBlkcnt()) // SHA_BLKCNT11
-            DEF_IO32(0x10101040, data = core->shas[0].readHash(0)) // SHA_HASH0_11
-            DEF_IO32(0x10101044, data = core->shas[0].readHash(1)) // SHA_HASH1_11
-            DEF_IO32(0x10101048, data = core->shas[0].readHash(2)) // SHA_HASH2_11
-            DEF_IO32(0x1010104C, data = core->shas[0].readHash(3)) // SHA_HASH3_11
-            DEF_IO32(0x10101050, data = core->shas[0].readHash(4)) // SHA_HASH4_11
-            DEF_IO32(0x10101054, data = core->shas[0].readHash(5)) // SHA_HASH5_11
-            DEF_IO32(0x10101058, data = core->shas[0].readHash(6)) // SHA_HASH6_11
-            DEF_IO32(0x1010105C, data = core->shas[0].readHash(7)) // SHA_HASH7_11
+            DEF_IO32(0x10101000, data = core->shas[0].readCnt()) // SHA0_CNT
+            DEF_IO32(0x10101004, data = core->shas[0].readBlkcnt()) // SHA0_BLKCNT
+            DEF_IO32(0x10101040, data = core->shas[0].readHash(0)) // SHA0_HASH0
+            DEF_IO32(0x10101044, data = core->shas[0].readHash(1)) // SHA0_HASH1
+            DEF_IO32(0x10101048, data = core->shas[0].readHash(2)) // SHA0_HASH2
+            DEF_IO32(0x1010104C, data = core->shas[0].readHash(3)) // SHA0_HASH3
+            DEF_IO32(0x10101050, data = core->shas[0].readHash(4)) // SHA0_HASH4
+            DEF_IO32(0x10101054, data = core->shas[0].readHash(5)) // SHA0_HASH5
+            DEF_IO32(0x10101058, data = core->shas[0].readHash(6)) // SHA0_HASH6
+            DEF_IO32(0x1010105C, data = core->shas[0].readHash(7)) // SHA0_HASH7
+            DEF_IO32(0x10102000, data = core->y2rs[0].readCnt()) // Y2R0_CNT
+            DEF_IO16(0x10102004, data = core->y2rs[0].readWidth()) // Y2R0_WIDTH
+            DEF_IO16(0x10102006, data = core->y2rs[0].readHeight()) // Y2R0_HEIGHT
             DEF_IO16(0x10103000, data = core->csnd.readMainVol()) // CSND_MAIN_VOL
             DEF_IO16(0x10103002, data = core->csnd.readMainCnt()) // CSND_MAIN_CNT
             DEF_IO16(0x10103400, data = core->csnd.readChanCnt(0)) // CSND_CHAN0_CNT
@@ -361,6 +364,9 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
             DEF_IO16(0x101220D8, data = core->wifi.readDataCtl()) // WIFI_DATA_CTL
             DEF_IO16(0x10122100, data = core->wifi.readData32Irq()) // WIFI_DATA32_IRQ
             DEF_IO16(0x10122104, data = core->wifi.readData32Blklen()) // WIFI_DATA32_BLKLEN
+            DEF_IO32(0x10132000, data = core->y2rs[1].readCnt()) // Y2R1_CNT
+            DEF_IO16(0x10132004, data = core->y2rs[1].readWidth()) // Y2R1_WIDTH
+            DEF_IO16(0x10132006, data = core->y2rs[1].readHeight()) // Y2R1_HEIGHT
             DEF_IO08(0x10140000, data = readCfg11Wram32kCode(0)) // CFG11_WRAM_32K_CODE0
             DEF_IO08(0x10140001, data = readCfg11Wram32kCode(1)) // CFG11_WRAM_32K_CODE1
             DEF_IO08(0x10140002, data = readCfg11Wram32kCode(2)) // CFG11_WRAM_32K_CODE2
@@ -574,23 +580,87 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x10206D00, data = core->cdmas[CDMA1].readDbgstatus()) // CDMA1_DBGSTATUS
                 DEF_IO32(0x10206D08, data = core->cdmas[CDMA1].readDbginst0()) // CDMA1_DBGINST0
                 DEF_IO32(0x10206D0C, data = core->cdmas[CDMA1].readDbginst1()) // CDMA1_DBGINST1
-                DEF_IO32(0x10301000, data = core->shas[0].readFifo()) // SHA_FIFO11
-                DEF_IO32(0x10301004, data = core->shas[0].readFifo()) // SHA_FIFO11
-                DEF_IO32(0x10301008, data = core->shas[0].readFifo()) // SHA_FIFO11
-                DEF_IO32(0x1030100C, data = core->shas[0].readFifo()) // SHA_FIFO11
-                DEF_IO32(0x10301010, data = core->shas[0].readFifo()) // SHA_FIFO11
-                DEF_IO32(0x10301014, data = core->shas[0].readFifo()) // SHA_FIFO11
-                DEF_IO32(0x10301018, data = core->shas[0].readFifo()) // SHA_FIFO11
-                DEF_IO32(0x1030101C, data = core->shas[0].readFifo()) // SHA_FIFO11
-                DEF_IO32(0x10301020, data = core->shas[0].readFifo()) // SHA_FIFO11
-                DEF_IO32(0x10301024, data = core->shas[0].readFifo()) // SHA_FIFO11
-                DEF_IO32(0x10301028, data = core->shas[0].readFifo()) // SHA_FIFO11
-                DEF_IO32(0x1030102C, data = core->shas[0].readFifo()) // SHA_FIFO11
-                DEF_IO32(0x10301030, data = core->shas[0].readFifo()) // SHA_FIFO11
-                DEF_IO32(0x10301034, data = core->shas[0].readFifo()) // SHA_FIFO11
-                DEF_IO32(0x10301038, data = core->shas[0].readFifo()) // SHA_FIFO11
-                DEF_IO32(0x1030103C, data = core->shas[0].readFifo()) // SHA_FIFO11
+                DEF_IO32(0x10301000, data = core->shas[0].readFifo()) // SHA0_FIFO
+                DEF_IO32(0x10301004, data = core->shas[0].readFifo()) // SHA0_FIFO
+                DEF_IO32(0x10301008, data = core->shas[0].readFifo()) // SHA0_FIFO
+                DEF_IO32(0x1030100C, data = core->shas[0].readFifo()) // SHA0_FIFO
+                DEF_IO32(0x10301010, data = core->shas[0].readFifo()) // SHA0_FIFO
+                DEF_IO32(0x10301014, data = core->shas[0].readFifo()) // SHA0_FIFO
+                DEF_IO32(0x10301018, data = core->shas[0].readFifo()) // SHA0_FIFO
+                DEF_IO32(0x1030101C, data = core->shas[0].readFifo()) // SHA0_FIFO
+                DEF_IO32(0x10301020, data = core->shas[0].readFifo()) // SHA0_FIFO
+                DEF_IO32(0x10301024, data = core->shas[0].readFifo()) // SHA0_FIFO
+                DEF_IO32(0x10301028, data = core->shas[0].readFifo()) // SHA0_FIFO
+                DEF_IO32(0x1030102C, data = core->shas[0].readFifo()) // SHA0_FIFO
+                DEF_IO32(0x10301030, data = core->shas[0].readFifo()) // SHA0_FIFO
+                DEF_IO32(0x10301034, data = core->shas[0].readFifo()) // SHA0_FIFO
+                DEF_IO32(0x10301038, data = core->shas[0].readFifo()) // SHA0_FIFO
+                DEF_IO32(0x1030103C, data = core->shas[0].readFifo()) // SHA0_FIFO
+                DEF_IO32(0x10302200, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
+                DEF_IO32(0x10302204, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
+                DEF_IO32(0x10302208, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
+                DEF_IO32(0x1030220C, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
+                DEF_IO32(0x10302210, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
+                DEF_IO32(0x10302214, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
+                DEF_IO32(0x10302218, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
+                DEF_IO32(0x1030221C, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
+                DEF_IO32(0x10302220, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
+                DEF_IO32(0x10302224, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
+                DEF_IO32(0x10302228, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
+                DEF_IO32(0x1030222C, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
+                DEF_IO32(0x10302230, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
+                DEF_IO32(0x10302234, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
+                DEF_IO32(0x10302238, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
+                DEF_IO32(0x1030223C, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
+                DEF_IO32(0x10302240, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
+                DEF_IO32(0x10302244, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
+                DEF_IO32(0x10302248, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
+                DEF_IO32(0x1030224C, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
+                DEF_IO32(0x10302250, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
+                DEF_IO32(0x10302254, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
+                DEF_IO32(0x10302258, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
+                DEF_IO32(0x1030225C, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
+                DEF_IO32(0x10302260, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
+                DEF_IO32(0x10302264, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
+                DEF_IO32(0x10302268, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
+                DEF_IO32(0x1030226C, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
+                DEF_IO32(0x10302270, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
+                DEF_IO32(0x10302274, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
+                DEF_IO32(0x10302278, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
+                DEF_IO32(0x1030227C, data = core->y2rs[0].readOutputRgba()) // Y2R0_OUTPUT_RGBA
                 DEF_IO32(0x10322000, data = core->wifi.readData32Fifo()) // WIFI_DATA32_FIFO
+                DEF_IO32(0x10332200, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
+                DEF_IO32(0x10332204, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
+                DEF_IO32(0x10332208, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
+                DEF_IO32(0x1033220C, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
+                DEF_IO32(0x10332210, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
+                DEF_IO32(0x10332214, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
+                DEF_IO32(0x10332218, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
+                DEF_IO32(0x1033221C, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
+                DEF_IO32(0x10332220, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
+                DEF_IO32(0x10332224, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
+                DEF_IO32(0x10332228, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
+                DEF_IO32(0x1033222C, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
+                DEF_IO32(0x10332230, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
+                DEF_IO32(0x10332234, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
+                DEF_IO32(0x10332238, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
+                DEF_IO32(0x1033223C, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
+                DEF_IO32(0x10332240, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
+                DEF_IO32(0x10332244, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
+                DEF_IO32(0x10332248, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
+                DEF_IO32(0x1033224C, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
+                DEF_IO32(0x10332250, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
+                DEF_IO32(0x10332254, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
+                DEF_IO32(0x10332258, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
+                DEF_IO32(0x1033225C, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
+                DEF_IO32(0x10332260, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
+                DEF_IO32(0x10332264, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
+                DEF_IO32(0x10332268, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
+                DEF_IO32(0x1033226C, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
+                DEF_IO32(0x10332270, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
+                DEF_IO32(0x10332274, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
+                DEF_IO32(0x10332278, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
+                DEF_IO32(0x1033227C, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
                 DEF_IO32(0x10400010, data = core->gpu.readMemsetDstAddr(0)) // GPU_MEMSET_DST_ADDR0
                 DEF_IO32(0x10400014, data = core->gpu.readMemsetDstEnd(0)) // GPU_MEMSET_DST_END0
                 DEF_IO32(0x10400018, data = core->gpu.readMemsetData(0)) // GPU_MEMSET_DATA0
@@ -1232,32 +1302,32 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x1000900C, data = core->aes.readRdfifo()) // AES_RDFIFO
                 DEF_IO08(0x10009010, data = core->aes.readKeysel()) // AES_KEYSEL
                 DEF_IO08(0x10009011, data = core->aes.readKeycnt()) // AES_KEYCNT
-                DEF_IO32(0x1000A000, data = core->shas[1].readCnt()) // SHA_CNT9
-                DEF_IO32(0x1000A004, data = core->shas[1].readBlkcnt()) // SHA_BLKCNT9
-                DEF_IO32(0x1000A040, data = core->shas[1].readHash(0)) // SHA_HASH0_9
-                DEF_IO32(0x1000A044, data = core->shas[1].readHash(1)) // SHA_HASH1_9
-                DEF_IO32(0x1000A048, data = core->shas[1].readHash(2)) // SHA_HASH2_9
-                DEF_IO32(0x1000A04C, data = core->shas[1].readHash(3)) // SHA_HASH3_9
-                DEF_IO32(0x1000A050, data = core->shas[1].readHash(4)) // SHA_HASH4_9
-                DEF_IO32(0x1000A054, data = core->shas[1].readHash(5)) // SHA_HASH5_9
-                DEF_IO32(0x1000A058, data = core->shas[1].readHash(6)) // SHA_HASH6_9
-                DEF_IO32(0x1000A05C, data = core->shas[1].readHash(7)) // SHA_HASH7_9
-                DEF_IO32(0x1000A080, data = core->shas[1].readFifo()) // SHA_FIFO9
-                DEF_IO32(0x1000A084, data = core->shas[1].readFifo()) // SHA_FIFO9
-                DEF_IO32(0x1000A088, data = core->shas[1].readFifo()) // SHA_FIFO9
-                DEF_IO32(0x1000A08C, data = core->shas[1].readFifo()) // SHA_FIFO9
-                DEF_IO32(0x1000A090, data = core->shas[1].readFifo()) // SHA_FIFO9
-                DEF_IO32(0x1000A094, data = core->shas[1].readFifo()) // SHA_FIFO9
-                DEF_IO32(0x1000A098, data = core->shas[1].readFifo()) // SHA_FIFO9
-                DEF_IO32(0x1000A09C, data = core->shas[1].readFifo()) // SHA_FIFO9
-                DEF_IO32(0x1000A0A0, data = core->shas[1].readFifo()) // SHA_FIFO9
-                DEF_IO32(0x1000A0A4, data = core->shas[1].readFifo()) // SHA_FIFO9
-                DEF_IO32(0x1000A0A8, data = core->shas[1].readFifo()) // SHA_FIFO9
-                DEF_IO32(0x1000A0AC, data = core->shas[1].readFifo()) // SHA_FIFO9
-                DEF_IO32(0x1000A0B0, data = core->shas[1].readFifo()) // SHA_FIFO9
-                DEF_IO32(0x1000A0B4, data = core->shas[1].readFifo()) // SHA_FIFO9
-                DEF_IO32(0x1000A0B8, data = core->shas[1].readFifo()) // SHA_FIFO9
-                DEF_IO32(0x1000A0BC, data = core->shas[1].readFifo()) // SHA_FIFO9
+                DEF_IO32(0x1000A000, data = core->shas[1].readCnt()) // SHA1_CNT
+                DEF_IO32(0x1000A004, data = core->shas[1].readBlkcnt()) // SHA1_BLKCNT
+                DEF_IO32(0x1000A040, data = core->shas[1].readHash(0)) // SHA1_HASH0
+                DEF_IO32(0x1000A044, data = core->shas[1].readHash(1)) // SHA1_HASH1
+                DEF_IO32(0x1000A048, data = core->shas[1].readHash(2)) // SHA1_HASH2
+                DEF_IO32(0x1000A04C, data = core->shas[1].readHash(3)) // SHA1_HASH3
+                DEF_IO32(0x1000A050, data = core->shas[1].readHash(4)) // SHA1_HASH4
+                DEF_IO32(0x1000A054, data = core->shas[1].readHash(5)) // SHA1_HASH5
+                DEF_IO32(0x1000A058, data = core->shas[1].readHash(6)) // SHA1_HASH6
+                DEF_IO32(0x1000A05C, data = core->shas[1].readHash(7)) // SHA1_HASH7
+                DEF_IO32(0x1000A080, data = core->shas[1].readFifo()) // SHA1_FIFO
+                DEF_IO32(0x1000A084, data = core->shas[1].readFifo()) // SHA1_FIFO
+                DEF_IO32(0x1000A088, data = core->shas[1].readFifo()) // SHA1_FIFO
+                DEF_IO32(0x1000A08C, data = core->shas[1].readFifo()) // SHA1_FIFO
+                DEF_IO32(0x1000A090, data = core->shas[1].readFifo()) // SHA1_FIFO
+                DEF_IO32(0x1000A094, data = core->shas[1].readFifo()) // SHA1_FIFO
+                DEF_IO32(0x1000A098, data = core->shas[1].readFifo()) // SHA1_FIFO
+                DEF_IO32(0x1000A09C, data = core->shas[1].readFifo()) // SHA1_FIFO
+                DEF_IO32(0x1000A0A0, data = core->shas[1].readFifo()) // SHA1_FIFO
+                DEF_IO32(0x1000A0A4, data = core->shas[1].readFifo()) // SHA1_FIFO
+                DEF_IO32(0x1000A0A8, data = core->shas[1].readFifo()) // SHA1_FIFO
+                DEF_IO32(0x1000A0AC, data = core->shas[1].readFifo()) // SHA1_FIFO
+                DEF_IO32(0x1000A0B0, data = core->shas[1].readFifo()) // SHA1_FIFO
+                DEF_IO32(0x1000A0B4, data = core->shas[1].readFifo()) // SHA1_FIFO
+                DEF_IO32(0x1000A0B8, data = core->shas[1].readFifo()) // SHA1_FIFO
+                DEF_IO32(0x1000A0BC, data = core->shas[1].readFifo()) // SHA1_FIFO
                 DEF_IO32(0x1000B000, data = core->rsa.readCnt()) // RSA_CNT
                 DEF_IO32(0x1000B100, data = core->rsa.readSlotcnt(0)) // RSA_SLOTCNT0
                 DEF_IO32(0x1000B104, data = core->rsa.readSlotsize(0)) // RSA_SLOTSIZE0
@@ -1542,16 +1612,19 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
 
         // Check registers that are shared between CPUs
         switch (base) {
-            DEF_IO32(0x10101000, core->shas[0].writeCnt(IO_PARAMS)) // SHA_CNT11
-            DEF_IO32(0x10101004, core->shas[0].writeBlkcnt(IO_PARAMS)) // SHA_BLKCNT11
-            DEF_IO32(0x10101040, core->shas[0].writeHash(0, IO_PARAMS)) // SHA_HASH0_11
-            DEF_IO32(0x10101044, core->shas[0].writeHash(1, IO_PARAMS)) // SHA_HASH1_11
-            DEF_IO32(0x10101048, core->shas[0].writeHash(2, IO_PARAMS)) // SHA_HASH2_11
-            DEF_IO32(0x1010104C, core->shas[0].writeHash(3, IO_PARAMS)) // SHA_HASH3_11
-            DEF_IO32(0x10101050, core->shas[0].writeHash(4, IO_PARAMS)) // SHA_HASH4_11
-            DEF_IO32(0x10101054, core->shas[0].writeHash(5, IO_PARAMS)) // SHA_HASH5_11
-            DEF_IO32(0x10101058, core->shas[0].writeHash(6, IO_PARAMS)) // SHA_HASH6_11
-            DEF_IO32(0x1010105C, core->shas[0].writeHash(7, IO_PARAMS)) // SHA_HASH7_11
+            DEF_IO32(0x10101000, core->shas[0].writeCnt(IO_PARAMS)) // SHA0_CNT
+            DEF_IO32(0x10101004, core->shas[0].writeBlkcnt(IO_PARAMS)) // SHA0_BLKCNT
+            DEF_IO32(0x10101040, core->shas[0].writeHash(0, IO_PARAMS)) // SHA0_HASH0
+            DEF_IO32(0x10101044, core->shas[0].writeHash(1, IO_PARAMS)) // SHA0_HASH1
+            DEF_IO32(0x10101048, core->shas[0].writeHash(2, IO_PARAMS)) // SHA0_HASH2
+            DEF_IO32(0x1010104C, core->shas[0].writeHash(3, IO_PARAMS)) // SHA0_HASH3
+            DEF_IO32(0x10101050, core->shas[0].writeHash(4, IO_PARAMS)) // SHA0_HASH4
+            DEF_IO32(0x10101054, core->shas[0].writeHash(5, IO_PARAMS)) // SHA0_HASH5
+            DEF_IO32(0x10101058, core->shas[0].writeHash(6, IO_PARAMS)) // SHA0_HASH6
+            DEF_IO32(0x1010105C, core->shas[0].writeHash(7, IO_PARAMS)) // SHA0_HASH7
+            DEF_IO32(0x10102000, core->y2rs[0].writeCnt(IO_PARAMS)) // Y2R0_CNT
+            DEF_IO16(0x10102004, core->y2rs[0].writeWidth(IO_PARAMS)) // Y2R0_WIDTH
+            DEF_IO16(0x10102006, core->y2rs[0].writeHeight(IO_PARAMS)) // Y2R0_HEIGHT
             DEF_IO16(0x10103000, core->csnd.writeMainVol(IO_PARAMS)) // CSND_MAIN_VOL
             DEF_IO16(0x10103002, core->csnd.writeMainCnt(IO_PARAMS)) // CSND_MAIN_CNT
             DEF_IO16(0x10103400, core->csnd.writeChanCnt(0, IO_PARAMS)) // CSND_CHAN0_CNT
@@ -1853,6 +1926,9 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
             DEF_IO16(0x101220D8, core->wifi.writeDataCtl(IO_PARAMS)) // WIFI_DATA_CTL
             DEF_IO16(0x10122100, core->wifi.writeData32Irq(IO_PARAMS)) // WIFI_DATA32_IRQ
             DEF_IO16(0x10122104, core->wifi.writeData32Blklen(IO_PARAMS)) // WIFI_DATA32_BLKLEN
+            DEF_IO32(0x10132000, core->y2rs[1].writeCnt(IO_PARAMS)) // Y2R1_CNT
+            DEF_IO16(0x10132004, core->y2rs[1].writeWidth(IO_PARAMS)) // Y2R1_WIDTH
+            DEF_IO16(0x10132006, core->y2rs[1].writeHeight(IO_PARAMS)) // Y2R1_HEIGHT
             DEF_IO08(0x10140000, writeCfg11Wram32kCode(0, IO_PARAMS8)) // CFG11_WRAM_32K_CODE0
             DEF_IO08(0x10140001, writeCfg11Wram32kCode(1, IO_PARAMS8)) // CFG11_WRAM_32K_CODE1
             DEF_IO08(0x10140002, writeCfg11Wram32kCode(2, IO_PARAMS8)) // CFG11_WRAM_32K_CODE2
@@ -1920,22 +1996,214 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x10206D0C, core->cdmas[CDMA1].writeDbginst1(IO_PARAMS)) // CDMA1_DBGINST1
                 DEF_IO32(0x10206020, core->cdmas[CDMA1].writeInten(IO_PARAMS)) // CDMA1_INTEN
                 DEF_IO32(0x1020602C, core->cdmas[CDMA1].writeIntclr(IO_PARAMS)) // CDMA1_INTCLR
-                DEF_IO32(0x10301000, core->shas[0].writeFifo(IO_PARAMS)) // SHA_FIFO11
-                DEF_IO32(0x10301004, core->shas[0].writeFifo(IO_PARAMS)) // SHA_FIFO11
-                DEF_IO32(0x10301008, core->shas[0].writeFifo(IO_PARAMS)) // SHA_FIFO11
-                DEF_IO32(0x1030100C, core->shas[0].writeFifo(IO_PARAMS)) // SHA_FIFO11
-                DEF_IO32(0x10301010, core->shas[0].writeFifo(IO_PARAMS)) // SHA_FIFO11
-                DEF_IO32(0x10301014, core->shas[0].writeFifo(IO_PARAMS)) // SHA_FIFO11
-                DEF_IO32(0x10301018, core->shas[0].writeFifo(IO_PARAMS)) // SHA_FIFO11
-                DEF_IO32(0x1030101C, core->shas[0].writeFifo(IO_PARAMS)) // SHA_FIFO11
-                DEF_IO32(0x10301020, core->shas[0].writeFifo(IO_PARAMS)) // SHA_FIFO11
-                DEF_IO32(0x10301024, core->shas[0].writeFifo(IO_PARAMS)) // SHA_FIFO11
-                DEF_IO32(0x10301028, core->shas[0].writeFifo(IO_PARAMS)) // SHA_FIFO11
-                DEF_IO32(0x1030102C, core->shas[0].writeFifo(IO_PARAMS)) // SHA_FIFO11
-                DEF_IO32(0x10301030, core->shas[0].writeFifo(IO_PARAMS)) // SHA_FIFO11
-                DEF_IO32(0x10301034, core->shas[0].writeFifo(IO_PARAMS)) // SHA_FIFO11
-                DEF_IO32(0x10301038, core->shas[0].writeFifo(IO_PARAMS)) // SHA_FIFO11
-                DEF_IO32(0x1030103C, core->shas[0].writeFifo(IO_PARAMS)) // SHA_FIFO11
+                DEF_IO32(0x10301000, core->shas[0].writeFifo(IO_PARAMS)) // SHA0_FIFO
+                DEF_IO32(0x10301004, core->shas[0].writeFifo(IO_PARAMS)) // SHA0_FIFO
+                DEF_IO32(0x10301008, core->shas[0].writeFifo(IO_PARAMS)) // SHA0_FIFO
+                DEF_IO32(0x1030100C, core->shas[0].writeFifo(IO_PARAMS)) // SHA0_FIFO
+                DEF_IO32(0x10301010, core->shas[0].writeFifo(IO_PARAMS)) // SHA0_FIFO
+                DEF_IO32(0x10301014, core->shas[0].writeFifo(IO_PARAMS)) // SHA0_FIFO
+                DEF_IO32(0x10301018, core->shas[0].writeFifo(IO_PARAMS)) // SHA0_FIFO
+                DEF_IO32(0x1030101C, core->shas[0].writeFifo(IO_PARAMS)) // SHA0_FIFO
+                DEF_IO32(0x10301020, core->shas[0].writeFifo(IO_PARAMS)) // SHA0_FIFO
+                DEF_IO32(0x10301024, core->shas[0].writeFifo(IO_PARAMS)) // SHA0_FIFO
+                DEF_IO32(0x10301028, core->shas[0].writeFifo(IO_PARAMS)) // SHA0_FIFO
+                DEF_IO32(0x1030102C, core->shas[0].writeFifo(IO_PARAMS)) // SHA0_FIFO
+                DEF_IO32(0x10301030, core->shas[0].writeFifo(IO_PARAMS)) // SHA0_FIFO
+                DEF_IO32(0x10301034, core->shas[0].writeFifo(IO_PARAMS)) // SHA0_FIFO
+                DEF_IO32(0x10301038, core->shas[0].writeFifo(IO_PARAMS)) // SHA0_FIFO
+                DEF_IO32(0x1030103C, core->shas[0].writeFifo(IO_PARAMS)) // SHA0_FIFO
+                DEF_IO32(0x10302000, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x10302004, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x10302008, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x1030200C, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x10302010, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x10302014, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x10302018, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x1030201C, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x10302020, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x10302024, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x10302028, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x1030202C, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x10302030, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x10302034, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x10302038, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x1030203C, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x10302040, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x10302044, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x10302048, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x1030204C, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x10302050, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x10302054, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x10302058, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x1030205C, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x10302060, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x10302064, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x10302068, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x1030206C, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x10302070, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x10302074, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x10302078, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x1030207C, core->y2rs[0].writeInputY(IO_PARAMS)) // Y2R0_INPUT_Y
+                DEF_IO32(0x10302080, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x10302084, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x10302088, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x1030208C, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x10302090, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x10302094, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x10302098, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x1030209C, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x103020A0, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x103020A4, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x103020A8, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x103020AC, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x103020B0, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x103020B4, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x103020B8, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x103020BC, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x103020C0, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x103020C4, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x103020C8, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x103020CC, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x103020D0, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x103020D4, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x103020D8, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x103020DC, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x103020E0, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x103020E4, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x103020E8, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x103020EC, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x103020F0, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x103020F4, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x103020F8, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x103020FC, core->y2rs[0].writeInputU(IO_PARAMS)) // Y2R0_INPUT_U
+                DEF_IO32(0x10302100, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x10302104, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x10302108, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x1030210C, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x10302110, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x10302114, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x10302118, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x1030211C, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x10302120, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x10302124, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x10302128, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x1030212C, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x10302130, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x10302134, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x10302138, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x1030213C, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x10302140, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x10302144, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x10302148, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x1030214C, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x10302150, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x10302154, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x10302158, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x1030215C, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x10302160, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x10302164, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x10302168, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x1030216C, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x10302170, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x10302174, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x10302178, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x1030217C, core->y2rs[0].writeInputV(IO_PARAMS)) // Y2R0_INPUT_V
+                DEF_IO32(0x10332000, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x10332004, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x10332008, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x1033200C, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x10332010, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x10332014, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x10332018, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x1033201C, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x10332020, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x10332024, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x10332028, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x1033202C, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x10332030, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x10332034, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x10332038, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x1033203C, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x10332040, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x10332044, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x10332048, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x1033204C, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x10332050, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x10332054, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x10332058, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x1033205C, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x10332060, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x10332064, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x10332068, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x1033206C, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x10332070, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x10332074, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x10332078, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x1033207C, core->y2rs[1].writeInputY(IO_PARAMS)) // Y2R1_INPUT_Y
+                DEF_IO32(0x10332080, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x10332084, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x10332088, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x1033208C, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x10332090, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x10332094, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x10332098, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x1033209C, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x103320A0, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x103320A4, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x103320A8, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x103320AC, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x103320B0, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x103320B4, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x103320B8, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x103320BC, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x103320C0, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x103320C4, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x103320C8, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x103320CC, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x103320D0, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x103320D4, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x103320D8, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x103320DC, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x103320E0, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x103320E4, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x103320E8, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x103320EC, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x103320F0, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x103320F4, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x103320F8, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x103320FC, core->y2rs[1].writeInputU(IO_PARAMS)) // Y2R1_INPUT_U
+                DEF_IO32(0x10332100, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
+                DEF_IO32(0x10332104, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
+                DEF_IO32(0x10332108, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
+                DEF_IO32(0x1033210C, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
+                DEF_IO32(0x10332110, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
+                DEF_IO32(0x10332114, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
+                DEF_IO32(0x10332118, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
+                DEF_IO32(0x1033211C, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
+                DEF_IO32(0x10332120, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
+                DEF_IO32(0x10332124, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
+                DEF_IO32(0x10332128, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
+                DEF_IO32(0x1033212C, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
+                DEF_IO32(0x10332130, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
+                DEF_IO32(0x10332134, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
+                DEF_IO32(0x10332138, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
+                DEF_IO32(0x1033213C, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
+                DEF_IO32(0x10332140, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
+                DEF_IO32(0x10332144, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
+                DEF_IO32(0x10332148, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
+                DEF_IO32(0x1033214C, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
+                DEF_IO32(0x10332150, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
+                DEF_IO32(0x10332154, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
+                DEF_IO32(0x10332158, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
+                DEF_IO32(0x1033215C, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
+                DEF_IO32(0x10332160, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
+                DEF_IO32(0x10332164, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
+                DEF_IO32(0x10332168, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
+                DEF_IO32(0x1033216C, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
+                DEF_IO32(0x10332170, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
+                DEF_IO32(0x10332174, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
+                DEF_IO32(0x10332178, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
+                DEF_IO32(0x1033217C, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
                 DEF_IO32(0x10322000, core->wifi.writeData32Fifo(IO_PARAMS)) // WIFI_DATA32_FIFO
                 DEF_IO32(0x10400010, core->gpu.writeMemsetDstAddr(0, IO_PARAMS)) // GPU_MEMSET_DST_ADDR0
                 DEF_IO32(0x10400014, core->gpu.writeMemsetDstEnd(0, IO_PARAMS)) // GPU_MEMSET_DST_END0
@@ -2658,32 +2926,32 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x10009100, core->aes.writeKeyfifo(IO_PARAMS)) // AES_KEYFIFO
                 DEF_IO32(0x10009104, core->aes.writeKeyxfifo(IO_PARAMS)) // AES_KEYXFIFO
                 DEF_IO32(0x10009108, core->aes.writeKeyyfifo(IO_PARAMS)) // AES_KEYYFIFO
-                DEF_IO32(0x1000A000, core->shas[1].writeCnt(IO_PARAMS)) // SHA_CNT9
-                DEF_IO32(0x1000A004, core->shas[1].writeBlkcnt(IO_PARAMS)) // SHA_BLKCNT9
-                DEF_IO32(0x1000A040, core->shas[1].writeHash(0, IO_PARAMS)) // SHA_HASH0_9
-                DEF_IO32(0x1000A044, core->shas[1].writeHash(1, IO_PARAMS)) // SHA_HASH1_9
-                DEF_IO32(0x1000A048, core->shas[1].writeHash(2, IO_PARAMS)) // SHA_HASH2_9
-                DEF_IO32(0x1000A04C, core->shas[1].writeHash(3, IO_PARAMS)) // SHA_HASH3_9
-                DEF_IO32(0x1000A050, core->shas[1].writeHash(4, IO_PARAMS)) // SHA_HASH4_9
-                DEF_IO32(0x1000A054, core->shas[1].writeHash(5, IO_PARAMS)) // SHA_HASH5_9
-                DEF_IO32(0x1000A058, core->shas[1].writeHash(6, IO_PARAMS)) // SHA_HASH6_9
-                DEF_IO32(0x1000A05C, core->shas[1].writeHash(7, IO_PARAMS)) // SHA_HASH7_9
-                DEF_IO32(0x1000A080, core->shas[1].writeFifo(IO_PARAMS)) // SHA_FIFO9
-                DEF_IO32(0x1000A084, core->shas[1].writeFifo(IO_PARAMS)) // SHA_FIFO9
-                DEF_IO32(0x1000A088, core->shas[1].writeFifo(IO_PARAMS)) // SHA_FIFO9
-                DEF_IO32(0x1000A08C, core->shas[1].writeFifo(IO_PARAMS)) // SHA_FIFO9
-                DEF_IO32(0x1000A090, core->shas[1].writeFifo(IO_PARAMS)) // SHA_FIFO9
-                DEF_IO32(0x1000A094, core->shas[1].writeFifo(IO_PARAMS)) // SHA_FIFO9
-                DEF_IO32(0x1000A098, core->shas[1].writeFifo(IO_PARAMS)) // SHA_FIFO9
-                DEF_IO32(0x1000A09C, core->shas[1].writeFifo(IO_PARAMS)) // SHA_FIFO9
-                DEF_IO32(0x1000A0A0, core->shas[1].writeFifo(IO_PARAMS)) // SHA_FIFO9
-                DEF_IO32(0x1000A0A4, core->shas[1].writeFifo(IO_PARAMS)) // SHA_FIFO9
-                DEF_IO32(0x1000A0A8, core->shas[1].writeFifo(IO_PARAMS)) // SHA_FIFO9
-                DEF_IO32(0x1000A0AC, core->shas[1].writeFifo(IO_PARAMS)) // SHA_FIFO9
-                DEF_IO32(0x1000A0B0, core->shas[1].writeFifo(IO_PARAMS)) // SHA_FIFO9
-                DEF_IO32(0x1000A0B4, core->shas[1].writeFifo(IO_PARAMS)) // SHA_FIFO9
-                DEF_IO32(0x1000A0B8, core->shas[1].writeFifo(IO_PARAMS)) // SHA_FIFO9
-                DEF_IO32(0x1000A0BC, core->shas[1].writeFifo(IO_PARAMS)) // SHA_FIFO9
+                DEF_IO32(0x1000A000, core->shas[1].writeCnt(IO_PARAMS)) // SHA1_CNT
+                DEF_IO32(0x1000A004, core->shas[1].writeBlkcnt(IO_PARAMS)) // SHA1_BLKCNT
+                DEF_IO32(0x1000A040, core->shas[1].writeHash(0, IO_PARAMS)) // SHA1_HASH0
+                DEF_IO32(0x1000A044, core->shas[1].writeHash(1, IO_PARAMS)) // SHA1_HASH1
+                DEF_IO32(0x1000A048, core->shas[1].writeHash(2, IO_PARAMS)) // SHA1_HASH2
+                DEF_IO32(0x1000A04C, core->shas[1].writeHash(3, IO_PARAMS)) // SHA1_HASH3
+                DEF_IO32(0x1000A050, core->shas[1].writeHash(4, IO_PARAMS)) // SHA1_HASH4
+                DEF_IO32(0x1000A054, core->shas[1].writeHash(5, IO_PARAMS)) // SHA1_HASH5
+                DEF_IO32(0x1000A058, core->shas[1].writeHash(6, IO_PARAMS)) // SHA1_HASH6
+                DEF_IO32(0x1000A05C, core->shas[1].writeHash(7, IO_PARAMS)) // SHA1_HASH7
+                DEF_IO32(0x1000A080, core->shas[1].writeFifo(IO_PARAMS)) // SHA1_FIFO
+                DEF_IO32(0x1000A084, core->shas[1].writeFifo(IO_PARAMS)) // SHA1_FIFO
+                DEF_IO32(0x1000A088, core->shas[1].writeFifo(IO_PARAMS)) // SHA1_FIFO
+                DEF_IO32(0x1000A08C, core->shas[1].writeFifo(IO_PARAMS)) // SHA1_FIFO
+                DEF_IO32(0x1000A090, core->shas[1].writeFifo(IO_PARAMS)) // SHA1_FIFO
+                DEF_IO32(0x1000A094, core->shas[1].writeFifo(IO_PARAMS)) // SHA1_FIFO
+                DEF_IO32(0x1000A098, core->shas[1].writeFifo(IO_PARAMS)) // SHA1_FIFO
+                DEF_IO32(0x1000A09C, core->shas[1].writeFifo(IO_PARAMS)) // SHA1_FIFO
+                DEF_IO32(0x1000A0A0, core->shas[1].writeFifo(IO_PARAMS)) // SHA1_FIFO
+                DEF_IO32(0x1000A0A4, core->shas[1].writeFifo(IO_PARAMS)) // SHA1_FIFO
+                DEF_IO32(0x1000A0A8, core->shas[1].writeFifo(IO_PARAMS)) // SHA1_FIFO
+                DEF_IO32(0x1000A0AC, core->shas[1].writeFifo(IO_PARAMS)) // SHA1_FIFO
+                DEF_IO32(0x1000A0B0, core->shas[1].writeFifo(IO_PARAMS)) // SHA1_FIFO
+                DEF_IO32(0x1000A0B4, core->shas[1].writeFifo(IO_PARAMS)) // SHA1_FIFO
+                DEF_IO32(0x1000A0B8, core->shas[1].writeFifo(IO_PARAMS)) // SHA1_FIFO
+                DEF_IO32(0x1000A0BC, core->shas[1].writeFifo(IO_PARAMS)) // SHA1_FIFO
                 DEF_IO32(0x1000B000, core->rsa.writeCnt(IO_PARAMS)) // RSA_CNT
                 DEF_IO32(0x1000B100, core->rsa.writeSlotcnt(0, IO_PARAMS)) // RSA_SLOTCNT0
                 DEF_IO32(0x1000B110, core->rsa.writeSlotcnt(1, IO_PARAMS)) // RSA_SLOTCNT1
