@@ -3,7 +3,7 @@ An experimental low-level 3DS emulator.
 
 ### Overview
 3Beans emulates the 3DS at a low level, which means that it runs the entire OS as if it were on real hardware. It's in
-the early stages of playing commercial games, but the home menu still doesn't fully boot. It's currently fully
+the early stages of playing commercial games, but the home menu still doesn't quite work. It's currently fully
 interpreted and software-rendered, which makes it portable but slow. If the project matures enough, I might try to
 incorporate hardware acceleration or high-level elements to achieve reasonable speeds.
 

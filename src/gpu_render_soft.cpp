@@ -24,7 +24,7 @@
 // Lookup table for vertex shader instructions
 void (GpuRenderSoft::*GpuRenderSoft::vshInstrs[])(uint32_t) {
     &GpuRenderSoft::shdAdd, &GpuRenderSoft::shdDp3, &GpuRenderSoft::shdDp4, &GpuRenderSoft::shdDph, // 0x00-0x03
-    &GpuRenderSoft::vshUnk, &GpuRenderSoft::vshUnk, &GpuRenderSoft::vshUnk, &GpuRenderSoft::vshUnk, // 0x04-0x07
+    &GpuRenderSoft::vshUnk, &GpuRenderSoft::shdEx2, &GpuRenderSoft::shdLg2, &GpuRenderSoft::vshUnk, // 0x04-0x07
     &GpuRenderSoft::shdMul, &GpuRenderSoft::shdSge, &GpuRenderSoft::shdSlt, &GpuRenderSoft::shdFlr, // 0x08-0x0B
     &GpuRenderSoft::shdMax, &GpuRenderSoft::shdMin, &GpuRenderSoft::shdRcp, &GpuRenderSoft::shdRsq, // 0x0C-0x0F
     &GpuRenderSoft::vshUnk, &GpuRenderSoft::vshUnk, &GpuRenderSoft::shdMova, &GpuRenderSoft::shdMov, // 0x10-0x13
@@ -640,83 +640,87 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
     }
 
     // Multiply source RGB values with the selected operand
+    float r1 = srcR, g1 = srcG, b1 = srcB;
     switch (blendOpers[0]) {
-        case OPER_ZERO: srcR = srcG = srcB = 0.0f; break;
+        case OPER_ZERO: r1 = g1 = b1 = 0.0f; break;
         case OPER_ONE: break;
-        case OPER_SRC: srcR *= srcR, srcG *= srcG, srcB *= srcB; break;
-        case OPER_1MSRC: srcR *= 1.0f - srcR, srcG *= 1.0f - srcG, srcB *= 1.0f - srcB; break;
-        case OPER_DST: srcR *= dstR, srcG *= dstG, srcB *= dstB; break;
-        case OPER_1MDST: srcR *= 1.0f - dstR, srcG *= 1.0f - dstG, srcB *= 1.0f - dstB; break;
-        case OPER_SRCA: srcR *= srcA, srcG *= srcA, srcB *= srcA; break;
-        case OPER_1MSRCA: srcR *= 1.0f - srcA, srcG *= 1.0f - srcA, srcB *= 1.0f - srcA; break;
-        case OPER_DSTA: srcR *= dstA, srcG *= dstA, srcB *= dstA; break;
-        case OPER_1MDSTA: srcR *= 1.0f - dstA, srcG *= 1.0f - dstA, srcB *= 1.0f - dstA; break;
-        case OPER_CONST: srcR *= blendR, srcG *= blendG, srcB *= blendB; break;
-        case OPER_1MCON: srcR *= 1.0f - blendR, srcG *= 1.0f - blendG, srcB *= 1.0f - blendB; break;
-        case OPER_CONSTA: srcR *= blendA, srcG *= blendA, srcB *= blendA; break;
-        case OPER_1MCONA: srcR *= 1.0f - blendA, srcG *= 1.0f - blendA, srcB *= 1.0f - blendA; break;
+        case OPER_SRC: r1 *= srcR, g1 *= srcG, b1 *= srcB; break;
+        case OPER_1MSRC: r1 *= 1.0f - srcR, g1 *= 1.0f - srcG, b1 *= 1.0f - srcB; break;
+        case OPER_DST: r1 *= dstR, g1 *= dstG, b1 *= dstB; break;
+        case OPER_1MDST: r1 *= 1.0f - dstR, g1 *= 1.0f - dstG, b1 *= 1.0f - dstB; break;
+        case OPER_SRCA: r1 *= srcA, g1 *= srcA, b1 *= srcA; break;
+        case OPER_1MSRCA: r1 *= 1.0f - srcA, g1 *= 1.0f - srcA, b1 *= 1.0f - srcA; break;
+        case OPER_DSTA: r1 *= dstA, g1 *= dstA, b1 *= dstA; break;
+        case OPER_1MDSTA: r1 *= 1.0f - dstA, g1 *= 1.0f - dstA, b1 *= 1.0f - dstA; break;
+        case OPER_CONST: r1 *= blendR, g1 *= blendG, b1 *= blendB; break;
+        case OPER_1MCON: r1 *= 1.0f - blendR, g1 *= 1.0f - blendG, b1 *= 1.0f - blendB; break;
+        case OPER_CONSTA: r1 *= blendA, g1 *= blendA, b1 *= blendA; break;
+        case OPER_1MCONA: r1 *= 1.0f - blendA, g1 *= 1.0f - blendA, b1 *= 1.0f - blendA; break;
     }
 
     // Multiply destination RGB values with the selected operand
+    float r2 = dstR, g2 = dstG, b2 = dstB;
     switch (blendOpers[1]) {
-        case OPER_ZERO: dstR = dstG = dstB = 0.0f; break;
+        case OPER_ZERO: r2 = g2 = b2 = 0.0f; break;
         case OPER_ONE: break;
-        case OPER_SRC: dstR *= srcR, dstG *= srcG, dstB *= srcB; break;
-        case OPER_1MSRC: dstR *= 1.0f - srcR, dstG *= 1.0f - srcG, dstB *= 1.0f - srcB; break;
-        case OPER_DST: dstR *= dstR, dstG *= dstG, dstB *= dstB; break;
-        case OPER_1MDST: dstR *= 1.0f - dstR, dstG *= 1.0f - dstG, dstB *= 1.0f - dstB; break;
-        case OPER_SRCA: dstR *= srcA, dstG *= srcA, dstB *= srcA; break;
-        case OPER_1MSRCA: dstR *= 1.0f - srcA, dstG *= 1.0f - srcA, dstB *= 1.0f - srcA; break;
-        case OPER_DSTA: dstR *= dstA, dstG *= dstA, dstB *= dstA; break;
-        case OPER_1MDSTA: dstR *= 1.0f - dstA, dstG *= 1.0f - dstA, dstB *= 1.0f - dstA; break;
-        case OPER_CONST: dstR *= blendR, dstG *= blendG, dstB *= blendB; break;
-        case OPER_1MCON: dstR *= 1.0f - blendR, dstG *= 1.0f - blendG, dstB *= 1.0f - blendB; break;
-        case OPER_CONSTA: dstR *= blendA, dstG *= blendA, dstB *= blendA; break;
-        case OPER_1MCONA: dstR *= 1.0f - blendA, dstG *= 1.0f - blendA, dstB *= 1.0f - blendA; break;
+        case OPER_SRC: r2 *= srcR, g2 *= srcG, b2 *= srcB; break;
+        case OPER_1MSRC: r2 *= 1.0f - srcR, g2 *= 1.0f - srcG, b2 *= 1.0f - srcB; break;
+        case OPER_DST: r2 *= dstR, g2 *= dstG, b2 *= dstB; break;
+        case OPER_1MDST: r2 *= 1.0f - dstR, g2 *= 1.0f - dstG, b2 *= 1.0f - dstB; break;
+        case OPER_SRCA: r2 *= srcA, g2 *= srcA, b2 *= srcA; break;
+        case OPER_1MSRCA: r2 *= 1.0f - srcA, g2 *= 1.0f - srcA, b2 *= 1.0f - srcA; break;
+        case OPER_DSTA: r2 *= dstA, g2 *= dstA, b2 *= dstA; break;
+        case OPER_1MDSTA: r2 *= 1.0f - dstA, g2 *= 1.0f - dstA, b2 *= 1.0f - dstA; break;
+        case OPER_CONST: r2 *= blendR, g2 *= blendG, b2 *= blendB; break;
+        case OPER_1MCON: r2 *= 1.0f - blendR, g2 *= 1.0f - blendG, b2 *= 1.0f - blendB; break;
+        case OPER_CONSTA: r2 *= blendA, g2 *= blendA, b2 *= blendA; break;
+        case OPER_1MCONA: r2 *= 1.0f - blendA, g2 *= 1.0f - blendA, b2 *= 1.0f - blendA; break;
     }
 
     // Multiply source alpha values with the selected operand
+    float a1 = srcA;
     switch (blendOpers[2]) {
-        case OPER_ZERO: srcA = 0.0f; break;
+        case OPER_ZERO: a1 = 0.0f; break;
         case OPER_ONE: break;
-        case OPER_SRC: case OPER_SRCA: srcA *= srcA; break;
-        case OPER_1MSRC: case OPER_1MSRCA: srcA *= 1.0f - srcA; break;
-        case OPER_DST: case OPER_DSTA: srcA *= dstA; break;
-        case OPER_1MDST: case OPER_1MDSTA: srcA *= 1.0f - dstA; break;
-        case OPER_CONST: case OPER_CONSTA: srcA *= blendA; break;
-        case OPER_1MCON: case OPER_1MCONA: srcA *= 1.0f - blendA; break;
+        case OPER_SRC: case OPER_SRCA: a1 *= srcA; break;
+        case OPER_1MSRC: case OPER_1MSRCA: a1 *= 1.0f - srcA; break;
+        case OPER_DST: case OPER_DSTA: a1 *= dstA; break;
+        case OPER_1MDST: case OPER_1MDSTA: a1 *= 1.0f - dstA; break;
+        case OPER_CONST: case OPER_CONSTA: a1 *= blendA; break;
+        case OPER_1MCON: case OPER_1MCONA: a1 *= 1.0f - blendA; break;
     }
 
     // Multiply destination alpha values with the selected operand
+    float a2 = dstA;
     switch (blendOpers[3]) {
-        case OPER_ZERO: dstA = 0.0f; break;
+        case OPER_ZERO: a2 = 0.0f; break;
         case OPER_ONE: break;
-        case OPER_SRC: case OPER_SRCA: dstA *= srcA; break;
-        case OPER_1MSRC: case OPER_1MSRCA: dstA *= 1.0f - srcA; break;
-        case OPER_DST: case OPER_DSTA: dstA *= dstA; break;
-        case OPER_1MDST: case OPER_1MDSTA: dstA *= 1.0f - dstA; break;
-        case OPER_CONST: case OPER_CONSTA: dstA *= blendA; break;
-        case OPER_1MCON: case OPER_1MCONA: dstA *= 1.0f - blendA; break;
+        case OPER_SRC: case OPER_SRCA: a2 *= srcA; break;
+        case OPER_1MSRC: case OPER_1MSRCA: a2 *= 1.0f - srcA; break;
+        case OPER_DST: case OPER_DSTA: a2 *= dstA; break;
+        case OPER_1MDST: case OPER_1MDSTA: a2 *= 1.0f - dstA; break;
+        case OPER_CONST: case OPER_CONSTA: a2 *= blendA; break;
+        case OPER_1MCON: case OPER_1MCONA: a2 *= 1.0f - blendA; break;
     }
 
     // Blend the source and destination RGB values based on mode
     float r, g, b;
     switch (blendModes[0]) {
-        default: r = srcR + dstR, g = srcG + dstG, b = srcB + dstB; break;
-        case MODE_SUB: r = srcR - dstR, g = srcG - dstG, b = srcB - dstB; break;
-        case MODE_RSUB: r = dstR - srcR, g = dstG - srcG, b = dstB - srcB; break;
-        case MODE_MIN: r = std::min(srcR, dstR), g = std::min(srcG, dstG), b = std::min(srcB, dstB); break;
-        case MODE_MAX: r = std::max(srcR, dstR), g = std::max(srcG, dstG), b = std::max(srcB, dstB); break;
+        default: r = r1 + r2, g = g1 + g2, b = b1 + b2; break;
+        case MODE_SUB: r = r1 - r2, g = g1 - g2, b = b1 - b2; break;
+        case MODE_RSUB: r = r2 - r1, g = g2 - g1, b = b2 - b1; break;
+        case MODE_MIN: r = std::min(r1, r2), g = std::min(g1, g2), b = std::min(b1, b2); break;
+        case MODE_MAX: r = std::max(r1, r2), g = std::max(g1, g2), b = std::max(b1, b2); break;
     }
 
     // Blend the source and destination alpha values based on mode
     float a;
     switch (blendModes[1]) {
-        default: a = srcA + dstA; break;
-        case MODE_SUB: a = srcA - dstA; break;
-        case MODE_RSUB: a = dstA - srcA; break;
-        case MODE_MIN: a = std::min(srcA, dstA); break;
-        case MODE_MAX: a = std::max(srcA, dstA); break;
+        default: a = a1 + a2; break;
+        case MODE_SUB: a = a1 - a2; break;
+        case MODE_RSUB: a = a2 - a1; break;
+        case MODE_MIN: a = std::min(a1, a2); break;
+        case MODE_MAX: a = std::max(a1, a2); break;
     }
 
     // Clamp the final color values
@@ -1043,6 +1047,22 @@ void GpuRenderSoft::shdDph(uint32_t opcode) {
     float *src2 = getSrc((opcode >> 7) & 0x1F, desc >> 9, 0);
     src1[0] = src1[0] * src2[0] + src1[1] * src2[1] + src1[2] * src2[2] + src2[3];
     src1[3] = src1[2] = src1[1] = src1[0];
+    setDst((opcode >> 21) & 0x1F, desc, src1);
+}
+
+void GpuRenderSoft::shdEx2(uint32_t opcode) {
+    // Calculate the base-2 exponent of a source register's first component
+    uint32_t desc = shdDesc[opcode & 0x7F];
+    float *src1 = getSrc((opcode >> 12) & 0x7F, desc, (opcode >> 19) & 0x3);
+    src1[3] = src1[2] = src1[1] = src1[0] = exp2f(src1[0]);
+    setDst((opcode >> 21) & 0x1F, desc, src1);
+}
+
+void GpuRenderSoft::shdLg2(uint32_t opcode) {
+    // Calculate the base-2 logarithm of a source register's first component
+    uint32_t desc = shdDesc[opcode & 0x7F];
+    float *src1 = getSrc((opcode >> 12) & 0x7F, desc, (opcode >> 19) & 0x3);
+    src1[3] = src1[2] = src1[1] = src1[0] = log2f(src1[0]);
     setDst((opcode >> 21) & 0x1F, desc, src1);
 }
 

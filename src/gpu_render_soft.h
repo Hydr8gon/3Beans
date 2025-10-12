@@ -192,6 +192,8 @@ private:
     void shdDp3(uint32_t opcode);
     void shdDp4(uint32_t opcode);
     void shdDph(uint32_t opcode);
+    void shdEx2(uint32_t opcode);
+    void shdLg2(uint32_t opcode);
     void shdMul(uint32_t opcode);
     void shdSge(uint32_t opcode);
     void shdSlt(uint32_t opcode);
