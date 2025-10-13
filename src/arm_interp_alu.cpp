@@ -1129,7 +1129,7 @@ int ArmInterp::uhadd8(uint32_t opcode) { // UHADD8 Rd,Rn,Rm
     uint32_t op2 = *registers[opcode & 0xF];
     uint32_t tmp1 = ((op1 >> 0) & 0xFF00FF) + ((op2 >> 0) & 0xFF00FF);
     uint32_t tmp2 = ((op1 >> 8) & 0xFF00FF) + ((op2 >> 8) & 0xFF00FF);
-    *op0 = ((tmp2 << 7) & 0x7F007F00) | ((tmp1 >> 1) & 0x7F007F);
+    *op0 = ((tmp2 << 7) & 0xFF00FF00) | ((tmp1 >> 1) & 0xFF00FF);
     return 1;
 }
 
@@ -1179,7 +1179,7 @@ int ArmInterp::uhadd16(uint32_t opcode) { // UHADD16 Rd,Rn,Rm
     uint32_t op2 = *registers[opcode & 0xF];
     uint32_t tmp1 = ((op1 >> 0) & 0xFFFF) + ((op2 >> 0) & 0xFFFF);
     uint32_t tmp2 = ((op1 >> 16) & 0xFFFF) + ((op2 >> 16) & 0xFFFF);
-    *op0 = ((tmp2 << 15) & 0x7FFF0000) | ((tmp1 >> 1) & 0x7FFF);
+    *op0 = ((tmp2 << 15) & 0xFFFF0000) | ((tmp1 >> 1) & 0xFFFF);
     return 1;
 }
 

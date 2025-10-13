@@ -28,6 +28,28 @@ bool Gpu::checkInterrupt(int i) {
     return true;
 }
 
+uint32_t Gpu::getDispSrcOfs(uint32_t x, uint32_t y, uint32_t width) {
+    // Get a linear source offset in linear-to-linear and linear-to-tiled display copy modes
+    if (gpuMemcpyFlags & (BIT(5) | BIT(1)))
+        return (y * width) + x;
+
+    // Get a swizzled source offset in tiled-to-linear display copy mode
+    uint32_t ofs = (((y >> 3) * (width >> 3) + (x >> 3)) << 6);
+    ofs |= ((y << 3) & 0x20) | ((y << 2) & 0x8) | ((y << 1) & 0x2);
+    return ofs | ((x << 2) & 0x10) | ((x << 1) & 0x4) | (x & 0x1);
+}
+
+uint32_t Gpu::getDispDstOfs(uint32_t x, uint32_t y, uint32_t width) {
+    // Get a linear destination offset in linear-to-linear and tiled-to-linear display copy modes
+    if ((gpuMemcpyFlags & (BIT(5) | BIT(1))) != BIT(1))
+        return (y * width) + x;
+
+    // Get a swizzled destination offset in linear-to-tiled display copy mode
+    uint32_t ofs = (((y >> 3) * (width >> 3) + (x >> 3)) << 6);
+    ofs |= ((y << 3) & 0x20) | ((y << 2) & 0x8) | ((y << 1) & 0x2);
+    return ofs | ((x << 2) & 0x10) | ((x << 1) & 0x4) | (x & 0x1);
+}
+
 void Gpu::setReady(int i) {
     // Trigger a GPU set ready interrupt after some time
     gpuMemsetCnt[i] |= BIT(1);
@@ -181,13 +203,9 @@ void Gpu::writeMemcpyCnt(uint32_t mask, uint32_t value) {
     // Schedule the ready signal based on display size
     core->schedule(GPU_CPY_READY, dstWidth * dstHeight);
 
-    // Check for unimplemented display copy flags
+    // Log the display copy and check for unimplemented flags
     LOG_INFO("Performing GPU display copy from 0x%X to 0x%X with width %d and height %d\n",
         srcAddr, dstAddr, dstWidth, dstHeight);
-    if (gpuMemcpyFlags & BIT(5))
-        LOG_CRIT("Unhandled GPU display copy mode: tiled to tiled\n");
-    else if (gpuMemcpyFlags & BIT(1))
-        LOG_CRIT("Unhandled GPU display copy mode: linear to tiled\n");
     if (gpuMemcpyFlags & BIT(16))
         LOG_CRIT("Unhandled GPU display copy tile size: 32x32\n");
 
@@ -200,20 +218,15 @@ void Gpu::writeMemcpyCnt(uint32_t mask, uint32_t value) {
             for (int x = 0; x < dstWidth; x++) {
                 switch (scaleType) {
                 default: // No downscale
-                    ofs = (((y0 >> 3) * (srcWidth >> 3) + (x >> 3)) << 8);
-                    ofs |= ((y0 << 5) & 0x80) | ((y0 << 4) & 0x20) | ((y0 << 3) & 0x8);
-                    ofs |= ((x << 4) & 0x40) | ((x << 3) & 0x10) | ((x << 2) & 0x4);
+                    ofs = getDispSrcOfs(x, y0, srcWidth) * 4;
                     c0 = core->memory.read<uint32_t>(ARM11, srcAddr + ofs);
                     r = ((c0 >> 24) & 0xFF);
                     g = ((c0 >> 16) & 0xFF);
                     b = ((c0 >> 8) & 0xFF);
                     a = ((c0 >> 0) & 0xFF);
                     break;
-
                 case 0x1: // 2x1 downscale
-                    ofs = (((y0 >> 3) * (srcWidth >> 3) + (x >> 2)) << 8);
-                    ofs |= ((y0 << 5) & 0x80) | ((y0 << 4) & 0x20) | ((y0 << 3) & 0x8);
-                    ofs |= ((x << 5) & 0x40) | ((x << 4) & 0x10);
+                    ofs = getDispSrcOfs(x << 1, y0, srcWidth) * 4;
                     c0 = core->memory.read<uint32_t>(ARM11, srcAddr + ofs + 0x0);
                     c1 = core->memory.read<uint32_t>(ARM11, srcAddr + ofs + 0x4);
                     r = (((c0 >> 24) & 0xFF) + ((c1 >> 24) & 0xFF)) / 2;
@@ -221,11 +234,8 @@ void Gpu::writeMemcpyCnt(uint32_t mask, uint32_t value) {
                     b = (((c0 >> 8) & 0xFF) + ((c1 >> 8) & 0xFF)) / 2;
                     a = (((c0 >> 0) & 0xFF) + ((c1 >> 0) & 0xFF)) / 2;
                     break;
-
                 case 0x2: // 2x2 downscale
-                    ofs = (((y0 >> 2) * (srcWidth >> 3) + (x >> 2)) << 8);
-                    ofs |= ((y0 << 6) & 0x80) | ((y0 << 5) & 0x20);
-                    ofs |= ((x << 5) & 0x40) | ((x << 4) & 0x10);
+                    ofs = getDispSrcOfs(x << 1, y0 << 1, srcWidth) * 4;
                     c0 = core->memory.read<uint32_t>(ARM11, srcAddr + ofs + 0x0);
                     c1 = core->memory.read<uint32_t>(ARM11, srcAddr + ofs + 0x4);
                     c2 = core->memory.read<uint32_t>(ARM11, srcAddr + ofs + 0x8);
@@ -239,32 +249,28 @@ void Gpu::writeMemcpyCnt(uint32_t mask, uint32_t value) {
 
                 switch (dstFmt) {
                 case 0x0: // RGBA8
-                    ofs = (y1 * dstWidth + x) * 4;
+                    ofs = getDispDstOfs(x, y1, dstWidth) * 4;
                     c0 = (r << 24) | (g << 16) | (b << 8) | a;
                     core->memory.write<uint32_t>(ARM11, dstAddr + ofs, c0);
                     continue;
-
                 case 0x1: // RGB8
-                    ofs = (y1 * dstWidth + x) * 3;
+                    ofs = getDispDstOfs(x, y1, dstWidth) * 3;
                     core->memory.write<uint8_t>(ARM11, dstAddr + ofs + 2, r);
                     core->memory.write<uint8_t>(ARM11, dstAddr + ofs + 1, g);
                     core->memory.write<uint8_t>(ARM11, dstAddr + ofs + 0, b);
                     continue;
-
                 case 0x2: // RGB565
-                    ofs = (y1 * dstWidth + x) * 2;
+                    ofs = getDispDstOfs(x, y1, dstWidth) * 2;
                     c0 = ((r * 31 / 255) << 11) | ((g * 63 / 255) << 5) | (b * 31 / 255);
                     core->memory.write<uint16_t>(ARM11, dstAddr + ofs, c0);
                     continue;
-
                 case 0x3: // RGB5A1
-                    ofs = (y1 * dstWidth + x) * 2;
+                    ofs = getDispDstOfs(x, y1, dstWidth) * 2;
                     c0 = ((r * 31 / 255) << 11) | ((g * 31 / 255) << 6) | ((b * 31 / 255) << 1) | bool(a);
                     core->memory.write<uint16_t>(ARM11, dstAddr + ofs, c0);
                     continue;
-
                 default: // RGBA4
-                    ofs = (y1 * dstWidth + x) * 2;
+                    ofs = getDispDstOfs(x, y1, dstWidth) * 2;
                     c0 = ((r * 15 / 255) << 12) | ((g * 15 / 255) << 8) | ((b * 15 / 255) << 4) | (a * 15 / 255);
                     core->memory.write<uint16_t>(ARM11, dstAddr + ofs, c0);
                     continue;
@@ -283,27 +289,19 @@ void Gpu::writeMemcpyCnt(uint32_t mask, uint32_t value) {
             for (int x = 0; x < dstWidth; x++) {
                 switch (scaleType) {
                 default: // No downscale
-                    ofs = (((y0 >> 3) * (srcWidth >> 3) + (x >> 3)) << 6);
-                    ofs |= ((y0 << 3) & 0x20) | ((y0 << 2) & 0x8) | ((y0 << 1) & 0x2);
-                    ofs = srcAddr + (ofs | ((x << 2) & 0x10) | ((x << 1) & 0x4) | (x & 0x1)) * 3;
+                    ofs = getDispSrcOfs(x, y0, srcWidth) * 3;
                     r = core->memory.read<uint8_t>(ARM11, ofs + 2);
                     g = core->memory.read<uint8_t>(ARM11, ofs + 1);
                     b = core->memory.read<uint8_t>(ARM11, ofs + 0);
                     break;
-
                 case 0x1: // 2x1 downscale
-                    ofs = (((y0 >> 3) * (srcWidth >> 3) + (x >> 2)) << 6);
-                    ofs |= ((y0 << 3) & 0x20) | ((y0 << 2) & 0x8) | ((y0 << 1) & 0x2);
-                    ofs = srcAddr + (ofs | ((x << 3) & 0x10) | ((x << 2) & 0x4)) * 3;
+                    ofs = getDispSrcOfs(x << 1, y0, srcWidth) * 3;
                     r = (core->memory.read<uint8_t>(ARM11, ofs + 2) + core->memory.read<uint8_t>(ARM11, ofs + 5)) / 2;
                     g = (core->memory.read<uint8_t>(ARM11, ofs + 1) + core->memory.read<uint8_t>(ARM11, ofs + 4)) / 2;
                     b = (core->memory.read<uint8_t>(ARM11, ofs + 0) + core->memory.read<uint8_t>(ARM11, ofs + 3)) / 2;
                     break;
-
                 case 0x2: // 2x2 downscale
-                    ofs = (((y0 >> 2) * (srcWidth >> 3) + (x >> 2)) << 6);
-                    ofs |= ((y0 << 4) & 0x20) | ((y0 << 3) & 0x8);
-                    ofs = srcAddr + (ofs | ((x << 3) & 0x10) | ((x << 2) & 0x4)) * 3;
+                    ofs = getDispSrcOfs(x << 1, y0 << 1, srcWidth) * 3;
                     r = (core->memory.read<uint8_t>(ARM11, ofs + 2) + core->memory.read<uint8_t>(ARM11, ofs + 5) +
                         core->memory.read<uint8_t>(ARM11, ofs + 8) + core->memory.read<uint8_t>(ARM11, ofs + 11)) / 4;
                     g = (core->memory.read<uint8_t>(ARM11, ofs + 1) + core->memory.read<uint8_t>(ARM11, ofs + 4) +
@@ -313,7 +311,7 @@ void Gpu::writeMemcpyCnt(uint32_t mask, uint32_t value) {
                     break;
                 }
 
-                ofs = dstAddr + (y1 * dstWidth + x) * 3;
+                ofs = getDispDstOfs(x, y1, dstWidth) * 3;
                 core->memory.write<uint8_t>(ARM11, ofs + 2, r);
                 core->memory.write<uint8_t>(ARM11, ofs + 1, g);
                 core->memory.write<uint8_t>(ARM11, ofs + 0, b);
@@ -326,30 +324,22 @@ void Gpu::writeMemcpyCnt(uint32_t mask, uint32_t value) {
             for (int x = 0; x < dstWidth; x++) {
                 switch (scaleType) {
                 default: // No downscale
-                    ofs = (((y0 >> 3) * (srcWidth >> 3) + (x >> 3)) << 7);
-                    ofs |= ((y0 << 4) & 0x40) | ((y0 << 3) & 0x10) | ((y0 << 2) & 0x4);
-                    ofs |= ((x << 3) & 0x20) | ((x << 2) & 0x8) | ((x << 1) & 0x2);
+                    ofs = getDispSrcOfs(x, y0, srcWidth) * 2;
                     c0 = core->memory.read<uint16_t>(ARM11, srcAddr + ofs);
                     r = ((c0 >> 11) & 0x1F);
                     g = ((c0 >> 5) & 0x3F);
                     b = ((c0 >> 0) & 0x1F);
                     break;
-
                 case 0x1: // 2x1 downscale
-                    ofs = (((y0 >> 3) * (srcWidth >> 3) + (x >> 2)) << 7);
-                    ofs |= ((y0 << 4) & 0x40) | ((y0 << 3) & 0x10) | ((y0 << 2) & 0x4);
-                    ofs |= ((x << 4) & 0x20) | ((x << 3) & 0x8);
+                    ofs = getDispSrcOfs(x << 1, y0, srcWidth) * 2;
                     c0 = core->memory.read<uint16_t>(ARM11, srcAddr + ofs + 0x0);
                     c1 = core->memory.read<uint16_t>(ARM11, srcAddr + ofs + 0x2);
                     r = (((c0 >> 11) & 0x1F) + ((c1 >> 11) & 0x1F)) / 2;
                     g = (((c0 >> 5) & 0x3F) + ((c1 >> 5) & 0x3F)) / 2;
                     b = (((c0 >> 0) & 0x1F) + ((c1 >> 0) & 0x1F)) / 2;
                     break;
-
                 case 0x2: // 2x2 downscale
-                    ofs = (((y0 >> 2) * (srcWidth >> 3) + (x >> 2)) << 7);
-                    ofs |= ((y0 << 5) & 0x40) | ((y0 << 4) & 0x10);
-                    ofs |= ((x << 4) & 0x20) | ((x << 3) & 0x8);
+                    ofs = getDispSrcOfs(x << 1, y0 << 1, srcWidth) * 2;
                     c0 = core->memory.read<uint32_t>(ARM11, srcAddr + ofs + 0x0);
                     c1 = core->memory.read<uint32_t>(ARM11, srcAddr + ofs + 0x2);
                     c2 = core->memory.read<uint32_t>(ARM11, srcAddr + ofs + 0x4);
@@ -365,21 +355,18 @@ void Gpu::writeMemcpyCnt(uint32_t mask, uint32_t value) {
                 case 0x1: // RGB8
                     LOG_CRIT("Invalid destination format for RGB565 display copy: 0x%X\n", dstFmt);
                     return;
-
                 case 0x2: // RGB565
-                    ofs = (y1 * dstWidth + x) * 2;
+                    ofs = getDispDstOfs(x, y1, dstWidth) * 2;
                     c0 = (r << 11) | (g << 5) | b;
                     core->memory.write<uint16_t>(ARM11, dstAddr + ofs, c0);
                     continue;
-
                 case 0x3: // RGB5A1
-                    ofs = (y1 * dstWidth + x) * 2;
+                    ofs = getDispDstOfs(x, y1, dstWidth) * 2;
                     c0 = (r << 11) | ((g * 31 / 63) << 6) | (b << 1) | 0x1;
                     core->memory.write<uint16_t>(ARM11, dstAddr + ofs, c0);
                     continue;
-
                 default: // RGBA4
-                    ofs = (y1 * dstWidth + x) * 2;
+                    ofs = getDispDstOfs(x, y1, dstWidth) * 2;
                     c0 = ((r * 15 / 31) << 12) | ((g * 15 / 63) << 8) | ((b * 15 / 31) << 4) | 0xF;
                     core->memory.write<uint16_t>(ARM11, dstAddr + ofs, c0);
                     continue;
@@ -393,20 +380,15 @@ void Gpu::writeMemcpyCnt(uint32_t mask, uint32_t value) {
             for (int x = 0; x < dstWidth; x++) {
                 switch (scaleType) {
                 default: // No downscale
-                    ofs = (((y0 >> 3) * (srcWidth >> 3) + (x >> 3)) << 7);
-                    ofs |= ((y0 << 4) & 0x40) | ((y0 << 3) & 0x10) | ((y0 << 2) & 0x4);
-                    ofs |= ((x << 3) & 0x20) | ((x << 2) & 0x8) | ((x << 1) & 0x2);
+                    ofs = getDispSrcOfs(x, y0, srcWidth) * 2;
                     c0 = core->memory.read<uint16_t>(ARM11, srcAddr + ofs);
                     r = ((c0 >> 11) & 0x1F);
                     g = ((c0 >> 6) & 0x1F);
                     b = ((c0 >> 1) & 0x1F);
                     a = (c0 & BIT(0)) * 4;
                     break;
-
                 case 0x1: // 2x1 downscale
-                    ofs = (((y0 >> 3) * (srcWidth >> 3) + (x >> 2)) << 7);
-                    ofs |= ((y0 << 4) & 0x40) | ((y0 << 3) & 0x10) | ((y0 << 2) & 0x4);
-                    ofs |= ((x << 4) & 0x20) | ((x << 3) & 0x8);
+                    ofs = getDispSrcOfs(x << 1, y0, srcWidth) * 2;
                     c0 = core->memory.read<uint16_t>(ARM11, srcAddr + ofs + 0x0);
                     c1 = core->memory.read<uint16_t>(ARM11, srcAddr + ofs + 0x2);
                     r = (((c0 >> 11) & 0x1F) + ((c1 >> 11) & 0x1F)) / 2;
@@ -414,11 +396,8 @@ void Gpu::writeMemcpyCnt(uint32_t mask, uint32_t value) {
                     b = (((c0 >> 1) & 0x1F) + ((c1 >> 1) & 0x1F)) / 2;
                     a = ((c0 & BIT(0)) + (c1 & BIT(0))) * 2;
                     break;
-
                 case 0x2: // 2x2 downscale
-                    ofs = (((y0 >> 2) * (srcWidth >> 3) + (x >> 2)) << 7);
-                    ofs |= ((y0 << 5) & 0x40) | ((y0 << 4) & 0x10);
-                    ofs |= ((x << 4) & 0x20) | ((x << 3) & 0x8);
+                    ofs = getDispSrcOfs(x << 1, y0 << 1, srcWidth) * 2;
                     c0 = core->memory.read<uint32_t>(ARM11, srcAddr + ofs + 0x0);
                     c1 = core->memory.read<uint32_t>(ARM11, srcAddr + ofs + 0x2);
                     c2 = core->memory.read<uint32_t>(ARM11, srcAddr + ofs + 0x4);
@@ -435,21 +414,18 @@ void Gpu::writeMemcpyCnt(uint32_t mask, uint32_t value) {
                 case 0x1: // RGB8
                     LOG_CRIT("Invalid destination format for RGB5A1 display copy: 0x%X\n", dstFmt);
                     return;
-
                 case 0x2: // RGB565
-                    ofs = (y1 * dstWidth + x) * 2;
+                    ofs = getDispDstOfs(x, y1, dstWidth) * 2;
                     c0 = (r << 11) | ((g * 63 / 31) << 5) | b;
                     core->memory.write<uint16_t>(ARM11, dstAddr + ofs, c0);
                     continue;
-
                 case 0x3: // RGB5A1
-                    ofs = (y1 * dstWidth + x) * 2;
+                    ofs = getDispDstOfs(x, y1, dstWidth) * 2;
                     c0 = (r << 11) | (g << 6) | (b << 1) | bool(a);
                     core->memory.write<uint16_t>(ARM11, dstAddr + ofs, c0);
                     continue;
-
                 default: // RGBA4
-                    ofs = (y1 * dstWidth + x) * 2;
+                    ofs = getDispDstOfs(x, y1, dstWidth) * 2;
                     c0 = ((r * 15 / 31) << 12) | ((g * 15 / 31) << 8) | ((b * 15 / 31) << 4) | (a * 15 / 4);
                     core->memory.write<uint16_t>(ARM11, dstAddr + ofs, c0);
                     continue;
@@ -463,20 +439,15 @@ void Gpu::writeMemcpyCnt(uint32_t mask, uint32_t value) {
             for (int x = 0; x < dstWidth; x++) {
                 switch (scaleType) {
                 default: // No downscale
-                    ofs = (((y0 >> 3) * (srcWidth >> 3) + (x >> 3)) << 7);
-                    ofs |= ((y0 << 4) & 0x40) | ((y0 << 3) & 0x10) | ((y0 << 2) & 0x4);
-                    ofs |= ((x << 3) & 0x20) | ((x << 2) & 0x8) | ((x << 1) & 0x2);
+                    ofs = getDispSrcOfs(x, y0, srcWidth) * 2;
                     c0 = core->memory.read<uint16_t>(ARM11, srcAddr + ofs);
                     r = ((c0 >> 12) & 0xF);
                     g = ((c0 >> 8) & 0xF);
                     b = ((c0 >> 4) & 0xF);
                     a = ((c0 >> 0) & 0xF);
                     break;
-
                 case 0x1: // 2x1 downscale
-                    ofs = (((y0 >> 3) * (srcWidth >> 3) + (x >> 2)) << 7);
-                    ofs |= ((y0 << 4) & 0x40) | ((y0 << 3) & 0x10) | ((y0 << 2) & 0x4);
-                    ofs |= ((x << 4) & 0x20) | ((x << 3) & 0x8);
+                    ofs = getDispSrcOfs(x << 1, y0, srcWidth) * 2;
                     c0 = core->memory.read<uint16_t>(ARM11, srcAddr + ofs + 0x0);
                     c1 = core->memory.read<uint16_t>(ARM11, srcAddr + ofs + 0x2);
                     r = (((c0 >> 12) & 0xF) + ((c1 >> 12) & 0xF)) / 2;
@@ -484,11 +455,8 @@ void Gpu::writeMemcpyCnt(uint32_t mask, uint32_t value) {
                     b = (((c0 >> 4) & 0xF) + ((c1 >> 4) & 0xF)) / 2;
                     a = (((c0 >> 0) & 0xF) + ((c1 >> 0) & 0xF)) / 2;
                     break;
-
                 case 0x2: // 2x2 downscale
-                    ofs = (((y0 >> 2) * (srcWidth >> 3) + (x >> 2)) << 7);
-                    ofs |= ((y0 << 5) & 0x40) | ((y0 << 4) & 0x10);
-                    ofs |= ((x << 4) & 0x20) | ((x << 3) & 0x8);
+                    ofs = getDispSrcOfs(x << 1, y0 << 1, srcWidth) * 2;
                     c0 = core->memory.read<uint32_t>(ARM11, srcAddr + ofs + 0x0);
                     c1 = core->memory.read<uint32_t>(ARM11, srcAddr + ofs + 0x2);
                     c2 = core->memory.read<uint32_t>(ARM11, srcAddr + ofs + 0x4);
@@ -505,21 +473,18 @@ void Gpu::writeMemcpyCnt(uint32_t mask, uint32_t value) {
                 case 0x1: // RGB8
                     LOG_CRIT("Invalid destination format for RGBA4 display copy: 0x%X\n", dstFmt);
                     return;
-
                 case 0x2: // RGB565
-                    ofs = (y1 * dstWidth + x) * 2;
+                    ofs = getDispDstOfs(x, y1, dstWidth) * 2;
                     c0 = ((r * 31 / 15) << 11) | ((g * 63 / 15) << 5) | (b * 31 / 15);
                     core->memory.write<uint16_t>(ARM11, dstAddr + ofs, c0);
                     continue;
-
                 case 0x3: // RGB5A1
-                    ofs = (y1 * dstWidth + x) * 2;
+                    ofs = getDispDstOfs(x, y1, dstWidth) * 2;
                     c0 = ((r * 31 / 15) << 11) | ((g * 31 / 15) << 6) | ((b * 31 / 15) << 1) | bool(a);
                     core->memory.write<uint16_t>(ARM11, dstAddr + ofs, c0);
                     continue;
-
                 default: // RGBA4
-                    ofs = (y1 * dstWidth + x) * 2;
+                    ofs = getDispDstOfs(x, y1, dstWidth) * 2;
                     c0 = (r << 12) | (g << 8) | (b << 4) | a;
                     core->memory.write<uint16_t>(ARM11, dstAddr + ofs, c0);
                     continue;

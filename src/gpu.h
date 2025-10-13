@@ -403,6 +403,9 @@ private:
     uint32_t gpuVshDescIdx = 0;
 
     bool checkInterrupt(int i);
+    uint32_t getDispSrcOfs(uint32_t x, uint32_t y, uint32_t width);
+    uint32_t getDispDstOfs(uint32_t x, uint32_t y, uint32_t width);
+
     static uint32_t flt24e7to32e8(uint32_t value);
     static uint32_t flt32e7to32e8(uint32_t value);
 
