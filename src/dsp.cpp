@@ -288,10 +288,10 @@ void Dsp::scheduleTmr(int i) {
     }
 
     // Schedule a timer underflow using its current counter and prescaler
-    // TODO: handle timer 1's slower clock speed
     uint8_t shift = (tmrCtrl[i] & 0x3);
     shift += 1 + (shift == 3);
-    tmrCycles[i] = uint64_t(tmrCount[i]) << shift;
+    tmrCycles[i] = (uint64_t(tmrCount[i]) + 1) << shift;
+    if (i) tmrCycles[i] = (tmrCycles[i] * 5) / 4; // 1.25x slower
     core->schedule(Task(DSP_UNDERFLOW0 + i), tmrCycles[i]);
     tmrCycles[i] += core->globalCycles;
 }
@@ -481,7 +481,9 @@ uint32_t Dsp::readTmrCount(int i) {
     if (tmrCycles[i] != -1) {
         uint8_t shift = (tmrCtrl[i] & 0x3);
         shift += 1 + (shift == 3);
-        tmrCount[i] = (tmrCycles[i] - core->globalCycles) >> shift;
+        uint64_t value = std::max<int64_t>(0, tmrCycles[i] - core->globalCycles);
+        if (i) value = (value * 4) / 5; // 1.25x slower
+        tmrCount[i] = (value >> shift);
     }
 
     // Read the current counter if updating, or the latched counter if frozen

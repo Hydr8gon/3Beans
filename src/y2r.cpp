@@ -28,9 +28,12 @@ void Y2r::outputPixel(uint32_t ofs, uint8_t y, uint8_t u, uint8_t v) {
         ofs += (s & ~0x7) << 3;
     }
 
-    // Stub conversion by simply using luminance for now
-    // TODO: do this properly, obviously
-    lineBuf[ofs] = (y << 24) | (y << 16) | (y << 8) | 0xFF;
+    // Convert YUV to RGBA using the configured constants
+    uint8_t r = std::min(0xFF, std::max(0, (((y * y2rMultiplyY + v * y2rMultiplyVr) >> 3) + y2rOffsetR) >> 5));
+    uint8_t b = std::min(0xFF, std::max(0, (((y * y2rMultiplyY + u * y2rMultiplyUb) >> 3) + y2rOffsetB) >> 5));
+    uint8_t g = std::min(0xFF, std::max(0, (((y * y2rMultiplyY - v *
+        y2rMultiplyVg - u * y2rMultiplyUg) >> 3) + y2rOffsetG) >> 5));
+    lineBuf[ofs] = (r << 24) | (g << 16) | (b << 8) | y2rAlpha;
 
     // Push the buffer to the output FIFO in the selected format once 8 lines are done
     if (ofs != y2rWidth * 8 - 1) return;
@@ -52,16 +55,16 @@ void Y2r::outputPixel(uint32_t ofs, uint8_t y, uint8_t u, uint8_t v) {
         return;
     case 0x2: // RGB5A1
         for (int i = 0; i < y2rWidth * 8; i++) {
-            uint8_t r = lineBuf[i] >> 24, g = lineBuf[i] >> 16, b = lineBuf[i] >> 8;
-            uint16_t value = ((r * 31 / 255) << 11) | ((g * 31 / 255) << 6) | ((b * 31 / 255) << 1) | 0x1;
+            uint32_t value = lineBuf[i];
+            value = ((value >> 16) & 0xF800) | ((value >> 13) & 0x7C0) | ((value >> 10) & 0x3E) | ((value >> 7) & 0x1);
             output.push(value >> 0);
             output.push(value >> 8);
         }
         return;
     default: // RGB565
         for (int i = 0; i < y2rWidth * 8; i++) {
-            uint8_t r = lineBuf[i] >> 24, g = lineBuf[i] >> 16, b = lineBuf[i] >> 8;
-            uint16_t value = ((r * 31 / 255) << 11) | ((g * 63 / 255) << 5) | (b * 31 / 255);
+            uint32_t value = lineBuf[i];
+            value = ((value >> 16) & 0xF800) | ((value >> 13) & 0x7E0) | ((value >> 11) & 0x1F);
             output.push(value >> 0);
             output.push(value >> 8);
         }
@@ -81,42 +84,43 @@ void Y2r::update() {
     bool conds[3] = {};
     while (y2rCnt & BIT(31)) {
         // Process data if there's enough for 8 lines based on input format
-        uint8_t y, u, v;
         switch (y2rCnt & 0x7) {
         case 0x0: // 8-bit 4:2:2
-            // Check if there are enough inputs using 8-bit 4:2:2 format
+            // Check if there are enough inputs for 8-bit 4:2:2 conversion
             conds[0] = (inputs[0].size() < y2rWidth * 8);
             conds[1] = (inputs[1].size() < y2rWidth * 4);
             conds[2] = (inputs[2].size() < y2rWidth * 4);
             if (conds[0] || conds[1] || conds[2]) goto finish;
 
             // Process 8 lines of data using 8-bit 4:2:2 format
-            for (uint32_t i = 0; i < y2rWidth * 8; i++) {
-                y = inputs[0].front(), inputs[0].pop();
-                if (!(i & 0x1)) {
-                    u = inputs[1].front(), inputs[1].pop();
-                    v = inputs[2].front(), inputs[2].pop();
-                }
-                outputPixel(i, y, u, v);
+            for (int i = 0; i < y2rWidth * 8; i++) {
+                int j = (i / 2);
+                outputPixel(i, inputs[0][i], inputs[1][j], inputs[2][j]);
             }
+
+            // Pop used data from the input FIFOs
+            inputs[0].erase(inputs[0].begin(), inputs[0].begin() + y2rWidth * 8);
+            inputs[1].erase(inputs[1].begin(), inputs[1].begin() + y2rWidth * 4);
+            inputs[2].erase(inputs[2].begin(), inputs[2].begin() + y2rWidth * 4);
             break;
 
         case 0x1: // 8-bit 4:2:0
-            // Check if there are enough inputs using 8-bit 4:2:0 format
+            // Check if there are enough inputs for 8-bit 4:2:0 conversion
             conds[0] = (inputs[0].size() < y2rWidth * 8);
             conds[1] = (inputs[1].size() < y2rWidth * 2);
             conds[2] = (inputs[2].size() < y2rWidth * 2);
             if (conds[0] || conds[1] || conds[2]) goto finish;
 
             // Process 8 lines of data using 8-bit 4:2:0 format
-            for (uint32_t i = 0; i < y2rWidth * 8; i++) {
-                y = inputs[0].front(), inputs[0].pop();
-                if (!(i & 0x3)) {
-                    u = inputs[1].front(), inputs[1].pop();
-                    v = inputs[2].front(), inputs[2].pop();
-                }
-                outputPixel(i, y, u, v);
+            for (int i = 0; i < y2rWidth * 8; i++) {
+                int j = ((i / (y2rWidth * 2)) * y2rWidth + (i % y2rWidth)) / 2;
+                outputPixel(i, inputs[0][i], inputs[1][j], inputs[2][j]);
             }
+
+            // Pop used data from the input FIFOs
+            inputs[0].erase(inputs[0].begin(), inputs[0].begin() + y2rWidth * 8);
+            inputs[1].erase(inputs[1].begin(), inputs[1].begin() + y2rWidth * 2);
+            inputs[2].erase(inputs[2].begin(), inputs[2].begin() + y2rWidth * 2);
             break;
 
         default:
@@ -217,12 +221,72 @@ void Y2r::writeHeight(uint16_t mask, uint16_t value) {
     y2rHeight = (y2rHeight & ~mask) | (value & mask);
 }
 
+void Y2r::writeMultiplyY(uint16_t mask, uint16_t value) {
+    // Write to the Y2R Y-to-RGB multiplier
+    if (id && !core->n3dsMode) return; // N3DS-exclusive
+    mask &= 0x3FF;
+    y2rMultiplyY = (y2rMultiplyY & ~mask) | (value & mask);
+}
+
+void Y2r::writeMultiplyVr(uint16_t mask, uint16_t value) {
+    // Write to the Y2R V-to-R multiplier
+    if (id && !core->n3dsMode) return; // N3DS-exclusive
+    mask &= 0x3FF;
+    y2rMultiplyVr = (y2rMultiplyVr & ~mask) | (value & mask);
+}
+
+void Y2r::writeMultiplyVg(uint16_t mask, uint16_t value) {
+    // Write to the Y2R V-to-G multiplier
+    if (id && !core->n3dsMode) return; // N3DS-exclusive
+    mask &= 0x3FF;
+    y2rMultiplyVg = (y2rMultiplyVg & ~mask) | (value & mask);
+}
+
+void Y2r::writeMultiplyUg(uint16_t mask, uint16_t value) {
+    // Write to the Y2R U-to-G multiplier
+    if (id && !core->n3dsMode) return; // N3DS-exclusive
+    mask &= 0x3FF;
+    y2rMultiplyUg = (y2rMultiplyUg & ~mask) | (value & mask);
+}
+
+void Y2r::writeMultiplyUb(uint16_t mask, uint16_t value) {
+    // Write to the Y2R U-to-B multiplier
+    if (id && !core->n3dsMode) return; // N3DS-exclusive
+    mask &= 0x3FF;
+    y2rMultiplyUb = (y2rMultiplyUb & ~mask) | (value & mask);
+}
+
+void Y2r::writeOffsetR(uint16_t mask, uint16_t value) {
+    // Write to the Y2R R-offset register
+    if (id && !core->n3dsMode) return; // N3DS-exclusive
+    y2rOffsetR = (y2rOffsetR & ~mask) | (value & mask);
+}
+
+void Y2r::writeOffsetG(uint16_t mask, uint16_t value) {
+    // Write to the Y2R G-offset register
+    if (id && !core->n3dsMode) return; // N3DS-exclusive
+    y2rOffsetG = (y2rOffsetG & ~mask) | (value & mask);
+}
+
+void Y2r::writeOffsetB(uint16_t mask, uint16_t value) {
+    // Write to the Y2R B-offset register
+    if (id && !core->n3dsMode) return; // N3DS-exclusive
+    y2rOffsetB = (y2rOffsetB & ~mask) | (value & mask);
+}
+
+void Y2r::writeAlpha(uint16_t mask, uint16_t value) {
+    // Write to the Y2R alpha register
+    if (id && !core->n3dsMode) return; // N3DS-exclusive
+    mask &= 0xFF;
+    y2rAlpha = (y2rAlpha & ~mask) | (value & mask);
+}
+
 void Y2r::writeInputY(uint32_t mask, uint32_t value) {
     // Write up to 4 bytes to the Y input FIFO
     // TODO: figure out FIFO size/limits
     if (id && !core->n3dsMode) return; // N3DS-exclusive
     for (int i = 0; i < 32; i += 8)
-        if (mask & BIT(i)) inputs[0].push(value >> i);
+        if (mask & BIT(i)) inputs[0].push_back(value >> i);
     triggerFifo();
 }
 
@@ -231,7 +295,7 @@ void Y2r::writeInputU(uint32_t mask, uint32_t value) {
     // TODO: figure out FIFO size/limits
     if (id && !core->n3dsMode) return; // N3DS-exclusive
     for (int i = 0; i < 32; i += 8)
-        if (mask & BIT(i)) inputs[1].push(value >> i);
+        if (mask & BIT(i)) inputs[1].push_back(value >> i);
     triggerFifo();
 }
 
@@ -240,6 +304,6 @@ void Y2r::writeInputV(uint32_t mask, uint32_t value) {
     // TODO: figure out FIFO size/limits
     if (id && !core->n3dsMode) return; // N3DS-exclusive
     for (int i = 0; i < 32; i += 8)
-        if (mask & BIT(i)) inputs[2].push(value >> i);
+        if (mask & BIT(i)) inputs[2].push_back(value >> i);
     triggerFifo();
 }

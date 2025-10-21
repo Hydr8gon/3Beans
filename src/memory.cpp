@@ -218,6 +218,15 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
             DEF_IO32(0x10102000, data = core->y2rs[0].readCnt()) // Y2R0_CNT
             DEF_IO16(0x10102004, data = core->y2rs[0].readWidth()) // Y2R0_WIDTH
             DEF_IO16(0x10102006, data = core->y2rs[0].readHeight()) // Y2R0_HEIGHT
+            DEF_IO16(0x10102010, data = core->y2rs[0].readMultiplyY()) // Y2R0_MULTIPLY_Y
+            DEF_IO16(0x10102012, data = core->y2rs[0].readMultiplyVr()) // Y2R0_MULTIPLY_VR
+            DEF_IO16(0x10102014, data = core->y2rs[0].readMultiplyVg()) // Y2R0_MULTIPLY_VG
+            DEF_IO16(0x10102016, data = core->y2rs[0].readMultiplyUg()) // Y2R0_MULTIPLY_UG
+            DEF_IO16(0x10102018, data = core->y2rs[0].readMultiplyUb()) // Y2R0_MULTIPLY_UB
+            DEF_IO16(0x1010201A, data = core->y2rs[0].readOffsetR()) // Y2R0_OFFSET_R
+            DEF_IO16(0x1010201C, data = core->y2rs[0].readOffsetG()) // Y2R0_OFFSET_G
+            DEF_IO16(0x1010201E, data = core->y2rs[0].readOffsetB()) // Y2R0_OFFSET_B
+            DEF_IO16(0x10102020, data = core->y2rs[0].readAlpha()) // Y2R0_ALPHA
             DEF_IO16(0x10103000, data = core->csnd.readMainVol()) // CSND_MAIN_VOL
             DEF_IO16(0x10103002, data = core->csnd.readMainCnt()) // CSND_MAIN_CNT
             DEF_IO16(0x10103400, data = core->csnd.readChanCnt(0)) // CSND_CHAN0_CNT
@@ -367,6 +376,15 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
             DEF_IO32(0x10132000, data = core->y2rs[1].readCnt()) // Y2R1_CNT
             DEF_IO16(0x10132004, data = core->y2rs[1].readWidth()) // Y2R1_WIDTH
             DEF_IO16(0x10132006, data = core->y2rs[1].readHeight()) // Y2R1_HEIGHT
+            DEF_IO16(0x10132010, data = core->y2rs[1].readMultiplyY()) // Y2R1_MULTIPLY_Y
+            DEF_IO16(0x10132012, data = core->y2rs[1].readMultiplyVr()) // Y2R1_MULTIPLY_VR
+            DEF_IO16(0x10132014, data = core->y2rs[1].readMultiplyVg()) // Y2R1_MULTIPLY_VG
+            DEF_IO16(0x10132016, data = core->y2rs[1].readMultiplyUg()) // Y2R1_MULTIPLY_UG
+            DEF_IO16(0x10132018, data = core->y2rs[1].readMultiplyUb()) // Y2R1_MULTIPLY_UB
+            DEF_IO16(0x1013201A, data = core->y2rs[1].readOffsetR()) // Y2R1_OFFSET_R
+            DEF_IO16(0x1013201C, data = core->y2rs[1].readOffsetG()) // Y2R1_OFFSET_G
+            DEF_IO16(0x1013201E, data = core->y2rs[1].readOffsetB()) // Y2R1_OFFSET_B
+            DEF_IO16(0x10132020, data = core->y2rs[1].readAlpha()) // Y2R1_ALPHA
             DEF_IO08(0x10140000, data = readCfg11Wram32kCode(0)) // CFG11_WRAM_32K_CODE0
             DEF_IO08(0x10140001, data = readCfg11Wram32kCode(1)) // CFG11_WRAM_32K_CODE1
             DEF_IO08(0x10140002, data = readCfg11Wram32kCode(2)) // CFG11_WRAM_32K_CODE2
@@ -1625,6 +1643,15 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
             DEF_IO32(0x10102000, core->y2rs[0].writeCnt(IO_PARAMS)) // Y2R0_CNT
             DEF_IO16(0x10102004, core->y2rs[0].writeWidth(IO_PARAMS)) // Y2R0_WIDTH
             DEF_IO16(0x10102006, core->y2rs[0].writeHeight(IO_PARAMS)) // Y2R0_HEIGHT
+            DEF_IO16(0x10102010, core->y2rs[0].writeMultiplyY(IO_PARAMS)) // Y2R0_MULTIPLY_Y
+            DEF_IO16(0x10102012, core->y2rs[0].writeMultiplyVr(IO_PARAMS)) // Y2R0_MULTIPLY_VR
+            DEF_IO16(0x10102014, core->y2rs[0].writeMultiplyVg(IO_PARAMS)) // Y2R0_MULTIPLY_VG
+            DEF_IO16(0x10102016, core->y2rs[0].writeMultiplyUg(IO_PARAMS)) // Y2R0_MULTIPLY_UG
+            DEF_IO16(0x10102018, core->y2rs[0].writeMultiplyUb(IO_PARAMS)) // Y2R0_MULTIPLY_UB
+            DEF_IO16(0x1010201A, core->y2rs[0].writeOffsetR(IO_PARAMS)) // Y2R0_OFFSET_R
+            DEF_IO16(0x1010201C, core->y2rs[0].writeOffsetG(IO_PARAMS)) // Y2R0_OFFSET_G
+            DEF_IO16(0x1010201E, core->y2rs[0].writeOffsetB(IO_PARAMS)) // Y2R0_OFFSET_B
+            DEF_IO16(0x10102020, core->y2rs[0].writeAlpha(IO_PARAMS)) // Y2R0_ALPHA
             DEF_IO16(0x10103000, core->csnd.writeMainVol(IO_PARAMS)) // CSND_MAIN_VOL
             DEF_IO16(0x10103002, core->csnd.writeMainCnt(IO_PARAMS)) // CSND_MAIN_CNT
             DEF_IO16(0x10103400, core->csnd.writeChanCnt(0, IO_PARAMS)) // CSND_CHAN0_CNT
@@ -1929,6 +1956,15 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
             DEF_IO32(0x10132000, core->y2rs[1].writeCnt(IO_PARAMS)) // Y2R1_CNT
             DEF_IO16(0x10132004, core->y2rs[1].writeWidth(IO_PARAMS)) // Y2R1_WIDTH
             DEF_IO16(0x10132006, core->y2rs[1].writeHeight(IO_PARAMS)) // Y2R1_HEIGHT
+            DEF_IO16(0x10132010, core->y2rs[1].writeMultiplyY(IO_PARAMS)) // Y2R1_MULTIPLY_Y
+            DEF_IO16(0x10132012, core->y2rs[1].writeMultiplyVr(IO_PARAMS)) // Y2R1_MULTIPLY_VR
+            DEF_IO16(0x10132014, core->y2rs[1].writeMultiplyVg(IO_PARAMS)) // Y2R1_MULTIPLY_VG
+            DEF_IO16(0x10132016, core->y2rs[1].writeMultiplyUg(IO_PARAMS)) // Y2R1_MULTIPLY_UG
+            DEF_IO16(0x10132018, core->y2rs[1].writeMultiplyUb(IO_PARAMS)) // Y2R1_MULTIPLY_UB
+            DEF_IO16(0x1013201A, core->y2rs[1].writeOffsetR(IO_PARAMS)) // Y2R1_OFFSET_R
+            DEF_IO16(0x1013201C, core->y2rs[1].writeOffsetG(IO_PARAMS)) // Y2R1_OFFSET_G
+            DEF_IO16(0x1013201E, core->y2rs[1].writeOffsetB(IO_PARAMS)) // Y2R1_OFFSET_B
+            DEF_IO16(0x10132020, core->y2rs[1].writeAlpha(IO_PARAMS)) // Y2R1_ALPHA
             DEF_IO08(0x10140000, writeCfg11Wram32kCode(0, IO_PARAMS8)) // CFG11_WRAM_32K_CODE0
             DEF_IO08(0x10140001, writeCfg11Wram32kCode(1, IO_PARAMS8)) // CFG11_WRAM_32K_CODE1
             DEF_IO08(0x10140002, writeCfg11Wram32kCode(2, IO_PARAMS8)) // CFG11_WRAM_32K_CODE2
