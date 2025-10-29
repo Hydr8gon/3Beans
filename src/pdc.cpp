@@ -104,6 +104,16 @@ void Pdc::drawScreen(int i, uint32_t *buffer) {
 }
 
 void Pdc::drawFrame() {
+    // Trigger PDC interrupts at V-blank if not disabled
+    // TODO: handle timings for different modes properly
+    if (((pdcInterruptType[0] >> 8) & 0x7) != 7)
+        core->interrupts.sendInterrupt(ARM11, 0x2A);
+    if (((pdcInterruptType[1] >> 8) & 0x7) != 7)
+        core->interrupts.sendInterrupt(ARM11, 0x2B);
+
+    // Sync the GPU thread every frame before output
+    core->gpu.syncThread();
+
     // Allow up to 2 framebuffers to be queued
     if (buffers.size() == 2) return;
     uint32_t *buffer = new uint32_t[400 * 480];
@@ -118,13 +128,6 @@ void Pdc::drawFrame() {
     buffers.push(buffer);
     ready.store(true);
     mutex.unlock();
-
-    // Trigger PDC interrupts at V-blank if not disabled
-    // TODO: handle timings for different modes properly
-    if (((pdcInterruptType[0] >> 8) & 0x7) != 7)
-        core->interrupts.sendInterrupt(ARM11, 0x2A);
-    if (((pdcInterruptType[1] >> 8) & 0x7) != 7)
-        core->interrupts.sendInterrupt(ARM11, 0x2B);
 }
 
 void Pdc::writeFramebufLt0(int i, uint32_t mask, uint32_t value) {

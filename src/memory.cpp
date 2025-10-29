@@ -679,14 +679,14 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x10332274, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
                 DEF_IO32(0x10332278, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
                 DEF_IO32(0x1033227C, data = core->y2rs[1].readOutputRgba()) // Y2R1_OUTPUT_RGBA
-                DEF_IO32(0x10400010, data = core->gpu.readMemsetDstAddr(0)) // GPU_MEMSET_DST_ADDR0
-                DEF_IO32(0x10400014, data = core->gpu.readMemsetDstEnd(0)) // GPU_MEMSET_DST_END0
-                DEF_IO32(0x10400018, data = core->gpu.readMemsetData(0)) // GPU_MEMSET_DATA0
-                DEF_IO32(0x1040001C, data = core->gpu.readMemsetCnt(0)) // GPU_MEMSET_CNT0
-                DEF_IO32(0x10400020, data = core->gpu.readMemsetDstAddr(1)) // GPU_MEMSET_DST_ADDR1
-                DEF_IO32(0x10400024, data = core->gpu.readMemsetDstEnd(1)) // GPU_MEMSET_DST_END1
-                DEF_IO32(0x10400028, data = core->gpu.readMemsetData(1)) // GPU_MEMSET_DATA1
-                DEF_IO32(0x1040002C, data = core->gpu.readMemsetCnt(1)) // GPU_MEMSET_CNT1
+                DEF_IO32(0x10400010, data = core->gpu.readFillDstAddr(0)) // GPU_FILL0_DST_ADDR
+                DEF_IO32(0x10400014, data = core->gpu.readFillDstEnd(0)) // GPU_FILL0_DST_END
+                DEF_IO32(0x10400018, data = core->gpu.readFillData(0)) // GPU_FILL0_DATA
+                DEF_IO32(0x1040001C, data = core->gpu.readFillCnt(0)) // GPU_FILL0_CNT
+                DEF_IO32(0x10400020, data = core->gpu.readFillDstAddr(1)) // GPU_FILL1_DST_ADDR
+                DEF_IO32(0x10400024, data = core->gpu.readFillDstEnd(1)) // GPU_FILL1_DST_END
+                DEF_IO32(0x10400028, data = core->gpu.readFillData(1)) // GPU_FILL1_DATA
+                DEF_IO32(0x1040002C, data = core->gpu.readFillCnt(1)) // GPU_FILL1_CNT
                 DEF_IO32(0x10400468, data = core->pdc.readFramebufLt0(0)) // PDC0_FRAMEBUF_LT0
                 DEF_IO32(0x1040046C, data = core->pdc.readFramebufLt1(0)) // PDC0_FRAMEBUF_LT1
                 DEF_IO32(0x10400470, data = core->pdc.readFramebufFormat(0)) // PDC0_FRAMEBUF_FORMAT
@@ -699,15 +699,15 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x10400574, data = core->pdc.readInterruptType(1)) // PDC1_INTERRUPT_TYPE
                 DEF_IO32(0x10400578, data = core->pdc.readFramebufSelAck(1)) // PDC1_FRAMEBUF_SEL_ACK
                 DEF_IO32(0x10400590, data = core->pdc.readFramebufStep(1)) // PDC1_FRAMEBUF_STEP
-                DEF_IO32(0x10400C00, data = core->gpu.readMemcpySrcAddr()) // GPU_MEMCPY_SRC_ADDR
-                DEF_IO32(0x10400C04, data = core->gpu.readMemcpyDstAddr()) // GPU_MEMCPY_DST_ADDR
-                DEF_IO32(0x10400C08, data = core->gpu.readMemcpyDispDstSize()) // GPU_MEMCPY_DISP_DST_SIZE
-                DEF_IO32(0x10400C0C, data = core->gpu.readMemcpyDispSrcSize()) // GPU_MEMCPY_DISP_SRC_SIZE
-                DEF_IO32(0x10400C10, data = core->gpu.readMemcpyFlags()) // GPU_MEMCPY_FLAGS
-                DEF_IO32(0x10400C18, data = core->gpu.readMemcpyCnt()) // GPU_MEMCPY_CNT
-                DEF_IO32(0x10400C20, data = core->gpu.readMemcpyTexSize()) // GPU_MEMCPY_TEX_SIZE
-                DEF_IO32(0x10400C24, data = core->gpu.readMemcpyTexSrcWidth()) // GPU_MEMCPY_TEX_SRC_WIDTH
-                DEF_IO32(0x10400C28, data = core->gpu.readMemcpyTexDstWidth()) // GPU_MEMCPY_TEX_DST_WIDTH
+                DEF_IO32(0x10400C00, data = core->gpu.readCopySrcAddr()) // GPU_COPY_SRC_ADDR
+                DEF_IO32(0x10400C04, data = core->gpu.readCopyDstAddr()) // GPU_COPY_DST_ADDR
+                DEF_IO32(0x10400C08, data = core->gpu.readCopyDispDstSize()) // GPU_COPY_DISP_DST_SIZE
+                DEF_IO32(0x10400C0C, data = core->gpu.readCopyDispSrcSize()) // GPU_COPY_DISP_SRC_SIZE
+                DEF_IO32(0x10400C10, data = core->gpu.readCopyFlags()) // GPU_COPY_FLAGS
+                DEF_IO32(0x10400C18, data = core->gpu.readCopyCnt()) // GPU_COPY_CNT
+                DEF_IO32(0x10400C20, data = core->gpu.readCopyTexSize()) // GPU_COPY_TEX_SIZE
+                DEF_IO32(0x10400C24, data = core->gpu.readCopyTexSrcWidth()) // GPU_COPY_TEX_SRC_WIDTH
+                DEF_IO32(0x10400C28, data = core->gpu.readCopyTexDstWidth()) // GPU_COPY_TEX_DST_WIDTH
                 DEF_IO32(0x10401000, data = core->gpu.readIrqAck(0)) // GPU_IRQ_ACK0
                 DEF_IO32(0x10401004, data = core->gpu.readIrqAck(1)) // GPU_IRQ_ACK1
                 DEF_IO32(0x10401008, data = core->gpu.readIrqAck(2)) // GPU_IRQ_ACK2
@@ -2241,14 +2241,14 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x10332178, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
                 DEF_IO32(0x1033217C, core->y2rs[1].writeInputV(IO_PARAMS)) // Y2R1_INPUT_V
                 DEF_IO32(0x10322000, core->wifi.writeData32Fifo(IO_PARAMS)) // WIFI_DATA32_FIFO
-                DEF_IO32(0x10400010, core->gpu.writeMemsetDstAddr(0, IO_PARAMS)) // GPU_MEMSET_DST_ADDR0
-                DEF_IO32(0x10400014, core->gpu.writeMemsetDstEnd(0, IO_PARAMS)) // GPU_MEMSET_DST_END0
-                DEF_IO32(0x10400018, core->gpu.writeMemsetData(0, IO_PARAMS)) // GPU_MEMSET_DATA0
-                DEF_IO32(0x1040001C, core->gpu.writeMemsetCnt(0, IO_PARAMS)) // GPU_MEMSET_CNT0
-                DEF_IO32(0x10400020, core->gpu.writeMemsetDstAddr(1, IO_PARAMS)) // GPU_MEMSET_DST_ADDR1
-                DEF_IO32(0x10400024, core->gpu.writeMemsetDstEnd(1, IO_PARAMS)) // GPU_MEMSET_DST_END1
-                DEF_IO32(0x10400028, core->gpu.writeMemsetData(1, IO_PARAMS)) // GPU_MEMSET_DATA1
-                DEF_IO32(0x1040002C, core->gpu.writeMemsetCnt(1, IO_PARAMS)) // GPU_MEMSET_CNT1
+                DEF_IO32(0x10400010, core->gpu.writeFillDstAddr(0, IO_PARAMS)) // GPU_FILL0_DST_ADDR
+                DEF_IO32(0x10400014, core->gpu.writeFillDstEnd(0, IO_PARAMS)) // GPU_FILL0_DST_END
+                DEF_IO32(0x10400018, core->gpu.writeFillData(0, IO_PARAMS)) // GPU_FILL0_DATA
+                DEF_IO32(0x1040001C, core->gpu.writeFillCnt(0, IO_PARAMS)) // GPU_FILL0_CNT
+                DEF_IO32(0x10400020, core->gpu.writeFillDstAddr(1, IO_PARAMS)) // GPU_FILL1_DST_ADDR
+                DEF_IO32(0x10400024, core->gpu.writeFillDstEnd(1, IO_PARAMS)) // GPU_FILL1_DST_END
+                DEF_IO32(0x10400028, core->gpu.writeFillData(1, IO_PARAMS)) // GPU_FILL1_DATA
+                DEF_IO32(0x1040002C, core->gpu.writeFillCnt(1, IO_PARAMS)) // GPU_FILL1_CNT
                 DEF_IO32(0x10400468, core->pdc.writeFramebufLt0(0, IO_PARAMS)) // PDC0_FRAMEBUF_LT0
                 DEF_IO32(0x1040046C, core->pdc.writeFramebufLt1(0, IO_PARAMS)) // PDC0_FRAMEBUF_LT1
                 DEF_IO32(0x10400470, core->pdc.writeFramebufFormat(0, IO_PARAMS)) // PDC0_FRAMEBUF_FORMAT
@@ -2261,15 +2261,15 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x10400574, core->pdc.writeInterruptType(1, IO_PARAMS)) // PDC1_INTERRUPT_TYPE
                 DEF_IO32(0x10400578, core->pdc.writeFramebufSelAck(1, IO_PARAMS)) // PDC1_FRAMEBUF_SEL_ACK
                 DEF_IO32(0x10400590, core->pdc.writeFramebufStep(1, IO_PARAMS)) // PDC1_FRAMEBUF_STEP
-                DEF_IO32(0x10400C00, core->gpu.writeMemcpySrcAddr(IO_PARAMS)) // GPU_MEMCPY_SRC_ADDR
-                DEF_IO32(0x10400C04, core->gpu.writeMemcpyDstAddr(IO_PARAMS)) // GPU_MEMCPY_DST_ADDR
-                DEF_IO32(0x10400C08, core->gpu.writeMemcpyDispDstSize(IO_PARAMS)) // GPU_MEMCPY_DISP_DST_SIZE
-                DEF_IO32(0x10400C0C, core->gpu.writeMemcpyDispSrcSize(IO_PARAMS)) // GPU_MEMCPY_DISP_SRC_SIZE
-                DEF_IO32(0x10400C10, core->gpu.writeMemcpyFlags(IO_PARAMS)) // GPU_MEMCPY_FLAGS
-                DEF_IO32(0x10400C18, core->gpu.writeMemcpyCnt(IO_PARAMS)) // GPU_MEMCPY_CNT
-                DEF_IO32(0x10400C20, core->gpu.writeMemcpyTexSize(IO_PARAMS)) // GPU_MEMCPY_TEX_SIZE
-                DEF_IO32(0x10400C24, core->gpu.writeMemcpyTexSrcWidth(IO_PARAMS)) // GPU_MEMCPY_TEX_SRC_WIDTH
-                DEF_IO32(0x10400C28, core->gpu.writeMemcpyTexDstWidth(IO_PARAMS)) // GPU_MEMCPY_TEX_DST_WIDTH
+                DEF_IO32(0x10400C00, core->gpu.writeCopySrcAddr(IO_PARAMS)) // GPU_COPY_SRC_ADDR
+                DEF_IO32(0x10400C04, core->gpu.writeCopyDstAddr(IO_PARAMS)) // GPU_COPY_DST_ADDR
+                DEF_IO32(0x10400C08, core->gpu.writeCopyDispDstSize(IO_PARAMS)) // GPU_COPY_DISP_DST_SIZE
+                DEF_IO32(0x10400C0C, core->gpu.writeCopyDispSrcSize(IO_PARAMS)) // GPU_COPY_DISP_SRC_SIZE
+                DEF_IO32(0x10400C10, core->gpu.writeCopyFlags(IO_PARAMS)) // GPU_COPY_FLAGS
+                DEF_IO32(0x10400C18, core->gpu.writeCopyCnt(IO_PARAMS)) // GPU_COPY_CNT
+                DEF_IO32(0x10400C20, core->gpu.writeCopyTexSize(IO_PARAMS)) // GPU_COPY_TEX_SIZE
+                DEF_IO32(0x10400C24, core->gpu.writeCopyTexSrcWidth(IO_PARAMS)) // GPU_COPY_TEX_SRC_WIDTH
+                DEF_IO32(0x10400C28, core->gpu.writeCopyTexDstWidth(IO_PARAMS)) // GPU_COPY_TEX_DST_WIDTH
                 DEF_IO32(0x10401000, core->gpu.writeIrqAck(0, IO_PARAMS)) // GPU_IRQ_ACK0
                 DEF_IO32(0x10401004, core->gpu.writeIrqAck(1, IO_PARAMS)) // GPU_IRQ_ACK1
                 DEF_IO32(0x10401008, core->gpu.writeIrqAck(2, IO_PARAMS)) // GPU_IRQ_ACK2

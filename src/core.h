@@ -96,9 +96,9 @@ enum Task {
     SHA1_UPDATE,
     Y2R0_UPDATE,
     Y2R1_UPDATE,
-    GPU_SET0_READY,
-    GPU_SET1_READY,
-    GPU_CPY_READY,
+    GPU_END_FILL0,
+    GPU_END_FILL1,
+    GPU_END_COPY,
     CSND_SAMPLE,
     SDMMC0_READ_BLOCK,
     SDMMC1_READ_BLOCK,
@@ -149,7 +149,7 @@ public:
     Wifi wifi;
     Y2r y2rs[2];
 
-    std::atomic<bool> running;
+    std::atomic<bool> running{false};
     std::vector<Event> events;
     uint64_t globalCycles = 0;
 

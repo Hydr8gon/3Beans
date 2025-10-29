@@ -33,6 +33,7 @@ struct Setting {
 
 namespace Settings {
     extern int fpsLimiter;
+    extern int threadedGpu;
     extern int cartAutoBoot;
     extern std::string boot11Path;
     extern std::string boot9Path;

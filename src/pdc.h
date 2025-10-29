@@ -50,7 +50,7 @@ private:
     Core *core;
 
     std::queue<uint32_t*> buffers;
-    std::atomic<bool> ready;
+    std::atomic<bool> ready{false};
     std::mutex mutex;
 
     uint32_t pdcFramebufLt0[2] = {};

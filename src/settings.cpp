@@ -22,6 +22,7 @@
 
 namespace Settings {
     int fpsLimiter = 1;
+    int threadedGpu = 0;
     int cartAutoBoot = 0;
     std::string boot11Path = "boot11.bin";
     std::string boot9Path = "boot9.bin";
@@ -31,6 +32,7 @@ namespace Settings {
 
     std::vector<Setting> settings = {
         Setting("fpsLimiter", &fpsLimiter, false),
+        Setting("threadedGpu", &threadedGpu, false),
         Setting("cartAutoBoot", &cartAutoBoot, false),
         Setting("boot11Path", &boot11Path, true),
         Setting("boot9Path", &boot9Path, true),

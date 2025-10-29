@@ -35,7 +35,7 @@ enum DspClock {
 
 class Csnd {
 public:
-    Csnd(Core *core);
+    Csnd(Core *core): core(core) {}
     ~Csnd();
 
     uint32_t *getSamples(uint32_t freq, uint32_t count);
@@ -67,7 +67,7 @@ private:
     Core *core;
     std::condition_variable condVars[2];
     std::mutex mutexes[3];
-    std::atomic<bool> ready;
+    std::atomic<bool> ready{false};
 
     uint32_t *mixBuffer = nullptr;
     uint32_t *csndBuffer[2] = {};

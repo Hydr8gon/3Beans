@@ -33,11 +33,6 @@ const int16_t Csnd::adpcmTable[] = {
     0x5771, 0x602F, 0x69CE, 0x7462, 0x7FFF
 };
 
-Csnd::Csnd(Core *core): core(core) {
-    // Mark the buffer as not ready
-    ready.store(false);
-}
-
 Csnd::~Csnd() {
     // Free the audio buffers
     delete[] mixBuffer;

@@ -30,7 +30,7 @@ class b3Canvas;
 class b3Frame: public wxFrame {
 public:
     Core *core = nullptr;
-    std::atomic<bool> running;
+    std::atomic<bool> running{false};
     std::mutex mutex;
 
     b3Frame();
@@ -52,8 +52,9 @@ private:
     void pause(wxCommandEvent &event);
     void restart(wxCommandEvent &event);
     void stop(wxCommandEvent &event);
-    void cartAutoBoot(wxCommandEvent &event);
     void fpsLimiter(wxCommandEvent &event);
+    void threadedGpu(wxCommandEvent &event);
+    void cartAutoBoot(wxCommandEvent &event);
     void pathSettings(wxCommandEvent &event);
     void inputBindings(wxCommandEvent &event);
     void close(wxCloseEvent &event);

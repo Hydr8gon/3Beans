@@ -19,6 +19,72 @@
 
 #include "core.h"
 
+Gpu::~Gpu() {
+    // Ensure the thread is finished
+    syncThread();
+}
+
+void Gpu::syncThread() {
+    // Tell the GPU thread to stop and wait for it to finish
+    if (!running.exchange(false)) return;
+    thread->join();
+    delete thread;
+}
+
+void Gpu::runThreaded() {
+    // Process GPU thread tasks
+    while (true) {
+        // Wait for more tasks or finish execution if stopped
+        while (tasks.empty()) {
+            if (!running.load()) return;
+            std::this_thread::yield();
+        }
+
+        // Handle the next task based on its type
+        GpuThreadTask &task = tasks.front();
+        switch (task.type) {
+        case TASK_CMD: {
+            // Decode a GPU command header
+            uint32_t *cmds = (uint32_t*)task.data;
+            uint8_t count = (cmds[0] >> 20) & 0xFF;
+            uint32_t mask = maskTable[(cmds[0] >> 16) & 0xF];
+            uint16_t cmd = (cmds[0] & 0x3FF);
+
+            // Write command parameters to GPU registers, with optionally increasing ID
+            (this->*cmdWrites[cmd])(mask, cmds[1]);
+            if (cmds[0] & BIT(31)) // Increasing
+                for (int i = 0; i < count; i++)
+                    (this->*cmdWrites[++cmd & 0x3FF])(mask, cmds[i + 2]);
+            else // Fixed
+                for (int i = 0; i < count; i++)
+                    (this->*cmdWrites[cmd])(mask, cmds[i + 2]);
+            delete[] cmds;
+            break;
+        }
+
+        case TASK_FILL: {
+            // Start a GPU fill using saved register values
+            GpuFillRegs *regs = (GpuFillRegs*)task.data;
+            startFill(*regs);
+            delete regs;
+            break;
+        }
+
+        case TASK_COPY: {
+            // Start a GPU copy using saved register values
+            GpuCopyRegs *regs = (GpuCopyRegs*)task.data;
+            startCopy(*regs);
+            delete regs;
+            break;
+        }}
+
+        // Remove finished tasks from the queue
+        mutex.lock();
+        tasks.pop();
+        mutex.unlock();
+    }
+}
+
 bool Gpu::checkInterrupt(int i) {
     // Trigger a GPU interrupt if enabled and its request/compare bytes match
     if ((gpuIrqMask & BITL(i)) || ((gpuIrqCmp[i >> 2] ^ gpuIrqReq[i >> 2]) & (0xFF << ((i & 0x3) * 8))))
@@ -30,7 +96,7 @@ bool Gpu::checkInterrupt(int i) {
 
 uint32_t Gpu::getDispSrcOfs(uint32_t x, uint32_t y, uint32_t width) {
     // Get a linear source offset in linear-to-linear and linear-to-tiled display copy modes
-    if (gpuMemcpyFlags & (BIT(5) | BIT(1)))
+    if (gpuCopy.flags & (BIT(5) | BIT(1)))
         return (y * width) + x;
 
     // Get a swizzled source offset in tiled-to-linear display copy mode
@@ -41,7 +107,7 @@ uint32_t Gpu::getDispSrcOfs(uint32_t x, uint32_t y, uint32_t width) {
 
 uint32_t Gpu::getDispDstOfs(uint32_t x, uint32_t y, uint32_t width) {
     // Get a linear destination offset in linear-to-linear and tiled-to-linear display copy modes
-    if ((gpuMemcpyFlags & (BIT(5) | BIT(1))) != BIT(1))
+    if ((gpuCopy.flags & (BIT(5) | BIT(1))) != BIT(1))
         return (y * width) + x;
 
     // Get a swizzled destination offset in linear-to-tiled display copy mode
@@ -50,130 +116,44 @@ uint32_t Gpu::getDispDstOfs(uint32_t x, uint32_t y, uint32_t width) {
     return ofs | ((x << 2) & 0x10) | ((x << 1) & 0x4) | (x & 0x1);
 }
 
-void Gpu::setReady(int i) {
-    // Trigger a GPU set ready interrupt after some time
-    gpuMemsetCnt[i] |= BIT(1);
-    core->interrupts.sendInterrupt(ARM11, 0x28 + i);
-}
+void Gpu::startFill(GpuFillRegs &regs) {
+    // Get the start and end addresses for a GPU fill
+    uint32_t start = (regs.dstAddr << 3), end = (regs.dstEnd << 3);
+    LOG_INFO("Performing GPU memory fill at 0x%X with size 0x%X\n", start, end - start);
 
-void Gpu::cpyReady() {
-    // Trigger a GPU copy ready interrupt after some time
-    gpuMemcpyCnt |= BIT(8);
-    core->interrupts.sendInterrupt(ARM11, 0x2C);
-}
-
-void Gpu::writeCfg11GpuCnt(uint32_t mask, uint32_t value) {
-    // Write to the CFG11_GPU_CNT register
-    mask &= 0x1007F;
-    cfg11GpuCnt = (cfg11GpuCnt & ~mask) | (value & mask);
-}
-
-void Gpu::writeMemsetDstAddr(int i, uint32_t mask, uint32_t value) {
-    // Write to one of the GPU_MEMSET_DST_ADDR registers
-    mask &= 0x1FFFFFFE;
-    gpuMemsetDstAddr[i] = (gpuMemsetDstAddr[i] & ~mask) | (value & mask);
-}
-
-void Gpu::writeMemsetDstEnd(int i, uint32_t mask, uint32_t value) {
-    // Write to one of the GPU_MEMSET_DST_END registers
-    mask &= 0x1FFFFFFE;
-    gpuMemsetDstEnd[i] = (gpuMemsetDstEnd[i] & ~mask) | (value & mask);
-}
-
-void Gpu::writeMemsetData(int i, uint32_t mask, uint32_t value) {
-    // Write to one of the GPU_MEMSET_DATA registers
-    gpuMemsetData[i] = (gpuMemsetData[i] & ~mask) | (value & mask);
-}
-
-void Gpu::writeMemsetCnt(int i, uint32_t mask, uint32_t value) {
-    // Write to one of the GPU_MEMSET_CNT registers
-    uint32_t mask2 = (mask & 0x1F0300);
-    gpuMemsetCnt[i] = (gpuMemsetCnt[i] & ~mask2) | (value & mask2);
-
-    // Allow clearing the interrupt bit but not setting it
-    if ((mask & BIT(1)) && !(value & BIT(1)))
-        gpuMemsetCnt[i] &= ~BIT(1);
-
-    // Check if a set should start and schedule the ready signal based on size
-    if (!(value & mask & BIT(0)) || !(cfg11GpuCnt & BIT(1))) return;
-    uint32_t start = (gpuMemsetDstAddr[i] << 3), end = (gpuMemsetDstEnd[i] << 3);
-    core->schedule(Task(GPU_SET0_READY + i), (end - start) / 8);
-    LOG_INFO("Performing GPU memory set at 0x%X with size 0x%X\n", start, end - start);
-
-    // Perform a memory set with the selected data width
-    switch ((gpuMemsetCnt[i] >> 8) & 0x3) {
+    // Perform a memory fill using the selected data width
+    switch ((regs.cnt >> 8) & 0x3) {
     case 0: // 16-bit
         for (uint32_t addr = start; addr < end; addr += 2)
-            core->memory.write<uint16_t>(ARM11, addr, gpuMemsetData[i]);
+            core->memory.write<uint16_t>(ARM11, addr, regs.data);
         return;
-
     case 1: case 3: // 24-bit
-        value = (gpuMemsetData[i] & 0xFFFFFF) | (gpuMemsetData[i] << 24);
-        for (uint32_t addr = start; addr < end; addr += 2)
-            core->memory.write<uint16_t>(ARM11, addr, value >> (((addr - start) * 8) % 24));
+        for (uint32_t addr = start, val = (regs.data & 0xFFFFFF) | (regs.data << 24); addr < end; addr += 2)
+            core->memory.write<uint16_t>(ARM11, addr, val >> (((addr - start) * 8) % 24));
         return;
-
     case 2: // 32-bit
         for (uint32_t addr = start; addr < end; addr += 4)
-            core->memory.write<uint32_t>(ARM11, addr, gpuMemsetData[i]);
+            core->memory.write<uint32_t>(ARM11, addr, regs.data);
         return;
     }
 }
 
-void Gpu::writeMemcpySrcAddr(uint32_t mask, uint32_t value) {
-    // Write to the GPU_MEMCPY_SRC_ADDR register
-    mask &= 0x1FFFFFFE;
-    gpuMemcpySrcAddr = (gpuMemcpySrcAddr & ~mask) | (value & mask);
-}
-
-void Gpu::writeMemcpyDstAddr(uint32_t mask, uint32_t value) {
-    // Write to the GPU_MEMCPY_DST_ADDR register
-    mask &= 0x1FFFFFFE;
-    gpuMemcpyDstAddr = (gpuMemcpyDstAddr & ~mask) | (value & mask);
-}
-
-void Gpu::writeMemcpyDispDstSize(uint32_t mask, uint32_t value) {
-    // Write to the GPU_MEMCPY_DISP_DST_SIZE register
-    mask &= 0xFFF8FFF8;
-    gpuMemcpyDispDstSize = (gpuMemcpyDispDstSize & ~mask) | (value & mask);
-}
-
-void Gpu::writeMemcpyDispSrcSize(uint32_t mask, uint32_t value) {
-    // Write to the GPU_MEMCPY_DISP_SRC_SIZE register
-    mask &= 0xFFF8FFF8;
-    gpuMemcpyDispSrcSize = (gpuMemcpyDispSrcSize & ~mask) | (value & mask);
-}
-
-void Gpu::writeMemcpyFlags(uint32_t mask, uint32_t value) {
-    // Write to the GPU_MEMCPY_FLAGS register
-    mask &= 0x301772F;
-    gpuMemcpyFlags = (gpuMemcpyFlags & ~mask) | (value & mask);
-}
-
-void Gpu::writeMemcpyCnt(uint32_t mask, uint32_t value) {
-    // Allow clearing the interrupt bit but not setting it
-    if ((mask & BIT(8)) && !(value & BIT(8)))
-        gpuMemcpyCnt &= ~BIT(8);
-
-    // Check if a copy should start and get common parameters
-    if (!(value & mask & BIT(0)) || !(cfg11GpuCnt & BIT(4))) return;
-    uint32_t srcAddr = (gpuMemcpySrcAddr << 3);
-    uint32_t dstAddr = (gpuMemcpyDstAddr << 3);
+void Gpu::startCopy(GpuCopyRegs &regs) {
+    // Get the source and destination addresses for a GPU copy
+    uint32_t srcAddr = (regs.srcAddr << 3);
+    uint32_t dstAddr = (regs.dstAddr << 3);
 
     // Perform a texture copy if enabled, which ignores most settings
-    if (gpuMemcpyFlags & BIT(3)) {
+    if (regs.flags & BIT(3)) {
         // Get the source and destination parameters for a texture copy
-        uint32_t srcWidth = (gpuMemcpyTexSrcWidth << 4) & 0xFFFF0;
-        uint32_t srcGap = (gpuMemcpyTexSrcWidth >> 12) & 0xFFFF0;
-        uint32_t dstWidth = (gpuMemcpyTexDstWidth << 4) & 0xFFFF0;
-        uint32_t dstGap = (gpuMemcpyTexDstWidth >> 12) & 0xFFFF0;
-
-        // Schedule the ready signal based on texture size
-        core->schedule(GPU_CPY_READY, gpuMemcpyTexSize / 4);
-        LOG_INFO("Performing GPU texture copy from 0x%X to 0x%X with size 0x%X\n", srcAddr, dstAddr, gpuMemcpyTexSize);
+        uint32_t srcWidth = (regs.texSrcWidth << 4) & 0xFFFF0;
+        uint32_t srcGap = (regs.texSrcWidth >> 12) & 0xFFFF0;
+        uint32_t dstWidth = (regs.texDstWidth << 4) & 0xFFFF0;
+        uint32_t dstGap = (regs.texDstWidth >> 12) & 0xFFFF0;
+        LOG_INFO("Performing GPU texture copy from 0x%X to 0x%X with size 0x%X\n", srcAddr, dstAddr, gpuCopy.texSize);
 
         // Perform a texture copy, applying address gaps when widths are reached
-        for (uint32_t i = 0; i < gpuMemcpyTexSize; i += 4) {
+        for (uint32_t i = 0; i < regs.texSize; i += 4) {
             core->memory.write<uint32_t>(ARM11, dstAddr + i, core->memory.read<uint32_t>(ARM11, srcAddr + i));
             if (srcWidth && !((i + 4) % srcWidth)) srcAddr += srcGap;
             if (dstWidth && !((i + 4) % dstWidth)) dstAddr += dstGap;
@@ -182,12 +162,12 @@ void Gpu::writeMemcpyCnt(uint32_t mask, uint32_t value) {
     }
 
     // Get the source and destination parameters for a display copy
-    uint8_t srcFmt = (gpuMemcpyFlags >> 8) & 0x7;
-    uint16_t srcWidth = (gpuMemcpyFlags & BIT(2)) ? gpuMemcpyDispSrcSize : gpuMemcpyDispDstSize;
-    uint8_t dstFmt = (gpuMemcpyFlags >> 12) & 0x7;
-    uint16_t dstWidth = (gpuMemcpyDispDstSize >> 0);
-    uint16_t dstHeight = (gpuMemcpyDispDstSize >> 16);
-    uint8_t scaleType = (gpuMemcpyFlags >> 24) & 0x3;
+    uint8_t srcFmt = (regs.flags >> 8) & 0x7;
+    uint16_t srcWidth = (regs.flags & BIT(2)) ? regs.dispSrcSize : regs.dispDstSize;
+    uint8_t dstFmt = (regs.flags >> 12) & 0x7;
+    uint16_t dstWidth = (regs.dispDstSize >> 0);
+    uint16_t dstHeight = (regs.dispDstSize >> 16);
+    uint8_t scaleType = (regs.flags >> 24) & 0x3;
 
     // Scale the destination dimensions based on scale type
     dstWidth >>= (scaleType == 0x1 || scaleType == 0x2);
@@ -195,18 +175,15 @@ void Gpu::writeMemcpyCnt(uint32_t mask, uint32_t value) {
 
     // Adjust the Y order based on the vertical flip bit
     int yStart, yInc;
-    if (gpuMemcpyFlags & BIT(0)) // Flipped
+    if (regs.flags & BIT(0)) // Flipped
         yStart = dstHeight - 1, yInc = -1;
     else // Normal
         yStart = 0, yInc = 1;
 
-    // Schedule the ready signal based on display size
-    core->schedule(GPU_CPY_READY, dstWidth * dstHeight);
-
     // Log the display copy and check for unimplemented flags
     LOG_INFO("Performing GPU display copy from 0x%X to 0x%X with width %d and height %d\n",
         srcAddr, dstAddr, dstWidth, dstHeight);
-    if (gpuMemcpyFlags & BIT(16))
+    if (regs.flags & BIT(16))
         LOG_CRIT("Unhandled GPU display copy tile size: 32x32\n");
 
     // Perform an 8x8 tiled to linear display copy based on format and scale settings
@@ -495,20 +472,124 @@ void Gpu::writeMemcpyCnt(uint32_t mask, uint32_t value) {
     }
 }
 
-void Gpu::writeMemcpyTexSize(uint32_t mask, uint32_t value) {
-    // Write to the GPU_MEMCPY_TEX_SIZE register
+void Gpu::endFill(int i) {
+    // Trigger a GPU fill end interrupt after some time
+    gpuFill[i].cnt |= BIT(1);
+    core->interrupts.sendInterrupt(ARM11, 0x28 + i);
+}
+
+void Gpu::endCopy() {
+    // Trigger a GPU copy ehd interrupt after some time
+    gpuCopy.cnt |= BIT(8);
+    core->interrupts.sendInterrupt(ARM11, 0x2C);
+}
+
+void Gpu::writeCfg11GpuCnt(uint32_t mask, uint32_t value) {
+    // Write to the CFG11_GPU_CNT register
+    mask &= 0x1007F;
+    cfg11GpuCnt = (cfg11GpuCnt & ~mask) | (value & mask);
+}
+
+void Gpu::writeFillDstAddr(int i, uint32_t mask, uint32_t value) {
+    // Write to one of the GPU_FILL_DST_ADDR registers
+    mask &= 0x1FFFFFFE;
+    gpuFill[i].dstAddr = (gpuFill[i].dstAddr & ~mask) | (value & mask);
+}
+
+void Gpu::writeFillDstEnd(int i, uint32_t mask, uint32_t value) {
+    // Write to one of the GPU_FILL_DST_END registers
+    mask &= 0x1FFFFFFE;
+    gpuFill[i].dstEnd = (gpuFill[i].dstEnd & ~mask) | (value & mask);
+}
+
+void Gpu::writeFillData(int i, uint32_t mask, uint32_t value) {
+    // Write to one of the GPU_FILL_DATA registers
+    gpuFill[i].data = (gpuFill[i].data & ~mask) | (value & mask);
+}
+
+void Gpu::writeFillCnt(int i, uint32_t mask, uint32_t value) {
+    // Write to one of the GPU_FILL_CNT registers
+    uint32_t mask2 = (mask & 0x1F0300);
+    gpuFill[i].cnt = (gpuFill[i].cnt & ~mask2) | (value & mask2);
+
+    // Allow clearing the interrupt bit but not setting it
+    if ((mask & BIT(1)) && !(value & BIT(1)))
+        gpuFill[i].cnt &= ~BIT(1);
+
+    // Check if a fill should start and schedule the end signal based on size
+    if (!(value & mask & BIT(0)) || !(cfg11GpuCnt & BIT(1))) return;
+    core->schedule(Task(GPU_END_FILL0 + i), gpuFill[i].dstEnd - gpuFill[i].dstAddr);
+
+    // Start the fill now or forward it to the thread if running
+    if (!running.load()) return startFill(gpuFill[i]);
+    GpuFillRegs *regs = new GpuFillRegs(gpuFill[i]);
+    mutex.lock();
+    tasks.emplace(TASK_FILL, regs);
+    mutex.unlock();
+}
+
+void Gpu::writeCopySrcAddr(uint32_t mask, uint32_t value) {
+    // Write to the GPU_COPY_SRC_ADDR register
+    mask &= 0x1FFFFFFE;
+    gpuCopy.srcAddr = (gpuCopy.srcAddr & ~mask) | (value & mask);
+}
+
+void Gpu::writeCopyDstAddr(uint32_t mask, uint32_t value) {
+    // Write to the GPU_COPY_DST_ADDR register
+    mask &= 0x1FFFFFFE;
+    gpuCopy.dstAddr = (gpuCopy.dstAddr & ~mask) | (value & mask);
+}
+
+void Gpu::writeCopyDispDstSize(uint32_t mask, uint32_t value) {
+    // Write to the GPU_COPY_DISP_DST_SIZE register
+    mask &= 0xFFF8FFF8;
+    gpuCopy.dispDstSize = (gpuCopy.dispDstSize & ~mask) | (value & mask);
+}
+
+void Gpu::writeCopyDispSrcSize(uint32_t mask, uint32_t value) {
+    // Write to the GPU_COPY_DISP_SRC_SIZE register
+    mask &= 0xFFF8FFF8;
+    gpuCopy.dispSrcSize = (gpuCopy.dispSrcSize & ~mask) | (value & mask);
+}
+
+void Gpu::writeCopyFlags(uint32_t mask, uint32_t value) {
+    // Write to the GPU_COPY_FLAGS register
+    mask &= 0x301772F;
+    gpuCopy.flags = (gpuCopy.flags & ~mask) | (value & mask);
+}
+
+void Gpu::writeCopyCnt(uint32_t mask, uint32_t value) {
+    // Allow clearing the interrupt bit but not setting it
+    if ((mask & BIT(8)) && !(value & BIT(8)))
+        gpuCopy.cnt &= ~BIT(8);
+
+    // Check if a copy should start and schedule the end signal based on type and size
+    if (!(value & mask & BIT(0)) || !(cfg11GpuCnt & BIT(4))) return;
+    core->schedule(GPU_END_COPY, (gpuCopy.flags & BIT(3)) ? (gpuCopy.texSize / 4)
+        : ((gpuCopy.dispDstSize & 0xFFFF) * (gpuCopy.dispDstSize >> 16)));
+
+    // Start the copy now or forward it to the thread if running
+    if (!running.load()) return startCopy(gpuCopy);
+    GpuCopyRegs *regs = new GpuCopyRegs(gpuCopy);
+    mutex.lock();
+    tasks.emplace(TASK_COPY, regs);
+    mutex.unlock();
+}
+
+void Gpu::writeCopyTexSize(uint32_t mask, uint32_t value) {
+    // Write to the GPU_COPY_TEX_SIZE register
     mask &= 0xFFFFFFF0;
-    gpuMemcpyTexSize = (gpuMemcpyTexSize & ~mask) | (value & mask);
+    gpuCopy.texSize = (gpuCopy.texSize & ~mask) | (value & mask);
 }
 
-void Gpu::writeMemcpyTexSrcWidth(uint32_t mask, uint32_t value) {
-    // Write to the GPU_MEMCPY_TEX_SRC_WIDTH register
-    gpuMemcpyTexSrcWidth = (gpuMemcpyTexSrcWidth & ~mask) | (value & mask);
+void Gpu::writeCopyTexSrcWidth(uint32_t mask, uint32_t value) {
+    // Write to the GPU_COPY_TEX_SRC_WIDTH register
+    gpuCopy.texSrcWidth = (gpuCopy.texSrcWidth & ~mask) | (value & mask);
 }
 
-void Gpu::writeMemcpyTexDstWidth(uint32_t mask, uint32_t value) {
-    // Write to the GPU_MEMCPY_TEX_DST_WIDTH register
-    gpuMemcpyTexDstWidth = (gpuMemcpyTexDstWidth & ~mask) | (value & mask);
+void Gpu::writeCopyTexDstWidth(uint32_t mask, uint32_t value) {
+    // Write to the GPU_COPY_TEX_DST_WIDTH register
+    gpuCopy.texDstWidth = (gpuCopy.texDstWidth & ~mask) | (value & mask);
 }
 
 void Gpu::writeIrqAck(int i, uint32_t mask, uint32_t value) {

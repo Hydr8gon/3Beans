@@ -31,6 +31,7 @@ enum FrameEvent {
     RESTART,
     STOP,
     FPS_LIMITER,
+    THREADED_GPU,
     CART_AUTO_BOOT,
     PATH_SETTINGS,
     INPUT_BINDINGS
@@ -44,6 +45,7 @@ EVT_MENU(PAUSE, b3Frame::pause)
 EVT_MENU(RESTART, b3Frame::restart)
 EVT_MENU(STOP, b3Frame::stop)
 EVT_MENU(FPS_LIMITER, b3Frame::fpsLimiter)
+EVT_MENU(THREADED_GPU, b3Frame::threadedGpu)
 EVT_MENU(CART_AUTO_BOOT, b3Frame::cartAutoBoot)
 EVT_MENU(PATH_SETTINGS, b3Frame::pathSettings)
 EVT_MENU(INPUT_BINDINGS, b3Frame::inputBindings)
@@ -68,6 +70,7 @@ b3Frame::b3Frame(): wxFrame(nullptr, wxID_ANY, "3Beans") {
     // Set up the settings menu
     wxMenu *settingsMenu = new wxMenu();
     settingsMenu->AppendCheckItem(FPS_LIMITER, "&FPS Limiter");
+    settingsMenu->AppendCheckItem(THREADED_GPU, "&Threaded GPU");
     settingsMenu->AppendCheckItem(CART_AUTO_BOOT, "&Cart Auto-Boot");
     settingsMenu->AppendSeparator();
     settingsMenu->Append(PATH_SETTINGS, "&Path Settings");
@@ -75,6 +78,7 @@ b3Frame::b3Frame(): wxFrame(nullptr, wxID_ANY, "3Beans") {
 
     // Set the initial settings checkbox states
     settingsMenu->Check(FPS_LIMITER, Settings::fpsLimiter);
+    settingsMenu->Check(THREADED_GPU, Settings::threadedGpu);
     settingsMenu->Check(CART_AUTO_BOOT, Settings::cartAutoBoot);
 
     // Set up the menu bar
@@ -97,7 +101,6 @@ b3Frame::b3Frame(): wxFrame(nullptr, wxID_ANY, "3Beans") {
     SetSizer(sizer);
 
     // Put the core in stopped state at first
-    running.store(false);
     stopCore(true);
 }
 
@@ -215,6 +218,12 @@ void b3Frame::stop(wxCommandEvent &event) {
 void b3Frame::fpsLimiter(wxCommandEvent &event) {
     // Toggle the FPS limiter setting
     Settings::fpsLimiter = !Settings::fpsLimiter;
+    Settings::save();
+}
+
+void b3Frame::threadedGpu(wxCommandEvent &event) {
+    // Toggle the threaded GPU setting
+    Settings::threadedGpu = !Settings::threadedGpu;
     Settings::save();
 }
 

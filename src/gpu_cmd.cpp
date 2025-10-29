@@ -66,6 +66,10 @@ FORCE_INLINE uint32_t Gpu::flt32e7to32e8(uint32_t value) {
 }
 
 void Gpu::runCommands() {
+    // Start the GPU thread if enabled but not running
+    if (Settings::threadedGpu && !running.exchange(true))
+        thread = new std::thread(&Gpu::runThreaded, this);
+
     // Execute GPU commands until the end is reached
     while (cmdAddr < cmdEnd) {
         // Decode the command header
@@ -74,12 +78,25 @@ void Gpu::runCommands() {
         uint8_t count = (header >> 20) & 0xFF;
         curCmd = (header & 0x3FF);
 
-        // Adjust the address and write the first parameter
+        // Adjust the address for the next command with 64-bit alignment
         uint32_t address = (cmdAddr + 4);
         cmdAddr += ((count + 3) << 2) & ~0x7;
-        (this->*cmdWrites[curCmd])(mask, core->memory.read<uint32_t>(ARM11, address - 4));
 
-        // Write the remaining parameters if any, with optionally increasing command ID
+        // Forward parameters to the thread if running, except for IRQ and jump commands
+        if (running.load() && (curCmd & 0x3F0) != 0x10 && (curCmd < 0x238 || curCmd > 0x23D)) {
+            uint32_t *data = new uint32_t[count + 2];
+            data[0] = header;
+            data[1] = core->memory.read<uint32_t>(ARM11, address - 4);
+            for (int i = 0; i < count; i++)
+                data[i + 2] = core->memory.read<uint32_t>(ARM11, address += 4);
+            mutex.lock();
+            tasks.emplace(TASK_CMD, data);
+            mutex.unlock();
+            continue;
+        }
+
+        // Write command parameters to GPU registers, with optionally increasing ID
+        (this->*cmdWrites[curCmd])(mask, core->memory.read<uint32_t>(ARM11, address - 4));
         if (header & BIT(31)) // Increasing
             for (int i = 0; i < count; i++)
                 (this->*cmdWrites[++curCmd & 0x3FF])(mask, core->memory.read<uint32_t>(ARM11, address += 4));
@@ -752,6 +769,7 @@ void Gpu::writeVshDescData(uint32_t mask, uint32_t value) {
 }
 
 void Gpu::writeUnkCmd(uint32_t mask, uint32_t value) {
-    // Catch unknown GPU command IDs
-    LOG_WARN("Unknown GPU command ID: 0x%X\n", curCmd & 0x3FF);
+    // Catch unknown GPU commands, pulling ID from the thread if running
+    uint16_t cmd = (running.load() ? (*(std::vector<uint32_t>*)tasks.front().data)[0] : curCmd) & 0x3FF;
+    LOG_WARN("Unknown GPU command ID: 0x%X\n", cmd);
 }

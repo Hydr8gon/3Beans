@@ -76,9 +76,9 @@ Core::Core(std::string &cartPath): aes(this), arms { ArmInterp(this, ARM11A), Ar
     tasks[SHA1_UPDATE] = std::bind(&Sha::update, &shas[1]);
     tasks[Y2R0_UPDATE] = std::bind(&Y2r::update, &y2rs[0]);
     tasks[Y2R1_UPDATE] = std::bind(&Y2r::update, &y2rs[1]);
-    tasks[GPU_SET0_READY] = std::bind(&Gpu::setReady, &gpu, 0);
-    tasks[GPU_SET1_READY] = std::bind(&Gpu::setReady, &gpu, 1);
-    tasks[GPU_CPY_READY] = std::bind(&Gpu::cpyReady, &gpu);
+    tasks[GPU_END_FILL0] = std::bind(&Gpu::endFill, &gpu, 0);
+    tasks[GPU_END_FILL1] = std::bind(&Gpu::endFill, &gpu, 1);
+    tasks[GPU_END_COPY] = std::bind(&Gpu::endCopy, &gpu);
     tasks[CSND_SAMPLE] = std::bind(&Csnd::runSample, &csnd);
     tasks[SDMMC0_READ_BLOCK] = std::bind(&SdMmc::readBlock, &sdMmcs[0]);
     tasks[SDMMC1_READ_BLOCK] = std::bind(&SdMmc::readBlock, &sdMmcs[1]);
