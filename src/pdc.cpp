@@ -35,12 +35,11 @@ void Pdc::drawScreen(int i, uint32_t *buffer) {
     // Draw a screen's framebuffer in the selected format if enabled
     if (~pdcInterruptType[i] & BIT(0)) return;
     int width = (i ? 320 : 400);
-    uint32_t base = (pdcFramebufSelAck[i] & BIT(0)) ? pdcFramebufLt1[i] : pdcFramebufLt0[i];
     switch (pdcFramebufFormat[i] & 0x7) {
     case 0: // RGBA8
         for (int y = 0; y < 240; y++) {
             for (int x = 0; x < width; x++) {
-                uint32_t address = base + x * pdcFramebufStep[i] + (239 - y) * 4;
+                uint32_t address = screenBases[i] + x * pdcFramebufStep[i] + (239 - y) * 4;
                 uint32_t color = core->memory.read<uint32_t>(ARM11A, address);
                 uint8_t r = (color >> 24) & 0xFF;
                 uint8_t g = (color >> 16) & 0xFF;
@@ -53,7 +52,7 @@ void Pdc::drawScreen(int i, uint32_t *buffer) {
     case 1: // RGB8
         for (int y = 0; y < 240; y++) {
             for (int x = 0; x < width; x++) {
-                uint32_t address = base + x * pdcFramebufStep[i] + (239 - y) * 3;
+                uint32_t address = screenBases[i] + x * pdcFramebufStep[i] + (239 - y) * 3;
                 uint8_t r = core->memory.read<uint8_t>(ARM11, address + 2);
                 uint8_t g = core->memory.read<uint8_t>(ARM11, address + 1);
                 uint8_t b = core->memory.read<uint8_t>(ARM11, address + 0);
@@ -65,7 +64,7 @@ void Pdc::drawScreen(int i, uint32_t *buffer) {
     case 2: // RGB565
         for (int y = 0; y < 240; y++) {
             for (int x = 0; x < width; x++) {
-                uint32_t address = base + x * pdcFramebufStep[i] + (239 - y) * 2;
+                uint32_t address = screenBases[i] + x * pdcFramebufStep[i] + (239 - y) * 2;
                 uint16_t color = core->memory.read<uint16_t>(ARM11, address);
                 uint8_t r = ((color >> 11) & 0x1F) * 255 / 31;
                 uint8_t g = ((color >> 5) & 0x3F) * 255 / 63;
@@ -78,7 +77,7 @@ void Pdc::drawScreen(int i, uint32_t *buffer) {
     case 3: // RGB5A1
         for (int y = 0; y < 240; y++) {
             for (int x = 0; x < width; x++) {
-                uint32_t address = base + x * pdcFramebufStep[i] + (239 - y) * 2;
+                uint32_t address = screenBases[i] + x * pdcFramebufStep[i] + (239 - y) * 2;
                 uint16_t color = core->memory.read<uint16_t>(ARM11, address);
                 uint8_t r = ((color >> 11) & 0x1F) * 255 / 31;
                 uint8_t g = ((color >> 6) & 0x1F) * 255 / 31;
@@ -91,7 +90,7 @@ void Pdc::drawScreen(int i, uint32_t *buffer) {
     default: // RGBA4
         for (int y = 0; y < 240; y++) {
             for (int x = 0; x < width; x++) {
-                uint32_t address = base + x * pdcFramebufStep[i] + (239 - y) * 2;
+                uint32_t address = screenBases[i] + x * pdcFramebufStep[i] + (239 - y) * 2;
                 uint16_t color = core->memory.read<uint16_t>(ARM11, address);
                 uint8_t r = ((color >> 12) & 0xF) * 255 / 15;
                 uint8_t g = ((color >> 8) & 0xF) * 255 / 15;
@@ -106,13 +105,17 @@ void Pdc::drawScreen(int i, uint32_t *buffer) {
 void Pdc::drawFrame() {
     // Trigger PDC interrupts at V-blank if not disabled
     // TODO: handle timings for different modes properly
-    if (((pdcInterruptType[0] >> 8) & 0x7) != 7)
+    if (((pdcInterruptType[0] >> 8) & 0x7) != 0x7)
         core->interrupts.sendInterrupt(ARM11, 0x2A);
-    if (((pdcInterruptType[1] >> 8) & 0x7) != 7)
+    if (((pdcInterruptType[1] >> 8) & 0x7) != 0x7)
         core->interrupts.sendInterrupt(ARM11, 0x2B);
 
-    // Sync the GPU thread every frame before output
-    core->gpu.syncThread();
+    // Update screen base addresses and sync the GPU thread if one changed
+    for (int i = 0; i < 2; i++) {
+        uint32_t base = (pdcFramebufSelAck[i] & BIT(0)) ? pdcFramebufLt1[i] : pdcFramebufLt0[i];
+        if (screenBases[i] != base) core->gpu.syncThread();
+        screenBases[i] = base;
+    }
 
     // Allow up to 2 framebuffers to be queued
     if (buffers.size() == 2) return;

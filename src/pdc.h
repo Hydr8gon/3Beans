@@ -52,6 +52,7 @@ private:
     std::queue<uint32_t*> buffers;
     std::atomic<bool> ready{false};
     std::mutex mutex;
+    uint32_t screenBases[2] = {};
 
     uint32_t pdcFramebufLt0[2] = {};
     uint32_t pdcFramebufLt1[2] = {};
