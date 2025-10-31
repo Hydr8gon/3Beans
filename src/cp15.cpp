@@ -28,11 +28,6 @@ template void Cp15::write(CpuId, uint32_t, uint16_t);
 template void Cp15::write(CpuId, uint32_t, uint32_t);
 
 uint32_t Cp15::mmuTranslate(CpuId id, uint32_t address) {
-    // Use a cached MMU address if its tag matches
-    MmuMap &map = mmuMaps[id][address >> 12];
-    if (map.tag == mmuTags[id])
-        return map.addr | (address & 0xFFF);
-
     // Check control value X to determine the table base address
     uint32_t base;
     if (tlbCtrlRegs[id]) {
@@ -53,31 +48,22 @@ uint32_t Cp15::mmuTranslate(CpuId id, uint32_t address) {
         entry = core->memory.read<uint32_t>(id, (entry & 0xFFFFFC00) + ((address >> 10) & 0x3FC));
         switch (entry & 0x3) {
         case 0x1: // 64KB large page
-            entry = (entry & 0xFFFF0000) | (address & 0xFFFF);
-            goto finish;
+            return (entry & 0xFFFF0000) | (address & 0xFFFF);
         case 0x2: case 0x3: // 4KB small page
-            entry = (entry & 0xFFFFF000) | (address & 0xFFF);
-            goto finish;
+            return (entry & 0xFFFFF000) | (address & 0xFFF);
         }
         break;
 
     case 0x2: // Section
         if (entry & BIT(18)) // 16MB supersection
-            entry = (entry & 0xFF000000) | (address & 0xFFFFFF);
+            return (entry & 0xFF000000) | (address & 0xFFFFFF);
         else // 1MB section
-            entry = (entry & 0xFFF00000) | (address & 0xFFFFF);
-        goto finish;
+            return (entry & 0xFFF00000) | (address & 0xFFFFF);
     }
 
     // Catch unhandled translation table entries
     LOG_CRIT("Unhandled ARM11 core %d MMU translation fault at 0x%X\n", id, address);
     return address;
-
-finish:
-    // Cache an address mapping with the current tag
-    map.addr = (entry & ~0xFFF);
-    map.tag = mmuTags[id];
-    return entry;
 }
 
 void Cp15::mmuInvalidate(CpuId id) {
@@ -87,57 +73,80 @@ void Cp15::mmuInvalidate(CpuId id) {
     mmuTags[id] = 1;
 }
 
-template <typename T> T Cp15::read(CpuId id, uint32_t address) {
-    // Handle special cases that only apply to CPU memory reads
-    if (id == ARM9) {
-        // Align the address
-        address &= ~(sizeof(T) - 1);
+void Cp15::updateEntry(CpuId id, uint32_t address) {
+    // Cache an MMU read/write mapping with the current tag
+    MmuMap &map = mmuMaps[id][address >> 12];
+    address = mmuTranslate(id, address);
+    map.read = core->memory.readMap11[address >> 12];
+    map.write = core->memory.writeMap11[address >> 12];
+    map.addr = (address & ~0xFFF);
+    map.tag = mmuTags[id];
+}
 
-        // Get a pointer to readable TCM memory on the ARM9 if it exists
-        uint8_t *data = nullptr;
-        if (address < itcmSize && itcmRead)
-            data = &itcm[address & 0x7FFF];
-        else if (address >= dtcmAddr && address < dtcmAddr + dtcmSize && dtcmRead)
-            data = &dtcm[(address - dtcmAddr) & 0x3FFF];
+void Cp15::updateMap9(uint32_t start, uint32_t end) {
+    // Use the ARM9 physical read/write maps as a base
+    uint32_t size = ((uint64_t(end) - start + 0xFFF) >> 12) * sizeof(uint8_t*);
+    memcpy(&readMap9[start >> 12], &core->memory.readMap9[start >> 12], size);
+    memcpy(&writeMap9[start >> 12], &core->memory.writeMap9[start >> 12], size);
 
-        // Form an LSB-first value from the data at the pointer
-        if (data) {
-            T value = 0;
-            for (uint32_t i = 0; i < sizeof(T); i++)
-                value |= data[i] << (i << 3);
-            return value;
+    // Overlay TCM mappings if enabled for read/write
+    for (uint64_t address = start; address <= end; address += 0x1000) {
+        if (address < itcmSize) {
+            if (itcmRead) readMap9[address >> 12] = &itcm[address & 0x7FFF];
+            if (itcmWrite) writeMap9[address >> 12] = &itcm[address & 0x7FFF];
+        }
+        else if (address >= dtcmAddr && address < dtcmAddr + dtcmSize) {
+            if (dtcmRead) readMap9[address >> 12] = &dtcm[(address - dtcmAddr) & 0x3FFF];
+            if (dtcmWrite) writeMap9[address >> 12] = &dtcm[(address - dtcmAddr) & 0x3FFF];
         }
     }
+}
+
+template <typename T> T Cp15::read(CpuId id, uint32_t address) {
+    // Get a pointer to mapped readable memory if it exists
+    uint8_t *data;
+    if (id == ARM9) {
+        // Align the address and read from ARM9 memory with TCM
+        address &= ~(sizeof(T) - 1);
+        data = readMap9[address >> 12];
+    }
     else if (mmuEnables[id]) {
-        // Translate the address using an ARM11 MMU if enabled
-        address = mmuTranslate(id, address);
+        // Read from ARM11 virtual memory, updating the cache if necessary
+        MmuMap &map = mmuMaps[id][address >> 12];
+        if (map.tag != mmuTags[id]) updateEntry(id, address);
+        if (!(data = map.read)) address = map.addr | (address & 0xFFF);
+    }
+    else {
+        // Read from ARM11 physical memory
+        data = core->memory.readMap11[address >> 12];
     }
 
-    // Fall back to a regular memory read
-    return core->memory.read<T>(id, address);
+    // Fall back to read handlers for special cases
+    if (!data)
+        return core->memory.readFallback<T>(id, address);
+
+    // Load an LSB-first value from a direct memory pointer
+    T value = 0;
+    data += (address & 0xFFF);
+    for (uint32_t i = 0; i < sizeof(T); i++)
+        value |= data[i] << (i << 3);
+    return value;
 }
 
 template <typename T> void Cp15::write(CpuId id, uint32_t address, T value) {
-    // Handle special cases that only apply to CPU memory writes
+    // Get a pointer to mapped writable memory if it exists
+    uint8_t *data;
     if (id == ARM9) {
-        // Align the address
+        // Align the address and write to ARM9 memory with TCM
         address &= ~(sizeof(T) - 1);
-
-        // Get a pointer to writable TCM memory on the ARM9 if it exists
-        uint8_t *data = nullptr;
-        if (address < itcmSize && itcmWrite)
-            data = &itcm[address & 0x7FFF];
-        else if (address >= dtcmAddr && address < dtcmAddr + dtcmSize && dtcmWrite)
-            data = &dtcm[(address - dtcmAddr) & 0x3FFF];
-
-        // Write an LSB-first value to the data at the pointer
-        if (data) {
-            for (uint32_t i = 0; i < sizeof(T); i++)
-                data[i] = value >> (i << 3);
-            return;
-        }
+        data = writeMap9[address >> 12];
     }
     else if (mmuEnables[id]) {
+        // Write to ARM11 virtual memory, updating the cache if necessary
+        MmuMap &map = mmuMaps[id][address >> 12];
+        if (map.tag != mmuTags[id]) updateEntry(id, address);
+        if (!(data = map.write)) address = map.addr | (address & 0xFFF);
+
         #if LOG_LEVEL > 3
         // Catch writes to special memory used by the 3DS OS
         if (address == 0xFFFF9004 && value) {
@@ -153,13 +162,20 @@ template <typename T> void Cp15::write(CpuId id, uint32_t address, T value) {
             LOG_OS("ARM11 core %d writing IPC command: 0x%X @ 0x%X\n", id, value, address - threadIdRegs[id][1] - 0x80);
         }
         #endif
-
-        // Translate the address using an ARM11 MMU if enabled
-        address = mmuTranslate(id, address);
+    }
+    else {
+        // Write to ARM11 physical memory
+        data = core->memory.writeMap11[address >> 12];
     }
 
-    // Fall back to a regular memory write
-    return core->memory.write<T>(id, address, value);
+    // Fall back to write handlers for special cases
+    if (!data)
+        return core->memory.writeFallback<T>(id, address, value);
+
+    // Write an LSB-first value to a direct memory pointer
+    data += (address & 0xFFF);
+    for (uint32_t i = 0; i < sizeof(T); i++)
+        data[i] = value >> (i << 3);
 }
 
 uint32_t Cp15::readReg(CpuId id, uint8_t cn, uint8_t cm, uint8_t cp) {
@@ -268,6 +284,10 @@ void Cp15::writeCtrl9(CpuId id, uint32_t value) {
     dtcmWrite = (ctrlRegs[id] & BIT(16));
     itcmRead = (ctrlRegs[id] & BIT(18)) && !(ctrlRegs[id] & BIT(19));
     itcmWrite = (ctrlRegs[id] & BIT(18));
+
+    // Update the memory map at the current TCM locations
+    updateMap9(dtcmAddr, dtcmAddr + dtcmSize);
+    updateMap9(0, itcmSize);
 }
 
 void Cp15::writeTlbBase0(CpuId id, uint32_t value) {
@@ -311,14 +331,23 @@ void Cp15::writeWfi(CpuId id, uint32_t value) {
 void Cp15::writeDtcm(CpuId id, uint32_t value) {
     // Set the DTCM address and size with a minimum of 4KB
     dtcmReg = value;
+    uint32_t oldAddr = dtcmAddr, oldSize = dtcmSize;
     dtcmAddr = dtcmReg & 0xFFFFF000;
     dtcmSize = std::max(0x1000, 0x200 << ((dtcmReg >> 1) & 0x1F));
     LOG_INFO("Remapping ARM9 DTCM to 0x%X with size 0x%X\n", dtcmAddr, dtcmSize);
+
+    // Update the memory map at the old and new DTCM areas
+    updateMap9(oldAddr, oldAddr + oldSize);
+    updateMap9(dtcmAddr, dtcmAddr + dtcmSize);
 }
 
 void Cp15::writeItcm(CpuId id, uint32_t value) {
     // Set the ITCM size with a minimum of 4KB
     itcmReg = value;
+    uint32_t oldSize = itcmSize;
     itcmSize = std::max(0x1000, 0x200 << ((itcmReg >> 1) & 0x1F));
     LOG_INFO("Remapping ARM9 ITCM with size 0x%X\n", itcmSize);
+
+    // Update the memory map at the old and new ITCM areas
+    updateMap9(0, std::max(oldSize, itcmSize));
 }

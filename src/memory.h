@@ -25,6 +25,11 @@ class Core;
 
 class Memory {
 public:
+    uint8_t *readMap11[0x100000] = {};
+    uint8_t *writeMap11[0x100000] = {};
+    uint8_t *readMap9[0x100000] = {};
+    uint8_t *writeMap9[0x100000] = {};
+
     Memory(Core *core): core(core) {}
     ~Memory();
 
@@ -35,14 +40,11 @@ public:
     template <typename T> T read(CpuId id, uint32_t address);
     template <typename T> void write(CpuId id, uint32_t address, T value);
 
+    template <typename T> T readFallback(CpuId id, uint32_t address);
+    template <typename T> void writeFallback(CpuId id, uint32_t address, T value);
+
 private:
     Core *core;
-
-    // 32-bit address space, split into 4KB pages
-    uint8_t *readMap11[0x100000] = {};
-    uint8_t *readMap9[0x100000] = {};
-    uint8_t *writeMap11[0x100000] = {};
-    uint8_t *writeMap9[0x100000] = {};
 
     uint8_t arm9Ram[0x180000] = {}; // 1.5MB ARM9 internal RAM
     uint8_t vram[0x600000] = {}; // 6MB VRAM
@@ -64,9 +66,6 @@ private:
     uint32_t cfg9Extmemcnt9 = 0;
     uint32_t prngSource[3] = {};
     uint32_t otpEncrypted[0x40] = {};
-
-    template <typename T> T readFallback(CpuId id, uint32_t address);
-    template <typename T> void writeFallback(CpuId id, uint32_t address, T value);
 
     template <typename T> T ioRead(CpuId id, uint32_t address);
     template <typename T> void ioWrite(CpuId id, uint32_t address, T value);

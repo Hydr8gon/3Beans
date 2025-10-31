@@ -162,6 +162,11 @@ void Memory::updateMap(bool arm9, uint32_t start, uint32_t end) {
         else if (extend && address >= 0x28000000 && address < 0x30000000)
             write = &fcramExt[address & 0x7FFFFFF]; // 128MB extended FCRAM
     }
+
+    // Update the virtual memory maps as well
+    if (arm9) return core->cp15.updateMap9(start, end);
+    for (int i = 0; i < MAX_CPUS; i++)
+        core->cp15.mmuInvalidate(CpuId(i));
 }
 
 template <typename T> T Memory::readFallback(CpuId id, uint32_t address) {

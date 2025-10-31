@@ -770,6 +770,6 @@ void Gpu::writeVshDescData(uint32_t mask, uint32_t value) {
 
 void Gpu::writeUnkCmd(uint32_t mask, uint32_t value) {
     // Catch unknown GPU commands, pulling ID from the thread if running
-    uint16_t cmd = (running.load() ? (*(std::vector<uint32_t>*)tasks.front().data)[0] : curCmd) & 0x3FF;
+    uint16_t cmd = (running.load() ? (*(uint32_t*)tasks.front().data) : curCmd) & 0x3FF;
     LOG_WARN("Unknown GPU command ID: 0x%X\n", cmd);
 }
