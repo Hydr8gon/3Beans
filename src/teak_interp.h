@@ -53,7 +53,7 @@ private:
     bool scheduled = false;
 
     uint16_t *readReg[0x20] = { &regR[0], &regR[1], &regR[2], &regR[3], &regR[4], &regR[5], &regR[7],
-        &regY[0], &regSt[0], &regSt[1], &regSt[2], &regP[0].h, (uint16_t*)&regPc, &regSp, &regCfg[0],
+        &regY[0], &regSt[0], &regSt[1], &regSt[2], &shiftP[0].h, (uint16_t*)&regPc, &regSp, &regCfg[0],
         &regCfg[1], &regB[0].h, &regB[1].h, &regB[0].l, &regB[1].l, &regExt[0], &regExt[1], &regExt[2],
         &regExt[3], &regA[0].l, &regA[1].l, &regA[0].l, &regA[1].l, &regA[0].h, &regA[1].h, &regLc, &regSv };
     uint16_t *readArpMod[0x10] = { &regAr[0], &regAr[1], &regArp[0], &regArp[1], &regArp[2], &regArp[3], &regNone,
@@ -62,11 +62,9 @@ private:
     uint16_t **readArArp = &readArpMod[0];
     uint16_t **readSttMod = &readArpMod[8];
 
-    static uint16_t (TeakInterp::*readRegP[0x20])();
     static uint16_t (TeakInterp::*readRegS[0x20])();
     static uint16_t (TeakInterp::*readAblhS[0x8])();
     static int64_t (TeakInterp::*readAbS[0x4])();
-    static int64_t (TeakInterp::*readPxS[0x2])();
     static void (TeakInterp::*writeReg[0x20])(uint16_t);
     static void (TeakInterp::*writeRegM[0x20])(uint16_t);
     static void (TeakInterp::*writeArpMod[0x10])(uint16_t);
@@ -132,6 +130,7 @@ private:
     uint16_t regArp[4] = { 0x21, 0x258C, 0x4AB5, 0x6F7B };
     uint16_t regNone = 0;
 
+    SplitReg shiftP[2] = {};
     SplitReg shadA[2] = {};
     uint16_t shadR[4] = {};
     uint16_t shadRepc = 0;
@@ -154,6 +153,7 @@ private:
     int64_t saturate(int64_t value);
     int64_t shift(int64_t value, int16_t amount);
     template <typename Tx, typename Ty> void multiplyXY(int i);
+    void updateShiftP(int i);
     static uint16_t calcZmne(int64_t res);
     static uint16_t revBits(uint16_t value);
 
@@ -177,13 +177,12 @@ private:
     template <int i> uint16_t readBlS();
     template <int i> uint16_t readBh();
     template <int i> uint16_t readBhS();
-    template <int i> int64_t readP33S();
     template <int i> uint16_t readR();
     template <int i> uint16_t readExt();
     template <int i> uint16_t readSt();
     template <int i> uint16_t readCfg();
 
-    uint16_t readP0hS();
+    uint16_t readP0h();
     uint16_t readY0();
     uint16_t readPc();
     uint16_t readSp();

@@ -96,8 +96,8 @@ MOV_FUNC(movI8sv, int8_t(opcode), regSv=, 1) // MOV Imm8s, SV
 MOV_FUNC(movMi8sv, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), regSv=, 1) // MOV MemImm8, SV
 MOV_FUNC(movMrnr6, core->dsp.readData(getRnStepZids(opcode)), regR[6]=, 1) // MOV MemRnStepZids, R6
 MOV_FUNC(movMxpreg, regMixp, (this->*writeRegM[opcode & 0x1F]), 1) // MOV MIXP, Register
-MOV_FUNC(movP0a, readP33S<0>(), (this->*writeAx40M[(opcode >> 5) & 0x1]), 1) // MOV P0, Ax
-MOV_FUNC(movP1ab, readP33S<1>(), (this->*writeAb40M[opcode & 0x3]), 1) // MOV P1, Ab
+MOV_FUNC(movP0a, shiftP[0].v, (this->*writeAx40M[(opcode >> 5) & 0x1]), 1) // MOV P0, Ax
+MOV_FUNC(movP1ab, shiftP[1].v, (this->*writeAb40M[opcode & 0x3]), 1) // MOV P1, Ab
 MOV_FUNC(movRegb, readRegP0S(opcode & 0x1F), (this->*writeBx40M[(opcode >> 5) & 0x1]), 1) // MOV RegisterP0, Bx
 MOV_FUNC(movRegmxp, (this->*readRegS[opcode & 0x1F])(), regMixp=, 1) // MOV Register, MIXP
 MOV_FUNC(movRegreg, readRegP0S(opcode & 0x1F), (this->*writeRegM[(opcode >> 5) & 0x1F]), 1) // MOV RegisterP0, Register
@@ -162,7 +162,7 @@ MOVHM_FUNC(movRymi8, readRegS[(opcode >> 9) & 0x7], (regMod[1] << 8) | (opcode &
 }
 
 MOVAM_FUNC(movPrar, regP[(opcode >> 1) & 0x1].v, 6, 2) // MOV Px, MemRarOffsStep
-MOVAM_FUNC(movPrars, (this->*readPxS[(opcode >> 1) & 0x1])(), 6, 2) // MOV Px, MemRarOffsStep, s
+MOVAM_FUNC(movPrars, shiftP[(opcode >> 1) & 0x1].v, 6, 2) // MOV Px, MemRarOffsStep, s
 MOVAM_FUNC(movaAbrar, (this->*readAbS[(opcode >> 4) & 0x3])(), 0, 0) // MOVA Ab, MemRarOffsStep
 
 // Move data memory to the high and low parts of an accumulator
@@ -241,15 +241,15 @@ PUSH_FUNC(pushY1, regY[1], 1) // PUSH Y1
 
 // Push the high and low parts of an accumulator to the stack
 #define PUSHA_FUNC(name, op0) int TeakInterp::name(uint16_t opcode) { \
-    int64_t value = (this->*op0)(); \
+    int64_t value = op0; \
     core->dsp.writeData(--regSp, value >> 0); \
     core->dsp.writeData(--regSp, value >> 16); \
     return 1; \
 }
 
-PUSHA_FUNC(pushP, readPxS[(opcode >> 1) & 0x1]) // PUSH Px
-PUSHA_FUNC(pushaA, readAxS[(opcode >> 6) & 0x1]) // PUSHA Ax
-PUSHA_FUNC(pushaB, readBxS[(opcode >> 1) & 0x1]) // PUSHA Bx
+PUSHA_FUNC(pushP, shiftP[(opcode >> 1) & 0x1].v) // PUSH Px
+PUSHA_FUNC(pushaA, (this->*readAxS[(opcode >> 6) & 0x1])()) // PUSHA Ax
+PUSHA_FUNC(pushaB, (this->*readBxS[(opcode >> 1) & 0x1])()) // PUSHA Bx
 
 int TeakInterp::swap(uint16_t opcode) { // SWAP SwapTypes4
     // Swap accumulator values and set flags based on the type bits

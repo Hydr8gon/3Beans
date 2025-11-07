@@ -33,7 +33,6 @@ TEMPLATE2(uint16_t TeakInterp::readBl, 0)
 TEMPLATE2(uint16_t TeakInterp::readBlS, 0)
 TEMPLATE2(uint16_t TeakInterp::readBh, 0)
 TEMPLATE2(uint16_t TeakInterp::readBhS, 0)
-TEMPLATE2(int64_t TeakInterp::readP33S, 0)
 TEMPLATE4(uint16_t TeakInterp::readR, 0)
 TEMPLATE4(uint16_t TeakInterp::readR, 4)
 TEMPLATE4(uint16_t TeakInterp::readExt, 0)
@@ -263,6 +262,16 @@ template <typename Tx, typename Ty> void TeakInterp::multiplyXY(int i) {
     (this->*writePx33[i])(valX * valY);
 }
 
+void TeakInterp::updateShiftP(int i) {
+    // Update the shifted copy of a product register
+    switch ((regMod[0] >> (10 + i * 3)) & 0x3) { // Shifter
+        case 0x0: shiftP[i].v = regP[i].v >> 0; return;
+        case 0x1: shiftP[i].v = regP[i].v >> 1; return;
+        case 0x2: shiftP[i].v = regP[i].v << 1; return;
+        default: shiftP[i].v = regP[i].v << 2; return;
+    }
+}
+
 uint16_t TeakInterp::calcZmne(int64_t res) {
     // Calculate the common ZMNE flags for an accumulator operation
     res = (res << 24) >> 24;
@@ -349,7 +358,7 @@ uint16_t TeakInterp::stepReg(uint8_t reg, int32_t step) {
 int64_t TeakInterp::readRegP0(int i, bool sign) {
     // Read a register operand with P0, substituting full-width values when applicable
     switch (i) {
-        case 0x0B: return readP33S<0>();
+        case 0x0B: return shiftP[0].v;
         case 0x18: return regA[0].v;
         case 0x19: return regA[1].v;
         default: return sign ? int16_t(*readReg[i]) : uint16_t(*readReg[i]);
@@ -359,7 +368,7 @@ int64_t TeakInterp::readRegP0(int i, bool sign) {
 int64_t TeakInterp::readRegP0S(int i) {
     // Read a register operand with P0 and saturation, substituting full-width values when applicable
     switch (i) {
-        case 0x0B: return readP33S<0>();
+        case 0x0B: return shiftP[0].v;
         case 0x18: return readA40S<0>();
         case 0x19: return readA40S<1>();
         default: return int16_t((this->*readRegS[i])());
@@ -369,7 +378,7 @@ int64_t TeakInterp::readRegP0S(int i) {
 int64_t TeakInterp::readRegExp(int i) {
     // Read a register operand for EXP opcodes, converting P0 and 16-bit values to signed 32-bit
     switch (i) {
-        case 0x0B: return int32_t(readP33S<0>());
+        case 0x0B: return int32_t(shiftP[0].v);
         case 0x18: return regA[0].v;
         case 0x19: return regA[1].v;
         default: return int32_t(*readReg[i] << 16);
@@ -406,26 +415,6 @@ template <int i> uint16_t TeakInterp::readBhS() {
     return (regMod[0] & BIT(0)) ? regB[i].h : (saturate(regB[i].v) >> 16);
 }
 
-template <int i> int64_t TeakInterp::readP33S() {
-    // Read from a full P register with its product shifter applied
-    switch ((regMod[0] >> (10 + i * 3)) & 0x3) {
-        case 0x0: return regP[i].v >> 0;
-        case 0x1: return regP[i].v >> 1;
-        case 0x2: return regP[i].v << 1;
-        default: return regP[i].v << 2;
-    }
-}
-
-uint16_t TeakInterp::readP0hS() {
-    // Read from the high part of P0 with its product shifter applied
-    switch ((regMod[0] >> 10) & 0x3) {
-        case 0x0: return regP[0].v >> 16;
-        case 0x1: return regP[0].v >> 17;
-        case 0x2: return regP[0].v >> 15;
-        default: return regP[0].v >> 14;
-    }
-}
-
 // Define read functions for registers with no special cases
 #define READ_FUNC(id, reg) id() { return reg; }
 READ_FUNC(template <int i> uint16_t TeakInterp::readAl, regA[i].l)
@@ -436,6 +425,7 @@ READ_FUNC(template <int i> uint16_t TeakInterp::readR, regR[i])
 READ_FUNC(template <int i> uint16_t TeakInterp::readExt, regExt[i])
 READ_FUNC(template <int i> uint16_t TeakInterp::readSt, regSt[i])
 READ_FUNC(template <int i> uint16_t TeakInterp::readCfg, regCfg[i])
+READ_FUNC(uint16_t TeakInterp::readP0h, shiftP[0].h)
 READ_FUNC(uint16_t TeakInterp::readY0, regY[0])
 READ_FUNC(uint16_t TeakInterp::readPc, regPc)
 READ_FUNC(uint16_t TeakInterp::readSp, regSp)
@@ -526,6 +516,7 @@ template <int i> void TeakInterp::writeP33(int64_t value) {
     // Write a 33-bit value to one of the P registers and mirror the 33rd bit to STT1
     regP[i].v = ((value << 31) >> 31);
     regStt[1] = (regStt[1] & ~BIT(14 + i)) | ((regP[i].v >> (18 - i)) & BIT(14 + i));
+    updateShiftP(i);
 }
 
 template <int i> void TeakInterp::writeCfg(uint16_t value) {
@@ -565,6 +556,7 @@ void TeakInterp::writeP0h(uint16_t value) {
     regP[0].h = value;
     regP[0].v = int32_t(regP[0].v);
     regStt[1] = (regStt[1] & ~0x4000) | ((value >> 1) & 0x4000);
+    updateShiftP(0);
 }
 
 void TeakInterp::writeSt0(uint16_t value) {
@@ -584,6 +576,7 @@ void TeakInterp::writeSt1(uint16_t value) {
     regMod[0] = (regMod[0] & ~0xC00) | (regSt[1] & 0xC00);
     regMod[1] = (regMod[1] & ~0xFF) | (regSt[1] & 0xFF);
     regA[1].e = int16_t(regSt[1]) >> 12;
+    updateShiftP(0);
 }
 
 void TeakInterp::writeSt2(uint16_t value) {
@@ -605,8 +598,10 @@ void TeakInterp::writeStt1(uint16_t value) {
     // Write to the STT1 register and mirror the R flag and 33rd P bits
     regStt[1] = (regStt[1] & ~0xC010) | (value & 0xC010);
     regSt[0] = (regSt[0] & ~0x10) | (regStt[1] & 0x10);
-    regP[0].e = int16_t(regStt[1] << 1) >> 15;
-    regP[1].e = int16_t(regStt[1] << 0) >> 15;
+    for (int i = 0; i < 2; i++) {
+        regP[i].e = int16_t(regStt[1] << !i) >> 15;
+        updateShiftP(i);
+    }
 }
 
 void TeakInterp::writeStt2(uint16_t value) {
@@ -620,6 +615,7 @@ void TeakInterp::writeMod0(uint16_t value) {
     regSt[0] = (regSt[0] & ~0x1) | (regMod[0] & 0x1);
     regSt[1] = (regSt[1] & ~0xC00) | (regMod[0] & 0xC00);
     regSt[2] = (regSt[2] & ~0x380) | (regMod[0] & 0x380);
+    updateShiftP(0), updateShiftP(1);
 }
 
 void TeakInterp::writeMod1(uint16_t value) {

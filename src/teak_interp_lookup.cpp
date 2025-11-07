@@ -19,23 +19,11 @@
 
 #include "core.h"
 
-// Lookup table for register reads with product shifting
-uint16_t (TeakInterp::*TeakInterp::readRegP[])() = {
-    &TeakInterp::readR<0>, &TeakInterp::readR<1>, &TeakInterp::readR<2>, &TeakInterp::readR<3>,
-    &TeakInterp::readR<4>, &TeakInterp::readR<5>, &TeakInterp::readR<7>, &TeakInterp::readY0,
-    &TeakInterp::readSt<0>, &TeakInterp::readSt<1>, &TeakInterp::readSt<2>, &TeakInterp::readP0hS,
-    &TeakInterp::readPc, &TeakInterp::readSp, &TeakInterp::readCfg<0>, &TeakInterp::readCfg<1>,
-    &TeakInterp::readBh<0>, &TeakInterp::readBh<1>, &TeakInterp::readBl<0>, &TeakInterp::readBl<1>,
-    &TeakInterp::readExt<0>, &TeakInterp::readExt<1>, &TeakInterp::readExt<2>, &TeakInterp::readExt<3>,
-    &TeakInterp::readAl<0>, &TeakInterp::readAl<1>, &TeakInterp::readAl<0>, &TeakInterp::readAl<1>,
-    &TeakInterp::readAh<0>, &TeakInterp::readAh<1>, &TeakInterp::readLc, &TeakInterp::readSv
-};
-
-// Lookup table for register reads with accumulator saturation and product shifting
+// Lookup table for register reads with accumulator saturation
 uint16_t (TeakInterp::*TeakInterp::readRegS[])() = {
     &TeakInterp::readR<0>, &TeakInterp::readR<1>, &TeakInterp::readR<2>, &TeakInterp::readR<3>,
     &TeakInterp::readR<4>, &TeakInterp::readR<5>, &TeakInterp::readR<7>, &TeakInterp::readY0,
-    &TeakInterp::readSt<0>, &TeakInterp::readSt<1>, &TeakInterp::readSt<2>, &TeakInterp::readP0hS,
+    &TeakInterp::readSt<0>, &TeakInterp::readSt<1>, &TeakInterp::readSt<2>, &TeakInterp::readP0h,
     &TeakInterp::readPc, &TeakInterp::readSp, &TeakInterp::readCfg<0>, &TeakInterp::readCfg<1>,
     &TeakInterp::readBhS<0>, &TeakInterp::readBhS<1>, &TeakInterp::readBlS<0>, &TeakInterp::readBlS<1>,
     &TeakInterp::readExt<0>, &TeakInterp::readExt<1>, &TeakInterp::readExt<2>, &TeakInterp::readExt<3>,
@@ -52,11 +40,6 @@ uint16_t (TeakInterp::*TeakInterp::readAblhS[])()= {
 // Lookup table for full accumulator reads with saturation
 int64_t (TeakInterp::*TeakInterp::readAbS[])()= {
     &TeakInterp::readB40S<0>, &TeakInterp::readB40S<1>, &TeakInterp::readA40S<0>, &TeakInterp::readA40S<1>
-};
-
-// Lookup table for full product reads with shifting
-int64_t (TeakInterp::*TeakInterp::readPxS[])()= {
-    &TeakInterp::readP33S<0>, &TeakInterp::readP33S<1>
 };
 
 // Lookup table for general register writes
