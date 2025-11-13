@@ -64,11 +64,11 @@ ALU_FUNCS(mvns, S)
 
 FORCE_INLINE int32_t ArmInterp::clampQ(int64_t value) {
     // Clamp value and set Q flag for saturated operations
-    if (value > 0x7FFFFFFF) {
+    if (value > 0x7FFFFFFFLL) {
         cpsr |= BIT(27);
         return 0x7FFFFFFF;
     }
-    else if (value < -0x80000000) {
+    else if (value < -0x80000000LL) {
         cpsr |= BIT(27);
         return -0x80000000;
     }
@@ -621,10 +621,9 @@ int ArmInterp::umull(uint32_t opcode) { // UMULL RdLo,RdHi,Rm,Rs
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
     uint32_t op2 = *registers[opcode & 0xF];
-    int32_t op3 = *registers[(opcode >> 8) & 0xF];
-    uint64_t res = (uint64_t)op2 * (uint32_t)op3;
-    *op1 = res >> 32;
-    *op0 = res;
+    uint32_t op3 = *registers[(opcode >> 8) & 0xF];
+    uint64_t res = uint64_t(op2) * op3;
+    *op0 = res, *op1 = res >> 32;
     return 3;
 }
 
@@ -633,11 +632,10 @@ int ArmInterp::umlal(uint32_t opcode) { // UMLAL RdLo,RdHi,Rm,Rs
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
     uint32_t op2 = *registers[opcode & 0xF];
-    int32_t op3 = *registers[(opcode >> 8) & 0xF];
-    uint64_t res = (uint64_t)op2 * (uint32_t)op3;
-    res += ((uint64_t)*op1 << 32) | *op0;
-    *op1 = res >> 32;
-    *op0 = res;
+    uint32_t op3 = *registers[(opcode >> 8) & 0xF];
+    uint64_t res = uint64_t(op2) * op3;
+    res += (uint64_t(*op1) << 32) | *op0;
+    *op0 = res, *op1 = res >> 32;
     return 3;
 }
 
@@ -647,9 +645,8 @@ int ArmInterp::smull(uint32_t opcode) { // SMULL RdLo,RdHi,Rm,Rs
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
     int32_t op2 = *registers[opcode & 0xF];
     int32_t op3 = *registers[(opcode >> 8) & 0xF];
-    int64_t res = (int64_t)op2 * op3;
-    *op1 = res >> 32;
-    *op0 = res;
+    int64_t res = int64_t(op2) * op3;
+    *op0 = res, *op1 = res >> 32;
     return 3;
 }
 
@@ -659,10 +656,9 @@ int ArmInterp::smlal(uint32_t opcode) { // SMLAL RdLo,RdHi,Rm,Rs
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
     int32_t op2 = *registers[opcode & 0xF];
     int32_t op3 = *registers[(opcode >> 8) & 0xF];
-    int64_t res = (int64_t)op2 * op3;
-    res += ((int64_t)*op1 << 32) | *op0;
-    *op1 = res >> 32;
-    *op0 = res;
+    int64_t res = int64_t(op2) * op3;
+    res += (int64_t(*op1) << 32) | *op0;
+    *op0 = res, *op1 = res >> 32;
     return 3;
 }
 
@@ -692,11 +688,10 @@ int ArmInterp::umulls(uint32_t opcode) { // UMULLS RdLo,RdHi,Rm,Rs
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
     uint32_t op2 = *registers[opcode & 0xF];
-    int32_t op3 = *registers[(opcode >> 8) & 0xF];
-    uint64_t res = (uint64_t)op2 * (uint32_t)op3;
-    *op1 = res >> 32;
-    *op0 = res;
-    cpsr = (cpsr & ~0xC0000000) | (*op1 & BIT(31)) | ((*op1 == 0) << 30);
+    uint32_t op3 = *registers[(opcode >> 8) & 0xF];
+    uint64_t res = uint64_t(op2) * op3;
+    *op0 = res, *op1 = res >> 32;
+    cpsr = (cpsr & ~0xC0000000) | (*op1 & BIT(31)) | ((res == 0) << 30);
     return 5;
 }
 
@@ -705,12 +700,11 @@ int ArmInterp::umlals(uint32_t opcode) { // UMLALS RdLo,RdHi,Rm,Rs
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
     uint32_t op2 = *registers[opcode & 0xF];
-    int32_t op3 = *registers[(opcode >> 8) & 0xF];
-    uint64_t res = (uint64_t)op2 * (uint32_t)op3;
-    res += ((uint64_t)*op1 << 32) | *op0;
-    *op1 = res >> 32;
-    *op0 = res;
-    cpsr = (cpsr & ~0xC0000000) | (*op1 & BIT(31)) | ((*op1 == 0) << 30);
+    uint32_t op3 = *registers[(opcode >> 8) & 0xF];
+    uint64_t res = uint64_t(op2) * op3;
+    res += (uint64_t(*op1) << 32) | *op0;
+    *op0 = res, *op1 = res >> 32;
+    cpsr = (cpsr & ~0xC0000000) | (*op1 & BIT(31)) | ((res == 0) << 30);
     return 5;
 }
 
@@ -720,10 +714,9 @@ int ArmInterp::smulls(uint32_t opcode) { // SMULLS RdLo,RdHi,Rm,Rs
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
     int32_t op2 = *registers[opcode & 0xF];
     int32_t op3 = *registers[(opcode >> 8) & 0xF];
-    int64_t res = (int64_t)op2 * op3;
-    *op1 = res >> 32;
-    *op0 = res;
-    cpsr = (cpsr & ~0xC0000000) | (*op1 & BIT(31)) | ((*op1 == 0) << 30);
+    int64_t res = int64_t(op2) * op3;
+    *op0 = res, *op1 = res >> 32;
+    cpsr = (cpsr & ~0xC0000000) | (*op1 & BIT(31)) | ((res == 0) << 30);
     return 5;
 }
 
@@ -733,11 +726,10 @@ int ArmInterp::smlals(uint32_t opcode) { // SMLALS RdLo,RdHi,Rm,Rs
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
     int32_t op2 = *registers[opcode & 0xF];
     int32_t op3 = *registers[(opcode >> 8) & 0xF];
-    int64_t res = (int64_t)op2 * op3;
-    res += ((int64_t)*op1 << 32) | *op0;
-    *op1 = res >> 32;
-    *op0 = res;
-    cpsr = (cpsr & ~0xC0000000) | (*op1 & BIT(31)) | ((*op1 == 0) << 30);
+    int64_t res = int64_t(op2) * op3;
+    res += (int64_t(*op1) << 32) | *op0;
+    *op0 = res, *op1 = res >> 32;
+    cpsr = (cpsr & ~0xC0000000) | (*op1 & BIT(31)) | ((res == 0) << 30);
     return 5;
 }
 
@@ -800,10 +792,9 @@ int ArmInterp::smlabb(uint32_t opcode) { // SMLABB Rd,Rm,Rs,Rn
     uint32_t *op0 = registers[(opcode >> 16) & 0xF];
     int16_t op1 = *registers[opcode & 0xF];
     int16_t op2 = *registers[(opcode >> 8) & 0xF];
-    uint32_t op3 = *registers[(opcode >> 12) & 0xF];
-    uint32_t res = op1 * op2;
-    *op0 = res + op3;
-    cpsr |= ((*op0 ^ res) & BIT(31)) >> 4;
+    int32_t op3 = *registers[(opcode >> 12) & 0xF];
+    int64_t res = int64_t(op1 * op2) + op3;
+    cpsr |= (res != int32_t(*op0 = res)) << 27; // Q
     return 1;
 }
 
@@ -812,10 +803,9 @@ int ArmInterp::smlabt(uint32_t opcode) { // SMLABT Rd,Rm,Rs,Rn
     uint32_t *op0 = registers[(opcode >> 16) & 0xF];
     int16_t op1 = *registers[opcode & 0xF];
     int16_t op2 = *registers[(opcode >> 8) & 0xF] >> 16;
-    uint32_t op3 = *registers[(opcode >> 12) & 0xF];
-    uint32_t res = op1 * op2;
-    *op0 = res + op3;
-    cpsr |= ((*op0 ^ res) & BIT(31)) >> 4;
+    int32_t op3 = *registers[(opcode >> 12) & 0xF];
+    int64_t res = int64_t(op1 * op2) + op3;
+    cpsr |= (res != int32_t(*op0 = res)) << 27; // Q
     return 1;
 }
 
@@ -824,10 +814,9 @@ int ArmInterp::smlatb(uint32_t opcode) { // SMLATB Rd,Rm,Rs,Rn
     uint32_t *op0 = registers[(opcode >> 16) & 0xF];
     int16_t op1 = *registers[opcode & 0xF] >> 16;
     int16_t op2 = *registers[(opcode >> 8) & 0xF];
-    uint32_t op3 = *registers[(opcode >> 12) & 0xF];
-    uint32_t res = op1 * op2;
-    *op0 = res + op3;
-    cpsr |= ((*op0 ^ res) & BIT(31)) >> 4;
+    int32_t op3 = *registers[(opcode >> 12) & 0xF];
+    int64_t res = int64_t(op1 * op2) + op3;
+    cpsr |= (res != int32_t(*op0 = res)) << 27; // Q
     return 1;
 }
 
@@ -836,10 +825,9 @@ int ArmInterp::smlatt(uint32_t opcode) { // SMLATT Rd,Rm,Rs,Rn
     uint32_t *op0 = registers[(opcode >> 16) & 0xF];
     int16_t op1 = *registers[opcode & 0xF] >> 16;
     int16_t op2 = *registers[(opcode >> 8) & 0xF] >> 16;
-    uint32_t op3 = *registers[(opcode >> 12) & 0xF];
-    uint32_t res = op1 * op2;
-    *op0 = res + op3;
-    cpsr |= ((*op0 ^ res) & BIT(31)) >> 4;
+    int32_t op3 = *registers[(opcode >> 12) & 0xF];
+    int64_t res = int64_t(op1 * op2) + op3;
+    cpsr |= (res != int32_t(*op0 = res)) << 27; // Q
     return 1;
 }
 
@@ -848,10 +836,9 @@ int ArmInterp::smlawb(uint32_t opcode) { // SMLAWB Rd,Rm,Rs,Rn
     uint32_t *op0 = registers[(opcode >> 16) & 0xF];
     int32_t op1 = *registers[opcode & 0xF];
     int16_t op2 = *registers[(opcode >> 8) & 0xF];
-    uint32_t op3 = *registers[(opcode >> 12) & 0xF];
-    uint32_t res = ((int64_t)op1 * op2) >> 16;
-    *op0 = res + op3;
-    cpsr |= ((*op0 ^ res) & BIT(31)) >> 4;
+    int32_t op3 = *registers[(opcode >> 12) & 0xF];
+    int64_t res = ((int64_t(op1) * op2) >> 16) + op3;
+    cpsr |= (res != int32_t(*op0 = res)) << 27; // Q
     return 1;
 }
 
@@ -860,10 +847,9 @@ int ArmInterp::smlawt(uint32_t opcode) { // SMLAWT Rd,Rm,Rs,Rn
     uint32_t *op0 = registers[(opcode >> 16) & 0xF];
     int32_t op1 = *registers[opcode & 0xF];
     int16_t op2 = *registers[(opcode >> 8) & 0xF] >> 16;
-    uint32_t op3 = *registers[(opcode >> 12) & 0xF];
-    uint32_t res = ((int64_t)op1 * op2) >> 16;
-    *op0 = res + op3;
-    cpsr |= ((*op0 ^ res) & BIT(31)) >> 4;
+    int32_t op3 = *registers[(opcode >> 12) & 0xF];
+    int64_t res = ((int64_t(op1) * op2) >> 16) + op3;
+    cpsr |= (res != int32_t(*op0 = res)) << 27; // Q
     return 1;
 }
 
@@ -873,10 +859,9 @@ int ArmInterp::smlalbb(uint32_t opcode) { // SMLALBB RdLo,RdHi,Rm,Rs
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
     int16_t op2 = *registers[opcode & 0xF];
     int16_t op3 = *registers[(opcode >> 8) & 0xF];
-    int64_t res = ((int64_t)*op1 << 32) | *op0;
+    int64_t res = (int64_t(*op1) << 32) | *op0;
     res += op2 * op3;
-    *op1 = res >> 32;
-    *op0 = res;
+    *op0 = res, *op1 = res >> 32;
     return 2;
 }
 
@@ -886,10 +871,9 @@ int ArmInterp::smlalbt(uint32_t opcode) { // SMLALBT RdLo,RdHi,Rm,Rs
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
     int16_t op2 = *registers[opcode & 0xF];
     int16_t op3 = *registers[(opcode >> 8) & 0xF] >> 16;
-    int64_t res = ((int64_t)*op1 << 32) | *op0;
+    int64_t res = (int64_t(*op1) << 32) | *op0;
     res += op2 * op3;
-    *op1 = res >> 32;
-    *op0 = res;
+    *op0 = res, *op1 = res >> 32;
     return 2;
 }
 
@@ -899,10 +883,9 @@ int ArmInterp::smlaltb(uint32_t opcode) { // SMLALTB RdLo,RdHi,Rm,Rs
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
     int16_t op2 = *registers[opcode & 0xF] >> 16;
     int16_t op3 = *registers[(opcode >> 8) & 0xF];
-    int64_t res = ((int64_t)*op1 << 32) | *op0;
+    int64_t res = (int64_t(*op1) << 32) | *op0;
     res += op2 * op3;
-    *op1 = res >> 32;
-    *op0 = res;
+    *op0 = res, *op1 = res >> 32;
     return 2;
 }
 
@@ -912,10 +895,9 @@ int ArmInterp::smlaltt(uint32_t opcode) { // SMLALTT RdLo,RdHi,Rm,Rs
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
     int16_t op2 = *registers[opcode & 0xF] >> 16;
     int16_t op3 = *registers[(opcode >> 8) & 0xF] >> 16;
-    int64_t res = ((int64_t)*op1 << 32) | *op0;
+    int64_t res = (int64_t(*op1) << 32) | *op0;
     res += op2 * op3;
-    *op1 = res >> 32;
-    *op0 = res;
+    *op0 = res, *op1 = res >> 32;
     return 2;
 }
 
@@ -924,7 +906,7 @@ int ArmInterp::qadd(uint32_t opcode) { // QADD Rd,Rm,Rn
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     int32_t op1 = *registers[opcode & 0xF];
     int32_t op2 = *registers[(opcode >> 16) & 0xF];
-    *op0 = clampQ((int64_t)op1 + op2);
+    *op0 = clampQ(int64_t(op1) + op2);
     return 1;
 }
 
@@ -933,7 +915,7 @@ int ArmInterp::qsub(uint32_t opcode) { // QSUB Rd,Rm,Rn
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     int32_t op1 = *registers[opcode & 0xF];
     int32_t op2 = *registers[(opcode >> 16) & 0xF];
-    *op0 = clampQ((int64_t)op1 - op2);
+    *op0 = clampQ(int64_t(op1) - op2);
     return 1;
 }
 
@@ -942,7 +924,7 @@ int ArmInterp::qdadd(uint32_t opcode) { // QDADD Rd,Rm,Rn
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     int32_t op1 = *registers[opcode & 0xF];
     int32_t op2 = *registers[(opcode >> 16) & 0xF];
-    *op0 = clampQ((int64_t)clampQ((int64_t)op2 * 2) + op1);
+    *op0 = clampQ(int64_t(op1) + clampQ(int64_t(op2) * 2));
     return 1;
 }
 
@@ -951,7 +933,7 @@ int ArmInterp::qdsub(uint32_t opcode) { // QDSUB Rd,Rm,Rn
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     int32_t op1 = *registers[opcode & 0xF];
     int32_t op2 = *registers[(opcode >> 16) & 0xF];
-    *op0 = clampQ((int64_t)clampQ((int64_t)op2 * 2) - op1);
+    *op0 = clampQ(int64_t(op1) - clampQ(int64_t(op2) * 2));
     return 1;
 }
 
@@ -1300,21 +1282,21 @@ int ArmInterp::sel(uint32_t opcode) { // SEL Rd,Rn,Rm
 }
 
 FORCE_INLINE int ArmInterp::ssat(uint32_t opcode, uint32_t op2) { // SSAT Rd,#sat,op2
-    // Saturate a signed 32-bit value within a bit range and set Q flag
+    // Signed saturate a 32-bit value within a bit range and set Q flag
     if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     int32_t op1 = (1 << ((opcode >> 16) & 0x1F)) - 1;
-    *op0 = std::max<int32_t>(-op1 - 1, std::min<int32_t>(op1, op2));
+    *op0 = std::max<int32_t>(~op1, std::min<int32_t>(op1, op2));
     cpsr |= (*op0 != op2) << 27; // Q
     return 1;
 }
 
 FORCE_INLINE int ArmInterp::usat(uint32_t opcode, uint32_t op2) { // USAT Rd,#sat,op2
-    // Saturate an unsigned 32-bit value within a bit range and set Q flag
+    // Unsigned saturate a 32-bit value within a bit range and set Q flag
     if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
-    uint32_t op1 = (2 << ((opcode >> 16) & 0x1F)) - 1;
-    *op0 = std::max<uint32_t>(0, std::min<uint32_t>(op1, op2));
+    uint32_t op1 = (1 << ((opcode >> 16) & 0x1F)) - 1;
+    *op0 = std::max<int32_t>(0, std::min<int32_t>(op1, op2));
     cpsr |= (*op0 != op2) << 27; // Q
     return 1;
 }
@@ -1325,25 +1307,25 @@ int ArmInterp::usatLli(uint32_t opcode) { return usat(opcode, lli(opcode)); } //
 int ArmInterp::usatAri(uint32_t opcode) { return usat(opcode, ari(opcode)); } // USAT Rd,#sat,Rm,ASR #i
 
 int ArmInterp::ssat16(uint32_t opcode) { // SSAT16 Rd,#sat,Rm
-    // Saturate two signed 16-bit values within a bit range and set Q flag
+    // Signed saturate two 16-bit values within a bit range and set Q flag
     if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     int16_t op1 = (1 << ((opcode >> 16) & 0xF)) - 1;
     uint32_t op2 = *registers[opcode & 0xF];
-    *op0 = std::max<int16_t>(-op1 - 1, std::min<int16_t>(op1, op2 >> 0)) << 0;
-    *op0 |= std::max<int16_t>(-op1 - 1, std::min<int16_t>(op1, op2 >> 16)) << 16;
+    *op0 = std::max<int16_t>(~op1, std::min<int16_t>(op1, op2 >> 0)) & 0xFFFF;
+    *op0 |= std::max<int16_t>(~op1, std::min<int16_t>(op1, op2 >> 16)) << 16;
     cpsr |= (*op0 != op2) << 27; // Q
     return 1;
 }
 
 int ArmInterp::usat16(uint32_t opcode) { // USAT16 Rd,#sat,Rm
-    // Saturate two unsigned 16-bit values within a bit range and set Q flag
+    // Unsigned saturate two 16-bit values within a bit range and set Q flag
     if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
-    uint16_t op1 = (2 << ((opcode >> 16) & 0xF)) - 1;
+    uint16_t op1 = (1 << ((opcode >> 16) & 0xF)) - 1;
     uint32_t op2 = *registers[opcode & 0xF];
-    *op0 = std::max<uint16_t>(0, std::min<uint16_t>(op1, op2 >> 0)) << 0;
-    *op0 |= std::max<uint16_t>(0, std::min<uint16_t>(op1, op2 >> 16)) << 16;
+    *op0 = std::max<int>(0, std::min<int>(op1, int16_t(op2 >> 0))) & 0xFFFF;
+    *op0 |= std::max<int>(0, std::min<int>(op1, int16_t(op2 >> 16))) << 16;
     cpsr |= (*op0 != op2) << 27; // Q
     return 1;
 }
