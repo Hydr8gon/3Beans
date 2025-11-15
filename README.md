@@ -1,9 +1,9 @@
 # 3Beans
-An experimental low-level 3DS emulator.
+A low-level 3DS emulator.
 
 ### Overview
-3Beans emulates the 3DS at a low level, which means that it runs the entire OS as if it were on real hardware. It's in
-the early stages of playing commercial games, but the home menu still doesn't quite work. It's currently fully
+3Beans emulates the 3DS at a low level, which means that it runs the entire OS as if it were on real hardware. It can
+boot the home menu and play cartridge-based games, but it's still young and has plenty of issues. It's currently fully
 interpreted and software-rendered, which makes it portable but slow. If the project matures enough, I might try to
 incorporate hardware acceleration or high-level elements to achieve reasonable speeds.
 
@@ -21,7 +21,7 @@ configured in the path settings.
 
 ### Usage
 Once the necessary files are present, 3Beans should function like the system they were dumped from. Controls can be
-viewed and changed in the settings. If you try to boot the official OS, you'll find that the home menu never shows up.
+viewed and changed in the settings. If you try to launch something from the home menu, you'll find that it never starts.
 This means that digital titles are inaccessible, but cartridges can still be used if the "Cart Auto-Boot" setting is
 enabled. Note that 3Beans requires encrypted cartridge dumps, unlike high-level emulators which typically expect
 decrypted ones. GodMode9 can dump both encrypted and decrypted ROMs, so make sure you get the right one.

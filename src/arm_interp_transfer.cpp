@@ -1338,7 +1338,7 @@ int ArmInterp::ldrexb(uint32_t opcode) { // LDREXB Rd,[Rn]
     if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
-    *op0 = core->cp15.read<uint8_t>(id, excAddress = op1);
+    excValue = *op0 = core->cp15.read<uint8_t>(id, excAddress = op1);
     exclusive = true;
 
     // Handle pipelining and THUMB switching
@@ -1349,13 +1349,12 @@ int ArmInterp::ldrexb(uint32_t opcode) { // LDREXB Rd,[Rn]
 }
 
 int ArmInterp::strexb(uint32_t opcode) { // STREXB Rd,Rm,[Rn]
-    // Store byte exclusively
-    // TODO: handle non-shared memory properly
+    // Store byte exclusively, passing if the data is loaded and unchanged
     if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[opcode & 0xF];
     uint32_t op2 = *registers[(opcode >> 16) & 0xF];
-    if ((*op0 = !exclusive || excAddress != op2)) return 1;
+    if (*op0 = !exclusive || excAddress != op2 || excValue != core->cp15.read<uint8_t>(id, op2)) return 1;
     core->cp15.write<uint8_t>(id, op2, op1);
 
     // Update exclusive states on all cores
@@ -1370,7 +1369,7 @@ int ArmInterp::ldrexh(uint32_t opcode) { // LDREXH Rd,[Rn]
     if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
-    *op0 = core->cp15.read<uint16_t>(id, excAddress = op1);
+    excValue = *op0 = core->cp15.read<uint16_t>(id, excAddress = op1);
     exclusive = true;
 
     // Handle pipelining
@@ -1380,13 +1379,12 @@ int ArmInterp::ldrexh(uint32_t opcode) { // LDREXH Rd,[Rn]
 }
 
 int ArmInterp::strexh(uint32_t opcode) { // STREXH Rd,Rm,[Rn]
-    // Store half-word exclusively
-    // TODO: handle non-shared memory properly
+    // Store half-word exclusively, passing if the data is loaded and unchanged
     if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[opcode & 0xF];
     uint32_t op2 = *registers[(opcode >> 16) & 0xF];
-    if ((*op0 = !exclusive || excAddress != op2)) return 1;
+    if (*op0 = !exclusive || excAddress != op2 || excValue != core->cp15.read<uint16_t>(id, op2)) return 1;
     core->cp15.write<uint16_t>(id, op2, op1);
 
     // Update exclusive states on all cores
@@ -1401,7 +1399,7 @@ int ArmInterp::ldrex(uint32_t opcode) { // LDREX Rd,[Rn]
     if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
-    *op0 = core->cp15.read<uint32_t>(id, excAddress = op1);
+    excValue = *op0 = core->cp15.read<uint32_t>(id, excAddress = op1);
     exclusive = true;
 
     // Handle pipelining and THUMB switching
@@ -1412,13 +1410,12 @@ int ArmInterp::ldrex(uint32_t opcode) { // LDREX Rd,[Rn]
 }
 
 int ArmInterp::strex(uint32_t opcode) { // STREX Rd,Rm,[Rn]
-    // Store word exclusively
-    // TODO: handle non-shared memory properly
+    // Store word exclusively, passing if the data is loaded and unchanged
     if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[opcode & 0xF];
     uint32_t op2 = *registers[(opcode >> 16) & 0xF];
-    if ((*op0 = !exclusive || excAddress != op2)) return 1;
+    if (*op0 = !exclusive || excAddress != op2 || excValue != core->cp15.read<uint32_t>(id, op2)) return 1;
     core->cp15.write<uint32_t>(id, op2, op1);
 
     // Update exclusive states on all cores
@@ -1434,21 +1431,21 @@ int ArmInterp::ldrexd(uint32_t opcode) { // LDREXD Rd,[Rn]
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     if (op0 == registers[15]) return 1;
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
-    op0[0] = core->cp15.read<uint32_t>(id, excAddress = op1);
-    op0[1] = core->cp15.read<uint32_t>(id, op1 + 4);
+    excValue = op0[0] = core->cp15.read<uint32_t>(id, excAddress = op1);
+    excValue |= uint64_t(op0[1] = core->cp15.read<uint32_t>(id, op1 + 4)) << 32;
     exclusive = true;
     return 2;
 }
 
 int ArmInterp::strexd(uint32_t opcode) { // STREXD Rd,Rm,[Rn]
-    // Store double words exclusively
-    // TODO: handle non-shared memory properly
+    // Store double words exclusively, passing if the data is loaded and unchanged
     if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t *op1 = registers[opcode & 0xF];
     if (op1 == registers[15]) return 1;
     uint32_t op2 = *registers[(opcode >> 16) & 0xF];
-    if ((*op0 = !exclusive || excAddress != op2)) return 1;
+    if (*op0 = !exclusive || excAddress != op2 || excValue != (core->cp15.read<uint32_t>(id, op2)
+        | (uint64_t(core->cp15.read<uint32_t>(id, op2 + 4)) << 32))) return 1;
     core->cp15.write<uint32_t>(id, op2, op1[0]);
     core->cp15.write<uint32_t>(id, op2 + 4, op1[1]);
 
