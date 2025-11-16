@@ -521,8 +521,10 @@ void TeakInterp::initLookup() {
             teakInstrs[op] = &TeakInterp::movRegmrn;
         else if ((op & 0xFFE0) == 0x5E80)
             teakInstrs[op] = &TeakInterp::movRegmxp;
-        else if ((op & 0xFFDF) == 0x5B0B) // Override
+        else if ((op & 0xFC1F) == 0x580B) // Override
             teakInstrs[op] = &TeakInterp::movP0a;
+        else if ((op & 0xFC1E) == 0x5818) // Override
+            teakInstrs[op] = &TeakInterp::unkOp;
         else if ((op & 0xFC00) == 0x5800)
             teakInstrs[op] = &TeakInterp::movRegreg;
         else if ((op & 0xFFE0) == 0x5F60)

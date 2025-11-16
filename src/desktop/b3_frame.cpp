@@ -90,7 +90,6 @@ b3Frame::b3Frame(): wxFrame(nullptr, wxID_ANY, "3Beans") {
 
     // Set up and show the window
     SetClientSize(MIN_SIZE);
-    SetMinClientSize(MIN_SIZE);
     Centre();
     Show(true);
 
@@ -105,8 +104,11 @@ b3Frame::b3Frame(): wxFrame(nullptr, wxID_ANY, "3Beans") {
 }
 
 void b3Frame::Refresh() {
-    // Override the refresh function to also update the FPS counter
+    // Override the refresh function and enforce minimum frame size
     wxFrame::Refresh();
+    SetMinClientSize(MIN_SIZE);
+
+    // Display current FPS in the title bar if running
     wxString label = "3Beans";
     mutex.lock();
     if (running.load())

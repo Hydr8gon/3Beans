@@ -19,6 +19,8 @@
 
 #include "core.h"
 
+#define IRQ_NONE 0x3FF
+
 void Interrupts::sendInterrupt(CpuId id, int type) {
     // Send an interrupt to the ARM9
     if (id == ARM9) {
@@ -42,7 +44,7 @@ void Interrupts::sendInterrupt(CpuId id, int type) {
             mpIp[i][type >> 5] |= BIT(type & 0x1F);
 
         // Schedule an interrupt if any pending interrupts are enabled
-        if (scheduled[i] || readMpPending(CpuId(i)) == 0x3FF) continue;
+        if (scheduled[i] || readMpPending(CpuId(i)) == IRQ_NONE) continue;
         core->schedule(Task(ARM11A_INTERRUPT + i), 1);
         scheduled[i] = true;
     }
@@ -112,18 +114,21 @@ uint32_t Interrupts::readMpScuConfig() {
 uint32_t Interrupts::readMpAck(CpuId id) {
     // Read the next pending interrupt and switch it to active state
     uint32_t value = readMpPending(id);
-    if (value == 0x3FF) return value;
+    if (value == IRQ_NONE) return value;
     int i = (value >> 5) & 0x3;
     uint32_t mask = BIT(value & 0x1F);
-    mpIp[id][i] &= ~mask;
     mpIa[id][i] |= mask;
+
+    // Clear the pending bit if non-software or all sources are handled
+    if ((value & 0x3F0) || !(sources[id][value & 0xF] &= ~BIT(value >> 10)))
+        mpIp[id][i] &= ~mask;
     return value;
 }
 
 uint32_t Interrupts::readMpPending(CpuId id) {
     // Find the lowest enabled and pending interrupt type with the highest priority
-    uint32_t type = 0x3FF, prio = 0xF0, mask;
-    for (int i = 0; i < 4; i++) {
+    uint32_t type = IRQ_NONE, prio = 0xF0, mask;
+    for (int i = 0; i < MAX_CPUS - 1; i++) {
         if (!(mask = mpIe[i] & mpIp[id][i])) continue;
         for (int bit = 0; mask >> bit; bit++) {
             if (~mask & BIT(bit)) continue;
@@ -133,10 +138,14 @@ uint32_t Interrupts::readMpPending(CpuId id) {
         }
     }
 
-    // Return the interrupt type (and software source) if its priority isn't masked
-    if (prio >= mpPrioMask[id]) return 0x3FF; // None
+    // Return the interrupt type if its priority isn't masked
+    if (prio >= mpPrioMask[id]) return IRQ_NONE;
     if (type >= 0x10) return type;
-    return (sources[id][type] << 10) | type;
+
+    // Append the lowest source core ID for software interrupts
+    for (int i = 0; i < MAX_CPUS - 1; i++)
+        if (sources[id][type] & BIT(i)) return (i << 10) | type;
+    return IRQ_NONE;
 }
 
 uint32_t Interrupts::readMpCtrlType() {
@@ -275,7 +284,7 @@ void Interrupts::writeMpSoftIrq(CpuId id, uint32_t mask, uint32_t value) {
     for (int i = 0; cores >> i; i++) {
         if (!(cores & BIT(i)) || !mpIle[i]) continue;
         mpIp[i][type >> 5] |= BIT(type & 0x1F);
-        sources[i][type] = id;
+        sources[i][type] |= BIT(id);
     }
     checkInterrupt(ARM11);
 }

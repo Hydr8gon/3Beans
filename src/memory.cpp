@@ -165,7 +165,7 @@ void Memory::updateMap(bool arm9, uint32_t start, uint32_t end) {
 
     // Update the virtual memory maps as well
     if (arm9) return core->cp15.updateMap9(start, end);
-    for (int i = 0; i < MAX_CPUS; i++)
+    for (int i = 0; i < MAX_CPUS - 1; i++)
         core->cp15.mmuInvalidate(CpuId(i));
 }
 
