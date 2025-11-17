@@ -65,6 +65,11 @@ GpuRenderSoft::GpuRenderSoft(Core *core): core(core) {
     shdBools = vshBools;
 }
 
+float GpuRenderSoft::mult(float a, float b) {
+    // Multiply floats, or return 0 for any number multiplied by 0 (including infinity)
+    return ((a == 0.0f && !std::isnan(b)) || (b == 0.0f && !std::isnan(a))) ? 0.0f : (a * b);
+}
+
 template <bool doX> SoftVertex GpuRenderSoft::interpolate(SoftVertex &v1, SoftVertex &v2, float x1, float x, float x2) {
     // Check bounds and calculate an interpolation factor
     if (x <= x1) return v1;
@@ -319,7 +324,7 @@ void GpuRenderSoft::getSource(float &r, float &g, float &b, float &a, SoftVertex
         case COMB_TEX1: getTexel(r, g, b, a, v.s1 / v.w, v.t1 / v.w, 1); break;
         case COMB_TEX2: getTexel(r, g, b, a, v.s2 / v.w, v.t2 / v.w, 2); break;
         case COMB_CONST: r = combColors[i][0], g = combColors[i][1], b = combColors[i][2], a = combColors[i][3]; break;
-        case COMB_FRAG0: case COMB_FRAG1: r = g = b = a = 0.5f; break; // Stub
+        case COMB_FRAG0: case COMB_FRAG1: r = g = b = 0.5f, a = 1.0f; break; // Stub
         case COMB_TEX3: r = g = b = a = 1.0f; break; // Stub
         case COMB_UNK: r = g = b = a = 0.0f; break;
 
@@ -516,38 +521,34 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
         }
     }
 
-    // Read a depth value to compare with based on buffer format
-    float depth = 0.0f;
-    if (depthFunc >= TEST_EQ) {
-        switch (depbufFmt) {
-        case DEP_16:
-            val = core->memory.read<uint16_t>(ARM11, depbufAddr + ofs * 2);
-            depth = -float(val) / 0xFFFF;
-            break;
-        case DEP_24:
-            val = core->memory.read<uint8_t>(ARM11, depbufAddr + ofs * 3 + 0) << 0;
-            val |= core->memory.read<uint8_t>(ARM11, depbufAddr + ofs * 3 + 1) << 8;
-            val |= core->memory.read<uint8_t>(ARM11, depbufAddr + ofs * 3 + 2) << 16;
-            depth = -float(val) / 0xFFFFFF;
-            break;
-        case DEP_24S8:
-            val = core->memory.read<uint32_t>(ARM11, depbufAddr + ofs * 4) & 0xFFFFFF;
-            depth = -float(val) / 0xFFFFFF;
-            break;
-        }
+    // Read the current depth and scale the incoming value based on buffer format
+    uint32_t depth = 0;
+    switch (depbufFmt) {
+    case DEP_16:
+        depth = core->memory.read<uint16_t>(ARM11, depbufAddr + ofs * 2);
+        val = std::max<int>(0, p.z * -0xFFFF);
+        break;
+    case DEP_24:
+        depth = core->memory.read<uint32_t>(ARM11, depbufAddr + ofs * 3) & 0xFFFFFF;
+        val = std::max<int>(0, p.z * -0xFFFFFF);
+        break;
+    case DEP_24S8:
+        depth = core->memory.read<uint32_t>(ARM11, depbufAddr + ofs * 4) & 0xFFFFFF;
+        val = std::max<int>(0, p.z * -0xFFFFFF);
+        break;
     }
 
-    // Compare the incoming depth value with the existing one
+    // Compare the incoming depth value with the current one
     bool pass;
     switch (depthFunc) {
         case TEST_NV: pass = false; break;
         case TEST_AL: pass = true; break;
-        case TEST_EQ: pass = (depth == p.z); break;
-        case TEST_NE: pass = (depth != p.z); break;
-        case TEST_LT: pass = (depth < p.z); break;
-        case TEST_LE: pass = (depth <= p.z); break;
-        case TEST_GT: pass = (depth > p.z); break;
-        case TEST_GE: pass = (depth >= p.z); break;
+        case TEST_EQ: pass = (val == depth); break;
+        case TEST_NE: pass = (val != depth); break;
+        case TEST_LT: pass = (val < depth); break;
+        case TEST_LE: pass = (val <= depth); break;
+        case TEST_GT: pass = (val > depth); break;
+        case TEST_GE: pass = (val >= depth); break;
     }
 
     // Perform the stencil depth pass/fail operation if enabled, and don't draw if failed
@@ -581,17 +582,13 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
     if (depbufMask & BIT(1)) {
         switch (depbufFmt) {
         case DEP_16:
-            val = std::min<int>(0xFFFF, std::max<int>(0, -p.z * 0xFFFF));
             core->memory.write<uint16_t>(ARM11, depbufAddr + ofs * 2, val);
             break;
         case DEP_24:
-            val = std::min<int>(0xFFFFFF, std::max<int>(0, -p.z * 0xFFFFFF));
-            core->memory.write<uint8_t>(ARM11, depbufAddr + ofs * 3 + 0, val >> 0);
-            core->memory.write<uint8_t>(ARM11, depbufAddr + ofs * 3 + 1, val >> 8);
-            core->memory.write<uint8_t>(ARM11, depbufAddr + ofs * 3 + 2, val >> 16);
+            val |= core->memory.read<uint8_t>(ARM11, depbufAddr + ofs * 3 + 3) << 24;
+            core->memory.write<uint32_t>(ARM11, depbufAddr + ofs * 3, val);
             break;
         case DEP_24S8:
-            val = std::min<int>(0xFFFFFF, std::max<int>(0, -p.z * 0xFFFFFF));
             val |= core->memory.read<uint8_t>(ARM11, depbufAddr + ofs * 4 + 3) << 24;
             core->memory.write<uint32_t>(ARM11, depbufAddr + ofs * 4, val);
             break;
@@ -754,7 +751,7 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
 void GpuRenderSoft::drawTriangle(SoftVertex &a, SoftVertex &b, SoftVertex &c) {
     // Cull triangles by determining their orientation with a cross product
     float cross = ((b.y - a.y) * (c.x - b.x)) - ((b.x - a.x) * (c.y - b.y));
-    if ((cullMode == CULL_FRONT && (cross < 0)) || (cullMode == CULL_BACK && (cross > 0)))
+    if (!std::isfinite(cross) || (cullMode == CULL_FRONT && (cross < 0)) || (cullMode == CULL_BACK && (cross > 0)))
         return;
 
     // Scale the coordinate steps to screen space
@@ -1025,7 +1022,7 @@ void GpuRenderSoft::shdDp3(uint32_t opcode) {
     uint32_t desc = shdDesc[opcode & 0x7F];
     float *src1 = getSrc((opcode >> 12) & 0x7F, desc, (opcode >> 19) & 0x3);
     float *src2 = getSrc((opcode >> 7) & 0x1F, desc >> 9, 0);
-    src1[0] = src1[0] * src2[0] + src1[1] * src2[1] + src1[2] * src2[2];
+    src1[0] = mult(src1[0], src2[0]) + mult(src1[1], src2[1]) + mult(src1[2], src2[2]);
     src1[3] = src1[2] = src1[1] = src1[0];
     setDst((opcode >> 21) & 0x1F, desc, src1);
 }
@@ -1035,7 +1032,7 @@ void GpuRenderSoft::shdDp4(uint32_t opcode) {
     uint32_t desc = shdDesc[opcode & 0x7F];
     float *src1 = getSrc((opcode >> 12) & 0x7F, desc, (opcode >> 19) & 0x3);
     float *src2 = getSrc((opcode >> 7) & 0x1F, desc >> 9, 0);
-    src1[0] = src1[0] * src2[0] + src1[1] * src2[1] + src1[2] * src2[2] + src1[3] * src2[3];
+    src1[0] = mult(src1[0], src2[0]) + mult(src1[1], src2[1]) + mult(src1[2], src2[2]) + mult(src1[3], src2[3]);
     src1[3] = src1[2] = src1[1] = src1[0];
     setDst((opcode >> 21) & 0x1F, desc, src1);
 }
@@ -1045,7 +1042,7 @@ void GpuRenderSoft::shdDph(uint32_t opcode) {
     uint32_t desc = shdDesc[opcode & 0x7F];
     float *src1 = getSrc((opcode >> 12) & 0x7F, desc, (opcode >> 19) & 0x3);
     float *src2 = getSrc((opcode >> 7) & 0x1F, desc >> 9, 0);
-    src1[0] = src1[0] * src2[0] + src1[1] * src2[1] + src1[2] * src2[2] + src2[3];
+    src1[0] = mult(src1[0], src2[0]) + mult(src1[1], src2[1]) + mult(src1[2], src2[2]) + src2[3];
     src1[3] = src1[2] = src1[1] = src1[0];
     setDst((opcode >> 21) & 0x1F, desc, src1);
 }
@@ -1072,7 +1069,7 @@ void GpuRenderSoft::shdMul(uint32_t opcode) {
     float *src1 = getSrc((opcode >> 12) & 0x7F, desc, (opcode >> 19) & 0x3);
     float *src2 = getSrc((opcode >> 7) & 0x1F, desc >> 9, 0);
     for (int i = 0; i < 4; i++)
-        src1[i] = src1[i] * src2[i];
+        src1[i] = mult(src1[i], src2[i]);
     setDst((opcode >> 21) & 0x1F, desc, src1);
 }
 
@@ -1163,7 +1160,7 @@ void GpuRenderSoft::shdDphi(uint32_t opcode) {
     uint32_t desc = shdDesc[opcode & 0x7F];
     float *src1 = getSrc((opcode >> 14) & 0x1F, desc, 0);
     float *src2 = getSrc((opcode >> 7) & 0x7F, desc >> 9, (opcode >> 19) & 0x3);
-    src1[0] = src1[0] * src2[0] + src1[1] * src2[1] + src1[2] * src2[2] + src2[3];
+    src1[0] = mult(src1[0], src2[0]) + mult(src1[1], src2[1]) + mult(src1[2], src2[2]) + src2[3];
     src1[3] = src1[2] = src1[1] = src1[0];
     setDst((opcode >> 21) & 0x1F, desc, src1);
 }
@@ -1341,7 +1338,7 @@ void GpuRenderSoft::shdMadi(uint32_t opcode) {
     float *src2 = getSrc((opcode >> 12) & 0x1F, desc >> 9, 0);
     float *src3 = getSrc((opcode >> 5) & 0x7F, desc >> 18, (opcode >> 22) & 0x3);
     for (int i = 0; i < 4; i++)
-        src1[i] = src1[i] * src2[i] + src3[i];
+        src1[i] = mult(src1[i], src2[i]) + src3[i];
     setDst((opcode >> 24) & 0x1F, desc, src1);
 }
 
@@ -1352,7 +1349,7 @@ void GpuRenderSoft::shdMad(uint32_t opcode) {
     float *src2 = getSrc((opcode >> 10) & 0x7F, desc >> 9, (opcode >> 22) & 0x3);
     float *src3 = getSrc((opcode >> 5) & 0x1F, desc >> 18, 0);
     for (int i = 0; i < 4; i++)
-        src1[i] = src1[i] * src2[i] + src3[i];
+        src1[i] = mult(src1[i], src2[i]) + src3[i];
     setDst((opcode >> 24) & 0x1F, desc, src1);
 }
 

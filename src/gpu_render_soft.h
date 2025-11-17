@@ -173,6 +173,7 @@ private:
     uint8_t stencilValue = 0;
     bool stencilEnable = false;
 
+    static float mult(float a, float b);
     template <bool doX> static SoftVertex interpolate(SoftVertex &v1, SoftVertex &v2, float x1, float x, float x2);
     static SoftVertex intersect(SoftVertex &v1, SoftVertex &v2, float x1, float x2);
     uint8_t stencilOp(uint8_t value, StenOper oper);
