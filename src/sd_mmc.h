@@ -78,7 +78,7 @@ private:
 
     uint32_t mmcCid[0x4] = {};
     uint16_t sdCmd = 0;
-    uint16_t sdPortSelect = 0;
+    uint16_t sdPortSelect = 0x200;
     uint32_t sdCmdParam = 0;
     uint16_t sdData16Blkcnt = 0;
     uint32_t sdResponse[4] = {};
