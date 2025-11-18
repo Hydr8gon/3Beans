@@ -70,14 +70,21 @@ void Interrupts::halt(CpuId id, uint8_t type) {
     core->arms[id].halt(BIT(type));
     if (id != ARM9 && core->arms[ARM11A].halted && core->arms[ARM11B].halted &&
             core->arms[ARM11C].halted && core->arms[ARM11D].halted) {
-        // Update the current clock/FCRAM mode and trigger an interrupt if changed
+        // Check if the current clock/FCRAM mode changed
         uint8_t mode = (cfg11MpClkcnt & 0x1) ? (cfg11MpClkcnt & 0x7) : 0;
         if (mode != ((cfg11MpClkcnt >> 16) & 0x7)) {
+            // Update FCRAM mappings and trigger an interrupt
+            LOG_INFO("Changing to clock/FCRAM mode %d\n", mode);
             cfg11MpClkcnt = (cfg11MpClkcnt & ~0x70000) | (mode << 16) | BIT(15);
             core->memory.updateMap(false, 0x28000000, 0x2FFFFFFF);
             core->memory.updateMap(true, 0x28000000, 0x2FFFFFFF);
             sendInterrupt(ARM11, 0x58);
-            LOG_INFO("Changing to clock/FCRAM mode %d\n", mode);
+
+            // Update the ARM11 timer scale based on clock speed
+            // TODO: actually change CPU execution speed
+            if (mode >= 5) core->timers.setMpScale(3);
+            else if (mode == 3) core->timers.setMpScale(2);
+            else core->timers.setMpScale(1);
         }
     }
 
@@ -160,7 +167,6 @@ uint8_t Interrupts::readMpTarget(CpuId id, int i) {
 
 void Interrupts::writeCfg11MpClkcnt(uint32_t mask, uint32_t value) {
     // Write to the CFG11_MP_CLKCNT register
-    // TODO: actually support changing clock speeds
     if (!core->n3dsMode) return; // N3DS-exclusive
     uint32_t mask2 = (mask & 0x7);
     cfg11MpClkcnt = (cfg11MpClkcnt & ~mask2) | (value & mask2);

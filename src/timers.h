@@ -28,6 +28,7 @@ public:
     Timers(Core *core): core(core) {}
 
     void resetCycles();
+    void setMpScale(int scale);
     void underflowMp(CpuId id, int i);
     void overflowTm(int i);
 
@@ -47,6 +48,7 @@ public:
 
 private:
     Core *core;
+    int mpScale = 1;
 
     uint64_t endCyclesMp[MAX_CPUS - 1][2] = {};
     uint64_t endCyclesTm[4] = {};

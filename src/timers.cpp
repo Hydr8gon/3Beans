@@ -28,10 +28,23 @@ void Timers::resetCycles() {
         endCyclesTm[i] -= core->globalCycles;
 }
 
+void Timers::setMpScale(int scale) {
+    // Update active ARM11 timers with the old scale and reschedule with the new one
+    for (int id = 0; id < MAX_CPUS - 1; id++)
+        for (int i = 0; i < 2; i++)
+            if (mpTmcnt[id][i] & BIT(0))
+                readMpCounter(CpuId(id), i);
+    mpScale = scale;
+    for (int id = 0; id < MAX_CPUS - 1; id++)
+        for (int i = 0; i < 2; i++)
+            if (mpTmcnt[id][i] & BIT(0))
+                scheduleMp(CpuId(id), i);
+}
+
 void Timers::scheduleMp(CpuId id, int i) {
     // Schedule a timer underflow using its prescaler, with half the ARM11 frequency as a base
     if (~mpTmcnt[id][i] & BIT(0)) return;
-    uint64_t cycles = (uint64_t(mpCounter[id][i]) + 1) * (((mpTmcnt[id][i]) >> 8) + 1) * 2;
+    uint64_t cycles = (uint64_t(mpCounter[id][i]) + 1) * (((mpTmcnt[id][i]) >> 8) + 1) * 2 / mpScale;
     core->schedule(Task(TMR11A_UNDERFLOW0 + id * 2 + i), cycles);
     endCyclesMp[id][i] = core->globalCycles + cycles;
 }
@@ -83,7 +96,7 @@ uint32_t Timers::readMpCounter(CpuId id, int i) {
     // Read one of an ARM11 core's counters, updating it if it's running on the scheduler
     if (mpTmcnt[id][i] & BIT(0)) {
         uint64_t value = std::max<int64_t>(0, endCyclesMp[id][i] - core->globalCycles);
-        mpCounter[id][i] = (value / ((((mpTmcnt[id][i]) >> 8) + 1) * 2));
+        mpCounter[id][i] = (value / (((mpTmcnt[id][i]) >> 8) + 1) * mpScale / 2);
     }
     return mpCounter[id][i];
 }
