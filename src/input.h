@@ -33,6 +33,10 @@ public:
     void releaseScreen();
     void setLStick(int x, int y);
 
+    void pressHome();
+    void releaseHome();
+    void updateHome();
+
     uint32_t readSpiFifoCnt() { return spiFifoCnt; }
     uint32_t readSpiFifoSelect() { return spiFifoSelect; }
     uint32_t readSpiFifoBlklen() { return spiFifoBlklen; }
@@ -50,6 +54,7 @@ public:
 
 private:
     Core *core;
+    uint8_t homeState = 0;
 
     uint16_t stickLX = 0x7FF;
     uint16_t stickLY = 0x7FF;

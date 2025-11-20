@@ -37,6 +37,7 @@ enum InputEvent {
     REMAP_LUP,
     REMAP_LDOWN,
     REMAP_LMOD,
+    REMAP_HOME,
     CLEAR_MAP
 };
 
@@ -58,6 +59,7 @@ EVT_BUTTON(REMAP_LLEFT, InputDialog::remapKey<13>)
 EVT_BUTTON(REMAP_LUP, InputDialog::remapKey<14>)
 EVT_BUTTON(REMAP_LDOWN, InputDialog::remapKey<15>)
 EVT_BUTTON(REMAP_LMOD, InputDialog::remapKey<16>)
+EVT_BUTTON(REMAP_HOME, InputDialog::remapKey<17>)
 EVT_BUTTON(CLEAR_MAP, InputDialog::clearMap)
 EVT_BUTTON(wxID_OK, InputDialog::confirm)
 EVT_CHAR_HOOK(InputDialog::pressKey)
@@ -187,7 +189,8 @@ InputDialog::InputDialog(): wxDialog(nullptr, wxID_ANY, "Input Bindings") {
         "A Button:", "B Button:", "Select Button:", "Start Button:",
         "D-Pad Right:", "D-Pad Left:", "D-Pad Up:", "D-Pad Down",
         "R Button:", "L Button:", "X Button:", "Y Button:",
-        "Stick Right:", "Stick Left:", "Stick Up:", "Stick Down:", "Stick Mod:"
+        "Stick Right:", "Stick Left:", "Stick Up:", "Stick Down:",
+        "Stick Mod:", "Home Button:"
     };
 
     // Set up the button settings
@@ -224,7 +227,7 @@ InputDialog::InputDialog(): wxDialog(nullptr, wxID_ANY, "Input Bindings") {
     rightSizer->Add(btnSizers[13], 1, wxEXPAND | wxALL, size / 8);
     rightSizer->Add(btnSizers[12], 1, wxEXPAND | wxALL, size / 8);
     rightSizer->Add(btnSizers[16], 1, wxEXPAND | wxALL, size / 8);
-    rightSizer->Add(new wxStaticText(this, wxID_ANY, ""), 1, wxEXPAND | wxALL, size / 8);
+    rightSizer->Add(btnSizers[17], 1, wxEXPAND | wxALL, size / 8);
 
     // Combine all the settings
     wxBoxSizer *buttonSizer = new wxBoxSizer(wxHORIZONTAL);

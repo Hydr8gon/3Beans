@@ -178,6 +178,8 @@ void b3Canvas::pressKey(wxKeyEvent &event) {
         for (int i = 12; i < 17; i++)
             if (event.GetKeyCode() == b3App::keyBinds[i])
                 stickKeys[i - 12] = true, updateKeyStick();
+        if (event.GetKeyCode() == b3App::keyBinds[17])
+            frame->core->input.pressHome();
     }
     frame->mutex.unlock();
 }
@@ -192,6 +194,8 @@ void b3Canvas::releaseKey(wxKeyEvent &event) {
         for (int i = 12; i < 17; i++)
             if (event.GetKeyCode() == b3App::keyBinds[i])
                 stickKeys[i - 12] = false, updateKeyStick();
+        if (event.GetKeyCode() == b3App::keyBinds[17])
+            frame->core->input.releaseHome();
     }
     frame->mutex.unlock();
 }

@@ -26,6 +26,7 @@ class Core;
 class I2c {
 public:
     I2c(Core *core): core(core) {}
+    void mcuInterrupt(uint32_t mask);
 
     uint8_t readBusData(int i) { return i2cBusData[i]; }
     uint8_t readBusCnt(int i) { return i2cBusCnt[i]; }
@@ -46,8 +47,6 @@ private:
 
     uint32_t mcuIrqFlags = 0;
     uint32_t mcuIrqMask = 0;
-
-    void mcuInterrupt(uint32_t mask);
 
     uint8_t readMcuIrqFlags(int i);
     uint8_t readMcuIrqMask(int i);

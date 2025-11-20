@@ -122,8 +122,9 @@ void Core::endFrame() {
         lastFpsTime = std::chrono::steady_clock::now();
     }
 
-    // Draw a frame and schedule the next one
+    // Handle per-frame tasks and schedule the next one
     pdc.drawFrame();
+    input.updateHome();
     schedule(END_FRAME, 268111856 / 60);
 }
 

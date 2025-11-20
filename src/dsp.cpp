@@ -812,12 +812,11 @@ void Dsp::writePcfg(uint16_t mask, uint16_t value) {
         readLength = 0;
     }
 
-    // Reset the DSP if the reset bit is set and unhalt on release
-    if (~old & dspPcfg & BIT(0)) {
-        LOG_INFO("Restarting Teak DSP execution\n");
-        core->teak.cycles = 0;
-        core->teak.regPc = 0;
-    }
+    // Reset the DSP if the reset bit was newly set
+    if (!(~old & dspPcfg & BIT(0))) return;
+    LOG_INFO("Restarting Teak DSP execution\n");
+    core->teak.cycles = 0;
+    core->teak.regPc = 0;
 }
 
 void Dsp::writePsem(uint16_t mask, uint16_t value) {

@@ -50,6 +50,25 @@ void Input::setLStick(int x, int y) {
     stickLY = std::min(0xFFF, std::max(0, y + 0x7FF));
 }
 
+void Input::pressHome() {
+    // Set a bit to request a home button press
+    homeState |= BIT(0);
+}
+
+void Input::releaseHome() {
+    // Set a bit to request a home button release
+    homeState |= BIT(1);
+}
+
+void Input::updateHome() {
+    // Trigger MCU interrupts for home button presses and releases
+    for (int i = 0; i < 2; i++) {
+        if (~homeState & BIT(i)) continue;
+        core->i2c.mcuInterrupt(BIT(2 + i));
+        homeState &= ~BIT(i);
+    }
+}
+
 uint8_t Input::spiTransfer(uint8_t value) {
     // End an SPI bus 1 transfer and trigger an interrupt when its length is reached
     if (--spiCount == 0) {
