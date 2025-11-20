@@ -798,6 +798,7 @@ void Dsp::writePadr(uint16_t mask, uint16_t value) {
 
 void Dsp::writePcfg(uint16_t mask, uint16_t value) {
     // Write to the DSP_PCFG register
+    uint16_t old = dspPcfg;
     dspPcfg = (dspPcfg & ~mask) | (value & mask);
 
     // Start or stop a read FIFO transfer based on its start bit
@@ -812,13 +813,10 @@ void Dsp::writePcfg(uint16_t mask, uint16_t value) {
     }
 
     // Reset the DSP if the reset bit is set and unhalt on release
-    if (dspPcfg & BIT(0)) {
-        core->teak.cycles = -1;
-        core->teak.regPc = 0;
-    }
-    else if (core->teak.cycles == -1 && !core->teak.halted) {
-        LOG_INFO("Starting Teak DSP execution\n");
+    if (~old & dspPcfg & BIT(0)) {
+        LOG_INFO("Restarting Teak DSP execution\n");
         core->teak.cycles = 0;
+        core->teak.regPc = 0;
     }
 }
 

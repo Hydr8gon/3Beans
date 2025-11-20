@@ -74,7 +74,7 @@ private:
     bool audScheduled = false;
 
     uint16_t dspPadr = 0;
-    uint16_t dspPcfg = 0x1;
+    uint16_t dspPcfg = 0;
     uint16_t dspPsts = 0x100;
     uint16_t dspPsem = 0;
     uint16_t dspPmask = 0;
