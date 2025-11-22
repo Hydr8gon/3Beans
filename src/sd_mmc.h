@@ -64,8 +64,10 @@ public:
 private:
     Core *core;
     int id = 0;
+
     FILE *nand = nullptr;
     FILE *sd = nullptr;
+    bool sdhc = false;
 
     uint32_t cardStatus = 0;
     uint32_t opCond = 0x80000000;

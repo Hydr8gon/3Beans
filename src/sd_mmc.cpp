@@ -32,6 +32,13 @@ bool SdMmc::init(SdMmc &other) {
     other.sd = sd = fopen(Settings::sdPath.c_str(), "rb+");
     other.id = 1;
 
+    // Check the SD's capacity so cards over 2GB can be handled differently
+    if (sd) {
+        fseek(sd, 0, SEEK_END);
+        other.sdhc = sdhc = (ftell(sd) > 0x40000000);
+        LOG_INFO("SD card is being treated as %s-capacity\n", sdhc ? "high" : "standard");
+    }
+
     // Try to open a GM9 NAND dump and load CID and OTP data
     if (!(other.nand = nand = fopen(Settings::nandPath.c_str(), "rb+"))) return false;
     fseek(nand, 0xC00, SEEK_SET);
@@ -151,11 +158,15 @@ void SdMmc::pushResponse(uint32_t value) {
 }
 
 void SdMmc::readBlock() {
-    // Read a block of data from the SD or MMC if present
+    // Check for high capacity and hardcode the block length if so
+    bool hc = (~sdPortSelect & sdhc);
+    uint32_t len = (hc ? 0x80 : blockLen);
+
+    // Read a block of data from the SD or MMC if present, in 512- or 1-byte units
     uint32_t data[0x80];
     if (FILE *src = (sdPortSelect & BIT(0)) ? nand : sd) {
-        fseek(src, curAddress, SEEK_SET);
-        fread(data, sizeof(uint32_t), blockLen, src);
+        fseek(src, hc ? (int64_t(curAddress) << 9) : curAddress, SEEK_SET);
+        fread(data, sizeof(uint32_t), len, src);
     }
     else {
         memset(data, 0, sizeof(data));
@@ -163,31 +174,35 @@ void SdMmc::readBlock() {
 
     // Push the data to a FIFO
     LOG_INFO("Reading %s block from 0x%X with size 0x%X\n",
-        (sdPortSelect & BIT(0)) ? "MMC" : "SD", curAddress, blockLen << 2);
-    for (int i = 0; i < blockLen; i++) pushFifo(data[i]);
+        (sdPortSelect & BIT(0)) ? "MMC" : "SD", curAddress, len << 2);
+    for (int i = 0; i < len; i++) pushFifo(data[i]);
 
     // Change to read or idle state based on blocks left and trigger a DRQ
     cardStatus = (cardStatus & ~0x1E00) | ((curBlock ? 0x5 : 0x4) << 9);
-    curAddress += (blockLen << 2);
+    curAddress += hc ? 1 : (len << 2);
     core->ndma.setDrq(0x6 + id);
 }
 
 void SdMmc::writeBlock() {
+    // Check for high capacity and hardcode the block length if so
+    bool hc = (~sdPortSelect & sdhc);
+    uint32_t len = (hc ? 0x80 : blockLen);
+
     // Pop a block of data from a FIFO
     uint32_t data[0x80];
     LOG_INFO("Writing %s block to 0x%X with size 0x%X\n",
-        (sdPortSelect & BIT(0)) ? "MMC" : "SD", curAddress, blockLen << 2);
-    for (int i = 0; i < blockLen; i++) data[i] = popFifo();
+        (sdPortSelect & BIT(0)) ? "MMC" : "SD", curAddress, len << 2);
+    for (int i = 0; i < len; i++) data[i] = popFifo();
 
-    // Write the data to the SD or MMC if present
+    // Write the data to the SD or MMC if present, in 512- or 1-byte units
     if (FILE *dst = (sdPortSelect & BIT(0)) ? nand : sd) {
-        fseek(dst, curAddress, SEEK_SET);
-        fwrite(data, sizeof(uint32_t), blockLen, dst);
+        fseek(dst, hc ? (int64_t(curAddress) << 9) : curAddress, SEEK_SET);
+        fwrite(data, sizeof(uint32_t), len, dst);
     }
 
     // Change state and trigger a DRQ or end interrupt based on blocks left
     cardStatus = (cardStatus & ~0x1E00) | ((curBlock ? 0x6 : 0x4) << 9);
-    curAddress += (blockLen << 2);
+    curAddress += hc ? 1 : (len << 2);
     if (!curBlock) return sendInterrupt(2);
     core->ndma.setDrq(0x6 + id);
 }
@@ -326,9 +341,9 @@ void SdMmc::sdStatus() {
 }
 
 void SdMmc::sdSendOpCond() {
-    // Set the SD operation condition voltage window bits
+    // Set the SD voltage window and return it along with high-capacity status
     opCond = (opCond & ~0xFFFFFF) | (sdCmdParam & 0xFFFFFF);
-    pushResponse(opCond);
+    pushResponse(opCond | ((~sdPortSelect & sdhc) << 30));
 }
 
 void SdMmc::getScr() {
