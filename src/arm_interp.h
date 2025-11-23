@@ -40,6 +40,7 @@ public:
     void halt(uint8_t mask);
     void unhalt(uint8_t mask);
     int exception(uint8_t vector);
+    void invalidatePc() { pcData = nullptr; }
 
 private:
     Core *core;
@@ -59,6 +60,7 @@ private:
     uint32_t spsrIrq = 0;
     uint32_t spsrUnd = 0;
 
+    uint8_t *pcData = nullptr;
     uint32_t pipeline[2] = {};
     uint64_t cycles = 0;
     uint64_t excValue = 0;
@@ -73,13 +75,14 @@ private:
     static const uint8_t bitCount[0x100];
 
     int runOpcode();
+    uint16_t getOpcode16();
+    uint32_t getOpcode32();
     void flushPipeline();
     void setCpsr(uint32_t value, bool save = false);
     int handleReserved(uint32_t opcode);
 
     int unkArm(uint32_t opcode);
     int unkThumb(uint16_t opcode);
-
     int32_t clampQ(int64_t value);
 
     uint32_t lli(uint32_t opcode);

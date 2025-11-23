@@ -34,6 +34,7 @@ public:
     uint32_t exceptAddrs[MAX_CPUS] = {};
 
     Cp15(Core *core): core(core) {}
+    uint8_t *getReadPtr(CpuId id, uint32_t address);
 
     void mmuInvalidate(CpuId id);
     void updateMap9(uint32_t start, uint32_t end);

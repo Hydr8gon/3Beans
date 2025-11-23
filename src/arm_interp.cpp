@@ -91,15 +91,15 @@ FORCE_INLINE int ArmInterp::runOpcode() {
 
     // Execute an instruction
     if (cpsr & BIT(5)) { // THUMB mode
-        // Fill the pipeline, incrementing the program counter
-        pipeline[1] = core->cp15.read<uint16_t>(id, *registers[15] += 2);
+        // Increment the program counter and fill the pipeline from pointer or fallback
+        pipeline[1] = (((*registers[15] += 2) & 0xFFE) && pcData) ? U8TO16(pcData += 2, 0) : getOpcode16();
 
         // Execute a THUMB instruction
         return (this->*thumbInstrs[(opcode >> 6) & 0x3FF])(opcode);
     }
     else { // ARM mode
-        // Fill the pipeline, incrementing the program counter
-        pipeline[1] = core->cp15.read<uint32_t>(id, *registers[15] += 4);
+        // Increment the program counter and fill the pipeline from pointer or fallback
+        pipeline[1] = (((*registers[15] += 4) & 0xFFC) && pcData) ? U8TO32(pcData += 4, 0) : getOpcode32();
 
         // Execute an ARM instruction based on its condition
         switch (condition[((opcode >> 24) & 0xF0) | (cpsr >> 28)]) {
@@ -108,6 +108,22 @@ FORCE_INLINE int ArmInterp::runOpcode() {
             default: return (this->*armInstrs[((opcode >> 16) & 0xFF0) | ((opcode >> 4) & 0xF)])(opcode);
         }
     }
+}
+
+uint16_t ArmInterp::getOpcode16() {
+    // Set the opcode pointer or fall back to a regular 16-bit opcode read
+    if (!(pcData = core->cp15.getReadPtr(id, *registers[15])))
+        return core->cp15.read<uint16_t>(id, *registers[15]);
+    pcData += (*registers[15] & 0xFFE);
+    return U8TO16(pcData, 0);
+}
+
+uint32_t ArmInterp::getOpcode32() {
+    // Set the opcode pointer or fall back to a regular 32-bit opcode read
+    if (!(pcData = core->cp15.getReadPtr(id, *registers[15])))
+        return core->cp15.read<uint32_t>(id, *registers[15]);
+    pcData += (*registers[15] & 0xFFC);
+    return U8TO32(pcData, 0);
 }
 
 void ArmInterp::halt(uint8_t mask) {
@@ -139,12 +155,14 @@ int ArmInterp::exception(uint8_t vector) {
 void ArmInterp::flushPipeline() {
     // Adjust the program counter and refill the pipeline after a jump
     if (cpsr & BIT(5)) { // THUMB mode
-        pipeline[0] = core->cp15.read<uint16_t>(id, *registers[15] &= ~1);
-        pipeline[1] = core->cp15.read<uint16_t>(id, *registers[15] += 2);
+        *registers[15] = (*registers[15] & ~0x1) + 2;
+        pipeline[0] = core->cp15.read<uint16_t>(id, *registers[15] - 2);
+        pipeline[1] = getOpcode16();
     }
     else { // ARM mode
-        pipeline[0] = core->cp15.read<uint32_t>(id, *registers[15] &= ~3);
-        pipeline[1] = core->cp15.read<uint32_t>(id, *registers[15] += 4);
+        *registers[15] = (*registers[15] & ~0x3) + 4;
+        pipeline[0] = core->cp15.read<uint32_t>(id, *registers[15] - 4);
+        pipeline[1] = getOpcode32();
     }
 }
 

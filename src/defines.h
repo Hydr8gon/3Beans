@@ -39,6 +39,10 @@ enum CpuId {
 #define BSWAP32(v) __builtin_bswap32(v)
 #define BSWAP64(v) __builtin_bswap64(v)
 
+// Macros to read a larger value from an 8-bit array
+#define U8TO16(data, index) (*(uint16_t*)&(data)[index])
+#define U8TO32(data, index) (*(uint32_t*)&(data)[index])
+
 // Macros to perform bit rotations
 #define ROL8(v, s) ((v << s) | (v >> (8 - s)))
 #define ROL32(v, s) ((v << s) | (v >> (32 - s)))

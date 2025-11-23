@@ -27,6 +27,15 @@ template void Cp15::write(CpuId, uint32_t, uint8_t);
 template void Cp15::write(CpuId, uint32_t, uint16_t);
 template void Cp15::write(CpuId, uint32_t, uint32_t);
 
+uint8_t *Cp15::getReadPtr(CpuId id, uint32_t address) {
+    // Get a readable memory pointer to use for caching
+    if (id == ARM9) return readMap9[address >> 12];
+    if (!mmuEnables[id]) return core->memory.readMap11[address >> 12];
+    MmuMap &map = mmuMaps[id][address >> 12];
+    if (map.tag != mmuTags[id]) updateEntry(id, address);
+    return map.read;
+}
+
 uint32_t Cp15::mmuTranslate(CpuId id, uint32_t address) {
     // Check control value X to determine the table base address
     uint32_t base;
@@ -68,6 +77,7 @@ uint32_t Cp15::mmuTranslate(CpuId id, uint32_t address) {
 
 void Cp15::mmuInvalidate(CpuId id) {
     // Increment the MMU tag to invalidate maps and reset on overflow to avoid false positives
+    core->arms[id].invalidatePc();
     if (++mmuTags[id]) return;
     memset(mmuMaps[id], 0, sizeof(mmuMaps[id]));
     mmuTags[id] = 1;
@@ -88,6 +98,7 @@ void Cp15::updateMap9(uint32_t start, uint32_t end) {
     uint32_t size = ((uint64_t(end) - start + 0xFFF) >> 12) * sizeof(uint8_t*);
     memcpy(&readMap9[start >> 12], &core->memory.readMap9[start >> 12], size);
     memcpy(&writeMap9[start >> 12], &core->memory.writeMap9[start >> 12], size);
+    core->arms[ARM9].invalidatePc();
 
     // Overlay TCM mappings if enabled for read/write
     for (uint64_t address = start; address <= end; address += 0x1000) {
