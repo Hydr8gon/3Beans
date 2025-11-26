@@ -155,14 +155,12 @@ int ArmInterp::exception(uint8_t vector) {
 void ArmInterp::flushPipeline() {
     // Adjust the program counter and refill the pipeline after a jump
     if (cpsr & BIT(5)) { // THUMB mode
-        *registers[15] = (*registers[15] & ~0x1) + 2;
-        pipeline[0] = core->cp15.read<uint16_t>(id, *registers[15] - 2);
-        pipeline[1] = getOpcode16();
+        pipeline[0] = core->cp15.read<uint16_t>(id, *registers[15] &= ~0x1);
+        *registers[15] += 2, pipeline[1] = getOpcode16();
     }
     else { // ARM mode
-        *registers[15] = (*registers[15] & ~0x3) + 4;
-        pipeline[0] = core->cp15.read<uint32_t>(id, *registers[15] - 4);
-        pipeline[1] = getOpcode32();
+        pipeline[0] = core->cp15.read<uint32_t>(id, *registers[15] &= ~0x3);
+        *registers[15] += 4, pipeline[1] = getOpcode32();
     }
 }
 
