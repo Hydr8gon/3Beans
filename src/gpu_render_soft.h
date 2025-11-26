@@ -24,6 +24,10 @@
 
 class Core;
 
+struct SoftColor {
+    float r, g, b, a;
+};
+
 struct SoftVertex {
     float x, y, z, w;
     float r, g, b, a;
@@ -100,8 +104,8 @@ private:
     PrimMode primMode = SAME_PRIM;
     CullMode cullMode = CULL_NONE;
 
-    float rc[6], gc[6], bc[6], ac[6];
-    float rt[3], gt[3], bt[3], at[3];
+    SoftColor combCache[6] = {};
+    SoftColor texCache[3] = {};
     int64_t lastU[3] = { -1, -1, -1 };
     int64_t lastV[3] = { -1, -1, -1 };
     uint8_t combStart = -1;
@@ -136,18 +140,18 @@ private:
     uint32_t texAddrs[3] = {};
     uint16_t texWidths[3] = {};
     uint16_t texHeights[3] = {};
-    float texBorders[3][4] = {};
+    SoftColor texBorders[3] = {};
     TexFmt texFmts[3] = {};
     TexWrap texWrapS[3] = {};
     TexWrap texWrapT[3] = {};
     CombSrc combSrcs[6][6] = {};
     OperFunc combOpers[6][6] = {};
     CalcMode combModes[6][2] = {};
-    float combColors[6][4] = {};
-    float combBufColor[4] = {};
+    SoftColor combColors[6] = {};
+    SoftColor combBufColor = {};
     OperFunc blendOpers[4] = {};
     CalcMode blendModes[2] = {};
-    float blendR = 0, blendG = 0, blendB = 0, blendA = 0;
+    SoftColor blendColor = {};
     TestFunc alphaFunc = TEST_AL;
     float alphaValue = 0;
 
@@ -178,9 +182,9 @@ private:
     static SoftVertex intersect(SoftVertex &v1, SoftVertex &v2, float x1, float x2);
     uint8_t stencilOp(uint8_t value, StenOper oper);
 
-    void getTexel(float &r, float &g, float &b, float &a, float s, float t, int i);
-    void getSource(float &r, float &g, float &b, float &a, SoftVertex &v, int i, int j);
-    void getCombine(float &r, float &g, float &b, float &a, SoftVertex &v, int i);
+    SoftColor &getTexel(float s, float t, int i);
+    void getSource(SoftColor &out, SoftVertex &v, int i, int j);
+    void getCombine(SoftColor &out, SoftVertex &v, int i);
 
     void drawPixel(SoftVertex &p);
     void drawTriangle(SoftVertex &a, SoftVertex &b, SoftVertex &c);

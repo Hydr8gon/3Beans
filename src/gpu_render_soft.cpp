@@ -129,12 +129,10 @@ uint8_t GpuRenderSoft::stencilOp(uint8_t value, StenOper oper) {
     }
 }
 
-void GpuRenderSoft::getTexel(float &r, float &g, float &b, float &a, float s, float t, int i) {
+SoftColor &GpuRenderSoft::getTexel(float s, float t, int i) {
     // Catch silly invalid textures like in Pokemon X/Y
-    if (!texWidths[i] || !texHeights[i]) {
-        r = g = b = a = 0.0f;
-        return;
-    }
+    if (!texWidths[i] || !texHeights[i])
+        return texCache[i] = {0.0f, 0.0f, 0.0f, 0.0f};
 
     // Scale the S-coordinate to texels and handle wrapping based on mode
     uint32_t u = uint32_t(s * texWidths[i]);
@@ -144,8 +142,7 @@ void GpuRenderSoft::getTexel(float &r, float &g, float &b, float &a, float s, fl
             u = (int32_t(u) < 0) ? 0 : (texWidths[i] - 1);
             break;
         case WRAP_BORDER:
-            r = texBorders[i][0], g = texBorders[i][1], b = texBorders[i][2], a = texBorders[i][3];
-            return;
+            return texBorders[i];
         case WRAP_REPEAT:
             u %= texWidths[i];
             break;
@@ -164,8 +161,7 @@ void GpuRenderSoft::getTexel(float &r, float &g, float &b, float &a, float s, fl
             v = (int32_t(v) < 0) ? 0 : (texHeights[i] - 1);
             break;
         case WRAP_BORDER:
-            r = texBorders[i][0], g = texBorders[i][1], b = texBorders[i][2], a = texBorders[i][3];
-            return;
+            return texBorders[i];
         case WRAP_REPEAT:
             v %= texHeights[i];
             break;
@@ -177,10 +173,8 @@ void GpuRenderSoft::getTexel(float &r, float &g, float &b, float &a, float s, fl
     }
 
     // Use the cached texel if coordinates are unchanged
-    if (lastU[i] == u && lastV[i] == v) {
-        r = rt[i], g = gt[i], b = bt[i], a = at[i];
-        return;
-    }
+    if (lastU[i] == u && lastV[i] == v)
+        return texCache[i];
 
     // Convert the texture coordinates to a swizzled memory offset
     uint32_t value, ofs = (u & 0x1) | ((u << 1) & 0x4) | ((u << 2) & 0x10);
@@ -191,74 +185,75 @@ void GpuRenderSoft::getTexel(float &r, float &g, float &b, float &a, float s, fl
     switch (texFmts[i]) {
     case TEX_RGBA8:
         value = core->memory.read<uint32_t>(ARM11, texAddrs[i] + ofs * 4);
-        r = float((value >> 24) & 0xFF) / 0xFF;
-        g = float((value >> 16) & 0xFF) / 0xFF;
-        b = float((value >> 8) & 0xFF) / 0xFF;
-        a = float((value >> 0) & 0xFF) / 0xFF;
+        texCache[i].r = float((value >> 24) & 0xFF) / 0xFF;
+        texCache[i].g = float((value >> 16) & 0xFF) / 0xFF;
+        texCache[i].b = float((value >> 8) & 0xFF) / 0xFF;
+        texCache[i].a = float((value >> 0) & 0xFF) / 0xFF;
         break;
     case TEX_RGB8:
-        r = float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs * 3 + 2)) / 0xFF;
-        g = float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs * 3 + 1)) / 0xFF;
-        b = float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs * 3 + 0)) / 0xFF;
-        a = 1.0f;
+        texCache[i].r = float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs * 3 + 2)) / 0xFF;
+        texCache[i].g = float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs * 3 + 1)) / 0xFF;
+        texCache[i].b = float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs * 3 + 0)) / 0xFF;
+        texCache[i].a = 1.0f;
         break;
     case TEX_RGB5A1:
         value = core->memory.read<uint16_t>(ARM11, texAddrs[i] + ofs * 2);
-        r = float((value >> 11) & 0x1F) / 0x1F;
-        g = float((value >> 6) & 0x1F) / 0x1F;
-        b = float((value >> 1) & 0x1F) / 0x1F;
-        a = (value & BIT(0)) ? 1.0f : 0.0f;
+        texCache[i].r = float((value >> 11) & 0x1F) / 0x1F;
+        texCache[i].g = float((value >> 6) & 0x1F) / 0x1F;
+        texCache[i].b = float((value >> 1) & 0x1F) / 0x1F;
+        texCache[i].a = (value & BIT(0)) ? 1.0f : 0.0f;
         break;
     case TEX_RGB565:
         value = core->memory.read<uint16_t>(ARM11, texAddrs[i] + ofs * 2);
-        r = float((value >> 11) & 0x1F) / 0x1F;
-        g = float((value >> 5) & 0x3F) / 0x3F;
-        b = float((value >> 0) & 0x1F) / 0x1F;
-        a = 1.0f;
+        texCache[i].r = float((value >> 11) & 0x1F) / 0x1F;
+        texCache[i].g = float((value >> 5) & 0x3F) / 0x3F;
+        texCache[i].b = float((value >> 0) & 0x1F) / 0x1F;
+        texCache[i].a = 1.0f;
         break;
     case TEX_RGBA4:
         value = core->memory.read<uint16_t>(ARM11, texAddrs[i] + ofs * 2);
-        r = float((value >> 12) & 0xF) / 0xF;
-        g = float((value >> 8) & 0xF) / 0xF;
-        b = float((value >> 4) & 0xF) / 0xF;
-        a = float((value >> 0) & 0xF) / 0xF;
+        texCache[i].r = float((value >> 12) & 0xF) / 0xF;
+        texCache[i].g = float((value >> 8) & 0xF) / 0xF;
+        texCache[i].b = float((value >> 4) & 0xF) / 0xF;
+        texCache[i].a = float((value >> 0) & 0xF) / 0xF;
         break;
     case TEX_LA8:
         value = core->memory.read<uint16_t>(ARM11, texAddrs[i] + ofs * 2);
-        r = g = b = float((value >> 8) & 0xFF) / 0xFF;
-        a = float((value >> 0) & 0xFF) / 0xFF;
+        texCache[i].r = texCache[i].g = texCache[i].b = float((value >> 8) & 0xFF) / 0xFF;
+        texCache[i].a = float((value >> 0) & 0xFF) / 0xFF;
         break;
     case TEX_RG8:
         value = core->memory.read<uint16_t>(ARM11, texAddrs[i] + ofs * 2);
-        r = float((value >> 8) & 0xFF) / 0xFF;
-        g = float((value >> 0) & 0xFF) / 0xFF;
-        b = 0.0f, a = 1.0f;
+        texCache[i].r = float((value >> 8) & 0xFF) / 0xFF;
+        texCache[i].g = float((value >> 0) & 0xFF) / 0xFF;
+        texCache[i].b = 0.0f, texCache[i].a = 1.0f;
         break;
     case TEX_L8:
-        r = g = b = float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs)) / 0xFF;
-        a = 1.0f;
+        texCache[i].r = texCache[i].g = texCache[i].b =
+            float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs)) / 0xFF;
+        texCache[i].a = 1.0f;
         break;
     case TEX_A8:
-        r = g = b = 0.0f;
-        a = float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs)) / 0xFF;
+        texCache[i].r = texCache[i].g = texCache[i].b = 0.0f;
+        texCache[i].a = float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs)) / 0xFF;
         break;
     case TEX_LA4:
         value = core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs);
-        r = g = b = float((value >> 4) & 0xF) / 0xF;
-        a = float((value >> 0) & 0xF) / 0xF;
+        texCache[i].r = texCache[i].g = texCache[i].b = float((value >> 4) & 0xF) / 0xF;
+        texCache[i].a = float((value >> 0) & 0xF) / 0xF;
         break;
     case TEX_L4:
         value = core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs / 2);
-        r = g = b = float((value >> ((ofs & 0x1) * 4)) & 0xF) / 0xF;
-        a = 1.0f;
+        texCache[i].r = texCache[i].g = texCache[i].b = float((value >> ((ofs & 0x1) * 4)) & 0xF) / 0xF;
+        texCache[i].a = 1.0f;
         break;
     case TEX_A4:
         value = core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs / 2);
-        r = g = b = 0.0f;
-        a = float((value >> ((ofs & 0x1) * 4)) & 0xF) / 0xF;
+        texCache[i].r = texCache[i].g = texCache[i].b = 0.0f;
+        texCache[i].a = float((value >> ((ofs & 0x1) * 4)) & 0xF) / 0xF;
         break;
     case TEX_UNK:
-        r = g = b = a = 1.0f;
+        texCache[i] = {1.0f, 1.0f, 1.0f, 1.0f};
         break;
 
     case TEX_ETC1: case TEX_ETC1A4:
@@ -267,11 +262,11 @@ void GpuRenderSoft::getTexel(float &r, float &g, float &b, float &a, float s, fl
         if (texFmts[i] == TEX_ETC1A4) {
             ofs = (ofs & ~0xF) + 8;
             value = core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs - 8 + idx / 2);
-            a = float((value >> ((idx & 0x1) * 4)) & 0xF) / 0xF;
+            texCache[i].a = float((value >> ((idx & 0x1) * 4)) & 0xF) / 0xF;
         }
         else {
             ofs = (ofs & ~0xF) >> 1;
-            a = 1.0f;
+            texCache[i].a = 1.0f;
         }
 
         // Decode an ETC1 texel based on the block it falls in and the base color mode
@@ -280,207 +275,218 @@ void GpuRenderSoft::getTexel(float &r, float &g, float &b, float &a, float s, fl
         if ((((val2 & BIT(0)) ? v : u) & 0x3) < 2) { // Block 1
             int16_t tbl = etc1Tables[(val2 >> 5) & 0x7][((val1 >> (idx + 15)) & 0x2) | ((val1 >> idx) & 0x1)];
             if (val2 & BIT(1)) { // Differential
-                r = float(((val2 >> 27) & 0x1F) * 0x21 / 4 + tbl);
-                g = float(((val2 >> 19) & 0x1F) * 0x21 / 4 + tbl);
-                b = float(((val2 >> 11) & 0x1F) * 0x21 / 4 + tbl);
+                texCache[i].r = float(((val2 >> 27) & 0x1F) * 0x21 / 4 + tbl);
+                texCache[i].g = float(((val2 >> 19) & 0x1F) * 0x21 / 4 + tbl);
+                texCache[i].b = float(((val2 >> 11) & 0x1F) * 0x21 / 4 + tbl);
             }
             else { // Individual
-                r = float(((val2 >> 28) & 0xF) * 0x11 + tbl);
-                g = float(((val2 >> 20) & 0xF) * 0x11 + tbl);
-                b = float(((val2 >> 12) & 0xF) * 0x11 + tbl);
+                texCache[i].r = float(((val2 >> 28) & 0xF) * 0x11 + tbl);
+                texCache[i].g = float(((val2 >> 20) & 0xF) * 0x11 + tbl);
+                texCache[i].b = float(((val2 >> 12) & 0xF) * 0x11 + tbl);
             }
         }
         else { // Block 2
             int16_t tbl = etc1Tables[(val2 >> 2) & 0x7][((val1 >> (idx + 15)) & 0x2) | ((val1 >> idx) & 0x1)];
             if (val2 & BIT(1)) { // Differential
-                r = float((((val2 >> 27) & 0x1F) + (int8_t(val2 >> 19) >> 5)) * 0x21 / 4 + tbl);
-                g = float((((val2 >> 19) & 0x1F) + (int8_t(val2 >> 11) >> 5)) * 0x21 / 4 + tbl);
-                b = float((((val2 >> 11) & 0x1F) + (int8_t(val2 >> 3) >> 5)) * 0x21 / 4 + tbl);
+                texCache[i].r = float((((val2 >> 27) & 0x1F) + (int8_t(val2 >> 19) >> 5)) * 0x21 / 4 + tbl);
+                texCache[i].g = float((((val2 >> 19) & 0x1F) + (int8_t(val2 >> 11) >> 5)) * 0x21 / 4 + tbl);
+                texCache[i].b = float((((val2 >> 11) & 0x1F) + (int8_t(val2 >> 3) >> 5)) * 0x21 / 4 + tbl);
             }
             else { // Individual
-                r = float(((val2 >> 24) & 0xF) * 0x11 + tbl);
-                g = float(((val2 >> 16) & 0xF) * 0x11 + tbl);
-                b = float(((val2 >> 8) & 0xF) * 0x11 + tbl);
+                texCache[i].r = float(((val2 >> 24) & 0xF) * 0x11 + tbl);
+                texCache[i].g = float(((val2 >> 16) & 0xF) * 0x11 + tbl);
+                texCache[i].b = float(((val2 >> 8) & 0xF) * 0x11 + tbl);
             }
         }
 
         // Normalize and clamp the final color values
-        r = std::min(1.0f, std::max(0.0f, r / 255));
-        g = std::min(1.0f, std::max(0.0f, g / 255));
-        b = std::min(1.0f, std::max(0.0f, b / 255));
+        texCache[i].r = std::min(1.0f, std::max(0.0f, texCache[i].r / 255));
+        texCache[i].g = std::min(1.0f, std::max(0.0f, texCache[i].g / 255));
+        texCache[i].b = std::min(1.0f, std::max(0.0f, texCache[i].b / 255));
         break;
     }
 
     // Cache the texel to avoid decoding multiple times
-    rt[i] = r, gt[i] = g, bt[i] = b, at[i] = a;
     lastU[i] = u, lastV[i] = v;
+    return texCache[i];
 }
 
-void GpuRenderSoft::getSource(float &r, float &g, float &b, float &a, SoftVertex &v, int i, int j) {
+void GpuRenderSoft::getSource(SoftColor &out, SoftVertex &v, int i, int j) {
     // Get the components of a texture combiner source color
     switch (combSrcs[i][j]) {
-        case COMB_PRIM: r = v.r / v.w, g = v.g / v.w, b = v.b / v.w, a = v.a / v.w; break;
-        case COMB_TEX0: getTexel(r, g, b, a, v.s0 / v.w, v.t0 / v.w, 0); break;
-        case COMB_TEX1: getTexel(r, g, b, a, v.s1 / v.w, v.t1 / v.w, 1); break;
-        case COMB_TEX2: getTexel(r, g, b, a, v.s2 / v.w, v.t2 / v.w, 2); break;
-        case COMB_CONST: r = combColors[i][0], g = combColors[i][1], b = combColors[i][2], a = combColors[i][3]; break;
-        case COMB_FRAG0: case COMB_FRAG1: r = g = b = 0.5f, a = 1.0f; break; // Stub
-        case COMB_TEX3: r = g = b = a = 1.0f; break; // Stub
-        case COMB_UNK: r = g = b = a = 0.0f; break;
+        case COMB_PRIM: out = {v.r / v.w, v.g / v.w, v.b / v.w, v.a / v.w}; break;
+        case COMB_TEX0: out = getTexel(v.s0 / v.w, v.t0 / v.w, 0); break;
+        case COMB_TEX1: out = getTexel(v.s1 / v.w, v.t1 / v.w, 1); break;
+        case COMB_TEX2: out = getTexel(v.s2 / v.w, v.t2 / v.w, 2); break;
+        case COMB_CONST: out = combColors[i]; break;
+        case COMB_FRAG0: case COMB_FRAG1: out = {0.5f, 0.5f, 0.5f, 1.0f}; break; // Stub
+        case COMB_TEX3: out = {1.0f, 1.0f, 1.0f, 1.0f}; break; // Stub
+        case COMB_UNK: out = {0.0f, 0.0f, 0.0f, 0.0f}; break;
 
     case COMB_PREV:
         // Generate the previous combiner's output, or use the cache if already done
         if (i == 0)
-            r = g = b = a = 0.0f;
+            out = {0.0f, 0.0f, 0.0f, 0.0f};
         else if (combMask & BIT(i - 1))
-            r = rc[i - 1], g = gc[i - 1], b = bc[i - 1], a = ac[i - 1];
+            out = combCache[i - 1];
         else
-            getCombine(r, g, b, a, v, i - 1);
+            getCombine(out, v, i - 1);
         break;
 
     case COMB_PRVBUF:
         // Generate the buffered previous output, using buffer color for the first update
         if (i == 0)
-            r = g = b = a = 0.0f;
+            out = {0.0f, 0.0f, 0.0f, 0.0f};
         else if (i == 1)
-            r = combBufColor[0], g = combBufColor[1], b = combBufColor[2], a = combBufColor[3];
+            out = combBufColor;
         else if (combMask & BIT(i - 2))
-            r = rc[i - 2], g = gc[i - 2], b = bc[i - 2], a = ac[i - 2];
+            out = combCache[i - 2];
         else
-            getCombine(r, g, b, a, v, i - 2);
+            getCombine(out, v, i - 2);
         break;
     }
 
     // Modify the source color based on its operand type
     switch (combOpers[i][j]) {
         case OPER_SRC: return;
-        case OPER_1MSRC: r = 1.0f - r, g = 1.0f - g, b = 1.0f - b, a = 1.0f - a; return;
-        case OPER_SRCA: r = g = b = a; return;
-        case OPER_1MSRCA: r = g = b = a = 1.0f - a; return;
+        case OPER_1MSRC: out = {1.0f - out.r, 1.0f - out.g, 1.0f - out.b, 1.0f - out.a}; return;
+        case OPER_SRCA: out.r = out.g = out.b = out.a; return;
+        case OPER_1MSRCA: out.r = out.g = out.b = out.a = 1.0f - out.a; return;
     }
 }
 
-void GpuRenderSoft::getCombine(float &r, float &g, float &b, float &a, SoftVertex &v, int i) {
-    // Define temporary values
-    float r0, g0, b0, a0;
-    float r1, g1, b1, a1;
-    float r2, g2, b2, a2;
-
+void GpuRenderSoft::getCombine(SoftColor &out, SoftVertex &v, int i) {
     // Combine source RGB values based on the selected mode
+    SoftColor c0, c1, c2;
     switch (combModes[i][0]) {
     case MODE_REPLACE:
-        getSource(r0, g0, b0, a0, v, i, 0);
-        r = r0, g = g0, b = b0;
+        getSource(out, v, i, 0);
         break;
     case MODE_MOD:
-        getSource(r0, g0, b0, a0, v, i, 0);
-        getSource(r1, g1, b1, a1, v, i, 1);
-        r = r0 * r1, g = g0 * g1, b = b0 * b1;
+        getSource(c0, v, i, 0);
+        getSource(c1, v, i, 1);
+        out.r = c0.r * c1.r;
+        out.g = c0.g * c1.g;
+        out.b = c0.b * c1.b;
         break;
     case MODE_ADD:
-        getSource(r0, g0, b0, a0, v, i, 0);
-        getSource(r1, g1, b1, a1, v, i, 1);
-        r = r0 + r1, g = g0 + g1, b = b0 + b1;
+        getSource(c0, v, i, 0);
+        getSource(c1, v, i, 1);
+        out.r = c0.r + c1.r;
+        out.g = c0.g + c1.g;
+        out.b = c0.b + c1.b;
         break;
     case MODE_ADDS:
-        getSource(r0, g0, b0, a0, v, i, 0);
-        getSource(r1, g1, b1, a1, v, i, 1);
-        r = r0 + r1 - 0.5f, g = g0 + g1 - 0.5f, b = b0 + b1 - 0.5f;
+        getSource(c0, v, i, 0);
+        getSource(c1, v, i, 1);
+        out.r = c0.r + c1.r - 0.5f;
+        out.g = c0.g + c1.g - 0.5f;
+        out.b = c0.b + c1.b - 0.5f;
         break;
     case MODE_INTERP:
-        getSource(r0, g0, b0, a0, v, i, 0);
-        getSource(r1, g1, b1, a1, v, i, 1);
-        getSource(r2, g2, b2, a2, v, i, 2);
-        r = r0 * r2 + r1 * (1.0f - r2), g = g0 * g2 + g1 * (1.0f - g2), b = b0 * b2 + b1 * (1.0f - b2);
+        getSource(c0, v, i, 0);
+        getSource(c1, v, i, 1);
+        getSource(c2, v, i, 2);
+        out.r = c0.r * c2.r + c1.r * (1.0f - c2.r);
+        out.g = c0.g * c2.g + c1.g * (1.0f - c2.g);
+        out.b = c0.b * c2.b + c1.b * (1.0f - c2.b);
         break;
     case MODE_SUB:
-        getSource(r0, g0, b0, a0, v, i, 0);
-        getSource(r1, g1, b1, a1, v, i, 1);
-        r = r0 - r1, g = g0 - g1, b = b0 - b1;
+        getSource(c0, v, i, 0);
+        getSource(c1, v, i, 1);
+        out.r = c0.r - c1.r;
+        out.g = c0.g - c1.g;
+        out.b = c0.b - c1.b;
         break;
     case MODE_DOT3:
     case MODE_DOT3A:
-        getSource(r0, g0, b0, a0, v, i, 0);
-        getSource(r1, g1, b1, a1, v, i, 1);
-        r = g = b = 4.0f * r0 - 0.5f * r1 - 0.5f + g0 - 0.5f * g1 - 0.5f + b0 - 0.5f * b1 - 0.5f;
+        getSource(c0, v, i, 0);
+        getSource(c1, v, i, 1);
+        out.r = 4.0f * c0.r - 0.5f * c1.r - 0.5f + c0.g - 0.5f * c1.g - 0.5f + c0.b - 0.5f * c1.b - 0.5f;
+        out.b = out.g = out.r;
         break;
     case MODE_MULADD:
-        getSource(r0, g0, b0, a0, v, i, 0);
-        getSource(r1, g1, b1, a1, v, i, 1);
-        getSource(r2, g2, b2, a2, v, i, 2);
-        r = (r0 * r1) + r2, g = (g0 * g1) + g2, b = (b0 * b1) + b2;
+        getSource(c0, v, i, 0);
+        getSource(c1, v, i, 1);
+        getSource(c2, v, i, 2);
+        out.r = (c0.r * c1.r) + c2.r;
+        out.g = (c0.g * c1.g) + c2.g;
+        out.b = (c0.b * c1.b) + c2.b;
         break;
     case MODE_ADDMUL:
-        getSource(r0, g0, b0, a0, v, i, 0);
-        getSource(r1, g1, b1, a1, v, i, 1);
-        getSource(r2, g2, b2, a2, v, i, 2);
-        r = (r0 + r1) * r2, g = (g0 + g1) * g2, b = (b0 + b1) * b2;
+        getSource(c0, v, i, 0);
+        getSource(c1, v, i, 1);
+        getSource(c2, v, i, 2);
+        out.r = (c0.r + c1.r) * c2.r;
+        out.g = (c0.g + c1.g) * c2.g;
+        out.b = (c0.b + c1.b) * c2.b;
         break;
     case MODE_UNK:
-        r = g = b = 1.0f;
+        out.r = out.g = out.b = 1.0f;
         break;
     }
 
     // Combine source alpha values based on the selected mode
     switch (combModes[i][1]) {
     case MODE_REPLACE:
-        getSource(r0, g0, b0, a0, v, i, 3);
-        a = a0;
+        getSource(c0, v, i, 3);
+        out.a = c0.a;
         break;
     case MODE_MOD:
-        getSource(r0, g0, b0, a0, v, i, 3);
-        getSource(r1, g1, b1, a1, v, i, 4);
-        a = a0 * a1;
+        getSource(c0, v, i, 3);
+        getSource(c1, v, i, 4);
+        out.a = c0.a * c1.a;
         break;
     case MODE_ADD:
-        getSource(r0, g0, b0, a0, v, i, 3);
-        getSource(r1, g1, b1, a1, v, i, 4);
-        a = a0 + a1;
+        getSource(c0, v, i, 3);
+        getSource(c1, v, i, 4);
+        out.a = c0.a + c1.a;
         break;
     case MODE_ADDS:
-        getSource(r0, g0, b0, a0, v, i, 3);
-        getSource(r1, g1, b1, a1, v, i, 4);
-        a = a0 + a1 - 0.5f;
+        getSource(c0, v, i, 3);
+        getSource(c1, v, i, 4);
+        out.a = c0.a + c1.a - 0.5f;
         break;
     case MODE_INTERP:
-        getSource(r0, g0, b0, a0, v, i, 3);
-        getSource(r1, g1, b1, a1, v, i, 4);
-        getSource(r2, g2, b2, a2, v, i, 5);
-        a = a0 * a2 + a1 * (1.0f - a2);
+        getSource(c0, v, i, 3);
+        getSource(c1, v, i, 4);
+        getSource(c2, v, i, 5);
+        out.a = c0.a * c2.a + c1.a * (1.0f - c2.a);
         break;
     case MODE_SUB:
-        getSource(r0, g0, b0, a0, v, i, 3);
-        getSource(r1, g1, b1, a1, v, i, 4);
-        a = a0 - a1;
+        getSource(c0, v, i, 3);
+        getSource(c1, v, i, 4);
+        out.a = c0.a - c1.a;
         break;
     case MODE_DOT3A:
-        getSource(r0, g0, b0, a0, v, i, 3);
-        getSource(r1, g1, b1, a1, v, i, 4);
-        a = 4.0f * r0 - 0.5f * r1 - 0.5f + g0 - 0.5f * g1 - 0.5f + b0 - 0.5f * b1 - 0.5f;
+        getSource(c0, v, i, 3);
+        getSource(c1, v, i, 4);
+        out.a = 4.0f * c0.r - 0.5f * c1.r - 0.5f + c0.g - 0.5f * c1.g - 0.5f + c0.b - 0.5f * c1.b - 0.5f;
         break;
     case MODE_MULADD:
-        getSource(r0, g0, b0, a0, v, i, 3);
-        getSource(r1, g1, b1, a1, v, i, 4);
-        getSource(r2, g2, b2, a2, v, i, 5);
-        a = (a0 * a1) + a2;
+        getSource(c0, v, i, 3);
+        getSource(c1, v, i, 4);
+        getSource(c2, v, i, 5);
+        out.a = (c0.a * c1.a) + c2.a;
         break;
     case MODE_ADDMUL:
-        getSource(r0, g0, b0, a0, v, i, 3);
-        getSource(r1, g1, b1, a1, v, i, 4);
-        getSource(r2, g2, b2, a2, v, i, 5);
-        a = (a0 + a1) * a2;
+        getSource(c0, v, i, 3);
+        getSource(c1, v, i, 4);
+        getSource(c2, v, i, 5);
+        out.a = (c0.a + c1.a) * c2.a;
         break;
     case MODE_DOT3:
     case MODE_UNK:
-        a = 1.0f;
+        out.a = 1.0f;
         break;
     }
 
     // Ensure final values are within range and cache them
-    rc[i] = r = std::min(1.0f, std::max(0.0f, r));
-    gc[i] = g = std::min(1.0f, std::max(0.0f, g));
-    bc[i] = b = std::min(1.0f, std::max(0.0f, b));
-    ac[i] = a = std::min(1.0f, std::max(0.0f, a));
+    out.r = std::min(1.0f, std::max(0.0f, out.r));
+    out.g = std::min(1.0f, std::max(0.0f, out.g));
+    out.b = std::min(1.0f, std::max(0.0f, out.b));
+    out.a = std::min(1.0f, std::max(0.0f, out.a));
+    combCache[i] = out;
     combMask |= BIT(i);
 }
 
@@ -562,20 +568,20 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
     }
 
     // Get source color values from the texture combiner
-    float srcR, srcG, srcB, srcA;
+    SoftColor s0, d0;
     combMask = 0; // Reset cache
-    getCombine(srcR, srcG, srcB, srcA, p, combStart);
+    getCombine(s0, p, combStart);
 
     // Compare the source alpha value with the provided one
     switch (alphaFunc) {
         case TEST_NV: return;
         case TEST_AL: break;
-        case TEST_EQ: if (srcA == alphaValue) break; return;
-        case TEST_NE: if (srcA != alphaValue) break; return;
-        case TEST_LT: if (srcA < alphaValue) break; return;
-        case TEST_LE: if (srcA <= alphaValue) break; return;
-        case TEST_GT: if (srcA > alphaValue) break; return;
-        case TEST_GE: if (srcA >= alphaValue) break; return;
+        case TEST_EQ: if (s0.a == alphaValue) break; return;
+        case TEST_NE: if (s0.a != alphaValue) break; return;
+        case TEST_LT: if (s0.a < alphaValue) break; return;
+        case TEST_LE: if (s0.a <= alphaValue) break; return;
+        case TEST_GT: if (s0.a > alphaValue) break; return;
+        case TEST_GE: if (s0.a >= alphaValue) break; return;
     }
 
     // Store the incoming depth value based on buffer format if enabled
@@ -596,128 +602,124 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
     }
 
     // Read color values to blend with based on buffer format
-    float dstR, dstG, dstB, dstA;
     switch (colbufFmt) {
     case COL_RGBA8:
         val = core->memory.read<uint32_t>(ARM11, colbufAddr + ofs * 4);
-        dstR = float((val >> 24) & 0xFF) / 0xFF;
-        dstG = float((val >> 16) & 0xFF) / 0xFF;
-        dstB = float((val >> 8) & 0xFF) / 0xFF;
-        dstA = float((val >> 0) & 0xFF) / 0xFF;
+        d0.r = float((val >> 24) & 0xFF) / 0xFF;
+        d0.g = float((val >> 16) & 0xFF) / 0xFF;
+        d0.b = float((val >> 8) & 0xFF) / 0xFF;
+        d0.a = float((val >> 0) & 0xFF) / 0xFF;
         break;
     case COL_RGB8:
-        dstR = float(core->memory.read<uint8_t>(ARM11, colbufAddr + ofs * 3 + 2)) / 0xFF;
-        dstG = float(core->memory.read<uint8_t>(ARM11, colbufAddr + ofs * 3 + 1)) / 0xFF;
-        dstB = float(core->memory.read<uint8_t>(ARM11, colbufAddr + ofs * 3 + 0)) / 0xFF;
-        dstA = 1.0f;
+        d0.r = float(core->memory.read<uint8_t>(ARM11, colbufAddr + ofs * 3 + 2)) / 0xFF;
+        d0.g = float(core->memory.read<uint8_t>(ARM11, colbufAddr + ofs * 3 + 1)) / 0xFF;
+        d0.b = float(core->memory.read<uint8_t>(ARM11, colbufAddr + ofs * 3 + 0)) / 0xFF;
+        d0.a = 1.0f;
         break;
     case COL_RGB565:
         val = core->memory.read<uint16_t>(ARM11, colbufAddr + ofs * 2);
-        dstR = float((val >> 11) & 0x1F) / 0x1F;
-        dstG = float((val >> 5) & 0x3F) / 0x3F;
-        dstB = float((val >> 0) & 0x1F) / 0x1F;
-        dstA = 1.0f;
+        d0.r = float((val >> 11) & 0x1F) / 0x1F;
+        d0.g = float((val >> 5) & 0x3F) / 0x3F;
+        d0.b = float((val >> 0) & 0x1F) / 0x1F;
+        d0.a = 1.0f;
         break;
     case COL_RGB5A1:
         val = core->memory.read<uint16_t>(ARM11, colbufAddr + ofs * 2);
-        dstR = float((val >> 11) & 0x1F) / 0x1F;
-        dstG = float((val >> 6) & 0x1F) / 0x1F;
-        dstB = float((val >> 1) & 0x1F) / 0x1F;
-        dstA = (val & BIT(0)) ? 1.0f : 0.0f;
+        d0.r = float((val >> 11) & 0x1F) / 0x1F;
+        d0.g = float((val >> 6) & 0x1F) / 0x1F;
+        d0.b = float((val >> 1) & 0x1F) / 0x1F;
+        d0.a = (val & BIT(0)) ? 1.0f : 0.0f;
         break;
     case COL_RGBA4:
         val = core->memory.read<uint16_t>(ARM11, colbufAddr + ofs * 2);
-        dstR = float((val >> 12) & 0xF) / 0xF;
-        dstG = float((val >> 8) & 0xF) / 0xF;
-        dstB = float((val >> 4) & 0xF) / 0xF;
-        dstA = float((val >> 0) & 0xF) / 0xF;
+        d0.r = float((val >> 12) & 0xF) / 0xF;
+        d0.g = float((val >> 8) & 0xF) / 0xF;
+        d0.b = float((val >> 4) & 0xF) / 0xF;
+        d0.a = float((val >> 0) & 0xF) / 0xF;
         break;
     case COL_UNK:
         return;
     }
 
     // Multiply source RGB values with the selected operand
-    float r1 = srcR, g1 = srcG, b1 = srcB;
+    SoftColor s1 = s0;
     switch (blendOpers[0]) {
-        case OPER_ZERO: r1 = g1 = b1 = 0.0f; break;
+        case OPER_ZERO: s1.r = s1.g = s1.b = 0.0f; break;
         case OPER_ONE: break;
-        case OPER_SRC: r1 *= srcR, g1 *= srcG, b1 *= srcB; break;
-        case OPER_1MSRC: r1 *= 1.0f - srcR, g1 *= 1.0f - srcG, b1 *= 1.0f - srcB; break;
-        case OPER_DST: r1 *= dstR, g1 *= dstG, b1 *= dstB; break;
-        case OPER_1MDST: r1 *= 1.0f - dstR, g1 *= 1.0f - dstG, b1 *= 1.0f - dstB; break;
-        case OPER_SRCA: r1 *= srcA, g1 *= srcA, b1 *= srcA; break;
-        case OPER_1MSRCA: r1 *= 1.0f - srcA, g1 *= 1.0f - srcA, b1 *= 1.0f - srcA; break;
-        case OPER_DSTA: r1 *= dstA, g1 *= dstA, b1 *= dstA; break;
-        case OPER_1MDSTA: r1 *= 1.0f - dstA, g1 *= 1.0f - dstA, b1 *= 1.0f - dstA; break;
-        case OPER_CONST: r1 *= blendR, g1 *= blendG, b1 *= blendB; break;
-        case OPER_1MCON: r1 *= 1.0f - blendR, g1 *= 1.0f - blendG, b1 *= 1.0f - blendB; break;
-        case OPER_CONSTA: r1 *= blendA, g1 *= blendA, b1 *= blendA; break;
-        case OPER_1MCONA: r1 *= 1.0f - blendA, g1 *= 1.0f - blendA, b1 *= 1.0f - blendA; break;
-    }
-
-    // Multiply destination RGB values with the selected operand
-    float r2 = dstR, g2 = dstG, b2 = dstB;
-    switch (blendOpers[1]) {
-        case OPER_ZERO: r2 = g2 = b2 = 0.0f; break;
-        case OPER_ONE: break;
-        case OPER_SRC: r2 *= srcR, g2 *= srcG, b2 *= srcB; break;
-        case OPER_1MSRC: r2 *= 1.0f - srcR, g2 *= 1.0f - srcG, b2 *= 1.0f - srcB; break;
-        case OPER_DST: r2 *= dstR, g2 *= dstG, b2 *= dstB; break;
-        case OPER_1MDST: r2 *= 1.0f - dstR, g2 *= 1.0f - dstG, b2 *= 1.0f - dstB; break;
-        case OPER_SRCA: r2 *= srcA, g2 *= srcA, b2 *= srcA; break;
-        case OPER_1MSRCA: r2 *= 1.0f - srcA, g2 *= 1.0f - srcA, b2 *= 1.0f - srcA; break;
-        case OPER_DSTA: r2 *= dstA, g2 *= dstA, b2 *= dstA; break;
-        case OPER_1MDSTA: r2 *= 1.0f - dstA, g2 *= 1.0f - dstA, b2 *= 1.0f - dstA; break;
-        case OPER_CONST: r2 *= blendR, g2 *= blendG, b2 *= blendB; break;
-        case OPER_1MCON: r2 *= 1.0f - blendR, g2 *= 1.0f - blendG, b2 *= 1.0f - blendB; break;
-        case OPER_CONSTA: r2 *= blendA, g2 *= blendA, b2 *= blendA; break;
-        case OPER_1MCONA: r2 *= 1.0f - blendA, g2 *= 1.0f - blendA, b2 *= 1.0f - blendA; break;
+        case OPER_SRC: s1.r *= s0.r, s1.g *= s0.g, s1.b *= s0.b; break;
+        case OPER_1MSRC: s1.r *= 1.0f - s0.r, s1.g *= 1.0f - s0.g, s1.b *= 1.0f - s0.b; break;
+        case OPER_DST: s1.r *= d0.r, s1.g *= d0.g, s1.b *= d0.b; break;
+        case OPER_1MDST: s1.r *= 1.0f - d0.r, s1.g *= 1.0f - d0.g, s1.b *= 1.0f - d0.b; break;
+        case OPER_SRCA: s1.r *= s0.a, s1.g *= s0.a, s1.b *= s0.a; break;
+        case OPER_1MSRCA: s1.r *= 1.0f - s0.a, s1.g *= 1.0f - s0.a, s1.b *= 1.0f - s0.a; break;
+        case OPER_DSTA: s1.r *= d0.a, s1.g *= d0.a, s1.b *= d0.a; break;
+        case OPER_1MDSTA: s1.r *= 1.0f - d0.a, s1.g *= 1.0f - d0.a, s1.b *= 1.0f - d0.a; break;
+        case OPER_CONST: s1.r *= blendColor.r, s1.g *= blendColor.g, s1.b *= blendColor.b; break;
+        case OPER_1MCON: s1.r *= 1.0f - blendColor.r, s1.g *= 1.0f - blendColor.g, s1.b *= 1.0f - blendColor.b; break;
+        case OPER_CONSTA: s1.r *= blendColor.a, s1.g *= blendColor.a, s1.b *= blendColor.a; break;
+        case OPER_1MCONA: s1.r *= 1.0f - blendColor.a, s1.g *= 1.0f - blendColor.a, s1.b *= 1.0f - blendColor.a; break;
     }
 
     // Multiply source alpha values with the selected operand
-    float a1 = srcA;
     switch (blendOpers[2]) {
-        case OPER_ZERO: a1 = 0.0f; break;
+        case OPER_ZERO: s1.a = 0.0f; break;
         case OPER_ONE: break;
-        case OPER_SRC: case OPER_SRCA: a1 *= srcA; break;
-        case OPER_1MSRC: case OPER_1MSRCA: a1 *= 1.0f - srcA; break;
-        case OPER_DST: case OPER_DSTA: a1 *= dstA; break;
-        case OPER_1MDST: case OPER_1MDSTA: a1 *= 1.0f - dstA; break;
-        case OPER_CONST: case OPER_CONSTA: a1 *= blendA; break;
-        case OPER_1MCON: case OPER_1MCONA: a1 *= 1.0f - blendA; break;
+        case OPER_SRC: case OPER_SRCA: s1.a *= s0.a; break;
+        case OPER_1MSRC: case OPER_1MSRCA: s1.a *= 1.0f - s0.a; break;
+        case OPER_DST: case OPER_DSTA: s1.a *= d0.a; break;
+        case OPER_1MDST: case OPER_1MDSTA: s1.a *= 1.0f - d0.a; break;
+        case OPER_CONST: case OPER_CONSTA: s1.a *= blendColor.a; break;
+        case OPER_1MCON: case OPER_1MCONA: s1.a *= 1.0f - blendColor.a; break;
+    }
+
+    // Multiply destination RGB values with the selected operand
+    SoftColor d1 = d0;
+    switch (blendOpers[1]) {
+        case OPER_ZERO: d1.r = d1.g = d1.b = 0.0f; break;
+        case OPER_ONE: break;
+        case OPER_SRC: d1.r *= s0.r, d1.g *= s0.g, d1.b *= s0.b; break;
+        case OPER_1MSRC: d1.r *= 1.0f - s0.r, d1.g *= 1.0f - s0.g, d1.b *= 1.0f - s0.b; break;
+        case OPER_DST: d1.r *= d0.r, d1.g *= d0.g, d1.b *= d0.b; break;
+        case OPER_1MDST: d1.r *= 1.0f - d0.r, d1.g *= 1.0f - d0.g, d1.b *= 1.0f - d0.b; break;
+        case OPER_SRCA: d1.r *= s0.a, d1.g *= s0.a, d1.b *= s0.a; break;
+        case OPER_1MSRCA: d1.r *= 1.0f - s0.a, d1.g *= 1.0f - s0.a, d1.b *= 1.0f - s0.a; break;
+        case OPER_DSTA: d1.r *= d0.a, d1.g *= d0.a, d1.b *= d0.a; break;
+        case OPER_1MDSTA: d1.r *= 1.0f - d0.a, d1.g *= 1.0f - d0.a, d1.b *= 1.0f - d0.a; break;
+        case OPER_CONST: d1.r *= blendColor.r, d1.g *= blendColor.g, d1.b *= blendColor.b; break;
+        case OPER_1MCON: d1.r *= 1.0f - blendColor.r, d1.g *= 1.0f - blendColor.g, d1.b *= 1.0f - blendColor.b; break;
+        case OPER_CONSTA: d1.r *= blendColor.a, d1.g *= blendColor.a, d1.b *= blendColor.a; break;
+        case OPER_1MCONA: d1.r *= 1.0f - blendColor.a, d1.g *= 1.0f - blendColor.a, d1.b *= 1.0f - blendColor.a; break;
     }
 
     // Multiply destination alpha values with the selected operand
-    float a2 = dstA;
     switch (blendOpers[3]) {
-        case OPER_ZERO: a2 = 0.0f; break;
+        case OPER_ZERO: d1.a = 0.0f; break;
         case OPER_ONE: break;
-        case OPER_SRC: case OPER_SRCA: a2 *= srcA; break;
-        case OPER_1MSRC: case OPER_1MSRCA: a2 *= 1.0f - srcA; break;
-        case OPER_DST: case OPER_DSTA: a2 *= dstA; break;
-        case OPER_1MDST: case OPER_1MDSTA: a2 *= 1.0f - dstA; break;
-        case OPER_CONST: case OPER_CONSTA: a2 *= blendA; break;
-        case OPER_1MCON: case OPER_1MCONA: a2 *= 1.0f - blendA; break;
+        case OPER_SRC: case OPER_SRCA: d1.a *= s0.a; break;
+        case OPER_1MSRC: case OPER_1MSRCA: d1.a *= 1.0f - s0.a; break;
+        case OPER_DST: case OPER_DSTA: d1.a *= d0.a; break;
+        case OPER_1MDST: case OPER_1MDSTA: d1.a *= 1.0f - d0.a; break;
+        case OPER_CONST: case OPER_CONSTA: d1.a *= blendColor.a; break;
+        case OPER_1MCON: case OPER_1MCONA: d1.a *= 1.0f - blendColor.a; break;
     }
 
     // Blend the source and destination RGB values based on mode
-    float r, g, b;
+    float r, g, b, a;
     switch (blendModes[0]) {
-        default: r = r1 + r2, g = g1 + g2, b = b1 + b2; break;
-        case MODE_SUB: r = r1 - r2, g = g1 - g2, b = b1 - b2; break;
-        case MODE_RSUB: r = r2 - r1, g = g2 - g1, b = b2 - b1; break;
-        case MODE_MIN: r = std::min(r1, r2), g = std::min(g1, g2), b = std::min(b1, b2); break;
-        case MODE_MAX: r = std::max(r1, r2), g = std::max(g1, g2), b = std::max(b1, b2); break;
+        default: r = s1.r + d1.r, g = s1.g + d1.g, b = s1.b + d1.b; break;
+        case MODE_SUB: r = s1.r - d1.r, g = s1.g - d1.g, b = s1.b - d1.b; break;
+        case MODE_RSUB: r = d1.r - s1.r, g = d1.g - s1.g, b = d1.b - s1.b; break;
+        case MODE_MIN: r = std::min(s1.r, d1.r), g = std::min(s1.g, d1.g), b = std::min(s1.b, d1.b); break;
+        case MODE_MAX: r = std::max(s1.r, d1.r), g = std::max(s1.g, d1.g), b = std::max(s1.b, d1.b); break;
     }
 
     // Blend the source and destination alpha values based on mode
-    float a;
     switch (blendModes[1]) {
-        default: a = a1 + a2; break;
-        case MODE_SUB: a = a1 - a2; break;
-        case MODE_RSUB: a = a2 - a1; break;
-        case MODE_MIN: a = std::min(a1, a2); break;
-        case MODE_MAX: a = std::max(a1, a2); break;
+        default: a = s1.a + d1.a; break;
+        case MODE_SUB: a = s1.a - d1.a; break;
+        case MODE_RSUB: a = d1.a - s1.a; break;
+        case MODE_MIN: a = std::min(s1.a, d1.a); break;
+        case MODE_MAX: a = std::max(s1.a, d1.a); break;
     }
 
     // Clamp the final color values
@@ -1384,10 +1386,10 @@ void GpuRenderSoft::setTexDims(int i, uint16_t width, uint16_t height) {
 
 void GpuRenderSoft::setTexBorder(int i, float r, float g, float b, float a) {
     // Set one of the texture unit border colors
-    texBorders[i][0] = r;
-    texBorders[i][1] = g;
-    texBorders[i][2] = b;
-    texBorders[i][3] = a;
+    texBorders[i].r = r;
+    texBorders[i].g = g;
+    texBorders[i].b = b;
+    texBorders[i].a = a;
 }
 
 void GpuRenderSoft::setTexFmt(int i, TexFmt format) {
@@ -1416,26 +1418,26 @@ void GpuRenderSoft::setCombMode(int i, int j, CalcMode mode) {
 
 void GpuRenderSoft::setCombColor(int i, float r, float g, float b, float a) {
     // Set one of the texture combiner constant colors
-    combColors[i][0] = r;
-    combColors[i][1] = g;
-    combColors[i][2] = b;
-    combColors[i][3] = a;
+    combColors[i].r = r;
+    combColors[i].g = g;
+    combColors[i].b = b;
+    combColors[i].a = a;
 }
 
 void GpuRenderSoft::setCombBufColor(float r, float g, float b, float a) {
     // Set the texture combiner initial buffer color
-    combBufColor[0] = r;
-    combBufColor[1] = g;
-    combBufColor[2] = b;
-    combBufColor[3] = a;
+    combBufColor.r = r;
+    combBufColor.g = g;
+    combBufColor.b = b;
+    combBufColor.a = a;
 }
 
 void GpuRenderSoft::setBlendColor(float r, float g, float b, float a) {
     // Set the blender constant color
-    blendR = r;
-    blendG = g;
-    blendB = b;
-    blendA = a;
+    blendColor.r = r;
+    blendColor.g = g;
+    blendColor.b = b;
+    blendColor.a = a;
 }
 
 void GpuRenderSoft::setStencilTest(TestFunc func, bool enable) {
