@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=3Beans
-Comment=An LLE 3DS emulator (maybe)
+Comment=A low-level 3DS emulator
 GenericName=Nintendo 3DS Emulator
 Icon=com.hydra.threebeans
 Exec=3beans %U

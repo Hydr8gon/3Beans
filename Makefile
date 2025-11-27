@@ -1,5 +1,6 @@
 NAME := 3beans
 BUILD := build
+META := meta
 SRCS := src src/desktop
 ARGS := -O3 -flto -std=c++11 -DLOG_LEVEL=0
 LIBS := $(shell pkg-config --libs portaudio-2.0)
@@ -35,7 +36,7 @@ ifneq ($(OS),Windows_NT)
 ifeq ($(uname -s),Darwin)
 
 install: $(NAME)
-	./mac-bundle.sh
+	$(META)/mac-bundle.sh
 	cp -r $(APPNAME).app /Applications/
 
 uninstall:
@@ -44,7 +45,7 @@ uninstall:
 else
 
 flatpak:
-	flatpak-builder --repo=repo --force-clean build-flatpak $(PKGNAME).yml
+	flatpak-builder --repo=repo --force-clean build-flatpak $(META)/$(PKGNAME).yml
 	flatpak build-bundle repo $(NAME).flatpak $(PKGNAME)
 
 flatpak-clean:
@@ -55,7 +56,7 @@ flatpak-clean:
 
 install: $(NAME)
 	install -Dm755 $(NAME) "$(DESTDIR)/bin/$(NAME)"
-	install -Dm644 $(PKGNAME).desktop "$(DESTDIR)/share/applications/$(PKGNAME).desktop"
+	install -Dm644 $(META)/$(PKGNAME).desktop "$(DESTDIR)/share/applications/$(PKGNAME).desktop"
 
 uninstall: 
 	rm -f "$(DESTDIR)/bin/$(NAME)"

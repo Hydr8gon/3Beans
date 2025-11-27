@@ -45,7 +45,7 @@ jobs:
       run: |
         make -j$(sysctl -n hw.logicalcpu)
     - name: Bundle
-      run: ./mac-bundle.sh --dmg
+      run: meta/mac-bundle.sh --dmg
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
@@ -66,7 +66,7 @@ jobs:
     - name: Compile
       run: |
         git config --global protocol.file.allow always
-        make flatpak
+        make flatpak -j$(nproc)
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
