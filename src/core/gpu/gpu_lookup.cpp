@@ -1,0 +1,286 @@
+/*
+    Copyright 2023-2025 Hydr8gon
+
+    This file is part of 3Beans.
+
+    3Beans is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    3Beans is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with 3Beans. If not, see <https://www.gnu.org/licenses/>.
+*/
+
+#include "../core.h"
+
+// Lookup table for GPU command list write functions
+void (Gpu::*Gpu::cmdWrites[])(uint32_t, uint32_t) {
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x000-0x003
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x004-0x007
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x008-0x00B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x00C-0x00F
+    &Gpu::writeIrqReq<0>, &Gpu::writeIrqReq<1>, &Gpu::writeIrqReq<2>, &Gpu::writeIrqReq<3>, // 0x010-0x013
+    &Gpu::writeIrqReq<4>, &Gpu::writeIrqReq<5>, &Gpu::writeIrqReq<6>, &Gpu::writeIrqReq<7>, // 0x014-0x017
+    &Gpu::writeIrqReq<8>, &Gpu::writeIrqReq<9>, &Gpu::writeIrqReq<10>, &Gpu::writeIrqReq<11>, // 0x018-0x01B
+    &Gpu::writeIrqReq<12>, &Gpu::writeIrqReq<13>, &Gpu::writeIrqReq<14>, &Gpu::writeIrqReq<15>, // 0x01C-0x01F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x020-0x023
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x024-0x027
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x028-0x02B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x02C-0x02F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x030-0x033
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x034-0x037
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x038-0x03B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x03C-0x03F
+    &Gpu::writeFaceCulling, &Gpu::writeViewScaleH, &Gpu::writeViewStepH, &Gpu::writeViewScaleV, // 0x040-0x043
+    &Gpu::writeViewStepV, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x044-0x047
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x048-0x04B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeShdOutTotal, // 0x04C-0x04F
+    &Gpu::writeShdOutMap<0>, &Gpu::writeShdOutMap<1>, &Gpu::writeShdOutMap<2>, &Gpu::writeShdOutMap<3>, // 0x050-0x053
+    &Gpu::writeShdOutMap<4>, &Gpu::writeShdOutMap<5>, &Gpu::writeShdOutMap<6>, &Gpu::writeUnkCmd, // 0x054-0x057
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x058-0x05B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x05C-0x05F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x060-0x063
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x064-0x067
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x068-0x06B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x06C-0x06F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x070-0x073
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x074-0x077
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x078-0x07B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x07C-0x07F
+    &Gpu::writeUnkCmd, &Gpu::writeTexBorder<0>, &Gpu::writeTexDim<0>, &Gpu::writeTexParam<0>, // 0x080-0x083
+    &Gpu::writeUnkCmd, &Gpu::writeTexAddr1<0>, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x084-0x087
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x088-0x08B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeTexType<0>, &Gpu::writeUnkCmd, // 0x08C-0x08F
+    &Gpu::writeUnkCmd, &Gpu::writeTexBorder<1>, &Gpu::writeTexDim<1>, &Gpu::writeTexParam<1>, // 0x090-0x093
+    &Gpu::writeUnkCmd, &Gpu::writeTexAddr1<1>, &Gpu::writeTexType<1>, &Gpu::writeUnkCmd, // 0x094-0x097
+    &Gpu::writeUnkCmd, &Gpu::writeTexBorder<2>, &Gpu::writeTexDim<2>, &Gpu::writeTexParam<2>, // 0x098-0x09B
+    &Gpu::writeUnkCmd, &Gpu::writeTexAddr1<2>, &Gpu::writeTexType<2>, &Gpu::writeUnkCmd, // 0x09C-0x09F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x0A0-0x0A3
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x0A4-0x0A7
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x0A8-0x0AB
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x0AC-0x0AF
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x0B0-0x0B3
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x0B4-0x0B7
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x0B8-0x0BB
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x0BC-0x0BF
+    &Gpu::writeCombSrc<0>, &Gpu::writeCombOper<0>, &Gpu::writeCombMode<0>, &Gpu::writeCombColor<0>, // 0x0C0-0x0C3
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x0C4-0x0C7
+    &Gpu::writeCombSrc<1>, &Gpu::writeCombOper<1>, &Gpu::writeCombMode<1>, &Gpu::writeCombColor<1>, // 0x0C8-0x0CB
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x0CC-0x0CF
+    &Gpu::writeCombSrc<2>, &Gpu::writeCombOper<2>, &Gpu::writeCombMode<2>, &Gpu::writeCombColor<2>, // 0x0D0-0x0D3
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x0D4-0x0D7
+    &Gpu::writeCombSrc<3>, &Gpu::writeCombOper<3>, &Gpu::writeCombMode<3>, &Gpu::writeCombColor<3>, // 0x0D8-0x0DB
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x0DC-0x0DF
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x0E0-0x0E3
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x0E4-0x0E7
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x0E8-0x0EB
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x0EC-0x0EF
+    &Gpu::writeCombSrc<4>, &Gpu::writeCombOper<4>, &Gpu::writeCombMode<4>, &Gpu::writeCombColor<4>, // 0x0F0-0x0F3
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x0F4-0x0F7
+    &Gpu::writeCombSrc<5>, &Gpu::writeCombOper<5>, &Gpu::writeCombMode<5>, &Gpu::writeCombColor<5>, // 0x0F8-0x0FB
+    &Gpu::writeUnkCmd, &Gpu::writeCombBufCol, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x0FC-0x0FF
+    &Gpu::writeUnkCmd, &Gpu::writeBlendFunc, &Gpu::writeUnkCmd, &Gpu::writeBlendColor, // 0x100-0x103
+    &Gpu::writeAlphaTest, &Gpu::writeStencilTest, &Gpu::writeStencilOp, &Gpu::writeDepcolMask, // 0x104-0x107
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x108-0x10B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x10C-0x10F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeColbufWrite, // 0x110-0x113
+    &Gpu::writeUnkCmd, &Gpu::writeDepbufWrite, &Gpu::writeDepbufFmt, &Gpu::writeColbufFmt, // 0x114-0x117
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x118-0x11B
+    &Gpu::writeDepbufLoc, &Gpu::writeColbufLoc, &Gpu::writeBufferDim, &Gpu::writeUnkCmd, // 0x11C-0x11F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x120-0x123
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x124-0x127
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x128-0x12B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x12C-0x12F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x130-0x133
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x134-0x137
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x138-0x13B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x13C-0x13F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x140-0x143
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x144-0x147
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x148-0x14B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x14C-0x14F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x150-0x153
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x154-0x157
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x158-0x15B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x15C-0x15F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x160-0x163
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x164-0x167
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x168-0x16B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x16C-0x16F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x170-0x173
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x174-0x177
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x178-0x17B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x17C-0x17F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x180-0x183
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x184-0x187
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x188-0x18B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x18C-0x18F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x190-0x193
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x194-0x197
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x198-0x19B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x19C-0x19F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x1A0-0x1A3
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x1A4-0x1A7
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x1A8-0x1AB
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x1AC-0x1AF
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x1B0-0x1B3
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x1B4-0x1B7
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x1B8-0x1BB
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x1BC-0x1BF
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x1C0-0x1C3
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x1C4-0x1C7
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x1C8-0x1CB
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x1CC-0x1CF
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x1D0-0x1D3
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x1D4-0x1D7
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x1D8-0x1DB
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x1DC-0x1DF
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x1E0-0x1E3
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x1E4-0x1E7
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x1E8-0x1EB
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x1EC-0x1EF
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x1F0-0x1F3
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x1F4-0x1F7
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x1F8-0x1FB
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x1FC-0x1FF
+    &Gpu::writeAttrBase, &Gpu::writeAttrFmtL, &Gpu::writeAttrFmtH, &Gpu::writeAttrOfs<0>, // 0x200-0x203
+    &Gpu::writeAttrCfgL<0>, &Gpu::writeAttrCfgH<0>, &Gpu::writeAttrOfs<1>, &Gpu::writeAttrCfgL<1>, // 0x204-0x207
+    &Gpu::writeAttrCfgH<1>, &Gpu::writeAttrOfs<2>, &Gpu::writeAttrCfgL<2>, &Gpu::writeAttrCfgH<2>, // 0x208-0x20B
+    &Gpu::writeAttrOfs<3>, &Gpu::writeAttrCfgL<3>, &Gpu::writeAttrCfgH<3>, &Gpu::writeAttrOfs<4>, // 0x20C-0x20F
+    &Gpu::writeAttrCfgL<4>, &Gpu::writeAttrCfgH<4>, &Gpu::writeAttrOfs<5>, &Gpu::writeAttrCfgL<5>, // 0x210-0x213
+    &Gpu::writeAttrCfgH<5>, &Gpu::writeAttrOfs<6>, &Gpu::writeAttrCfgL<6>, &Gpu::writeAttrCfgH<6>, // 0x214-0x217
+    &Gpu::writeAttrOfs<7>, &Gpu::writeAttrCfgL<7>, &Gpu::writeAttrCfgH<7>, &Gpu::writeAttrOfs<8>, // 0x218-0x21B
+    &Gpu::writeAttrCfgL<8>, &Gpu::writeAttrCfgH<8>, &Gpu::writeAttrOfs<9>, &Gpu::writeAttrCfgL<9>, // 0x21C-0x21F
+    &Gpu::writeAttrCfgH<9>, &Gpu::writeAttrOfs<10>, &Gpu::writeAttrCfgL<10>, &Gpu::writeAttrCfgH<10>, // 0x220-0x223
+    &Gpu::writeAttrOfs<11>, &Gpu::writeAttrCfgL<11>, &Gpu::writeAttrCfgH<11>, &Gpu::writeAttrIdxList, // 0x224-0x227
+    &Gpu::writeAttrNumVerts, &Gpu::writeUnkCmd, &Gpu::writeAttrFirstIdx, &Gpu::writeUnkCmd, // 0x228-0x22B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeAttrDrawArrays, &Gpu::writeAttrDrawElems, // 0x22C-0x22F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeAttrFixedIdx, &Gpu::writeAttrFixedData, // 0x230-0x233
+    &Gpu::writeAttrFixedData, &Gpu::writeAttrFixedData, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x234-0x237
+    &Gpu::writeCmdSize<0>, &Gpu::writeCmdSize<1>, &Gpu::writeCmdAddr<0>, &Gpu::writeCmdAddr<1>, // 0x238-0x23B
+    &Gpu::writeCmdJump<0>, &Gpu::writeCmdJump<1>, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x23C-0x23F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeVshNumAttr, &Gpu::writeUnkCmd, // 0x240-0x243
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x244-0x247
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x248-0x24B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x24C-0x24F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x250-0x253
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x254-0x257
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x258-0x25B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writePrimConfig, &Gpu::writePrimRestart, // 0x25C-0x25F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x260-0x263
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x264-0x267
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x268-0x26B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x26C-0x26F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x270-0x273
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x274-0x277
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x278-0x27B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x27C-0x27F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x280-0x283
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x284-0x287
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x288-0x28B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x28C-0x28F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x290-0x293
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x294-0x297
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x298-0x29B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x29C-0x29F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x2A0-0x2A3
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x2A4-0x2A7
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x2A8-0x2AB
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x2AC-0x2AF
+    &Gpu::writeVshBools, &Gpu::writeVshInts<0>, &Gpu::writeVshInts<1>, &Gpu::writeVshInts<2>, // 0x2B0-0x2B3
+    &Gpu::writeVshInts<3>, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x2B4-0x2B7
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeVshEntry, &Gpu::writeVshAttrIdsL, // 0x2B8-0x2BB
+    &Gpu::writeVshAttrIdsH, &Gpu::writeVshOutMask, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x2BC-0x2BF
+    &Gpu::writeVshFloatIdx, &Gpu::writeVshFloatData, &Gpu::writeVshFloatData, &Gpu::writeVshFloatData, // 0x2C0-0x2C3
+    &Gpu::writeVshFloatData, &Gpu::writeVshFloatData, &Gpu::writeVshFloatData, &Gpu::writeVshFloatData, // 0x2C4-0x2C7
+    &Gpu::writeVshFloatData, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeVshCodeIdx, // 0x2C8-0x2CB
+    &Gpu::writeVshCodeData, &Gpu::writeVshCodeData, &Gpu::writeVshCodeData, &Gpu::writeVshCodeData, // 0x2CC-0x2CF
+    &Gpu::writeVshCodeData, &Gpu::writeVshCodeData, &Gpu::writeVshCodeData, &Gpu::writeVshCodeData, // 0x2D0-0x2D3
+    &Gpu::writeUnkCmd, &Gpu::writeVshDescIdx, &Gpu::writeVshDescData, &Gpu::writeVshDescData, // 0x2D4-0x2D7
+    &Gpu::writeVshDescData, &Gpu::writeVshDescData, &Gpu::writeVshDescData, &Gpu::writeVshDescData, // 0x2D8-0x2DB
+    &Gpu::writeVshDescData, &Gpu::writeVshDescData, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x2DC-0x2DF
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x2E0-0x2E3
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x2E4-0x2E7
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x2E8-0x2EB
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x2EC-0x2EF
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x2F0-0x2F3
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x2F4-0x2F7
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x2F8-0x2FB
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x2FC-0x2FF
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x300-0x303
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x304-0x307
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x308-0x30B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x30C-0x30F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x310-0x313
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x314-0x317
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x318-0x31B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x31C-0x31F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x320-0x323
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x324-0x327
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x328-0x32B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x32C-0x32F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x330-0x333
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x334-0x337
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x338-0x33B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x33C-0x33F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x340-0x343
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x344-0x347
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x348-0x34B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x34C-0x34F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x350-0x353
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x354-0x357
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x358-0x35B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x35C-0x35F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x360-0x363
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x364-0x367
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x368-0x36B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x36C-0x36F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x370-0x373
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x374-0x377
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x378-0x37B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x37C-0x37F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x380-0x383
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x384-0x387
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x388-0x38B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x38C-0x38F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x390-0x393
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x394-0x397
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x398-0x39B
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x39C-0x39F
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x3A0-0x3A3
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x3A4-0x3A7
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x3A8-0x3AB
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x3AC-0x3AF
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x3B0-0x3B3
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x3B4-0x3B7
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x3B8-0x3BB
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x3BC-0x3BF
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x3C0-0x3C3
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x3C4-0x3C7
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x3C8-0x3CB
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x3CC-0x3CF
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x3D0-0x3D3
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x3D4-0x3D7
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x3D8-0x3DB
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x3DC-0x3DF
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x3E0-0x3E3
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x3E4-0x3E7
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x3E8-0x3EB
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x3EC-0x3EF
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x3F0-0x3F3
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x3F4-0x3F7
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x3F8-0x3FB
+    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd // 0x3FC-0x3FF
+};
+
+// Lookup table for GPU command list parameter masks
+uint32_t Gpu::maskTable[] {
+    0x00000000, 0x000000FF, 0x0000FF00, 0x0000FFFF, 0x00FF0000, 0x00FF00FF, 0x00FFFF00, 0x00FFFFFF,
+    0xFF000000, 0xFF0000FF, 0xFF00FF00, 0xFF00FFFF, 0xFFFF0000, 0xFFFF00FF, 0xFFFFFF00, 0xFFFFFFFF
+};

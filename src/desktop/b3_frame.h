@@ -22,7 +22,7 @@
 #include <mutex>
 #include <thread>
 #include <wx/wx.h>
-#include "../core.h"
+#include "../core/core.h"
 
 #define MIN_SIZE wxSize(400, 480)
 class b3Canvas;

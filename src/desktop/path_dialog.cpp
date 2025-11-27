@@ -18,7 +18,7 @@
 */
 
 #include "path_dialog.h"
-#include "../settings.h"
+#include "../core/settings.h"
 
 enum PathEvent {
     BOOT11_BROWSE = 1,
