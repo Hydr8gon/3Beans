@@ -333,18 +333,31 @@ void GpuRenderSoft::getSource(SoftColor &out, SoftVertex &v, int i, int j) {
             getCombine(out, v, i - 1);
         break;
 
-    case COMB_PRVBUF:
-        // Generate the buffered previous output, using buffer color for the first update
-        if (i == 0)
-            out = {0.0f, 0.0f, 0.0f, 0.0f};
-        else if (i == 1)
+    case COMB_PRVBUF: {
+        // Check which combiners should be buffered at this stage
+        int rgb = std::min(3, i - 1), a = rgb;
+        while (rgb >= 0 && !(combBufMask & BIT(rgb))) rgb--;
+        while (a >= 0 && !(combBufMask & BIT(4 + a))) a--;
+
+        // Generate the buffered RGB values, or use the cache
+        if (rgb == -1)
             out = combBufColor;
-        else if (combMask & BIT(i - 2))
-            out = combCache[i - 2];
+        else if (~combMask & BIT(rgb))
+            getCombine(out, v, rgb);
         else
-            getCombine(out, v, i - 2);
+             out = combCache[rgb];
+
+        // Generate the buffered alpha value, or use the cache
+        if (a == -1) {
+            out.a = combBufColor.a;
+        }
+        else {
+            if (~combMask & BIT(a))
+                getCombine(combCache[a], v, a);
+            out.a = combCache[a].a;
+        }
         break;
-    }
+    }}
 
     // Modify the source color based on its operand type
     switch (combOpers[i][j]) {

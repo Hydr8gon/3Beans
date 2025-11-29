@@ -65,6 +65,7 @@ public:
     void setCombMode(int i, int j, CalcMode mode);
     void setCombColor(int i, float r, float g, float b, float a);
     void setCombBufColor(float r, float g, float b, float a);
+    void setCombBufMask(uint8_t mask) { combBufMask = mask; }
     void setBlendOper(int i, OperFunc oper) { blendOpers[i] = oper; }
     void setBlendMode(int i, CalcMode mode) { blendModes[i] = mode; }
     void setBlendColor(float r, float g, float b, float a);
@@ -149,6 +150,7 @@ private:
     CalcMode combModes[6][2] = {};
     SoftColor combColors[6] = {};
     SoftColor combBufColor = {};
+    uint8_t combBufMask = 0;
     OperFunc blendOpers[4] = {};
     CalcMode blendModes[2] = {};
     SoftColor blendColor = {};

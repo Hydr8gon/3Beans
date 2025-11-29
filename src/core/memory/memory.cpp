@@ -810,6 +810,7 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x10401364, data = core->gpu.readCombOper(3)) // GPU_COMB3_OPER
                 DEF_IO32(0x10401368, data = core->gpu.readCombMode(3)) // GPU_COMB3_MODE
                 DEF_IO32(0x1040136C, data = core->gpu.readCombColor(3)) // GPU_COMB3_COLOR
+                DEF_IO32(0x10401380, data = core->gpu.readCombBufUpd()) // GPU_COMB_BUF_UPD
                 DEF_IO32(0x104013C0, data = core->gpu.readCombSrc(4)) // GPU_COMB4_SRC
                 DEF_IO32(0x104013C4, data = core->gpu.readCombOper(4)) // GPU_COMB4_OPER
                 DEF_IO32(0x104013C8, data = core->gpu.readCombMode(4)) // GPU_COMB4_MODE
@@ -2370,6 +2371,7 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x10401364, core->gpu.writeCombOper<3>(IO_PARAMS)) // GPU_COMB3_OPER
                 DEF_IO32(0x10401368, core->gpu.writeCombMode<3>(IO_PARAMS)) // GPU_COMB3_MODE
                 DEF_IO32(0x1040136C, core->gpu.writeCombColor<3>(IO_PARAMS)) // GPU_COMB3_COLOR
+                DEF_IO32(0x10401380, core->gpu.writeCombBufUpd(IO_PARAMS)) // GPU_COMB_BUF_UPD
                 DEF_IO32(0x104013C0, core->gpu.writeCombSrc<4>(IO_PARAMS)) // GPU_COMB4_SRC
                 DEF_IO32(0x104013C4, core->gpu.writeCombOper<4>(IO_PARAMS)) // GPU_COMB4_OPER
                 DEF_IO32(0x104013C8, core->gpu.writeCombMode<4>(IO_PARAMS)) // GPU_COMB4_MODE

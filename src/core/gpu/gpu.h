@@ -20,6 +20,7 @@
 #pragma once
 
 #include <cstdint>
+#include <mutex>
 #include <thread>
 
 class Core;
@@ -228,6 +229,7 @@ public:
     uint32_t readCombOper(int i) { return gpuCombOper[i]; }
     uint32_t readCombMode(int i) { return gpuCombMode[i]; }
     uint32_t readCombColor(int i) { return gpuCombColor[i]; }
+    uint32_t readCombBufUpd() { return gpuCombBufUpd; }
     uint32_t readCombBufCol() { return gpuCombBufCol; }
     uint32_t readBlendFunc() { return gpuBlendFunc; }
     uint32_t readBlendColor() { return gpuBlendColor; }
@@ -300,6 +302,7 @@ public:
     template <int i> void writeCombOper(uint32_t mask, uint32_t value);
     template <int i> void writeCombMode(uint32_t mask, uint32_t value);
     template <int i> void writeCombColor(uint32_t mask, uint32_t value);
+    void writeCombBufUpd(uint32_t mask, uint32_t value);
     void writeCombBufCol(uint32_t mask, uint32_t value);
     void writeBlendFunc(uint32_t mask, uint32_t value);
     void writeBlendColor(uint32_t mask, uint32_t value);
@@ -396,6 +399,7 @@ private:
     uint32_t gpuCombOper[6] = {};
     uint32_t gpuCombMode[6] = {};
     uint32_t gpuCombColor[6] = {};
+    uint32_t gpuCombBufUpd = 0;
     uint32_t gpuCombBufCol = 0;
     uint32_t gpuBlendFunc = 0;
     uint32_t gpuBlendColor = 0;

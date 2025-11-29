@@ -377,6 +377,14 @@ template <int i> void Gpu::writeCombColor(uint32_t mask, uint32_t value) {
     core->gpuRender.setCombColor(i, r, g, b, a);
 }
 
+void Gpu::writeCombBufUpd(uint32_t mask, uint32_t value) {
+    // Write to the texture combiner buffer update register and set the renderer's mask
+    // TODO: use other bits (or are they just for fog?)
+    mask &= 0x301FF0F;
+    gpuCombBufUpd = (gpuCombBufUpd & ~mask) | (value & mask);
+    core->gpuRender.setCombBufMask(gpuCombBufUpd >> 8);
+}
+
 void Gpu::writeCombBufCol(uint32_t mask, uint32_t value) {
     // Write to the texture combiner buffer color and send it to the renderer
     gpuCombBufCol = (gpuCombBufCol & ~mask) | (value & mask);

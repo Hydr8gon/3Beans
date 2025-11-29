@@ -95,5 +95,6 @@ jobs:
         name: Rolling Release
         body: These are automatically updated builds of the latest commit.
         artifacts: "*.zip"
+        makeLatest: true
         tag: release
         token: ${{ secrets.GITHUB_TOKEN }}
