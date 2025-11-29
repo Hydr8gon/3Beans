@@ -61,12 +61,12 @@ public:
     void setTexWrapS(int i, TexWrap wrap) { texWrapS[i] = wrap; }
     void setTexWrapT(int i, TexWrap wrap) { texWrapT[i] = wrap; }
     void setCombSrc(int i, int j, CombSrc src);
-    void setCombOper(int i, int j, OperFunc oper);
+    void setCombOper(int i, int j, CombOper oper);
     void setCombMode(int i, int j, CalcMode mode);
     void setCombColor(int i, float r, float g, float b, float a);
     void setCombBufColor(float r, float g, float b, float a);
     void setCombBufMask(uint8_t mask) { combBufMask = mask; }
-    void setBlendOper(int i, OperFunc oper) { blendOpers[i] = oper; }
+    void setBlendOper(int i, BlendOper oper) { blendOpers[i] = oper; }
     void setBlendMode(int i, CalcMode mode) { blendModes[i] = mode; }
     void setBlendColor(float r, float g, float b, float a);
     void setAlphaFunc(TestFunc func) { alphaFunc = func; }
@@ -146,12 +146,12 @@ private:
     TexWrap texWrapS[3] = {};
     TexWrap texWrapT[3] = {};
     CombSrc combSrcs[6][6] = {};
-    OperFunc combOpers[6][6] = {};
+    CombOper combOpers[6][6] = {};
     CalcMode combModes[6][2] = {};
     SoftColor combColors[6] = {};
     SoftColor combBufColor = {};
     uint8_t combBufMask = 0;
-    OperFunc blendOpers[4] = {};
+    BlendOper blendOpers[4] = {};
     CalcMode blendModes[2] = {};
     SoftColor blendColor = {};
     TestFunc alphaFunc = TEST_AL;

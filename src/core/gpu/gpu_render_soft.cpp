@@ -365,6 +365,12 @@ void GpuRenderSoft::getSource(SoftColor &out, SoftVertex &v, int i, int j) {
         case OPER_1MSRC: out = {1.0f - out.r, 1.0f - out.g, 1.0f - out.b, 1.0f - out.a}; return;
         case OPER_SRCA: out.r = out.g = out.b = out.a; return;
         case OPER_1MSRCA: out.r = out.g = out.b = out.a = 1.0f - out.a; return;
+        case OPER_SRCR: out.g = out.b = out.a = out.r; return;
+        case OPER_1MSRCR: out.r = out.g = out.b = out.a = 1.0f - out.r; return;
+        case OPER_SRCG: out.r = out.b = out.a = out.g; return;
+        case OPER_1MSRCG: out.r = out.g = out.b = out.a = 1.0f - out.g; return;
+        case OPER_SRCB: out.r = out.g = out.a = out.b; return;
+        case OPER_1MSRCB: out.r = out.g = out.b = out.a = 1.0f - out.b; return;
     }
 }
 
@@ -474,7 +480,7 @@ void GpuRenderSoft::getCombine(SoftColor &out, SoftVertex &v, int i) {
     case MODE_DOT3A:
         getSource(c0, v, i, 3);
         getSource(c1, v, i, 4);
-        out.a = 4.0f * c0.r - 0.5f * c1.r - 0.5f + c0.g - 0.5f * c1.g - 0.5f + c0.b - 0.5f * c1.b - 0.5f;
+        out.a = 4.0f * c0.a - 0.5f * c1.a - 0.5f + c0.a - 0.5f * c1.a - 0.5f + c0.a - 0.5f * c1.a - 0.5f;
         break;
     case MODE_MULADD:
         getSource(c0, v, i, 3);
@@ -657,63 +663,63 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
     // Multiply source RGB values with the selected operand
     SoftColor s1 = s0;
     switch (blendOpers[0]) {
-        case OPER_ZERO: s1.r = s1.g = s1.b = 0.0f; break;
-        case OPER_ONE: break;
-        case OPER_SRC: s1.r *= s0.r, s1.g *= s0.g, s1.b *= s0.b; break;
-        case OPER_1MSRC: s1.r *= 1.0f - s0.r, s1.g *= 1.0f - s0.g, s1.b *= 1.0f - s0.b; break;
-        case OPER_DST: s1.r *= d0.r, s1.g *= d0.g, s1.b *= d0.b; break;
-        case OPER_1MDST: s1.r *= 1.0f - d0.r, s1.g *= 1.0f - d0.g, s1.b *= 1.0f - d0.b; break;
-        case OPER_SRCA: s1.r *= s0.a, s1.g *= s0.a, s1.b *= s0.a; break;
-        case OPER_1MSRCA: s1.r *= 1.0f - s0.a, s1.g *= 1.0f - s0.a, s1.b *= 1.0f - s0.a; break;
-        case OPER_DSTA: s1.r *= d0.a, s1.g *= d0.a, s1.b *= d0.a; break;
-        case OPER_1MDSTA: s1.r *= 1.0f - d0.a, s1.g *= 1.0f - d0.a, s1.b *= 1.0f - d0.a; break;
-        case OPER_CONST: s1.r *= blendColor.r, s1.g *= blendColor.g, s1.b *= blendColor.b; break;
-        case OPER_1MCON: s1.r *= 1.0f - blendColor.r, s1.g *= 1.0f - blendColor.g, s1.b *= 1.0f - blendColor.b; break;
-        case OPER_CONSTA: s1.r *= blendColor.a, s1.g *= blendColor.a, s1.b *= blendColor.a; break;
-        case OPER_1MCONA: s1.r *= 1.0f - blendColor.a, s1.g *= 1.0f - blendColor.a, s1.b *= 1.0f - blendColor.a; break;
+        case BLND_ZERO: s1.r = s1.g = s1.b = 0.0f; break;
+        case BLND_ONE: break;
+        case BLND_SRC: s1.r *= s0.r, s1.g *= s0.g, s1.b *= s0.b; break;
+        case BLND_1MSRC: s1.r *= 1.0f - s0.r, s1.g *= 1.0f - s0.g, s1.b *= 1.0f - s0.b; break;
+        case BLND_DST: s1.r *= d0.r, s1.g *= d0.g, s1.b *= d0.b; break;
+        case BLND_1MDST: s1.r *= 1.0f - d0.r, s1.g *= 1.0f - d0.g, s1.b *= 1.0f - d0.b; break;
+        case BLND_SRCA: s1.r *= s0.a, s1.g *= s0.a, s1.b *= s0.a; break;
+        case BLND_1MSRCA: s1.r *= 1.0f - s0.a, s1.g *= 1.0f - s0.a, s1.b *= 1.0f - s0.a; break;
+        case BLND_DSTA: s1.r *= d0.a, s1.g *= d0.a, s1.b *= d0.a; break;
+        case BLND_1MDSTA: s1.r *= 1.0f - d0.a, s1.g *= 1.0f - d0.a, s1.b *= 1.0f - d0.a; break;
+        case BLND_CONST: s1.r *= blendColor.r, s1.g *= blendColor.g, s1.b *= blendColor.b; break;
+        case BLND_1MCON: s1.r *= 1.0f - blendColor.r, s1.g *= 1.0f - blendColor.g, s1.b *= 1.0f - blendColor.b; break;
+        case BLND_CONSTA: s1.r *= blendColor.a, s1.g *= blendColor.a, s1.b *= blendColor.a; break;
+        case BLND_1MCONA: s1.r *= 1.0f - blendColor.a, s1.g *= 1.0f - blendColor.a, s1.b *= 1.0f - blendColor.a; break;
     }
 
     // Multiply source alpha values with the selected operand
     switch (blendOpers[2]) {
-        case OPER_ZERO: s1.a = 0.0f; break;
-        case OPER_ONE: break;
-        case OPER_SRC: case OPER_SRCA: s1.a *= s0.a; break;
-        case OPER_1MSRC: case OPER_1MSRCA: s1.a *= 1.0f - s0.a; break;
-        case OPER_DST: case OPER_DSTA: s1.a *= d0.a; break;
-        case OPER_1MDST: case OPER_1MDSTA: s1.a *= 1.0f - d0.a; break;
-        case OPER_CONST: case OPER_CONSTA: s1.a *= blendColor.a; break;
-        case OPER_1MCON: case OPER_1MCONA: s1.a *= 1.0f - blendColor.a; break;
+        case BLND_ZERO: s1.a = 0.0f; break;
+        case BLND_ONE: break;
+        case BLND_SRC: case BLND_SRCA: s1.a *= s0.a; break;
+        case BLND_1MSRC: case BLND_1MSRCA: s1.a *= 1.0f - s0.a; break;
+        case BLND_DST: case BLND_DSTA: s1.a *= d0.a; break;
+        case BLND_1MDST: case BLND_1MDSTA: s1.a *= 1.0f - d0.a; break;
+        case BLND_CONST: case BLND_CONSTA: s1.a *= blendColor.a; break;
+        case BLND_1MCON: case BLND_1MCONA: s1.a *= 1.0f - blendColor.a; break;
     }
 
     // Multiply destination RGB values with the selected operand
     SoftColor d1 = d0;
     switch (blendOpers[1]) {
-        case OPER_ZERO: d1.r = d1.g = d1.b = 0.0f; break;
-        case OPER_ONE: break;
-        case OPER_SRC: d1.r *= s0.r, d1.g *= s0.g, d1.b *= s0.b; break;
-        case OPER_1MSRC: d1.r *= 1.0f - s0.r, d1.g *= 1.0f - s0.g, d1.b *= 1.0f - s0.b; break;
-        case OPER_DST: d1.r *= d0.r, d1.g *= d0.g, d1.b *= d0.b; break;
-        case OPER_1MDST: d1.r *= 1.0f - d0.r, d1.g *= 1.0f - d0.g, d1.b *= 1.0f - d0.b; break;
-        case OPER_SRCA: d1.r *= s0.a, d1.g *= s0.a, d1.b *= s0.a; break;
-        case OPER_1MSRCA: d1.r *= 1.0f - s0.a, d1.g *= 1.0f - s0.a, d1.b *= 1.0f - s0.a; break;
-        case OPER_DSTA: d1.r *= d0.a, d1.g *= d0.a, d1.b *= d0.a; break;
-        case OPER_1MDSTA: d1.r *= 1.0f - d0.a, d1.g *= 1.0f - d0.a, d1.b *= 1.0f - d0.a; break;
-        case OPER_CONST: d1.r *= blendColor.r, d1.g *= blendColor.g, d1.b *= blendColor.b; break;
-        case OPER_1MCON: d1.r *= 1.0f - blendColor.r, d1.g *= 1.0f - blendColor.g, d1.b *= 1.0f - blendColor.b; break;
-        case OPER_CONSTA: d1.r *= blendColor.a, d1.g *= blendColor.a, d1.b *= blendColor.a; break;
-        case OPER_1MCONA: d1.r *= 1.0f - blendColor.a, d1.g *= 1.0f - blendColor.a, d1.b *= 1.0f - blendColor.a; break;
+        case BLND_ZERO: d1.r = d1.g = d1.b = 0.0f; break;
+        case BLND_ONE: break;
+        case BLND_SRC: d1.r *= s0.r, d1.g *= s0.g, d1.b *= s0.b; break;
+        case BLND_1MSRC: d1.r *= 1.0f - s0.r, d1.g *= 1.0f - s0.g, d1.b *= 1.0f - s0.b; break;
+        case BLND_DST: d1.r *= d0.r, d1.g *= d0.g, d1.b *= d0.b; break;
+        case BLND_1MDST: d1.r *= 1.0f - d0.r, d1.g *= 1.0f - d0.g, d1.b *= 1.0f - d0.b; break;
+        case BLND_SRCA: d1.r *= s0.a, d1.g *= s0.a, d1.b *= s0.a; break;
+        case BLND_1MSRCA: d1.r *= 1.0f - s0.a, d1.g *= 1.0f - s0.a, d1.b *= 1.0f - s0.a; break;
+        case BLND_DSTA: d1.r *= d0.a, d1.g *= d0.a, d1.b *= d0.a; break;
+        case BLND_1MDSTA: d1.r *= 1.0f - d0.a, d1.g *= 1.0f - d0.a, d1.b *= 1.0f - d0.a; break;
+        case BLND_CONST: d1.r *= blendColor.r, d1.g *= blendColor.g, d1.b *= blendColor.b; break;
+        case BLND_1MCON: d1.r *= 1.0f - blendColor.r, d1.g *= 1.0f - blendColor.g, d1.b *= 1.0f - blendColor.b; break;
+        case BLND_CONSTA: d1.r *= blendColor.a, d1.g *= blendColor.a, d1.b *= blendColor.a; break;
+        case BLND_1MCONA: d1.r *= 1.0f - blendColor.a, d1.g *= 1.0f - blendColor.a, d1.b *= 1.0f - blendColor.a; break;
     }
 
     // Multiply destination alpha values with the selected operand
     switch (blendOpers[3]) {
-        case OPER_ZERO: d1.a = 0.0f; break;
-        case OPER_ONE: break;
-        case OPER_SRC: case OPER_SRCA: d1.a *= s0.a; break;
-        case OPER_1MSRC: case OPER_1MSRCA: d1.a *= 1.0f - s0.a; break;
-        case OPER_DST: case OPER_DSTA: d1.a *= d0.a; break;
-        case OPER_1MDST: case OPER_1MDSTA: d1.a *= 1.0f - d0.a; break;
-        case OPER_CONST: case OPER_CONSTA: d1.a *= blendColor.a; break;
-        case OPER_1MCON: case OPER_1MCONA: d1.a *= 1.0f - blendColor.a; break;
+        case BLND_ZERO: d1.a = 0.0f; break;
+        case BLND_ONE: break;
+        case BLND_SRC: case BLND_SRCA: d1.a *= s0.a; break;
+        case BLND_1MSRC: case BLND_1MSRCA: d1.a *= 1.0f - s0.a; break;
+        case BLND_DST: case BLND_DSTA: d1.a *= d0.a; break;
+        case BLND_1MDST: case BLND_1MDSTA: d1.a *= 1.0f - d0.a; break;
+        case BLND_CONST: case BLND_CONSTA: d1.a *= blendColor.a; break;
+        case BLND_1MCON: case BLND_1MCONA: d1.a *= 1.0f - blendColor.a; break;
     }
 
     // Blend the source and destination RGB values based on mode
@@ -1417,7 +1423,7 @@ void GpuRenderSoft::setCombSrc(int i, int j, CombSrc src) {
     combStart = -1;
 }
 
-void GpuRenderSoft::setCombOper(int i, int j, OperFunc oper) {
+void GpuRenderSoft::setCombOper(int i, int j, CombOper oper) {
     // Set a texture combiner operand and invalidate the start index
     combOpers[i][j] = oper;
     combStart = -1;

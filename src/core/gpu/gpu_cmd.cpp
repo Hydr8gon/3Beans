@@ -336,16 +336,42 @@ template <int i> void Gpu::writeCombSrc(uint32_t mask, uint32_t value) {
 
 template <int i> void Gpu::writeCombOper(uint32_t mask, uint32_t value) {
     // Write to some of the texture combiner operands
-    mask &= 0x111333;
+    mask &= 0x777FFF;
     gpuCombOper[i] = (gpuCombOper[i] & ~mask) | (value & mask);
 
-    // Set the operands for the renderer
-    for (int j = 0; j < 6; j++) {
-        switch ((gpuCombOper[i] >> (j * 4)) & 0x3) {
+    // Set RGB operands for the renderer if they're valid
+    for (int j = 0; j < 3; j++) {
+        switch (uint8_t oper = (gpuCombOper[i] >> (j * 4)) & 0xF) {
             case 0x0: core->gpuRender.setCombOper(i, j, OPER_SRC); continue;
             case 0x1: core->gpuRender.setCombOper(i, j, OPER_1MSRC); continue;
             case 0x2: core->gpuRender.setCombOper(i, j, OPER_SRCA); continue;
-            default: core->gpuRender.setCombOper(i, j, OPER_1MSRCA); continue;
+            case 0x3: core->gpuRender.setCombOper(i, j, OPER_1MSRCA); continue;
+            case 0x4: core->gpuRender.setCombOper(i, j, OPER_SRCR); continue;
+            case 0x5: core->gpuRender.setCombOper(i, j, OPER_1MSRCR); continue;
+            case 0x8: core->gpuRender.setCombOper(i, j, OPER_SRCG); continue;
+            case 0x9: core->gpuRender.setCombOper(i, j, OPER_1MSRCG); continue;
+            case 0xC: core->gpuRender.setCombOper(i, j, OPER_SRCB); continue;
+            case 0xD: core->gpuRender.setCombOper(i, j, OPER_1MSRCB); continue;
+
+        default:
+            // Catch unknown RGB operand values
+            LOG_WARN("GPU texture combiner %d operand %d set to unknown value: 0x%X\n", i, j, oper);
+            core->gpuRender.setCombOper(i, j, OPER_SRC);
+            continue;
+        }
+    }
+
+    // Set alpha operands for the renderer
+    for (int j = 3; j < 6; j++) {
+        switch ((gpuCombOper[i] >> (j * 4)) & 0x7) {
+            case 0x0: core->gpuRender.setCombOper(i, j, OPER_SRC); continue;
+            case 0x1: core->gpuRender.setCombOper(i, j, OPER_1MSRC); continue;
+            case 0x2: core->gpuRender.setCombOper(i, j, OPER_SRCR); continue;
+            case 0x3: core->gpuRender.setCombOper(i, j, OPER_1MSRCR); continue;
+            case 0x4: core->gpuRender.setCombOper(i, j, OPER_SRCG); continue;
+            case 0x5: core->gpuRender.setCombOper(i, j, OPER_1MSRCG); continue;
+            case 0x6: core->gpuRender.setCombOper(i, j, OPER_SRCB); continue;
+            default: core->gpuRender.setCombOper(i, j, OPER_1MSRCB); continue;
         }
     }
 }
@@ -415,11 +441,11 @@ void Gpu::writeBlendFunc(uint32_t mask, uint32_t value) {
     for (int i = 0; i < 4; i++) {
         uint8_t oper = (gpuBlendFunc >> (16 + (i * 4))) & 0xF;
         if (oper < 0xE) {
-            core->gpuRender.setBlendOper(i, OperFunc(oper));
+            core->gpuRender.setBlendOper(i, BlendOper(oper));
             continue;
         }
         LOG_WARN("GPU blender operand %d set to unknown value: 0x%X\n", i, oper);
-        core->gpuRender.setBlendOper(i, OPER_ONE);
+        core->gpuRender.setBlendOper(i, BLND_ONE);
     }
 }
 

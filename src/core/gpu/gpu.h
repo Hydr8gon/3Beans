@@ -60,21 +60,17 @@ enum CombSrc {
     COMB_UNK
 };
 
-enum OperFunc {
-    OPER_ZERO,
-    OPER_ONE,
+enum CombOper {
     OPER_SRC,
     OPER_1MSRC,
-    OPER_DST,
-    OPER_1MDST,
     OPER_SRCA,
     OPER_1MSRCA,
-    OPER_DSTA,
-    OPER_1MDSTA,
-    OPER_CONST,
-    OPER_1MCON,
-    OPER_CONSTA,
-    OPER_1MCONA
+    OPER_SRCR,
+    OPER_1MSRCR,
+    OPER_SRCG,
+    OPER_1MSRCG,
+    OPER_SRCB,
+    OPER_1MSRCB
 };
 
 enum CalcMode {
@@ -114,6 +110,23 @@ enum StenOper {
     STEN_INVERT,
     STEN_INCWR,
     STEN_DECWR
+};
+
+enum BlendOper {
+    BLND_ZERO,
+    BLND_ONE,
+    BLND_SRC,
+    BLND_1MSRC,
+    BLND_DST,
+    BLND_1MDST,
+    BLND_SRCA,
+    BLND_1MSRCA,
+    BLND_DSTA,
+    BLND_1MDSTA,
+    BLND_CONST,
+    BLND_1MCON,
+    BLND_CONSTA,
+    BLND_1MCONA
 };
 
 enum TexFmt {
