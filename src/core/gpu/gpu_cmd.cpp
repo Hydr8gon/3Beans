@@ -51,6 +51,7 @@ TEMPLATE4(void Gpu::writeAttrCfgH, 8, uint32_t, uint32_t)
 TEMPLATE2(void Gpu::writeCmdSize, 0, uint32_t, uint32_t)
 TEMPLATE2(void Gpu::writeCmdAddr, 0, uint32_t, uint32_t)
 TEMPLATE2(void Gpu::writeCmdJump, 0, uint32_t, uint32_t)
+TEMPLATE4(void Gpu::writeGshInts, 0, uint32_t, uint32_t)
 TEMPLATE4(void Gpu::writeVshInts, 0, uint32_t, uint32_t)
 
 FORCE_INLINE uint32_t Gpu::flt24e7to32e8(uint32_t value) {
@@ -177,16 +178,17 @@ void Gpu::drawAttrIdx(uint32_t idx) {
         }
     }
 
-    // Run the finished input through the shader and handle primitive restarts
-    core->gpuRender.runShader(input, restart ? PrimMode(((gpuPrimConfig >> 8) & 0x3) + 1) : SAME_PRIM, idx);
+    // Pass the finished input to the renderer and handle primitive restarts
+    core->gpuRender.processVtx(input, restart ? PrimMode(((gpuPrimConfig >> 8) & 0x3) + 1) : SAME_PRIM, idx);
     restart = false;
 }
 
-void Gpu::updateOutMap() {
+void Gpu::updateShdMaps() {
     // Build a map of shader outputs to fixed semantics for the renderer
     uint8_t outMap[0x18][2] = {};
+    uint32_t outMask = (gpuGshConfig & BIT(1)) ? gpuGshOutMask : gpuVshOutMask;
     for (int t = 0, i = 0; t < gpuShdOutTotal && i < 7; t++, i++) {
-        while (!(gpuVshOutMask & BIT(i)))
+        while (~outMask & BIT(i))
             if (++i >= 7) break;
         for (int j = 0; j < 4; j++) {
             uint8_t sem = (gpuShdOutMap[i] >> (j << 3));
@@ -195,7 +197,19 @@ void Gpu::updateOutMap() {
             outMap[sem][1] = j;
         }
     }
+
+    // Update the map and check if the second one is needed
+    shdMapDirty = false;
     core->gpuRender.setOutMap(outMap);
+    if (~gpuGshConfig & BIT(1)) return;
+
+    // Build a map of vertex shader outputs to geometry shader inputs
+    uint8_t gshInMap[0x10] = {};
+    for (int i = 0; i <= (gpuGshInputCfg & 0xF); i++)
+        gshInMap[i] = (gpuGshAttrIds >> (i << 2)) & 0xF;
+    if ((gpuGshInputCfg & 0xF) < 0xF)
+        gshInMap[(gpuGshInputCfg & 0xF) + 1] = -1; // End
+    core->gpuRender.setGshInMap(gshInMap);
 }
 
 template <int i> void Gpu::writeIrqReq(uint32_t mask, uint32_t value) {
@@ -251,14 +265,14 @@ void Gpu::writeShdOutTotal(uint32_t mask, uint32_t value) {
     // Write to the shader output mapping total count
     mask &= 0x7;
     gpuShdOutTotal = (gpuShdOutTotal & ~mask) | (value & mask);
-    updateOutMap();
+    shdMapDirty = true;
 }
 
 template <int i> void Gpu::writeShdOutMap(uint32_t mask, uint32_t value) {
     // Write to one of the shader output mapping registers
     mask &= 0x1F1F1F1F;
     gpuShdOutMap[i] = (gpuShdOutMap[i] & ~mask) | (value & mask);
-    updateOutMap();
+    shdMapDirty = true;
 }
 
 template <int i> void Gpu::writeTexBorder(uint32_t mask, uint32_t value) {
@@ -610,23 +624,38 @@ void Gpu::writeAttrNumVerts(uint32_t mask, uint32_t value) {
     gpuAttrNumVerts = (gpuAttrNumVerts & ~mask) | (value & mask);
 }
 
+void Gpu::writeGshConfig(uint32_t mask, uint32_t value) {
+    // Write to the geometry shader config register and set the renderer's enable state
+    // TODO: use the other bits for something?
+    mask &= 0x800F0303;
+    gpuGshConfig = (gpuGshConfig & ~mask) | (value & mask);
+    core->gpuRender.setGshInCount((gpuGshConfig & BIT(1)) ? (gpuVshOutTotal + 1) : 0);
+    shdMapDirty = true;
+}
+
 void Gpu::writeAttrFirstIdx(uint32_t mask, uint32_t value) {
     // Write to the attribute buffer starting index
     gpuAttrFirstIdx = (gpuAttrFirstIdx & ~mask) | (value & mask);
 }
 
 void Gpu::writeAttrDrawArrays(uint32_t mask, uint32_t value) {
+    // Update renderer state before a new vertex batch
+    if (shdMapDirty) updateShdMaps();
+    core->gpuRender.startList();
+
     // Draw vertices from the attribute buffer using increasing indices
     LOG_INFO("GPU sending %d linear vertices to be rendered\n", gpuAttrNumVerts);
-    core->gpuRender.startList();
     for (uint32_t i = 0; i < gpuAttrNumVerts; i++)
         drawAttrIdx(gpuAttrFirstIdx + i);
 }
 
 void Gpu::writeAttrDrawElems(uint32_t mask, uint32_t value) {
+    // Update renderer state before a new vertex batch
+    if (shdMapDirty) updateShdMaps();
+    core->gpuRender.startList();
+
     // Draw vertices from the attribute buffer using indices from a list
     LOG_INFO("GPU sending %d indexed vertices to be rendered\n", gpuAttrNumVerts);
-    core->gpuRender.startList();
     uint32_t base = (gpuAttrBase << 3) + (gpuAttrIdxList & 0xFFFFFFF);
     if (gpuAttrIdxList & BIT(31)) // 16-bit
         for (uint32_t i = 0; i < gpuAttrNumVerts; i++)
@@ -668,8 +697,9 @@ void Gpu::writeAttrFixedData(uint32_t mask, uint32_t value) {
         input[i][3] = *(float*)&(f = flt24e7to32e8(attrFixedData[j][0] >> 8));
     }
 
-    // Run the finished input through the shader and handle primitive restarts
-    core->gpuRender.runShader(input, restart ? PrimMode(((gpuPrimConfig >> 8) & 0x3) + 1) : SAME_PRIM);
+    // Pass the finished input to the renderer and handle primitive restarts
+    if (shdMapDirty) updateShdMaps();
+    core->gpuRender.processVtx(input, restart ? PrimMode(((gpuPrimConfig >> 8) & 0x3) + 1) : SAME_PRIM);
     restart = false;
 }
 
@@ -700,6 +730,13 @@ void Gpu::writeVshNumAttr(uint32_t mask, uint32_t value) {
     gpuVshNumAttr = (gpuVshNumAttr & ~mask) | (value & mask);
 }
 
+void Gpu::writeVshOutTotal(uint32_t mask, uint32_t value) {
+    // Write to the vertex shader output attribute count and send it to the renderer
+    mask &= 0xF;
+    gpuVshOutTotal = (gpuVshOutTotal & ~mask) | (value & mask);
+    core->gpuRender.setGshInCount((gpuGshConfig & BIT(1)) ? (gpuVshOutTotal + 1) : 0);
+}
+
 void Gpu::writePrimConfig(uint32_t mask, uint32_t value) {
     // Write to the primitive configuration register
     // TODO: use bits other than primitive mode?
@@ -711,6 +748,104 @@ void Gpu::writePrimRestart(uint32_t mask, uint32_t value) {
     // Write to the primitive restart register and restart on the next vertex
     gpuPrimRestart = (gpuPrimConfig & ~mask) | (value & mask);
     restart = true;
+}
+
+void Gpu::writeGshBools(uint32_t mask, uint32_t value) {
+    // Write to the geometry uniform boolean register
+    // TODO: use the upper bits for something?
+    mask &= 0xFFFFFFF;
+    gpuGshBools = (gpuGshBools & ~mask) | (value & mask);
+
+    // Update the uniform booleans in the renderer
+    for (int i = 0; i < 16; i++)
+        core->gpuRender.setGshBool(i, gpuGshBools & BIT(i));
+}
+
+template <int i> void Gpu::writeGshInts(uint32_t mask, uint32_t value) {
+    // Write to one of the geometry uniform integer registers
+    mask &= 0xFFFFFF;
+    gpuGshInts[i] = (gpuGshInts[i] & ~mask) | (value & mask);
+
+    // Update some of the uniform integers in the renderer
+    for (int j = 0; j < 3; j++)
+        core->gpuRender.setGshInt(i, j, gpuGshInts[i] >> (j << 3));
+}
+
+void Gpu::writeGshInputCfg(uint32_t mask, uint32_t value) {
+    // Write to the geometry shader input config register
+    // TODO: use bits other than attribute count?
+    mask &= 0xB800010F;
+    gpuGshInputCfg = (gpuGshInputCfg & ~mask) | (value & mask);
+    shdMapDirty = true;
+}
+
+void Gpu::writeGshEntry(uint32_t mask, uint32_t value) {
+    // Write to the geometry shader entry/end and send them to the renderer
+    mask &= 0xFFF0FFF;
+    gpuGshEntry = (gpuGshEntry & ~mask) | (value & mask);
+    core->gpuRender.setGshEntry(gpuGshEntry >> 0, gpuGshEntry >> 16);
+}
+
+void Gpu::writeGshAttrIdsL(uint32_t mask, uint32_t value) {
+    // Write to the lower geometry shader attribute IDs
+    gpuGshAttrIds = (gpuGshAttrIds & ~mask) | (value & mask);
+    shdMapDirty = true;
+}
+
+void Gpu::writeGshAttrIdsH(uint32_t mask, uint32_t value) {
+    // Write to the upper geometry shader attribute IDs
+    gpuGshAttrIds = (gpuGshAttrIds & ~(uint64_t(mask) << 32)) | (uint64_t(value & mask) << 32);
+    shdMapDirty = true;
+}
+
+void Gpu::writeGshOutMask(uint32_t mask, uint32_t value) {
+    // Write to the geometry shader output mask
+    mask &= 0x7FFFFFF;
+    gpuGshOutMask = (gpuGshOutMask & ~mask) | (value & mask);
+    shdMapDirty = true;
+}
+
+void Gpu::writeGshFloatIdx(uint32_t mask, uint32_t value) {
+    // Update the geometry uniform float index register state if written to
+    if (mask & 0x000000FF) gshFloatIdx = (value & 0xFF) << 2;
+    if (mask & 0xFF000000) gshFloat32 = (value & BIT(31));
+}
+
+void Gpu::writeGshFloatData(uint32_t mask, uint32_t value) {
+    // Write to the geometry uniform float buffer and convert 24-bit to 32-bit if necessary
+    gshFloatData[~gshFloatIdx & 0x3] = (value & mask);
+    if (!gshFloat32 && (gshFloatIdx & 0x3) == 0x2) {
+        gshFloatData[0] = flt24e7to32e8(gshFloatData[1]);
+        gshFloatData[1] = flt24e7to32e8((gshFloatData[2] << 8) | (gshFloatData[1] >> 24));
+        gshFloatData[2] = flt24e7to32e8((gshFloatData[3] << 16) | (gshFloatData[2] >> 16));
+        gshFloatData[3] = flt24e7to32e8(gshFloatData[3] >> 8);
+        gshFloatIdx++;
+    }
+
+    // Increment the index and update the renderer once 4 floats are received
+    if (gshFloatIdx++ < (96 << 2) && !(gshFloatIdx & 0x3))
+        for (int i = 0; i < 4; i++)
+            core->gpuRender.setGshFloat((gshFloatIdx >> 2) - 1, i, *(float*)&gshFloatData[i]);
+}
+
+void Gpu::writeGshCodeIdx(uint32_t mask, uint32_t value) {
+    // Write to the geometry shader program data index
+    gpuGshCodeIdx = (gpuGshCodeIdx & ~mask) | (value & mask);
+}
+
+void Gpu::writeGshCodeData(uint32_t mask, uint32_t value) {
+    // Write to the current geometry shader program index and increment it
+    core->gpuRender.writeGshCode(gpuGshCodeIdx++ & 0xFFF, value & mask);
+}
+
+void Gpu::writeGshDescIdx(uint32_t mask, uint32_t value) {
+    // Write to the geometry operand descriptor data index
+    gpuGshDescIdx = (gpuGshDescIdx & ~mask) | (value & mask);
+}
+
+void Gpu::writeGshDescData(uint32_t mask, uint32_t value) {
+    // Write to the current geometry operand descriptor index and increment it
+    core->gpuRender.writeGshDesc(gpuGshDescIdx++ & 0x7F, value & mask);
 }
 
 void Gpu::writeVshBools(uint32_t mask, uint32_t value) {
@@ -756,7 +891,7 @@ void Gpu::writeVshOutMask(uint32_t mask, uint32_t value) {
     // Write to the vertex shader output mask
     mask &= 0x7FFFFFF;
     gpuVshOutMask = (gpuVshOutMask & ~mask) | (value & mask);
-    updateOutMap();
+    shdMapDirty = true;
 }
 
 void Gpu::writeVshFloatIdx(uint32_t mask, uint32_t value) {

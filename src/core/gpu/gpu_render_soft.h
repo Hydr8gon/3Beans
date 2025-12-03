@@ -44,8 +44,12 @@ class GpuRenderSoft {
 public:
     GpuRenderSoft(Core *core);
 
-    void runShader(float (*input)[4], PrimMode mode, uint32_t idx = -1);
     void startList();
+    void processVtx(float (*input)[4], PrimMode mode, uint32_t idx = -1);
+
+    void setOutMap(uint8_t (*map)[2]);
+    void setGshInMap(uint8_t *map);
+    void setGshInCount(uint8_t count) { gshInCount = count; }
 
     void writeVshCode(int i, uint32_t value) { vshCode[i] = value; }
     void writeVshDesc(int i, uint32_t value) { vshDesc[i] = value; }
@@ -53,6 +57,13 @@ public:
     void setVshBool(int i, bool value) { vshBools[i] = value; }
     void setVshInt(int i, int j, uint8_t value) { vshInts[i][j] = value; }
     void setVshFloat(int i, int j, float value) { vshFloats[i][j] = value; }
+
+    void writeGshCode(int i, uint32_t value) { gshCode[i] = value; }
+    void writeGshDesc(int i, uint32_t value) { gshDesc[i] = value; }
+    void setGshEntry(uint16_t entry, uint16_t end);
+    void setGshBool(int i, bool value) { gshBools[i] = value; }
+    void setGshInt(int i, int j, uint8_t value) { gshInts[i][j] = value; }
+    void setGshFloat(int i, int j, float value) { gshFloats[i][j] = value; }
 
     void setTexAddr(int i, uint32_t address);
     void setTexDims(int i, uint16_t width, uint16_t height);
@@ -76,7 +87,6 @@ public:
     void setStencilMasks(uint8_t bufMask, uint8_t refMask);
     void setStencilValue(uint8_t value) { stencilValue = value; }
 
-    void setOutMap(uint8_t (*map)[2]);
     void setCullMode(CullMode mode) { cullMode = mode; }
     void setViewScaleH(float scale) { viewScaleH = scale; }
     void setViewStepH(float step) { viewStepH = step; }
@@ -95,9 +105,9 @@ private:
     Core *core;
 
     static void (GpuRenderSoft::*vshInstrs[0x40])(uint32_t);
+    static void (GpuRenderSoft::*gshInstrs[0x40])(uint32_t);
     static int16_t etc1Tables[8][4];
 
-    uint8_t outMap[0x18][2] = {};
     VertexCache vtxCache[0x101] = {};
     SoftVertex vertices[3] = {};
     uint32_t vtxCount = 0;
@@ -112,17 +122,26 @@ private:
     uint8_t combStart = -1;
     uint8_t combMask = 0;
 
-    float *srcRegs[0x80];
+    float gshInput[16][4] = {};
+    SoftVertex gshBuffer[4] = {};
+    uint8_t outMap[0x18][2] = {};
+    uint8_t gshInMap[0x10] = {};
+    uint8_t gshInCount = 0;
+    uint8_t gshInTotal = 0;
+    uint8_t emitParam = 0;
+
+    float **srcRegs;
     float *dstRegs[0x20];
     uint32_t *shdDesc;
     uint8_t (*shdInts)[3];
     bool *shdBools;
 
     float shdTmp[16][4];
-    float shdOut[8][4];
+    float shdOut[16][4];
     int16_t shdAddr[3];
     bool shdCond[2];
     uint16_t shdPc;
+    uint16_t shdStop;
 
     std::deque<uint32_t> loopStack;
     std::deque<uint32_t> ifStack;
@@ -137,6 +156,16 @@ private:
     bool vshBools[16] = {};
     uint8_t vshInts[4][3] = {};
     float vshFloats[96][4] = {};
+    float *vshRegs[0x80] = {};
+
+    uint32_t gshCode[0x1000] = {};
+    uint32_t gshDesc[0x80] = {};
+    uint16_t gshEntry = 0;
+    uint16_t gshEnd = 0;
+    bool gshBools[16] = {};
+    uint8_t gshInts[4][3] = {};
+    float gshFloats[96][4] = {};
+    float *gshRegs[0x80] = {};
 
     uint32_t texAddrs[3] = {};
     uint16_t texWidths[3] = {};
@@ -192,6 +221,9 @@ private:
     void drawTriangle(SoftVertex &a, SoftVertex &b, SoftVertex &c);
     void clipTriangle(SoftVertex &a, SoftVertex &b, SoftVertex &c);
 
+    template <bool geo> void runShader();
+    void buildVertex(SoftVertex &vertex);
+    void submitVertex(SoftVertex &vertex);
     float *getSrc(uint8_t src, uint32_t desc, uint8_t idx);
     void setDst(uint8_t dst, uint32_t desc, float *value);
 
@@ -224,10 +256,13 @@ private:
     void shdIfu(uint32_t opcode);
     void shdIfc(uint32_t opcode);
     void shdLoop(uint32_t opcode);
+    void gshEmit(uint32_t opcode);
+    void gshSetemit(uint32_t opcode);
     void shdJmpc(uint32_t opcode);
     void shdJmpu(uint32_t opcode);
     void shdCmp(uint32_t opcode);
     void shdMadi(uint32_t opcode);
     void shdMad(uint32_t opcode);
     void vshUnk(uint32_t opcode);
+    void gshUnk(uint32_t opcode);
 };

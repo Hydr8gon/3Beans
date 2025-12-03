@@ -41,6 +41,26 @@ void (GpuRenderSoft::*GpuRenderSoft::vshInstrs[])(uint32_t) {
     &GpuRenderSoft::shdMad, &GpuRenderSoft::shdMad, &GpuRenderSoft::shdMad, &GpuRenderSoft::shdMad // 0x3C-0x3F
 };
 
+// Lookup table for geometry shader instructions
+void (GpuRenderSoft::*GpuRenderSoft::gshInstrs[])(uint32_t) {
+    &GpuRenderSoft::shdAdd, &GpuRenderSoft::shdDp3, &GpuRenderSoft::shdDp4, &GpuRenderSoft::shdDph, // 0x00-0x03
+    &GpuRenderSoft::gshUnk, &GpuRenderSoft::shdEx2, &GpuRenderSoft::shdLg2, &GpuRenderSoft::gshUnk, // 0x04-0x07
+    &GpuRenderSoft::shdMul, &GpuRenderSoft::shdSge, &GpuRenderSoft::shdSlt, &GpuRenderSoft::shdFlr, // 0x08-0x0B
+    &GpuRenderSoft::shdMax, &GpuRenderSoft::shdMin, &GpuRenderSoft::shdRcp, &GpuRenderSoft::shdRsq, // 0x0C-0x0F
+    &GpuRenderSoft::gshUnk, &GpuRenderSoft::gshUnk, &GpuRenderSoft::shdMova, &GpuRenderSoft::shdMov, // 0x10-0x13
+    &GpuRenderSoft::gshUnk, &GpuRenderSoft::gshUnk, &GpuRenderSoft::gshUnk, &GpuRenderSoft::gshUnk, // 0x14-0x17
+    &GpuRenderSoft::shdDphi, &GpuRenderSoft::gshUnk, &GpuRenderSoft::shdSgei, &GpuRenderSoft::shdSlti, // 0x18-0x1B
+    &GpuRenderSoft::gshUnk, &GpuRenderSoft::gshUnk, &GpuRenderSoft::gshUnk, &GpuRenderSoft::gshUnk, // 0x1C-0x1F
+    &GpuRenderSoft::shdBreak, &GpuRenderSoft::shdNop, &GpuRenderSoft::shdEnd, &GpuRenderSoft::shdBreakc, // 0x20-0x23
+    &GpuRenderSoft::shdCall, &GpuRenderSoft::shdCallc, &GpuRenderSoft::shdCallu, &GpuRenderSoft::shdIfu, // 0x24-0x27
+    &GpuRenderSoft::shdIfc, &GpuRenderSoft::shdLoop, &GpuRenderSoft::gshEmit, &GpuRenderSoft::gshSetemit, // 0x28-0x2B
+    &GpuRenderSoft::shdJmpc, &GpuRenderSoft::shdJmpu, &GpuRenderSoft::shdCmp, &GpuRenderSoft::shdCmp, // 0x2C-0x2F
+    &GpuRenderSoft::shdMadi, &GpuRenderSoft::shdMadi, &GpuRenderSoft::shdMadi, &GpuRenderSoft::shdMadi, // 0x30-0x33
+    &GpuRenderSoft::shdMadi, &GpuRenderSoft::shdMadi, &GpuRenderSoft::shdMadi, &GpuRenderSoft::shdMadi, // 0x34-0x37
+    &GpuRenderSoft::shdMad, &GpuRenderSoft::shdMad, &GpuRenderSoft::shdMad, &GpuRenderSoft::shdMad, // 0x38-0x3B
+    &GpuRenderSoft::shdMad, &GpuRenderSoft::shdMad, &GpuRenderSoft::shdMad, &GpuRenderSoft::shdMad // 0x3C-0x3F
+};
+
 int16_t GpuRenderSoft::etc1Tables[][4] {
     { 2, 8, -2, -8 },
     { 5, 17, -5, -17 },
@@ -55,14 +75,15 @@ int16_t GpuRenderSoft::etc1Tables[][4] {
 GpuRenderSoft::GpuRenderSoft(Core *core): core(core) {
     // Map the constant shader source and destination registers
     for (int i = 0x0; i < 0x10; i++)
-        dstRegs[i] = shdOut[std::min(7, i)];
+        gshRegs[i] = gshInput[i], dstRegs[i] = shdOut[i];
     for (int i = 0x10; i < 0x20; i++)
-        srcRegs[i] = dstRegs[i] = shdTmp[i - 0x10];
+        vshRegs[i] = gshRegs[i] = dstRegs[i] = shdTmp[i - 0x10];
     for (int i = 0x20; i < 0x80; i++)
-        srcRegs[i] = vshFloats[i - 0x20];
-    shdDesc = vshDesc;
-    shdInts = vshInts;
-    shdBools = vshBools;
+        vshRegs[i] = vshFloats[i - 0x20], gshRegs[i] = gshFloats[i - 0x20];
+
+    // Set up the vertex shader by default
+    srcRegs = vshRegs, shdDesc = vshDesc;
+    shdInts = vshInts, shdBools = vshBools;
 }
 
 float GpuRenderSoft::mult(float a, float b) {
@@ -865,77 +886,123 @@ void GpuRenderSoft::clipTriangle(SoftVertex &a, SoftVertex &b, SoftVertex &c) {
     }
 }
 
-void GpuRenderSoft::runShader(float (*input)[4], PrimMode mode, uint32_t idx) {
-    // Get an entry in the vertex cache, up to the first 256 in a list
-    idx = std::min<uint32_t>(0x100, idx);
-    VertexCache &cache = vtxCache[idx];
-    SoftVertex &vertex = cache.vtx;
+void GpuRenderSoft::startList() {
+    // Increment the vertex tag to invalidate cache and reset on overflow to avoid false positives
+    if (++vtxTag) return;
+    memset(vtxCache, 0, sizeof(vtxCache));
+    vtxTag = 1;
+}
 
-    // Process a vertex if it can't be cached or is outdated
-    if (idx >= 0x100 || cache.tag != vtxTag) {
-        // Update source registers and reset the shader state
-        for (int i = 0x0; i < 0x10; i++)
-            srcRegs[i] = input[i];
-        memset(shdTmp, 0, sizeof(shdTmp));
-        memset(shdOut, 0, sizeof(shdOut));
-        memset(shdAddr, 0, sizeof(shdAddr));
-        memset(shdCond, 0, sizeof(shdCond));
-        ifStack = callStack = {};
-        shdPc = vshEntry;
-
-        // Execute the vertex shader until completion
-        while (shdPc != vshEnd) {
-            // Run an opcode and increment the program counter
-            uint32_t opcode = vshCode[shdPc & 0x1FF];
-            uint16_t cmpPc = ++shdPc;
-            (this->*vshInstrs[opcode >> 26])(opcode);
-
-            // Check the program counter against flow stacks and pop on match
-            while (!callStack.empty() && !((cmpPc ^ callStack.front()) & 0x1FF))
-                shdPc = (callStack.front() >> 16), callStack.pop_front(); // Multiple checks
-            if (!ifStack.empty() && !((cmpPc ^ ifStack.front()) & 0x1FF))
-                shdPc = (ifStack.front() >> 16), ifStack.pop_front(); // Single check
-
-            // Adjust the loop counter and loop again or end on program counter match
-            if (!loopStack.empty() && !((cmpPc ^ loopStack.front()) & 0x1FF)) {
-                opcode = vshCode[((loopStack.front() >> 12) - 1) & 0x1FF];
-                shdAddr[2] += shdInts[(opcode >> 22) & 0x3][2];
-                shdPc = (loopStack.front() >> 12) & 0xFFF;
-                if (loopStack.front() >> 24)
-                    loopStack[loopStack.size() - 1] -= BIT(24);
-                else
-                    loopStack.pop_front();
-            }
-        }
-
-        // Build a vertex using the shader output map
-        vertex.x = shdOut[outMap[0x0][0]][outMap[0x0][1]];
-        vertex.y = shdOut[outMap[0x1][0]][outMap[0x1][1]];
-        vertex.z = shdOut[outMap[0x2][0]][outMap[0x2][1]];
-        vertex.w = shdOut[outMap[0x3][0]][outMap[0x3][1]];
-        vertex.r = shdOut[outMap[0x8][0]][outMap[0x8][1]];
-        vertex.g = shdOut[outMap[0x9][0]][outMap[0x9][1]];
-        vertex.b = shdOut[outMap[0xA][0]][outMap[0xA][1]];
-        vertex.a = shdOut[outMap[0xB][0]][outMap[0xB][1]];
-        vertex.s0 = shdOut[outMap[0xC][0]][outMap[0xC][1]];
-        vertex.t0 = shdOut[outMap[0xD][0]][outMap[0xD][1]];
-        vertex.s1 = shdOut[outMap[0xE][0]][outMap[0xE][1]];
-        vertex.t1 = shdOut[outMap[0xF][0]][outMap[0xF][1]];
-        vertex.s2 = shdOut[outMap[0x16][0]][outMap[0x16][1]];
-        vertex.t2 = shdOut[outMap[0x17][0]][outMap[0x17][1]];
-        cache.tag = vtxTag;
-    }
-
+void GpuRenderSoft::processVtx(float (*input)[4], PrimMode mode, uint32_t idx) {
     // Reset the vertex count if the primitive mode changed
     if (mode != SAME_PRIM) {
         vtxCount = 0;
         primMode = mode;
     }
 
+    // Get an entry in the vertex cache, up to the first 256 in a list
+    idx = std::min<uint32_t>(0x100, idx);
+    VertexCache &cache = vtxCache[idx];
+
+    // Skip processing the vertex if it's cached and not outdated
+    if (idx < 0x100 && cache.tag == vtxTag && !gshInCount)
+        return submitVertex(cache.vtx);
+
+    // Update source registers and run the vertex shader
+    for (int i = 0x0; i < 0x10; i++)
+        vshRegs[i] = input[i];
+    runShader<false>();
+
+    // Cache and submit a vertex from the output if geometry shader is disabled
+    if (!gshInCount) {
+        cache.tag = vtxTag;
+        buildVertex(cache.vtx);
+        return submitVertex(cache.vtx);
+    }
+
+    // Copy vertex output to geometry input until it's full
+    for (int i = 0; i < gshInCount; i++) {
+        memcpy(gshInput[gshInMap[gshInTotal]], shdOut[i], 4 * sizeof(float));
+        if (++gshInTotal >= 16 || gshInMap[gshInTotal] >= 16) goto geometry;
+    }
+    return;
+
+geometry:
+    // Run the geometry shader and then switch back to vertex
+    srcRegs = gshRegs, shdDesc = gshDesc;
+    shdInts = gshInts, shdBools = gshBools;
+    runShader<true>();
+    srcRegs = vshRegs, shdDesc = vshDesc;
+    shdInts = vshInts, shdBools = vshBools;
+    gshInTotal = 0;
+}
+
+template <bool geo> void GpuRenderSoft::runShader() {
+    // Configure constants that depend on shader type
+    const uint16_t mask = (geo ? 0xFFF : 0x1FF);
+    void (GpuRenderSoft::**instrs)(uint32_t) = (geo ? gshInstrs : vshInstrs);
+    uint32_t *code = (geo ? gshCode : vshCode);
+
+    // Set the initial PC and stop address for the shader
+    shdPc = (geo ? gshEntry : vshEntry);
+    shdStop = (geo ? gshEnd : vshEnd);
+
+    // Reset the general shader state
+    memset(shdTmp, 0, sizeof(shdTmp));
+    memset(shdOut, 0, sizeof(shdOut));
+    memset(shdAddr, 0, sizeof(shdAddr));
+    memset(shdCond, 0, sizeof(shdCond));
+    ifStack = callStack = {};
+
+    // Execute the current shader until completion
+    while (shdPc != shdStop) {
+        // Run an opcode and increment the program counter
+        uint32_t opcode = code[shdPc & mask];
+        uint16_t cmpPc = ++shdPc;
+        (this->*instrs[opcode >> 26])(opcode);
+
+        // Check the program counter against flow stacks and pop on match
+        while (!callStack.empty() && !((cmpPc ^ callStack.front()) & mask))
+            shdPc = (callStack.front() >> 16), callStack.pop_front(); // Multiple checks
+        if (!ifStack.empty() && !((cmpPc ^ ifStack.front()) & mask))
+            shdPc = (ifStack.front() >> 16), ifStack.pop_front(); // Single check
+
+        // Adjust the loop counter and loop again or end on program counter match
+        if (!loopStack.empty() && !((cmpPc ^ loopStack.front()) & mask)) {
+            opcode = vshCode[((loopStack.front() >> 12) - 1) & mask];
+            shdAddr[2] += shdInts[(opcode >> 22) & 0x3][2];
+            shdPc = (loopStack.front() >> 12) & 0xFFF;
+            if (loopStack.front() >> 24)
+                loopStack[loopStack.size() - 1] -= BIT(24);
+            else
+                loopStack.pop_front();
+        }
+    }
+}
+
+void GpuRenderSoft::buildVertex(SoftVertex &vertex) {
+    // Build a vertex using the shader output map
+    vertex.x = shdOut[outMap[0x0][0]][outMap[0x0][1]];
+    vertex.y = shdOut[outMap[0x1][0]][outMap[0x1][1]];
+    vertex.z = shdOut[outMap[0x2][0]][outMap[0x2][1]];
+    vertex.w = shdOut[outMap[0x3][0]][outMap[0x3][1]];
+    vertex.r = shdOut[outMap[0x8][0]][outMap[0x8][1]];
+    vertex.g = shdOut[outMap[0x9][0]][outMap[0x9][1]];
+    vertex.b = shdOut[outMap[0xA][0]][outMap[0xA][1]];
+    vertex.a = shdOut[outMap[0xB][0]][outMap[0xB][1]];
+    vertex.s0 = shdOut[outMap[0xC][0]][outMap[0xC][1]];
+    vertex.t0 = shdOut[outMap[0xD][0]][outMap[0xD][1]];
+    vertex.s1 = shdOut[outMap[0xE][0]][outMap[0xE][1]];
+    vertex.t1 = shdOut[outMap[0xF][0]][outMap[0xF][1]];
+    vertex.s2 = shdOut[outMap[0x16][0]][outMap[0x16][1]];
+    vertex.t2 = shdOut[outMap[0x17][0]][outMap[0x17][1]];
+}
+
+void GpuRenderSoft::submitVertex(SoftVertex &vertex) {
     // Build a triangle based on the current primitive mode
     switch (primMode) {
     case TRIANGLES:
-    case GEO_PRIM: // TODO?
+    case GEO_PRIM:
         // Draw separate triangles every 3 vertices
         vertices[vtxCount] = vertex;
         if (++vtxCount < 3) return;
@@ -984,13 +1051,6 @@ void GpuRenderSoft::runShader(float (*input)[4], PrimMode mode, uint32_t idx) {
             return clipTriangle(vertices[0], vertices[2], vertices[1]);
         }
     }
-}
-
-void GpuRenderSoft::startList() {
-    // Increment the vertex tag to invalidate cache and reset on overflow to avoid false positives
-    if (++vtxTag) return;
-    memset(vtxCache, 0, sizeof(vtxCache));
-    vtxTag = 1;
 }
 
 float *GpuRenderSoft::getSrc(uint8_t src, uint32_t desc, uint8_t idx) {
@@ -1219,7 +1279,7 @@ void GpuRenderSoft::shdNop(uint32_t opcode) {
 
 void GpuRenderSoft::shdEnd(uint32_t opcode) {
     // Finish shader execution
-    shdPc = vshEnd;
+    shdPc = shdStop;
 }
 
 void GpuRenderSoft::shdBreakc(uint32_t opcode) {
@@ -1314,6 +1374,29 @@ void GpuRenderSoft::shdLoop(uint32_t opcode) {
     if (loopStack.size() > 4) loopStack.pop_back(); // 4-deep
 }
 
+void GpuRenderSoft::gshEmit(uint32_t opcode) {
+    // Build a vertex from the current output and check the primitive bit
+    buildVertex(gshBuffer[emitParam >> 2]);
+    if (~emitParam & BIT(1)) return;
+
+    // Submit a triangle from the geometry buffer based on the winding bit
+    if (emitParam & BIT(0)) {
+        submitVertex(gshBuffer[2]);
+        submitVertex(gshBuffer[1]);
+        submitVertex(gshBuffer[0]);
+    }
+    else {
+        submitVertex(gshBuffer[0]);
+        submitVertex(gshBuffer[1]);
+        submitVertex(gshBuffer[2]);
+    }
+}
+
+void GpuRenderSoft::gshSetemit(uint32_t opcode) {
+    // Update the geometry emit parameters
+    emitParam = (opcode >> 22) & 0xF;
+}
+
 void GpuRenderSoft::shdJmpc(uint32_t opcode) {
     // Evaluate the X/Y condition values using reference values
     bool refX = (opcode & BIT(25)), refY = (opcode & BIT(24));
@@ -1379,15 +1462,31 @@ void GpuRenderSoft::vshUnk(uint32_t opcode) {
     LOG_CRIT("Unknown GPU vertex shader opcode: 0x%X\n", opcode);
 }
 
+void GpuRenderSoft::gshUnk(uint32_t opcode) {
+    // Handle an unknown geometry shader opcode
+    LOG_CRIT("Unknown GPU geometry shader opcode: 0x%X\n", opcode);
+}
+
+void GpuRenderSoft::setOutMap(uint8_t (*map)[2]) {
+    // Set the map of shader outputs to fixed semantics
+    memcpy(outMap, map, sizeof(outMap));
+}
+
+void GpuRenderSoft::setGshInMap(uint8_t *map) {
+    // Set the map of vertex shader outputs to geometry shader inputs
+    memcpy(gshInMap, map, sizeof(gshInMap));
+}
+
 void GpuRenderSoft::setVshEntry(uint16_t entry, uint16_t end) {
     // Set the vertex shader entry and end points
     vshEntry = entry;
     vshEnd = end;
 }
 
-void GpuRenderSoft::setOutMap(uint8_t (*map)[2]) {
-    // Set the map of shader outputs to fixed semantics
-    memcpy(outMap, map, sizeof(outMap));
+void GpuRenderSoft::setGshEntry(uint16_t entry, uint16_t end) {
+    // Set the geometry shader entry and end points
+    gshEntry = entry;
+    gshEnd = end;
 }
 
 void GpuRenderSoft::setTexAddr(int i, uint32_t address) {
