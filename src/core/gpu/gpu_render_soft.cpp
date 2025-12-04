@@ -768,8 +768,16 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
     b = std::min(1.0f, std::max(0.0f, b));
     a = std::min(1.0f, std::max(0.0f, a));
 
-    // Store the final color values based on buffer format if enabled
-    if (!colbufMask) return; // TODO: use individual components
+    // Preserve the original value of some channels if any are unmasked
+    if (colbufMask != 0xF) {
+        if (!colbufMask) return;
+        if (~colbufMask & BIT(0)) r = d0.r;
+        if (~colbufMask & BIT(1)) g = d0.g;
+        if (~colbufMask & BIT(2)) b = d0.b;
+        if (~colbufMask & BIT(3)) a = d0.a;
+    }
+
+    // Store the final color values based on buffer format
     switch (colbufFmt) {
     case COL_RGBA8:
         val = (int(r * 255) << 24) | (int(g * 255) << 16) | (int(b * 255) << 8) | int(a * 255);
