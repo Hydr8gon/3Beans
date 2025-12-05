@@ -61,7 +61,7 @@ void (GpuRenderSoft::*GpuRenderSoft::gshInstrs[])(uint32_t) {
     &GpuRenderSoft::shdMad, &GpuRenderSoft::shdMad, &GpuRenderSoft::shdMad, &GpuRenderSoft::shdMad // 0x3C-0x3F
 };
 
-int16_t GpuRenderSoft::etc1Tables[][4] {
+const int16_t GpuRenderSoft::etc1Tables[][4] {
     { 2, 8, -2, -8 },
     { 5, 17, -5, -17 },
     { 9, 29, -9, -29 },
@@ -71,6 +71,11 @@ int16_t GpuRenderSoft::etc1Tables[][4] {
     { 33, 106, -33, -106 },
     { 47, 183, -47, -183 }
 };
+
+const uint8_t GpuRenderSoft::paramCounts[] = { 1, 2, 2, 2, 3, 2, 2, 2, 3, 3 };
+SoftColor GpuRenderSoft::zeroColor = { 0.0f, 0.0f, 0.0f, 0.0f };
+SoftColor GpuRenderSoft::oneColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+SoftColor GpuRenderSoft::stubColor = { 0.5f, 0.5f, 0.5f, 1.0f };
 
 GpuRenderSoft::GpuRenderSoft(Core *core): core(core) {
     // Map the constant shader source and destination registers
@@ -150,10 +155,12 @@ uint8_t GpuRenderSoft::stencilOp(uint8_t value, StenOper oper) {
     }
 }
 
-SoftColor &GpuRenderSoft::getTexel(float s, float t, int i) {
+void GpuRenderSoft::updateTexel(int i, float s, float t) {
     // Catch silly invalid textures like in Pokemon X/Y
-    if (!texWidths[i] || !texHeights[i])
-        return texCache[i] = {0.0f, 0.0f, 0.0f, 0.0f};
+    if (!texWidths[i] || !texHeights[i]) {
+        texColors[i] = zeroColor;
+        return;
+    }
 
     // Scale the S-coordinate to texels and handle wrapping based on mode
     uint32_t u = uint32_t(s * texWidths[i]);
@@ -163,7 +170,8 @@ SoftColor &GpuRenderSoft::getTexel(float s, float t, int i) {
             u = (int32_t(u) < 0) ? 0 : (texWidths[i] - 1);
             break;
         case WRAP_BORDER:
-            return texBorders[i];
+            texColors[i] = texBorders[i];
+            return;
         case WRAP_REPEAT:
             u %= texWidths[i];
             break;
@@ -182,7 +190,8 @@ SoftColor &GpuRenderSoft::getTexel(float s, float t, int i) {
             v = (int32_t(v) < 0) ? 0 : (texHeights[i] - 1);
             break;
         case WRAP_BORDER:
-            return texBorders[i];
+            texColors[i] = texBorders[i];
+            return;
         case WRAP_REPEAT:
             v %= texHeights[i];
             break;
@@ -195,7 +204,7 @@ SoftColor &GpuRenderSoft::getTexel(float s, float t, int i) {
 
     // Use the cached texel if coordinates are unchanged
     if (lastU[i] == u && lastV[i] == v)
-        return texCache[i];
+        return;
 
     // Convert the texture coordinates to a swizzled memory offset
     uint32_t value, ofs = (u & 0x1) | ((u << 1) & 0x4) | ((u << 2) & 0x10);
@@ -206,75 +215,75 @@ SoftColor &GpuRenderSoft::getTexel(float s, float t, int i) {
     switch (texFmts[i]) {
     case TEX_RGBA8:
         value = core->memory.read<uint32_t>(ARM11, texAddrs[i] + ofs * 4);
-        texCache[i].r = float((value >> 24) & 0xFF) / 0xFF;
-        texCache[i].g = float((value >> 16) & 0xFF) / 0xFF;
-        texCache[i].b = float((value >> 8) & 0xFF) / 0xFF;
-        texCache[i].a = float((value >> 0) & 0xFF) / 0xFF;
+        texColors[i].r = float((value >> 24) & 0xFF) / 0xFF;
+        texColors[i].g = float((value >> 16) & 0xFF) / 0xFF;
+        texColors[i].b = float((value >> 8) & 0xFF) / 0xFF;
+        texColors[i].a = float((value >> 0) & 0xFF) / 0xFF;
         break;
     case TEX_RGB8:
-        texCache[i].r = float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs * 3 + 2)) / 0xFF;
-        texCache[i].g = float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs * 3 + 1)) / 0xFF;
-        texCache[i].b = float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs * 3 + 0)) / 0xFF;
-        texCache[i].a = 1.0f;
+        texColors[i].r = float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs * 3 + 2)) / 0xFF;
+        texColors[i].g = float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs * 3 + 1)) / 0xFF;
+        texColors[i].b = float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs * 3 + 0)) / 0xFF;
+        texColors[i].a = 1.0f;
         break;
     case TEX_RGB5A1:
         value = core->memory.read<uint16_t>(ARM11, texAddrs[i] + ofs * 2);
-        texCache[i].r = float((value >> 11) & 0x1F) / 0x1F;
-        texCache[i].g = float((value >> 6) & 0x1F) / 0x1F;
-        texCache[i].b = float((value >> 1) & 0x1F) / 0x1F;
-        texCache[i].a = (value & BIT(0)) ? 1.0f : 0.0f;
+        texColors[i].r = float((value >> 11) & 0x1F) / 0x1F;
+        texColors[i].g = float((value >> 6) & 0x1F) / 0x1F;
+        texColors[i].b = float((value >> 1) & 0x1F) / 0x1F;
+        texColors[i].a = (value & BIT(0)) ? 1.0f : 0.0f;
         break;
     case TEX_RGB565:
         value = core->memory.read<uint16_t>(ARM11, texAddrs[i] + ofs * 2);
-        texCache[i].r = float((value >> 11) & 0x1F) / 0x1F;
-        texCache[i].g = float((value >> 5) & 0x3F) / 0x3F;
-        texCache[i].b = float((value >> 0) & 0x1F) / 0x1F;
-        texCache[i].a = 1.0f;
+        texColors[i].r = float((value >> 11) & 0x1F) / 0x1F;
+        texColors[i].g = float((value >> 5) & 0x3F) / 0x3F;
+        texColors[i].b = float((value >> 0) & 0x1F) / 0x1F;
+        texColors[i].a = 1.0f;
         break;
     case TEX_RGBA4:
         value = core->memory.read<uint16_t>(ARM11, texAddrs[i] + ofs * 2);
-        texCache[i].r = float((value >> 12) & 0xF) / 0xF;
-        texCache[i].g = float((value >> 8) & 0xF) / 0xF;
-        texCache[i].b = float((value >> 4) & 0xF) / 0xF;
-        texCache[i].a = float((value >> 0) & 0xF) / 0xF;
+        texColors[i].r = float((value >> 12) & 0xF) / 0xF;
+        texColors[i].g = float((value >> 8) & 0xF) / 0xF;
+        texColors[i].b = float((value >> 4) & 0xF) / 0xF;
+        texColors[i].a = float((value >> 0) & 0xF) / 0xF;
         break;
     case TEX_LA8:
         value = core->memory.read<uint16_t>(ARM11, texAddrs[i] + ofs * 2);
-        texCache[i].r = texCache[i].g = texCache[i].b = float((value >> 8) & 0xFF) / 0xFF;
-        texCache[i].a = float((value >> 0) & 0xFF) / 0xFF;
+        texColors[i].r = texColors[i].g = texColors[i].b = float((value >> 8) & 0xFF) / 0xFF;
+        texColors[i].a = float((value >> 0) & 0xFF) / 0xFF;
         break;
     case TEX_RG8:
         value = core->memory.read<uint16_t>(ARM11, texAddrs[i] + ofs * 2);
-        texCache[i].r = float((value >> 8) & 0xFF) / 0xFF;
-        texCache[i].g = float((value >> 0) & 0xFF) / 0xFF;
-        texCache[i].b = 0.0f, texCache[i].a = 1.0f;
+        texColors[i].r = float((value >> 8) & 0xFF) / 0xFF;
+        texColors[i].g = float((value >> 0) & 0xFF) / 0xFF;
+        texColors[i].b = 0.0f, texColors[i].a = 1.0f;
         break;
     case TEX_L8:
-        texCache[i].r = texCache[i].g = texCache[i].b =
+        texColors[i].r = texColors[i].g = texColors[i].b =
             float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs)) / 0xFF;
-        texCache[i].a = 1.0f;
+        texColors[i].a = 1.0f;
         break;
     case TEX_A8:
-        texCache[i].r = texCache[i].g = texCache[i].b = 0.0f;
-        texCache[i].a = float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs)) / 0xFF;
+        texColors[i].r = texColors[i].g = texColors[i].b = 0.0f;
+        texColors[i].a = float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs)) / 0xFF;
         break;
     case TEX_LA4:
         value = core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs);
-        texCache[i].r = texCache[i].g = texCache[i].b = float((value >> 4) & 0xF) / 0xF;
-        texCache[i].a = float((value >> 0) & 0xF) / 0xF;
+        texColors[i].r = texColors[i].g = texColors[i].b = float((value >> 4) & 0xF) / 0xF;
+        texColors[i].a = float((value >> 0) & 0xF) / 0xF;
         break;
     case TEX_L4:
         value = core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs / 2);
-        texCache[i].r = texCache[i].g = texCache[i].b = float((value >> ((ofs & 0x1) * 4)) & 0xF) / 0xF;
-        texCache[i].a = 1.0f;
+        texColors[i].r = texColors[i].g = texColors[i].b = float((value >> ((ofs & 0x1) * 4)) & 0xF) / 0xF;
+        texColors[i].a = 1.0f;
         break;
     case TEX_A4:
         value = core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs / 2);
-        texCache[i].r = texCache[i].g = texCache[i].b = 0.0f;
-        texCache[i].a = float((value >> ((ofs & 0x1) * 4)) & 0xF) / 0xF;
+        texColors[i].r = texColors[i].g = texColors[i].b = 0.0f;
+        texColors[i].a = float((value >> ((ofs & 0x1) * 4)) & 0xF) / 0xF;
         break;
     case TEX_UNK:
-        texCache[i] = {1.0f, 1.0f, 1.0f, 1.0f};
+        texColors[i] = oneColor;
         break;
 
     case TEX_ETC1: case TEX_ETC1A4:
@@ -283,11 +292,11 @@ SoftColor &GpuRenderSoft::getTexel(float s, float t, int i) {
         if (texFmts[i] == TEX_ETC1A4) {
             ofs = (ofs & ~0xF) + 8;
             value = core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs - 8 + idx / 2);
-            texCache[i].a = float((value >> ((idx & 0x1) * 4)) & 0xF) / 0xF;
+            texColors[i].a = float((value >> ((idx & 0x1) * 4)) & 0xF) / 0xF;
         }
         else {
             ofs = (ofs & ~0xF) >> 1;
-            texCache[i].a = 1.0f;
+            texColors[i].a = 1.0f;
         }
 
         // Decode an ETC1 texel based on the block it falls in and the base color mode
@@ -296,238 +305,278 @@ SoftColor &GpuRenderSoft::getTexel(float s, float t, int i) {
         if ((((val2 & BIT(0)) ? v : u) & 0x3) < 2) { // Block 1
             int16_t tbl = etc1Tables[(val2 >> 5) & 0x7][((val1 >> (idx + 15)) & 0x2) | ((val1 >> idx) & 0x1)];
             if (val2 & BIT(1)) { // Differential
-                texCache[i].r = float(((val2 >> 27) & 0x1F) * 0x21 / 4 + tbl);
-                texCache[i].g = float(((val2 >> 19) & 0x1F) * 0x21 / 4 + tbl);
-                texCache[i].b = float(((val2 >> 11) & 0x1F) * 0x21 / 4 + tbl);
+                texColors[i].r = float(((val2 >> 27) & 0x1F) * 0x21 / 4 + tbl);
+                texColors[i].g = float(((val2 >> 19) & 0x1F) * 0x21 / 4 + tbl);
+                texColors[i].b = float(((val2 >> 11) & 0x1F) * 0x21 / 4 + tbl);
             }
             else { // Individual
-                texCache[i].r = float(((val2 >> 28) & 0xF) * 0x11 + tbl);
-                texCache[i].g = float(((val2 >> 20) & 0xF) * 0x11 + tbl);
-                texCache[i].b = float(((val2 >> 12) & 0xF) * 0x11 + tbl);
+                texColors[i].r = float(((val2 >> 28) & 0xF) * 0x11 + tbl);
+                texColors[i].g = float(((val2 >> 20) & 0xF) * 0x11 + tbl);
+                texColors[i].b = float(((val2 >> 12) & 0xF) * 0x11 + tbl);
             }
         }
         else { // Block 2
             int16_t tbl = etc1Tables[(val2 >> 2) & 0x7][((val1 >> (idx + 15)) & 0x2) | ((val1 >> idx) & 0x1)];
             if (val2 & BIT(1)) { // Differential
-                texCache[i].r = float((((val2 >> 27) & 0x1F) + (int8_t(val2 >> 19) >> 5)) * 0x21 / 4 + tbl);
-                texCache[i].g = float((((val2 >> 19) & 0x1F) + (int8_t(val2 >> 11) >> 5)) * 0x21 / 4 + tbl);
-                texCache[i].b = float((((val2 >> 11) & 0x1F) + (int8_t(val2 >> 3) >> 5)) * 0x21 / 4 + tbl);
+                texColors[i].r = float((((val2 >> 27) & 0x1F) + (int8_t(val2 >> 19) >> 5)) * 0x21 / 4 + tbl);
+                texColors[i].g = float((((val2 >> 19) & 0x1F) + (int8_t(val2 >> 11) >> 5)) * 0x21 / 4 + tbl);
+                texColors[i].b = float((((val2 >> 11) & 0x1F) + (int8_t(val2 >> 3) >> 5)) * 0x21 / 4 + tbl);
             }
             else { // Individual
-                texCache[i].r = float(((val2 >> 24) & 0xF) * 0x11 + tbl);
-                texCache[i].g = float(((val2 >> 16) & 0xF) * 0x11 + tbl);
-                texCache[i].b = float(((val2 >> 8) & 0xF) * 0x11 + tbl);
+                texColors[i].r = float(((val2 >> 24) & 0xF) * 0x11 + tbl);
+                texColors[i].g = float(((val2 >> 16) & 0xF) * 0x11 + tbl);
+                texColors[i].b = float(((val2 >> 8) & 0xF) * 0x11 + tbl);
             }
         }
 
         // Normalize and clamp the final color values
-        texCache[i].r = std::min(1.0f, std::max(0.0f, texCache[i].r / 255));
-        texCache[i].g = std::min(1.0f, std::max(0.0f, texCache[i].g / 255));
-        texCache[i].b = std::min(1.0f, std::max(0.0f, texCache[i].b / 255));
+        texColors[i].r = std::min(1.0f, std::max(0.0f, texColors[i].r / 255));
+        texColors[i].g = std::min(1.0f, std::max(0.0f, texColors[i].g / 255));
+        texColors[i].b = std::min(1.0f, std::max(0.0f, texColors[i].b / 255));
         break;
     }
 
-    // Cache the texel to avoid decoding multiple times
+    // Cache texel coordinates to avoid decoding multiple times
     lastU[i] = u, lastV[i] = v;
-    return texCache[i];
 }
 
-void GpuRenderSoft::getSource(SoftColor &out, SoftVertex &v, int i, int j) {
-    // Get the components of a texture combiner source color
+void GpuRenderSoft::updateCombine(SoftVertex &v) {
+    // Update the per-pixel color sources that are used
+    if (paramMask & BIT(COMB_PRIM)) primColor = { v.r / v.w, v.g / v.w, v.b / v.w, v.a / v.w };
+    if (paramMask & BIT(COMB_TEX0)) updateTexel(0, v.s0 / v.w, v.t0 / v.w);
+    if (paramMask & BIT(COMB_TEX1)) updateTexel(1, v.s1 / v.w, v.t1 / v.w);
+    if (paramMask & BIT(COMB_TEX2)) updateTexel(2, v.s2 / v.w, v.t2 / v.w);
+    SoftColor c[3];
+
+    // Process the texture combiner opcode cache
+    for (int i = 0; i < combCache.size(); i++) {
+        CombOpcode &op = combCache[i];
+        if (op.id < 6) { // RGB
+            // Load parameter colors and apply RGB operand adjustments
+            for (int j = 0; j < paramCounts[op.mode]; j++) {
+                SoftColor &in = *op.params[j].color, &out = c[j];
+                switch (op.params[j].oper) {
+                    case OPER_SRC: out.r = in.r, out.g = in.g, out.b = in.b; continue;
+                    case OPER_1MSRC: out.r = 1.0f - in.r, out.g = 1.0f - in.g, out.b = 1.0f - in.b; continue;
+                    case OPER_SRCA: out.r = out.g = out.b = in.a; continue;
+                    case OPER_1MSRCA: out.r = out.g = out.b = 1.0f - in.a; continue;
+                    case OPER_SRCR: out.r = out.g = out.b = in.r; continue;
+                    case OPER_1MSRCR: out.r = out.g = out.b = 1.0f - in.r; continue;
+                    case OPER_SRCG: out.r = out.g = out.b = in.g; continue;
+                    case OPER_1MSRCG: out.r = out.g = out.b = 1.0f - in.g; continue;
+                    case OPER_SRCB: out.r = out.g = out.b = in.b; continue;
+                    case OPER_1MSRCB: out.r = out.g = out.b = 1.0f - in.b; continue;
+                }
+            }
+
+            // Calculate RGB values for a combiner using cached information
+            SoftColor &out = combBuffer[op.id];
+            switch (op.mode) {
+            case MODE_REPLACE:
+                out.r = c[0].r;
+                out.g = c[0].g;
+                out.b = c[0].b;
+                break;
+            case MODE_MOD:
+                out.r = c[0].r * c[1].r;
+                out.g = c[0].g * c[1].g;
+                out.b = c[0].b * c[1].b;
+                break;
+            case MODE_ADD:
+                out.r = c[0].r + c[1].r;
+                out.g = c[0].g + c[1].g;
+                out.b = c[0].b + c[1].b;
+                break;
+            case MODE_ADDS:
+                out.r = c[0].r + c[1].r - 0.5f;
+                out.g = c[0].g + c[1].g - 0.5f;
+                out.b = c[0].b + c[1].b - 0.5f;
+                break;
+            case MODE_INTERP:
+                out.r = c[0].r * c[2].r + c[1].r * (1.0f - c[2].r);
+                out.g = c[0].g * c[2].g + c[1].g * (1.0f - c[2].g);
+                out.b = c[0].b * c[2].b + c[1].b * (1.0f - c[2].b);
+                break;
+            case MODE_SUB:
+                out.r = c[0].r - c[1].r;
+                out.g = c[0].g - c[1].g;
+                out.b = c[0].b - c[1].b;
+                break;
+            case MODE_DOT3:
+            case MODE_DOT3A:
+                out.r = out.g = out.b = 4.0f * c[0].r - 0.5f * c[1].r - 0.5f +
+                    c[0].g - 0.5f * c[1].g - 0.5f + c[0].b - 0.5f * c[1].b - 0.5f;
+                break;
+            case MODE_MULADD:
+                out.r = (c[0].r * c[1].r) + c[2].r;
+                out.g = (c[0].g * c[1].g) + c[2].g;
+                out.b = (c[0].b * c[1].b) + c[2].b;
+                break;
+            case MODE_ADDMUL:
+                out.r = (c[0].r + c[1].r) * c[2].r;
+                out.g = (c[0].g + c[1].g) * c[2].g;
+                out.b = (c[0].b + c[1].b) * c[2].b;
+                break;
+            case MODE_UNK:
+                out.r = out.g = out.b = 1.0f;
+                break;
+            }
+
+            // Ensure final values are within range
+            out.r = std::min(1.0f, std::max(0.0f, out.r));
+            out.g = std::min(1.0f, std::max(0.0f, out.g));
+            out.b = std::min(1.0f, std::max(0.0f, out.b));
+        }
+        else { // Alpha
+            // Load parameter colors and apply alpha operand adjustments
+            for (int j = 0; j < paramCounts[op.mode]; j++) {
+                SoftColor &in = *op.params[j].color, &out = c[j];
+                switch (op.params[j].oper) {
+                    case OPER_SRCA: out.a = in.a; continue;
+                    case OPER_1MSRCA: out.a = 1.0f - in.a; continue;
+                    case OPER_SRCR: out.a = in.r; continue;
+                    case OPER_1MSRCR: out.a = 1.0f - in.r; continue;
+                    case OPER_SRCG: out.a = in.g; continue;
+                    case OPER_1MSRCG: out.a = 1.0f - in.g; continue;
+                    case OPER_SRCB: out.a = in.b; continue;
+                    case OPER_1MSRCB: out.a = 1.0f - in.b; continue;
+                }
+            }
+
+            // Calculate alpha values for a combiner using cached information
+            SoftColor &out = combBuffer[op.id - 6];
+            switch (op.mode) {
+            case MODE_REPLACE:
+                out.a = c[0].a;
+                break;
+            case MODE_MOD:
+                out.a = c[0].a * c[1].a;
+                break;
+            case MODE_ADD:
+                out.a = c[0].a + c[1].a;
+                break;
+            case MODE_ADDS:
+                out.a = c[0].a + c[1].a - 0.5f;
+                break;
+            case MODE_INTERP:
+                out.a = c[0].a * c[2].a + c[1].a * (1.0f - c[2].a);
+                break;
+            case MODE_SUB:
+                out.a = c[0].a - c[1].a;
+                break;
+            case MODE_DOT3A:
+                out.a = 4.0f * c[0].a - 0.5f * c[1].a - 0.5f + c[0].a -
+                    0.5f * c[1].a - 0.5f + c[0].a - 0.5f * c[1].a - 0.5f;
+                break;
+            case MODE_MULADD:
+                out.a = (c[0].a * c[1].a) + c[2].a;
+                break;
+            case MODE_ADDMUL:
+                out.a = (c[0].a + c[1].a) * c[2].a;
+                break;
+            case MODE_DOT3:
+            case MODE_UNK:
+                out.a = 1.0f;
+                break;
+            }
+
+            // Ensure final values are within range
+            out.a = std::min(1.0f, std::max(0.0f, out.a));
+        }
+    }
+}
+
+CombParam GpuRenderSoft::cacheParam(int i, int j) {
+    // Cache a combiner parameter's operation and mark the source as used
+    CombParam param;
+    param.oper = combOpers[i][j];
+    paramMask |= BIT(combSrcs[i][j]);
+
+    // Cache a combiner parameter's color source
     switch (combSrcs[i][j]) {
-        case COMB_PRIM: out = {v.r / v.w, v.g / v.w, v.b / v.w, v.a / v.w}; break;
-        case COMB_TEX0: out = getTexel(v.s0 / v.w, v.t0 / v.w, 0); break;
-        case COMB_TEX1: out = getTexel(v.s1 / v.w, v.t1 / v.w, 1); break;
-        case COMB_TEX2: out = getTexel(v.s2 / v.w, v.t2 / v.w, 2); break;
-        case COMB_CONST: out = combColors[i]; break;
-        case COMB_FRAG0: case COMB_FRAG1: out = {0.5f, 0.5f, 0.5f, 1.0f}; break; // Stub
-        case COMB_TEX3: out = {1.0f, 1.0f, 1.0f, 1.0f}; break; // Stub
-        case COMB_UNK: out = {0.0f, 0.0f, 0.0f, 0.0f}; break;
+        case COMB_PRIM: param.color = &primColor; return param;
+        case COMB_TEX0: param.color = &texColors[0]; return param;
+        case COMB_TEX1: param.color = &texColors[1]; return param;
+        case COMB_TEX2: param.color = &texColors[2]; return param;
+        case COMB_CONST: param.color = &combColors[i]; return param;
+        case COMB_FRAG0: param.color = &stubColor; return param;
+        case COMB_FRAG1: param.color = &stubColor; return param;
+        case COMB_TEX3: param.color = &oneColor; return param;
+        case COMB_UNK: param.color = &zeroColor; return param;
 
     case COMB_PREV:
-        // Generate the previous combiner's output, or use the cache if already done
-        if (i == 0)
-            out = {0.0f, 0.0f, 0.0f, 0.0f};
-        else if (combMask & BIT(i - 1))
-            out = combCache[i - 1];
-        else
-            getCombine(out, v, i - 1);
-        break;
-
-    case COMB_PRVBUF: {
-        // Check which combiners should be buffered at this stage
-        int rgb = std::min(3, i - 1), a = rgb;
-        while (rgb >= 0 && !(combBufMask & BIT(rgb))) rgb--;
-        while (a >= 0 && !(combBufMask & BIT(4 + a))) a--;
-
-        // Generate the buffered RGB values, or use the cache
-        if (rgb == -1)
-            out = combBufColor;
-        else if (~combMask & BIT(rgb))
-            getCombine(out, v, rgb);
-        else
-             out = combCache[rgb];
-
-        // Generate the buffered alpha value, or use the cache
-        if (a == -1) {
-            out.a = combBufColor.a;
+        // Read zeros if there's no previous combiner
+        if (i == 0) {
+            param.color = &zeroColor;
+            return param;
         }
-        else {
-            if (~combMask & BIT(a))
-                getCombine(combCache[a], v, a);
-            out.a = combCache[a].a;
-        }
-        break;
-    }}
 
-    // Modify the source color based on its operand type
-    switch (combOpers[i][j]) {
-        case OPER_SRC: return;
-        case OPER_1MSRC: out = {1.0f - out.r, 1.0f - out.g, 1.0f - out.b, 1.0f - out.a}; return;
-        case OPER_SRCA: out.r = out.g = out.b = out.a; return;
-        case OPER_1MSRCA: out.r = out.g = out.b = out.a = 1.0f - out.a; return;
-        case OPER_SRCR: out.g = out.b = out.a = out.r; return;
-        case OPER_1MSRCR: out.r = out.g = out.b = out.a = 1.0f - out.r; return;
-        case OPER_SRCG: out.r = out.b = out.a = out.g; return;
-        case OPER_1MSRCG: out.r = out.g = out.b = out.a = 1.0f - out.g; return;
-        case OPER_SRCB: out.r = out.g = out.a = out.b; return;
-        case OPER_1MSRCB: out.r = out.g = out.b = out.a = 1.0f - out.b; return;
+        // Cache the previous RGB or alpha combiner and have it computed first
+        ((combOpers[i][j] & ~0x1) != OPER_SRCA) ? cacheCombRgb(i - 1) : cacheCombA(i - 1);
+        param.color = &combBuffer[i - 1];
+        return param;
+
+    case COMB_PRVBUF:
+        if ((combOpers[i][j] & ~0x1) != OPER_SRCA) { // RGB
+            // Check which RGB combiner should be buffered at this stage
+            int idx = std::min(3, i - 1);
+            while (idx >= 0 && !(combBufMask & BIT(idx))) idx--;
+
+            // Read the buffer color if nothing replaced it
+            if (idx < 0) {
+                param.color = &combBufColor;
+                return param;
+            }
+
+            // Cache the buffered combiner and have it computed first
+            cacheCombRgb(idx);
+            param.color = &combBuffer[idx];
+        }
+        else { // Alpha
+            // Check which alpha combiner should be buffered at this stage
+            int idx = std::min(3, i - 1);
+            while (idx >= 0 && !(combBufMask & BIT(idx + 4))) idx--;
+
+            // Read the buffer color if nothing replaced it
+            if (idx < 0) {
+                param.color = &combBufColor;
+                return param;
+            }
+
+            // Cache the buffered combiner and have it computed first
+            cacheCombA(idx);
+            param.color = &combBuffer[idx];
+        }
+        return param;
     }
 }
 
-void GpuRenderSoft::getCombine(SoftColor &out, SoftVertex &v, int i) {
-    // Combine source RGB values based on the selected mode
-    SoftColor c0, c1, c2;
-    switch (combModes[i][0]) {
-    case MODE_REPLACE:
-        getSource(out, v, i, 0);
-        break;
-    case MODE_MOD:
-        getSource(c0, v, i, 0);
-        getSource(c1, v, i, 1);
-        out.r = c0.r * c1.r;
-        out.g = c0.g * c1.g;
-        out.b = c0.b * c1.b;
-        break;
-    case MODE_ADD:
-        getSource(c0, v, i, 0);
-        getSource(c1, v, i, 1);
-        out.r = c0.r + c1.r;
-        out.g = c0.g + c1.g;
-        out.b = c0.b + c1.b;
-        break;
-    case MODE_ADDS:
-        getSource(c0, v, i, 0);
-        getSource(c1, v, i, 1);
-        out.r = c0.r + c1.r - 0.5f;
-        out.g = c0.g + c1.g - 0.5f;
-        out.b = c0.b + c1.b - 0.5f;
-        break;
-    case MODE_INTERP:
-        getSource(c0, v, i, 0);
-        getSource(c1, v, i, 1);
-        getSource(c2, v, i, 2);
-        out.r = c0.r * c2.r + c1.r * (1.0f - c2.r);
-        out.g = c0.g * c2.g + c1.g * (1.0f - c2.g);
-        out.b = c0.b * c2.b + c1.b * (1.0f - c2.b);
-        break;
-    case MODE_SUB:
-        getSource(c0, v, i, 0);
-        getSource(c1, v, i, 1);
-        out.r = c0.r - c1.r;
-        out.g = c0.g - c1.g;
-        out.b = c0.b - c1.b;
-        break;
-    case MODE_DOT3:
-    case MODE_DOT3A:
-        getSource(c0, v, i, 0);
-        getSource(c1, v, i, 1);
-        out.r = 4.0f * c0.r - 0.5f * c1.r - 0.5f + c0.g - 0.5f * c1.g - 0.5f + c0.b - 0.5f * c1.b - 0.5f;
-        out.b = out.g = out.r;
-        break;
-    case MODE_MULADD:
-        getSource(c0, v, i, 0);
-        getSource(c1, v, i, 1);
-        getSource(c2, v, i, 2);
-        out.r = (c0.r * c1.r) + c2.r;
-        out.g = (c0.g * c1.g) + c2.g;
-        out.b = (c0.b * c1.b) + c2.b;
-        break;
-    case MODE_ADDMUL:
-        getSource(c0, v, i, 0);
-        getSource(c1, v, i, 1);
-        getSource(c2, v, i, 2);
-        out.r = (c0.r + c1.r) * c2.r;
-        out.g = (c0.g + c1.g) * c2.g;
-        out.b = (c0.b + c1.b) * c2.b;
-        break;
-    case MODE_UNK:
-        out.r = out.g = out.b = 1.0f;
-        break;
-    }
+void GpuRenderSoft::cacheCombRgb(int i) {
+    // Cache an RGB combiner's parameters if not already done
+    if (combMask & BIT(i)) return;
+    CombOpcode opcode;
+    for (int j = 0; j < paramCounts[combModes[i][0]]; j++)
+        opcode.params[j] = cacheParam(i, j);
 
-    // Combine source alpha values based on the selected mode
-    switch (combModes[i][1]) {
-    case MODE_REPLACE:
-        getSource(c0, v, i, 3);
-        out.a = c0.a;
-        break;
-    case MODE_MOD:
-        getSource(c0, v, i, 3);
-        getSource(c1, v, i, 4);
-        out.a = c0.a * c1.a;
-        break;
-    case MODE_ADD:
-        getSource(c0, v, i, 3);
-        getSource(c1, v, i, 4);
-        out.a = c0.a + c1.a;
-        break;
-    case MODE_ADDS:
-        getSource(c0, v, i, 3);
-        getSource(c1, v, i, 4);
-        out.a = c0.a + c1.a - 0.5f;
-        break;
-    case MODE_INTERP:
-        getSource(c0, v, i, 3);
-        getSource(c1, v, i, 4);
-        getSource(c2, v, i, 5);
-        out.a = c0.a * c2.a + c1.a * (1.0f - c2.a);
-        break;
-    case MODE_SUB:
-        getSource(c0, v, i, 3);
-        getSource(c1, v, i, 4);
-        out.a = c0.a - c1.a;
-        break;
-    case MODE_DOT3A:
-        getSource(c0, v, i, 3);
-        getSource(c1, v, i, 4);
-        out.a = 4.0f * c0.a - 0.5f * c1.a - 0.5f + c0.a - 0.5f * c1.a - 0.5f + c0.a - 0.5f * c1.a - 0.5f;
-        break;
-    case MODE_MULADD:
-        getSource(c0, v, i, 3);
-        getSource(c1, v, i, 4);
-        getSource(c2, v, i, 5);
-        out.a = (c0.a * c1.a) + c2.a;
-        break;
-    case MODE_ADDMUL:
-        getSource(c0, v, i, 3);
-        getSource(c1, v, i, 4);
-        getSource(c2, v, i, 5);
-        out.a = (c0.a + c1.a) * c2.a;
-        break;
-    case MODE_DOT3:
-    case MODE_UNK:
-        out.a = 1.0f;
-        break;
-    }
-
-    // Ensure final values are within range and cache them
-    out.r = std::min(1.0f, std::max(0.0f, out.r));
-    out.g = std::min(1.0f, std::max(0.0f, out.g));
-    out.b = std::min(1.0f, std::max(0.0f, out.b));
-    out.a = std::min(1.0f, std::max(0.0f, out.a));
-    combCache[i] = out;
+    // Add the combiner to the opcode list and mark it as done
+    opcode.mode = combModes[i][0];
+    opcode.id = i;
+    combCache.push_back(opcode);
     combMask |= BIT(i);
+}
+
+void GpuRenderSoft::cacheCombA(int i) {
+    // Cache an alpha combiner's parameters if not already done
+    if (combMask & BIT(i + 8)) return;
+    CombOpcode opcode;
+    for (int j = 0; j < paramCounts[combModes[i][1]]; j++)
+        opcode.params[j] = cacheParam(i, j + 3);
+
+    // Add the combiner to the opcode list and mark it as done
+    opcode.mode = combModes[i][1];
+    opcode.id = (i + 6);
+    combCache.push_back(opcode);
+    combMask |= BIT(i + 8);
 }
 
 void GpuRenderSoft::drawPixel(SoftVertex &p) {
@@ -608,9 +657,8 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
     }
 
     // Get source color values from the texture combiner
-    SoftColor s0, d0;
-    combMask = 0; // Reset cache
-    getCombine(s0, p, combStart);
+    updateCombine(p);
+    SoftColor s0 = combBuffer[combEnd], d0;
 
     // Compare the source alpha value with the provided one
     switch (alphaFunc) {
@@ -815,13 +863,20 @@ void GpuRenderSoft::drawTriangle(SoftVertex &a, SoftVertex &b, SoftVertex &c) {
     if (v[0]->y > v[2]->y) std::swap(v[0], v[2]);
     if (v[1]->y > v[2]->y) std::swap(v[1], v[2]);
 
-    // Check for combiners set to simply output the previous color, so they can be skipped
-    if (combStart > 5) {
-        combStart = 5;
-        uint8_t &i = combStart;
+    // Check if the texture combiner cache is dirty
+    if (combEnd > 5) {
+        // Skip over combiners set to simply output the previous color
+        combEnd = 5;
+        uint8_t &i = combEnd;
         while (i > 0 && combModes[i][0] == MODE_REPLACE && combModes[i][1] == MODE_REPLACE && combSrcs[i][0] ==
-            COMB_PREV && combSrcs[i][3] == COMB_PREV && combOpers[i][0] == OPER_SRC && combOpers[i][3] == OPER_SRC)
-            combStart--;
+            COMB_PREV && combSrcs[i][3] == COMB_PREV && combOpers[i][0] == OPER_SRC && combOpers[i][3] == OPER_SRCA)
+            combEnd--;
+
+        // Reset and regenerate the cache
+        combCache = {};
+        paramMask = combMask = 0;
+        cacheCombRgb(combEnd);
+        cacheCombA(combEnd);
     }
 
     // Draw the pixels of a triangle by interpolating between X and Y bounds
@@ -1525,21 +1580,21 @@ void GpuRenderSoft::setTexFmt(int i, TexFmt format) {
 }
 
 void GpuRenderSoft::setCombSrc(int i, int j, CombSrc src) {
-    // Set a texture combiner source and invalidate the start index
+    // Set a texture combiner source and invalidate the cache
     combSrcs[i][j] = src;
-    combStart = -1;
+    combEnd = -1;
 }
 
 void GpuRenderSoft::setCombOper(int i, int j, CombOper oper) {
-    // Set a texture combiner operand and invalidate the start index
+    // Set a texture combiner operand and invalidate the cache
     combOpers[i][j] = oper;
-    combStart = -1;
+    combEnd = -1;
 }
 
 void GpuRenderSoft::setCombMode(int i, int j, CalcMode mode) {
-    // Set a texture combiner mode and invalidate the start index
+    // Set a texture combiner mode and invalidate the cache
     combModes[i][j] = mode;
-    combStart = -1;
+    combEnd = -1;
 }
 
 void GpuRenderSoft::setCombColor(int i, float r, float g, float b, float a) {
@@ -1556,6 +1611,12 @@ void GpuRenderSoft::setCombBufColor(float r, float g, float b, float a) {
     combBufColor.g = g;
     combBufColor.b = b;
     combBufColor.a = a;
+}
+
+void GpuRenderSoft::setCombBufMask(uint8_t mask) {
+    // Set a texture combiner buffer mask and invalidate the cache
+    combBufMask = mask;
+    combEnd = -1;
 }
 
 void GpuRenderSoft::setBlendColor(float r, float g, float b, float a) {

@@ -378,8 +378,8 @@ template <int i> void Gpu::writeCombOper(uint32_t mask, uint32_t value) {
     // Set alpha operands for the renderer
     for (int j = 3; j < 6; j++) {
         switch ((gpuCombOper[i] >> (j * 4)) & 0x7) {
-            case 0x0: core->gpuRender.setCombOper(i, j, OPER_SRC); continue;
-            case 0x1: core->gpuRender.setCombOper(i, j, OPER_1MSRC); continue;
+            case 0x0: core->gpuRender.setCombOper(i, j, OPER_SRCA); continue;
+            case 0x1: core->gpuRender.setCombOper(i, j, OPER_1MSRCA); continue;
             case 0x2: core->gpuRender.setCombOper(i, j, OPER_SRCR); continue;
             case 0x3: core->gpuRender.setCombOper(i, j, OPER_1MSRCR); continue;
             case 0x4: core->gpuRender.setCombOper(i, j, OPER_SRCG); continue;

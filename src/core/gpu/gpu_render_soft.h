@@ -40,6 +40,17 @@ struct VertexCache {
     uint32_t tag;
 };
 
+struct CombParam {
+    SoftColor *color;
+    CombOper oper;
+};
+
+struct CombOpcode {
+    CombParam params[3];
+    CalcMode mode;
+    uint8_t id;
+};
+
 class GpuRenderSoft {
 public:
     GpuRenderSoft(Core *core);
@@ -76,7 +87,7 @@ public:
     void setCombMode(int i, int j, CalcMode mode);
     void setCombColor(int i, float r, float g, float b, float a);
     void setCombBufColor(float r, float g, float b, float a);
-    void setCombBufMask(uint8_t mask) { combBufMask = mask; }
+    void setCombBufMask(uint8_t mask);
     void setBlendOper(int i, BlendOper oper) { blendOpers[i] = oper; }
     void setBlendMode(int i, CalcMode mode) { blendModes[i] = mode; }
     void setBlendColor(float r, float g, float b, float a);
@@ -106,7 +117,10 @@ private:
 
     static void (GpuRenderSoft::*vshInstrs[0x40])(uint32_t);
     static void (GpuRenderSoft::*gshInstrs[0x40])(uint32_t);
-    static int16_t etc1Tables[8][4];
+    static const int16_t etc1Tables[8][4];
+    static const uint8_t paramCounts[MODE_UNK + 1];
+    static SoftColor zeroColor, oneColor;
+    static SoftColor stubColor;
 
     VertexCache vtxCache[0x101] = {};
     SoftVertex vertices[3] = {};
@@ -115,12 +129,15 @@ private:
     PrimMode primMode = SAME_PRIM;
     CullMode cullMode = CULL_NONE;
 
-    SoftColor combCache[6] = {};
-    SoftColor texCache[3] = {};
+    std::vector<CombOpcode> combCache;
+    SoftColor combBuffer[6] = {};
+    SoftColor texColors[3] = {};
+    SoftColor primColor = {};
     int64_t lastU[3] = { -1, -1, -1 };
     int64_t lastV[3] = { -1, -1, -1 };
-    uint8_t combStart = -1;
-    uint8_t combMask = 0;
+    uint16_t paramMask = 0;
+    uint16_t combMask = 0;
+    uint8_t combEnd = -1;
 
     float gshInput[16][4] = {};
     SoftVertex gshBuffer[4] = {};
@@ -213,9 +230,11 @@ private:
     static SoftVertex intersect(SoftVertex &v1, SoftVertex &v2, float x1, float x2);
     uint8_t stencilOp(uint8_t value, StenOper oper);
 
-    SoftColor &getTexel(float s, float t, int i);
-    void getSource(SoftColor &out, SoftVertex &v, int i, int j);
-    void getCombine(SoftColor &out, SoftVertex &v, int i);
+    void updateTexel(int i, float s, float t);
+    void updateCombine(SoftVertex &v);
+    CombParam cacheParam(int i, int j);
+    void cacheCombRgb(int i);
+    void cacheCombA(int i);
 
     void drawPixel(SoftVertex &p);
     void drawTriangle(SoftVertex &a, SoftVertex &b, SoftVertex &c);
