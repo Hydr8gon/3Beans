@@ -25,11 +25,16 @@
 
 class InputDialog: public wxDialog {
 public:
-    InputDialog();
+    InputDialog(wxJoystick *joystick);
+    ~InputDialog();
 
 private:
-    int keyBinds[MAX_KEYS];
     wxButton *keyBtns[MAX_KEYS];
+    wxJoystick *joystick;
+    wxTimer *timer;
+
+    int keyBinds[MAX_KEYS];
+    std::vector<int> axisBases;
     wxButton *current = nullptr;
     int keyIndex = 0;
 
@@ -38,6 +43,7 @@ private:
 
     template <int i> void remapKey(wxCommandEvent &event);
     void clearMap(wxCommandEvent &event);
+    void updateJoystick(wxTimerEvent &event);
     void confirm(wxCommandEvent &event);
     void pressKey(wxKeyEvent &event);
     wxDECLARE_EVENT_TABLE();

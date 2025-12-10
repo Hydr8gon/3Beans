@@ -38,7 +38,8 @@ enum InputEvent {
     REMAP_LDOWN,
     REMAP_LMOD,
     REMAP_HOME,
-    CLEAR_MAP
+    CLEAR_MAP,
+    UPDATE_JOYSTICK
 };
 
 wxBEGIN_EVENT_TABLE(InputDialog, wxDialog)
@@ -61,11 +62,20 @@ EVT_BUTTON(REMAP_LDOWN, InputDialog::remapKey<15>)
 EVT_BUTTON(REMAP_LMOD, InputDialog::remapKey<16>)
 EVT_BUTTON(REMAP_HOME, InputDialog::remapKey<17>)
 EVT_BUTTON(CLEAR_MAP, InputDialog::clearMap)
+EVT_TIMER(UPDATE_JOYSTICK, InputDialog::updateJoystick)
 EVT_BUTTON(wxID_OK, InputDialog::confirm)
 EVT_CHAR_HOOK(InputDialog::pressKey)
 wxEND_EVENT_TABLE()
 
 std::string InputDialog::keyToStr(int key) {
+    // Handle joystick keys based on the special offsets assigned to them
+    if (key >= 3000)
+        return "Axis " + std::to_string(key - 3000) + " -";
+    else if (key >= 2000)
+        return "Axis " + std::to_string(key - 2000) + " +";
+    else if (key >= 1000)
+        return "Button " + std::to_string(key - 1000);
+
     // Convert special keys to words representing their respective keys
     switch (key) {
         case 0: return "None";
@@ -177,7 +187,7 @@ std::string InputDialog::keyToStr(int key) {
     }
 }
 
-InputDialog::InputDialog(): wxDialog(nullptr, wxID_ANY, "Input Bindings") {
+InputDialog::InputDialog(wxJoystick *joystick): wxDialog(nullptr, wxID_ANY, "Input Bindings"), joystick(joystick) {
     // Use the height of a button as a unit to scale pixel values based on DPI/font
     wxButton *dummy = new wxButton(this, wxID_ANY, "");
     int size = dummy->GetSize().y;
@@ -251,6 +261,19 @@ InputDialog::InputDialog(): wxDialog(nullptr, wxID_ANY, "Input Bindings") {
     wxBoxSizer *sizer = new wxBoxSizer(wxHORIZONTAL);
     sizer->Add(contents, 1, wxEXPAND | wxALL, size / 8);
     SetSizerAndFit(sizer);
+
+    // Set up joystick input for this window if it was passed through
+    if (!joystick) return;
+    for (int i = 0; i < joystick->GetNumberAxes(); i++)
+        axisBases.push_back(joystick->GetPosition(i));
+    timer = new wxTimer(this, UPDATE_JOYSTICK);
+    timer->Start(10);
+}
+
+InputDialog::~InputDialog() {
+    // Clean up the joystick timer
+    if (joystick)
+        delete timer;
 }
 
 void InputDialog::resetLabels() {
@@ -277,6 +300,34 @@ void InputDialog::clearMap(wxCommandEvent &event) {
     else { // All
         memset(keyBinds, 0, sizeof(keyBinds));
         resetLabels();
+    }
+}
+
+void InputDialog::updateJoystick(wxTimerEvent &event) {
+    // Map the current button to a joystick button if one is pressed
+    if (!current) return;
+    for (int i = 0; i < joystick->GetNumberButtons(); i++) {
+        if (!joystick->GetButtonState(i)) continue;
+        keyBinds[keyIndex] = 1000 + i;
+        current->SetLabel(keyToStr(keyBinds[keyIndex]));
+        current = nullptr;
+        return;
+    }
+
+    // Map the current button to a joystick axis if one is offset far enough
+    for (int i = 0; i < joystick->GetNumberAxes(); i++) {
+        if (joystick->GetPosition(i) - axisBases[i] > joystick->GetXMax() / 2) { // Positive
+            keyBinds[keyIndex] = 2000 + i;
+            current->SetLabel(keyToStr(keyBinds[keyIndex]));
+            current = nullptr;
+            return;
+        }
+        else if (joystick->GetPosition(i) - axisBases[i] < joystick->GetXMin() / 2) { // Negative
+            keyBinds[keyIndex] = 3000 + i;
+            current->SetLabel(keyToStr(keyBinds[keyIndex]));
+            current = nullptr;
+            return;
+        }
     }
 }
 

@@ -46,30 +46,6 @@ void b3Canvas::finish() {
     finished = true;
 }
 
-void b3Canvas::updateKeyStick() {
-    // Apply the base stick movement from pressed keys
-    int stickX = 0, stickY = 0;
-    if (stickKeys[0]) stickX -= 0x7FF;
-    if (stickKeys[1]) stickX += 0x7FF;
-    if (stickKeys[2]) stickY += 0x7FF;
-    if (stickKeys[3]) stickY -= 0x7FF;
-
-    // Scale diagonals to create a round boundary
-    if (stickX && stickY) {
-        stickX = stickX * 0x5FF / 0x7FF;
-        stickY = stickY * 0x5FF / 0x7FF;
-    }
-
-    // Halve coordinates when the modifier is applied
-    if (stickKeys[4]) {
-        stickX /= 2;
-        stickY /= 2;
-    }
-
-    // Send stick coordinates to the core
-    frame->core->input.setLStick(stickX, stickY);
-}
-
 void b3Canvas::draw(wxPaintEvent &event) {
     // Set the GL context if still rendering
     if (finished) return;
@@ -170,34 +146,16 @@ void b3Canvas::resize(wxSizeEvent &event) {
 
 void b3Canvas::pressKey(wxKeyEvent &event) {
     // Trigger a key press if a mapped key was pressed
-    frame->mutex.lock();
-    if (frame->core) {
-        for (int i = 0; i < 12; i++)
-            if (event.GetKeyCode() == b3App::keyBinds[i])
-                frame->core->input.pressKey(i);
-        for (int i = 12; i < 17; i++)
-            if (event.GetKeyCode() == b3App::keyBinds[i])
-                stickKeys[i - 12] = true, updateKeyStick();
-        if (event.GetKeyCode() == b3App::keyBinds[17])
-            frame->core->input.pressHome();
-    }
-    frame->mutex.unlock();
+    for (int i = 0; i < MAX_KEYS; i++)
+        if (event.GetKeyCode() == b3App::keyBinds[i])
+            return frame->pressKey(i);
 }
 
 void b3Canvas::releaseKey(wxKeyEvent &event) {
     // Trigger a key release if a mapped key was released
-    frame->mutex.lock();
-    if (frame->core) {
-        for (int i = 0; i < 12; i++)
-            if (event.GetKeyCode() == b3App::keyBinds[i])
-                frame->core->input.releaseKey(i);
-        for (int i = 12; i < 17; i++)
-            if (event.GetKeyCode() == b3App::keyBinds[i])
-                stickKeys[i - 12] = false, updateKeyStick();
-        if (event.GetKeyCode() == b3App::keyBinds[17])
-            frame->core->input.releaseHome();
-    }
-    frame->mutex.unlock();
+    for (int i = 0; i < MAX_KEYS; i++)
+        if (event.GetKeyCode() == b3App::keyBinds[i])
+            return frame->releaseKey(i);
 }
 
 void b3Canvas::pressScreen(wxMouseEvent &event) {

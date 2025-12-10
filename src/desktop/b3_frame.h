@@ -22,6 +22,7 @@
 #include <mutex>
 #include <thread>
 #include <wx/wx.h>
+#include <wx/joystick.h>
 #include "../core/core.h"
 
 #define MIN_SIZE wxSize(400, 480)
@@ -36,15 +37,24 @@ public:
     b3Frame();
     void Refresh();
 
+    void pressKey(int key);
+    void releaseKey(int key);
+
 private:
     b3Canvas *canvas;
     wxMenu *fileMenu, *systemMenu;
+    wxJoystick *joystick;
+    wxTimer *timer;
+
     std::thread *thread;
     std::string cartPath;
+    std::vector<int> axisBases;
+    bool stickKeys[5] = {};
 
     void runCore();
     void startCore(bool full);
     void stopCore(bool full);
+    void updateKeyStick();
 
     void insertCart(wxCommandEvent &event);
     void ejectCart(wxCommandEvent &event);
@@ -57,6 +67,7 @@ private:
     void cartAutoBoot(wxCommandEvent &event);
     void pathSettings(wxCommandEvent &event);
     void inputBindings(wxCommandEvent &event);
+    void updateJoystick(wxTimerEvent &event);
     void close(wxCloseEvent &event);
     wxDECLARE_EVENT_TABLE();
 };

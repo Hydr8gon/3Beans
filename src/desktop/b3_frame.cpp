@@ -34,7 +34,8 @@ enum FrameEvent {
     THREADED_GPU,
     CART_AUTO_BOOT,
     PATH_SETTINGS,
-    INPUT_BINDINGS
+    INPUT_BINDINGS,
+    UPDATE_JOYSTICK
 };
 
 wxBEGIN_EVENT_TABLE(b3Frame, wxFrame)
@@ -49,6 +50,7 @@ EVT_MENU(THREADED_GPU, b3Frame::threadedGpu)
 EVT_MENU(CART_AUTO_BOOT, b3Frame::cartAutoBoot)
 EVT_MENU(PATH_SETTINGS, b3Frame::pathSettings)
 EVT_MENU(INPUT_BINDINGS, b3Frame::inputBindings)
+EVT_TIMER(UPDATE_JOYSTICK, b3Frame::updateJoystick)
 EVT_CLOSE(b3Frame::close)
 wxEND_EVENT_TABLE()
 
@@ -101,6 +103,24 @@ b3Frame::b3Frame(): wxFrame(nullptr, wxID_ANY, "3Beans") {
 
     // Put the core in stopped state at first
     stopCore(true);
+    
+    // Prepare a joystick if one is connected
+    joystick = new wxJoystick();
+    if (joystick->IsOk()) {
+        // Save initial axis values so inputs can be detected as offsets from resting
+        for (int i = 0; i < joystick->GetNumberAxes(); i++)
+            axisBases.push_back(joystick->GetPosition(i));
+
+        // Start a timer to update joystick input, since wxJoystickEvents are unreliable
+        timer = new wxTimer(this, UPDATE_JOYSTICK);
+        timer->Start(10);
+    }
+    else {
+        // Don't use a joystick if one isn't connected
+        delete joystick;
+        joystick = nullptr;
+        timer = nullptr;
+    }
 }
 
 void b3Frame::Refresh() {
@@ -178,6 +198,58 @@ void b3Frame::stopCore(bool full) {
     mutex.unlock();
 }
 
+void b3Frame::pressKey(int key) {
+    // Handle a key press based on its type
+    mutex.lock();
+    if (core) {
+        if (key < 12)
+            core->input.pressKey(key);
+        else if (key < 17)
+            stickKeys[key - 12] = true, updateKeyStick();
+        else
+            core->input.pressHome();
+    }
+    mutex.unlock();
+}
+
+void b3Frame::releaseKey(int key) {
+    // Handle a key release based on its type
+    mutex.lock();
+    if (core) {
+        if (key < 12)
+            core->input.releaseKey(key);
+        else if (key < 17)
+            stickKeys[key - 12] = false, updateKeyStick();
+        else
+            core->input.releaseHome();
+    }
+    mutex.unlock();
+}
+
+void b3Frame::updateKeyStick() {
+    // Apply the base stick movement from pressed keys
+    int stickX = 0, stickY = 0;
+    if (stickKeys[0]) stickX -= 0x7FF;
+    if (stickKeys[1]) stickX += 0x7FF;
+    if (stickKeys[2]) stickY += 0x7FF;
+    if (stickKeys[3]) stickY -= 0x7FF;
+
+    // Scale diagonals to create a round boundary
+    if (stickX && stickY) {
+        stickX = stickX * 0x5FF / 0x7FF;
+        stickY = stickY * 0x5FF / 0x7FF;
+    }
+
+    // Halve coordinates if the modifier is active
+    if (stickKeys[4]) {
+        stickX /= 2;
+        stickY /= 2;
+    }
+
+    // Send key-stick coordinates to the core
+    core->input.setLStick(stickX, stickY);
+}
+
 void b3Frame::insertCart(wxCommandEvent &event) {
     // Open a file browser for cartridge ROMs
     wxFileDialog romSelect(this, "Select Cart ROM", "", "",
@@ -242,12 +314,118 @@ void b3Frame::pathSettings(wxCommandEvent &event) {
 }
 
 void b3Frame::inputBindings(wxCommandEvent &event) {
-    // Show the input bindings dialog
-    InputDialog inputDialog;
+    // Pause joystick updates and show the input bindings dialog
+    if (timer) timer->Stop();
+    InputDialog inputDialog(joystick);
     inputDialog.ShowModal();
+    if (timer) timer->Start(10);
+}
+
+void b3Frame::updateJoystick(wxTimerEvent &event) {
+    // Check the status of mapped joystick inputs
+    int stickX = 0, stickY = 0;
+    for (int i = 0; i < MAX_KEYS; i++) {
+        if (b3App::keyBinds[i] >= 3000 && joystick->GetNumberAxes() > b3App::keyBinds[i] - 3000) { // Axis -
+            int j = b3App::keyBinds[i] - 3000;
+            switch (i) {
+            case 12: // Stick Right
+                // Scale the axis position and apply it to the stick in the right direction
+                if (joystick->GetPosition(j) < axisBases[j])
+                    stickX -= (joystick->GetPosition(j) - axisBases[j]) * 0x7FF / joystick->GetXMax();
+                continue;
+
+            case 13: // Stick Left
+                // Scale the axis position and apply it to the stick in the left direction
+                if (joystick->GetPosition(j) < axisBases[j])
+                    stickX += (joystick->GetPosition(j) - axisBases[j]) * 0x7FF / joystick->GetXMin();
+                continue;
+
+            case 14: // Stick Up
+                // Scale the axis position and apply it to the stick in the up direction
+                if (joystick->GetPosition(j) < axisBases[j])
+                    stickY += (joystick->GetPosition(j) - axisBases[j]) * 0x7FF / joystick->GetYMin();
+                continue;
+
+            case 15: // Stick Down
+                // Scale the axis position and apply it to the stick in the down direction
+                if (joystick->GetPosition(j) < axisBases[j])
+                    stickY -= (joystick->GetPosition(j) - axisBases[j]) * 0x7FF / joystick->GetYMax();
+                continue;
+
+            default:
+                // Trigger a key press or release based on the axis position
+                if (joystick->GetPosition(j) < axisBases[j] - joystick->GetXMax() / 2)
+                    pressKey(i);
+                else
+                    releaseKey(i);
+                continue;
+            }
+        }
+        else if (b3App::keyBinds[i] >= 2000 && joystick->GetNumberAxes() > b3App::keyBinds[i] - 2000) { // Axis +
+            int j = b3App::keyBinds[i] - 2000;
+            switch (i) {
+            case 12: // Stick Right
+                // Scale the axis position and apply it to the stick in the right direction
+                if (joystick->GetPosition(j) > axisBases[j])
+                    stickX -= (joystick->GetPosition(j) - axisBases[j]) * 0x7FF / joystick->GetXMax();
+                continue;
+
+            case 13: // Stick Left
+                // Scale the axis position and apply it to the stick in the left direction
+                if (joystick->GetPosition(j) > axisBases[j])
+                    stickX += (joystick->GetPosition(j) - axisBases[j]) * 0x7FF / joystick->GetXMin();
+                continue;
+
+            case 14: // Stick Up
+                // Scale the axis position and apply it to the stick in the up direction
+                if (joystick->GetPosition(j) > axisBases[j])
+                    stickY += (joystick->GetPosition(j) - axisBases[j]) * 0x7FF / joystick->GetYMin();
+                continue;
+
+            case 15: // Stick Down
+                // Scale the axis position and apply it to the stick in the down direction
+                if (joystick->GetPosition(j) > axisBases[j])
+                    stickY -= (joystick->GetPosition(j) - axisBases[j]) * 0x7FF / joystick->GetYMax();
+                continue;
+
+            default:
+                // Trigger a key press or release based on the axis position
+                if (joystick->GetPosition(j) > axisBases[j] + joystick->GetXMax() / 2)
+                    pressKey(i);
+                else
+                    releaseKey(i);
+                continue;
+            }
+        }
+        else if (b3App::keyBinds[i] >= 1000 && joystick->GetNumberButtons() > b3App::keyBinds[i] - 1000) { // Button
+            // Trigger a key press or release based on the button status
+            if (joystick->GetButtonState(b3App::keyBinds[i] - 1000))
+                pressKey(i);
+            else
+                releaseKey(i);
+        }
+    }
+
+    // Halve stick coordinates if the modifier is active
+    if (stickKeys[4]) {
+        stickX /= 2;
+        stickY /= 2;
+    }
+
+    // Send coordinates to the core if key-stick is inactive
+    mutex.lock();
+    if (core && !stickKeys[0] && !stickKeys[1] && !stickKeys[2] && !stickKeys[3])
+        core->input.setLStick(stickX, stickY);
+    mutex.unlock();
 }
 
 void b3Frame::close(wxCloseEvent &event) {
+    // Clean up the joystick if used
+    if (joystick) {
+        timer->Stop();
+        delete joystick;
+    }
+
     // Stop the canvas and the core
     canvas->finish();
     stopCore(true);
