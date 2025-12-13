@@ -16,8 +16,8 @@ jobs:
       with:
         msystem: MINGW64
         update: true
-    - name: Install build tools, wxWidgets, and PortAudio
-      run: pacman -S mingw-w64-x86_64-{gcc,pkg-config,wxwidgets-msw,portaudio,jbigkit} make --noconfirm
+    - name: Install tools and dependencies
+      run: pacman -S mingw-w64-x86_64-{gcc,pkg-config,wxwidgets-msw,portaudio,libepoxy,jbigkit} make --noconfirm
       shell: msys2 {0}
     - name: Compile
       run: |
@@ -41,7 +41,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
     - name: Compile
-      shell: 'nix-shell -p wxGTK32 portaudio libGL pkg-config --run "bash {0}"'
+      shell: 'nix-shell -p wxGTK32 portaudio libepoxy libGL pkg-config --run "bash {0}"'
       run: |
         make -j$(sysctl -n hw.logicalcpu)
     - name: Bundle

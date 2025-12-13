@@ -26,7 +26,6 @@
 #include "../core/core.h"
 
 #define MIN_SIZE wxSize(400, 480)
-class b3Canvas;
 
 class b3Frame: public wxFrame {
 public:
@@ -37,11 +36,13 @@ public:
     b3Frame();
     void Refresh();
 
+    uint32_t *getFrame();
     void pressKey(int key);
     void releaseKey(int key);
+    void pressScreen(int x, int y);
+    void releaseScreen();
 
 private:
-    b3Canvas *canvas;
     wxMenu *fileMenu, *systemMenu;
     wxJoystick *joystick;
     wxTimer *timer;
@@ -50,6 +51,11 @@ private:
     std::string cartPath;
     std::vector<int> axisBases;
     bool stickKeys[5] = {};
+
+    std::chrono::steady_clock::time_point lastRateTime;
+    int frameCount = 0;
+    int swapInterval = 0;
+    int refreshRate = 0;
 
     void runCore();
     void startCore(bool full);

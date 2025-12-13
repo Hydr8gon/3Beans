@@ -57,6 +57,5 @@ modules:
     build-commands:
       - DESTDIR=/app make install
     sources:
-      - type: git
-        url: https://github.com/Hydr8gon/3Beans.git
-        branch: main
+      - type: dir
+        path: ..

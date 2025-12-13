@@ -19,7 +19,8 @@
 
 #include <thread>
 #include "b3_frame.h"
-#include "b3_canvas.h"
+#include "b3_canvas_ogl.h"
+#include "b3_canvas_soft.h"
 #include "input_dialog.h"
 #include "path_dialog.h"
 
@@ -91,18 +92,25 @@ b3Frame::b3Frame(): wxFrame(nullptr, wxID_ANY, "3Beans") {
     SetMenuBar(menuBar);
 
     // Set up and show the window
+    stopCore(true);
     SetClientSize(MIN_SIZE);
+    SetBackgroundColour(*wxBLACK);
     Centre();
     Show(true);
 
-    // Set up a canvas for drawing the framebuffer
-    canvas = new b3Canvas(this);
+    // Create an OpenGL canvas if supported, or fall back to software
+    wxWindow *canvas;
+    try {
+        canvas = new b3CanvasOgl(this);
+    }
+    catch (CanvasError e) {
+        canvas = new b3CanvasSoft(this);
+    }
+
+    // Add the canvas to the frame
     wxBoxSizer *sizer = new wxBoxSizer(wxHORIZONTAL);
     sizer->Add(canvas, 1, wxEXPAND);
     SetSizer(sizer);
-
-    // Put the core in stopped state at first
-    stopCore(true);
     
     // Prepare a joystick if one is connected
     joystick = new wxJoystick();
@@ -198,6 +206,36 @@ void b3Frame::stopCore(bool full) {
     mutex.unlock();
 }
 
+uint32_t *b3Frame::getFrame() {
+    // Track refresh rate and update the swap interval every second
+    refreshRate++;
+    std::chrono::duration<double> rateTime = std::chrono::steady_clock::now() - lastRateTime;
+    if (rateTime.count() >= 1.0f) {
+        swapInterval = (refreshRate + 5) / 60; // Margin of 5
+        refreshRate = 0;
+        lastRateTime = std::chrono::steady_clock::now();
+    }
+
+    // Wait until the swap interval is reached
+    if (++frameCount < swapInterval)
+        return nullptr;
+
+    // Get a new frame from the core, or make an empty one if inactive
+    uint32_t *frame;
+    mutex.lock();
+    if (core) {
+        frame = core->pdc.getFrame();
+        mutex.unlock();
+    }
+    else {
+        mutex.unlock();
+        frame = new uint32_t[400 * 480];
+        memset(frame, 0, 400 * 480 * sizeof(uint32_t));
+    }
+    frameCount = 0;
+    return frame;
+}
+
 void b3Frame::pressKey(int key) {
     // Handle a key press based on its type
     mutex.lock();
@@ -248,6 +286,20 @@ void b3Frame::updateKeyStick() {
 
     // Send key-stick coordinates to the core
     core->input.setLStick(stickX, stickY);
+}
+
+void b3Frame::pressScreen(int x, int y) {
+    // Send a screen press to the core
+    mutex.lock();
+    if (core) core->input.pressScreen(x, y);
+    mutex.unlock();
+}
+
+void b3Frame::releaseScreen() {
+    // Send a screen release to the core
+    mutex.lock();
+    if (core) core->input.releaseScreen();
+    mutex.unlock();
 }
 
 void b3Frame::insertCart(wxCommandEvent &event) {
@@ -426,8 +478,7 @@ void b3Frame::close(wxCloseEvent &event) {
         delete joystick;
     }
 
-    // Stop the canvas and the core
-    canvas->finish();
+    // Stop the core
     stopCore(true);
     event.Skip(true);
 }

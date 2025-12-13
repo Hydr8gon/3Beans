@@ -33,12 +33,13 @@ you're just a user!
 
 ### Building
 **Windows:** Install [MSYS2](https://www.msys2.org) and run the command
-`pacman -Syu mingw-w64-x86_64-{gcc,pkg-config,wxwidgets-msw,portaudio,jbigkit} make` to get dependencies. Navigate to
-the project root directory and run `make -j$(nproc)` to start building.
+`pacman -Syu mingw-w64-x86_64-{gcc,pkg-config,wxwidgets-msw,portaudio,libepoxy,jbigkit} make` to get dependencies.
+Navigate to the project root directory and run `make -j$(nproc)` to start building.
 
-**macOS/Linux:** On the target system, install [wxWidgets](https://www.wxwidgets.org) and
-[PortAudio](https://www.portaudio.com). This can be done with the [Homebrew](https://brew.sh) package manager on macOS,
-or a built-in package manager on Linux. Run `make -j$(nproc)` in the project root directory to start building.
+**macOS/Linux:** On the target system, install [wxWidgets](https://www.wxwidgets.org),
+[PortAudio](https://www.portaudio.com), and [Epoxy](https://github.com/anholt/libepoxy). This can be done with a package
+manager like [Homebrew](https://brew.sh) on macOS, or a built-in one on Linux. Run `make -j$(nproc)` in the project root
+directory to start building.
 
 ### Hardware References
 * [GBATEK](https://problemkaputt.de/gbatek.htm) - Incomplete but great reference for the 3DS hardware

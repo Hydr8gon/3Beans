@@ -19,31 +19,20 @@
 
 #pragma once
 
-#include <chrono>
 #include <wx/wx.h>
-#include <wx/glcanvas.h>
 
 class b3Frame;
 
-class b3Canvas: public wxGLCanvas {
+class b3CanvasSoft: public wxPanel {
 public:
-    b3Canvas(b3Frame *frame);
-    void finish();
+    b3CanvasSoft(b3Frame *frame);
 
 private:
     b3Frame *frame;
-    wxGLContext *context;
+    wxBitmap bitmap;
 
-    std::chrono::steady_clock::time_point lastRateTime;
-    int frameCount = 0;
-    int swapInterval = 0;
-    int refreshRate = 0;
-    bool finished = false;
-
-    uint32_t width = 0;
-    uint32_t height = 0;
-    uint32_t x = 0;
-    uint32_t y = 0;
+    int scrW = 0, scrH = 0;
+    int scrX = 0, scrY = 0;
 
     void draw(wxPaintEvent &event);
     void resize(wxSizeEvent &event);
