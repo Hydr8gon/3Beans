@@ -21,6 +21,9 @@
 
 #include <cstdint>
 #include <deque>
+#include <vector>
+
+#include "gpu_render.h"
 
 class Core;
 
@@ -51,7 +54,7 @@ struct CombOpcode {
     uint8_t id;
 };
 
-class GpuRenderSoft {
+class GpuRenderSoft: public GpuRender {
 public:
     GpuRenderSoft(Core *core);
 

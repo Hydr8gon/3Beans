@@ -18,10 +18,17 @@
 */
 
 #include "../core.h"
+#include "gpu_render_soft.h"
+
+Gpu::Gpu(Core *core): core(core) {
+    // Initialize the software renderer
+    gpuRender = new GpuRenderSoft(core);
+}
 
 Gpu::~Gpu() {
-    // Ensure the thread is finished
+    // Finish and clean up the renderer
     syncThread();
+    delete gpuRender;
 }
 
 void Gpu::syncThread() {

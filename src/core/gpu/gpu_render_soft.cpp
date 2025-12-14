@@ -19,7 +19,9 @@
 
 #include <cmath>
 #include <cstring>
+
 #include "../core.h"
+#include "gpu_render_soft.h"
 
 // Lookup table for vertex shader instructions
 void (GpuRenderSoft::*GpuRenderSoft::vshInstrs[])(uint32_t) {

@@ -24,6 +24,7 @@
 #include <thread>
 
 class Core;
+class GpuRender;
 
 enum PrimMode {
     SAME_PRIM,
@@ -196,7 +197,7 @@ struct GpuThreadTask {
 
 class Gpu {
 public:
-    Gpu(Core *core): core(core) {}
+    Gpu(Core *core);
     ~Gpu();
 
     void syncThread();
@@ -389,6 +390,7 @@ public:
 
 private:
     Core *core;
+    GpuRender *gpuRender;
 
     static void (Gpu::*cmdWrites[0x400])(uint32_t, uint32_t);
     static uint32_t maskTable[0x10];

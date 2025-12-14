@@ -36,7 +36,6 @@
 #include "convert/sha.h"
 #include "convert/y2r.h"
 #include "gpu/gpu.h"
-#include "gpu/gpu_render_soft.h"
 #include "gpu/pdc.h"
 #include "io/cartridge.h"
 #include "io/csnd.h"
@@ -132,7 +131,6 @@ public:
     Csnd csnd;
     Dsp dsp;
     Gpu gpu;
-    GpuRenderSoft gpuRender;
     I2c i2c;
     Input input;
     Interrupts interrupts;

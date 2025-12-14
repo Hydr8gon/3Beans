@@ -18,7 +18,9 @@
 */
 
 #include <cstring>
+
 #include "../core.h"
+#include "gpu_render.h"
 
 TEMPLATE4(void Gpu::writeIrqReq, 0, uint32_t, uint32_t)
 TEMPLATE4(void Gpu::writeIrqReq, 4, uint32_t, uint32_t)
@@ -179,7 +181,7 @@ void Gpu::drawAttrIdx(uint32_t idx) {
     }
 
     // Pass the finished input to the renderer and handle primitive restarts
-    core->gpuRender.processVtx(input, restart ? PrimMode(((gpuPrimConfig >> 8) & 0x3) + 1) : SAME_PRIM, idx);
+    gpuRender->processVtx(input, restart ? PrimMode(((gpuPrimConfig >> 8) & 0x3) + 1) : SAME_PRIM, idx);
     restart = false;
 }
 
@@ -200,7 +202,7 @@ void Gpu::updateShdMaps() {
 
     // Update the map and check if the second one is needed
     shdMapDirty = false;
-    core->gpuRender.setOutMap(outMap);
+    gpuRender->setOutMap(outMap);
     if (~gpuGshConfig & BIT(1)) return;
 
     // Build a map of vertex shader outputs to geometry shader inputs
@@ -209,7 +211,7 @@ void Gpu::updateShdMaps() {
         gshInMap[i] = (gpuGshAttrIds >> (i << 2)) & 0xF;
     if ((gpuGshInputCfg & 0xF) < 0xF)
         gshInMap[(gpuGshInputCfg & 0xF) + 1] = -1; // End
-    core->gpuRender.setGshInMap(gshInMap);
+    gpuRender->setGshInMap(gshInMap);
 }
 
 template <int i> void Gpu::writeIrqReq(uint32_t mask, uint32_t value) {
@@ -227,9 +229,9 @@ void Gpu::writeFaceCulling(uint32_t mask, uint32_t value) {
 
     // Set the culling mode for the renderer
     switch (gpuFaceCulling) {
-        case 0x1: return core->gpuRender.setCullMode(CULL_FRONT);
-        case 0x2: return core->gpuRender.setCullMode(CULL_BACK);
-        default: return core->gpuRender.setCullMode(CULL_NONE);
+        case 0x1: return gpuRender->setCullMode(CULL_FRONT);
+        case 0x2: return gpuRender->setCullMode(CULL_BACK);
+        default: return gpuRender->setCullMode(CULL_NONE);
     }
 }
 
@@ -237,28 +239,28 @@ void Gpu::writeViewScaleH(uint32_t mask, uint32_t value) {
     // Write to the viewport horizontal scale and send it to the renderer
     gpuViewScaleH = (gpuViewScaleH & ~mask) | (value & mask);
     uint32_t conv = flt24e7to32e8(gpuViewScaleH);
-    core->gpuRender.setViewScaleH(*(float*)&conv);
+    gpuRender->setViewScaleH(*(float*)&conv);
 }
 
 void Gpu::writeViewStepH(uint32_t mask, uint32_t value) {
     // Write to the viewport horizontal step and send it to the renderer
     gpuViewStepH = (gpuViewStepH & ~mask) | (value & mask);
     uint32_t conv = flt32e7to32e8(gpuViewStepH);
-    core->gpuRender.setViewStepH(*(float*)&conv);
+    gpuRender->setViewStepH(*(float*)&conv);
 }
 
 void Gpu::writeViewScaleV(uint32_t mask, uint32_t value) {
     // Write to the viewport vertical scale and send it to the renderer
     gpuViewScaleV = (gpuViewScaleV & ~mask) | (value & mask);
     uint32_t conv = flt24e7to32e8(gpuViewScaleV);
-    core->gpuRender.setViewScaleV(*(float*)&conv);
+    gpuRender->setViewScaleV(*(float*)&conv);
 }
 
 void Gpu::writeViewStepV(uint32_t mask, uint32_t value) {
     // Write to the viewport vertical step and send it to the renderer
     gpuViewStepV = (gpuViewStepV & ~mask) | (value & mask);
     uint32_t conv = flt32e7to32e8(gpuViewStepV);
-    core->gpuRender.setViewStepV(*(float*)&conv);
+    gpuRender->setViewStepV(*(float*)&conv);
 }
 
 void Gpu::writeShdOutTotal(uint32_t mask, uint32_t value) {
@@ -282,14 +284,14 @@ template <int i> void Gpu::writeTexBorder(uint32_t mask, uint32_t value) {
     float g = float((gpuTexBorder[i] >> 8) & 0xFF) / 0xFF;
     float b = float((gpuTexBorder[i] >> 16) & 0xFF) / 0xFF;
     float a = float((gpuTexBorder[i] >> 24) & 0xFF) / 0xFF;
-    core->gpuRender.setTexBorder(i, r, g, b, a);
+    gpuRender->setTexBorder(i, r, g, b, a);
 }
 
 template <int i> void Gpu::writeTexDim(uint32_t mask, uint32_t value) {
     // Write to one of the texture dimensions and send them to the renderer
     mask &= 0x7FFFFFF;
     gpuTexDim[i] = (gpuTexDim[i] & ~mask) | (value & mask);
-    core->gpuRender.setTexDims(i, gpuTexDim[i] >> 16, gpuTexDim[i] & 0x7FF);
+    gpuRender->setTexDims(i, gpuTexDim[i] >> 16, gpuTexDim[i] & 0x7FF);
 }
 
 template <int i> void Gpu::writeTexParam(uint32_t mask, uint32_t value) {
@@ -297,15 +299,15 @@ template <int i> void Gpu::writeTexParam(uint32_t mask, uint32_t value) {
     // TODO: use bits other than coordinate wraps
     mask &= (i ? 0x1FFFFFF : 0x71FFFFFF);
     gpuTexParam[i] = (gpuTexParam[i] & ~mask) | (value & mask);
-    core->gpuRender.setTexWrapS(i, TexWrap((gpuTexParam[i] >> 12) & 0x3));
-    core->gpuRender.setTexWrapT(i, TexWrap((gpuTexParam[i] >> 8) & 0x3));
+    gpuRender->setTexWrapS(i, TexWrap((gpuTexParam[i] >> 12) & 0x3));
+    gpuRender->setTexWrapT(i, TexWrap((gpuTexParam[i] >> 8) & 0x3));
 }
 
 template <int i> void Gpu::writeTexAddr1(uint32_t mask, uint32_t value) {
     // Write to one of the texture addresses and send it to the renderer
     mask &= 0xFFFFFFF;
     gpuTexAddr1[i] = (gpuTexAddr1[i] & ~mask) | (value & mask);
-    core->gpuRender.setTexAddr(i, gpuTexAddr1[i] << 3);
+    gpuRender->setTexAddr(i, gpuTexAddr1[i] << 3);
 }
 
 template <int i> void Gpu::writeTexType(uint32_t mask, uint32_t value) {
@@ -315,9 +317,9 @@ template <int i> void Gpu::writeTexType(uint32_t mask, uint32_t value) {
 
     // Set the format for the renderer if it's valid
     if (gpuTexType[i] < 0xE)
-        return core->gpuRender.setTexFmt(i, TexFmt(gpuTexType[i]));
+        return gpuRender->setTexFmt(i, TexFmt(gpuTexType[i]));
     LOG_WARN("GPU texture %d set to unknown format: 0x%X\n", i, gpuTexType[i]);
-    return core->gpuRender.setTexFmt(i, TEX_UNK);
+    return gpuRender->setTexFmt(i, TEX_UNK);
 }
 
 template <int i> void Gpu::writeCombSrc(uint32_t mask, uint32_t value) {
@@ -328,21 +330,21 @@ template <int i> void Gpu::writeCombSrc(uint32_t mask, uint32_t value) {
     // Set the sources for the renderer if they're valid
     for (int j = 0; j < 6; j++) {
         switch (uint8_t src = (gpuCombSrc[i] >> ((j + (j > 2)) * 4)) & 0xF) {
-            case 0x0: core->gpuRender.setCombSrc(i, j, COMB_PRIM); continue;
-            case 0x1: core->gpuRender.setCombSrc(i, j, COMB_FRAG0); continue;
-            case 0x2: core->gpuRender.setCombSrc(i, j, COMB_FRAG1); continue;
-            case 0x3: core->gpuRender.setCombSrc(i, j, COMB_TEX0); continue;
-            case 0x4: core->gpuRender.setCombSrc(i, j, COMB_TEX1); continue;
-            case 0x5: core->gpuRender.setCombSrc(i, j, COMB_TEX2); continue;
-            case 0x6: core->gpuRender.setCombSrc(i, j, COMB_TEX3); continue;
-            case 0xD: core->gpuRender.setCombSrc(i, j, COMB_PRVBUF); continue;
-            case 0xE: core->gpuRender.setCombSrc(i, j, COMB_CONST); continue;
-            case 0xF: core->gpuRender.setCombSrc(i, j, COMB_PREV); continue;
+            case 0x0: gpuRender->setCombSrc(i, j, COMB_PRIM); continue;
+            case 0x1: gpuRender->setCombSrc(i, j, COMB_FRAG0); continue;
+            case 0x2: gpuRender->setCombSrc(i, j, COMB_FRAG1); continue;
+            case 0x3: gpuRender->setCombSrc(i, j, COMB_TEX0); continue;
+            case 0x4: gpuRender->setCombSrc(i, j, COMB_TEX1); continue;
+            case 0x5: gpuRender->setCombSrc(i, j, COMB_TEX2); continue;
+            case 0x6: gpuRender->setCombSrc(i, j, COMB_TEX3); continue;
+            case 0xD: gpuRender->setCombSrc(i, j, COMB_PRVBUF); continue;
+            case 0xE: gpuRender->setCombSrc(i, j, COMB_CONST); continue;
+            case 0xF: gpuRender->setCombSrc(i, j, COMB_PREV); continue;
 
         default:
             // Catch unknown texture combiner source values
             LOG_WARN("GPU texture combiner %d source %d set to unknown value: 0x%X\n", i, j, src);
-            core->gpuRender.setCombSrc(i, j, COMB_UNK);
+            gpuRender->setCombSrc(i, j, COMB_UNK);
             continue;
         }
     }
@@ -356,21 +358,21 @@ template <int i> void Gpu::writeCombOper(uint32_t mask, uint32_t value) {
     // Set RGB operands for the renderer if they're valid
     for (int j = 0; j < 3; j++) {
         switch (uint8_t oper = (gpuCombOper[i] >> (j * 4)) & 0xF) {
-            case 0x0: core->gpuRender.setCombOper(i, j, OPER_SRC); continue;
-            case 0x1: core->gpuRender.setCombOper(i, j, OPER_1MSRC); continue;
-            case 0x2: core->gpuRender.setCombOper(i, j, OPER_SRCA); continue;
-            case 0x3: core->gpuRender.setCombOper(i, j, OPER_1MSRCA); continue;
-            case 0x4: core->gpuRender.setCombOper(i, j, OPER_SRCR); continue;
-            case 0x5: core->gpuRender.setCombOper(i, j, OPER_1MSRCR); continue;
-            case 0x8: core->gpuRender.setCombOper(i, j, OPER_SRCG); continue;
-            case 0x9: core->gpuRender.setCombOper(i, j, OPER_1MSRCG); continue;
-            case 0xC: core->gpuRender.setCombOper(i, j, OPER_SRCB); continue;
-            case 0xD: core->gpuRender.setCombOper(i, j, OPER_1MSRCB); continue;
+            case 0x0: gpuRender->setCombOper(i, j, OPER_SRC); continue;
+            case 0x1: gpuRender->setCombOper(i, j, OPER_1MSRC); continue;
+            case 0x2: gpuRender->setCombOper(i, j, OPER_SRCA); continue;
+            case 0x3: gpuRender->setCombOper(i, j, OPER_1MSRCA); continue;
+            case 0x4: gpuRender->setCombOper(i, j, OPER_SRCR); continue;
+            case 0x5: gpuRender->setCombOper(i, j, OPER_1MSRCR); continue;
+            case 0x8: gpuRender->setCombOper(i, j, OPER_SRCG); continue;
+            case 0x9: gpuRender->setCombOper(i, j, OPER_1MSRCG); continue;
+            case 0xC: gpuRender->setCombOper(i, j, OPER_SRCB); continue;
+            case 0xD: gpuRender->setCombOper(i, j, OPER_1MSRCB); continue;
 
         default:
             // Catch unknown RGB operand values
             LOG_WARN("GPU texture combiner %d operand %d set to unknown value: 0x%X\n", i, j, oper);
-            core->gpuRender.setCombOper(i, j, OPER_SRC);
+            gpuRender->setCombOper(i, j, OPER_SRC);
             continue;
         }
     }
@@ -378,14 +380,14 @@ template <int i> void Gpu::writeCombOper(uint32_t mask, uint32_t value) {
     // Set alpha operands for the renderer
     for (int j = 3; j < 6; j++) {
         switch ((gpuCombOper[i] >> (j * 4)) & 0x7) {
-            case 0x0: core->gpuRender.setCombOper(i, j, OPER_SRCA); continue;
-            case 0x1: core->gpuRender.setCombOper(i, j, OPER_1MSRCA); continue;
-            case 0x2: core->gpuRender.setCombOper(i, j, OPER_SRCR); continue;
-            case 0x3: core->gpuRender.setCombOper(i, j, OPER_1MSRCR); continue;
-            case 0x4: core->gpuRender.setCombOper(i, j, OPER_SRCG); continue;
-            case 0x5: core->gpuRender.setCombOper(i, j, OPER_1MSRCG); continue;
-            case 0x6: core->gpuRender.setCombOper(i, j, OPER_SRCB); continue;
-            default: core->gpuRender.setCombOper(i, j, OPER_1MSRCB); continue;
+            case 0x0: gpuRender->setCombOper(i, j, OPER_SRCA); continue;
+            case 0x1: gpuRender->setCombOper(i, j, OPER_1MSRCA); continue;
+            case 0x2: gpuRender->setCombOper(i, j, OPER_SRCR); continue;
+            case 0x3: gpuRender->setCombOper(i, j, OPER_1MSRCR); continue;
+            case 0x4: gpuRender->setCombOper(i, j, OPER_SRCG); continue;
+            case 0x5: gpuRender->setCombOper(i, j, OPER_1MSRCG); continue;
+            case 0x6: gpuRender->setCombOper(i, j, OPER_SRCB); continue;
+            default: gpuRender->setCombOper(i, j, OPER_1MSRCB); continue;
         }
     }
 }
@@ -399,11 +401,11 @@ template <int i> void Gpu::writeCombMode(uint32_t mask, uint32_t value) {
     for (int j = 0; j < 2; j++) {
         uint8_t mode = (gpuCombMode[i] >> (j * 16)) & 0xF;
         if (mode < 0xA) {
-            core->gpuRender.setCombMode(i, j, CalcMode(mode));
+            gpuRender->setCombMode(i, j, CalcMode(mode));
             continue;
         }
         LOG_WARN("GPU texture combiner %d mode %d set to unknown value: 0x%X\n", i, j, mode);
-        core->gpuRender.setCombMode(i, j, MODE_UNK);
+        gpuRender->setCombMode(i, j, MODE_UNK);
     }
 }
 
@@ -414,7 +416,7 @@ template <int i> void Gpu::writeCombColor(uint32_t mask, uint32_t value) {
     float g = float((gpuCombColor[i] >> 8) & 0xFF) / 0xFF;
     float b = float((gpuCombColor[i] >> 16) & 0xFF) / 0xFF;
     float a = float((gpuCombColor[i] >> 24) & 0xFF) / 0xFF;
-    core->gpuRender.setCombColor(i, r, g, b, a);
+    gpuRender->setCombColor(i, r, g, b, a);
 }
 
 void Gpu::writeCombBufUpd(uint32_t mask, uint32_t value) {
@@ -422,7 +424,7 @@ void Gpu::writeCombBufUpd(uint32_t mask, uint32_t value) {
     // TODO: use other bits (or are they just for fog?)
     mask &= 0x301FF0F;
     gpuCombBufUpd = (gpuCombBufUpd & ~mask) | (value & mask);
-    core->gpuRender.setCombBufMask(gpuCombBufUpd >> 8);
+    gpuRender->setCombBufMask(gpuCombBufUpd >> 8);
 }
 
 void Gpu::writeCombBufCol(uint32_t mask, uint32_t value) {
@@ -432,7 +434,7 @@ void Gpu::writeCombBufCol(uint32_t mask, uint32_t value) {
     float g = float((gpuCombBufCol >> 8) & 0xFF) / 0xFF;
     float b = float((gpuCombBufCol >> 16) & 0xFF) / 0xFF;
     float a = float((gpuCombBufCol >> 24) & 0xFF) / 0xFF;
-    core->gpuRender.setCombBufColor(r, g, b, a);
+    gpuRender->setCombBufColor(r, g, b, a);
 }
 
 void Gpu::writeBlendFunc(uint32_t mask, uint32_t value) {
@@ -443,11 +445,11 @@ void Gpu::writeBlendFunc(uint32_t mask, uint32_t value) {
     // Set the blend modes for the renderer
     for (int i = 0; i < 2; i++) {
         switch ((gpuBlendFunc >> (i * 8)) & 0x7) {
-            default: core->gpuRender.setBlendMode(i, MODE_ADD); continue;
-            case 0x1: core->gpuRender.setBlendMode(i, MODE_SUB); continue;
-            case 0x2: core->gpuRender.setBlendMode(i, MODE_RSUB); continue;
-            case 0x3: core->gpuRender.setBlendMode(i, MODE_MIN); continue;
-            case 0x4: core->gpuRender.setBlendMode(i, MODE_MAX); continue;
+            default: gpuRender->setBlendMode(i, MODE_ADD); continue;
+            case 0x1: gpuRender->setBlendMode(i, MODE_SUB); continue;
+            case 0x2: gpuRender->setBlendMode(i, MODE_RSUB); continue;
+            case 0x3: gpuRender->setBlendMode(i, MODE_MIN); continue;
+            case 0x4: gpuRender->setBlendMode(i, MODE_MAX); continue;
         }
     }
 
@@ -455,11 +457,11 @@ void Gpu::writeBlendFunc(uint32_t mask, uint32_t value) {
     for (int i = 0; i < 4; i++) {
         uint8_t oper = (gpuBlendFunc >> (16 + (i * 4))) & 0xF;
         if (oper < 0xE) {
-            core->gpuRender.setBlendOper(i, BlendOper(oper));
+            gpuRender->setBlendOper(i, BlendOper(oper));
             continue;
         }
         LOG_WARN("GPU blender operand %d set to unknown value: 0x%X\n", i, oper);
-        core->gpuRender.setBlendOper(i, BLND_ONE);
+        gpuRender->setBlendOper(i, BLND_ONE);
     }
 }
 
@@ -470,31 +472,31 @@ void Gpu::writeBlendColor(uint32_t mask, uint32_t value) {
     float g = float((gpuBlendColor >> 8) & 0xFF) / 0xFF;
     float b = float((gpuBlendColor >> 16) & 0xFF) / 0xFF;
     float a = float((gpuBlendColor >> 24) & 0xFF) / 0xFF;
-    core->gpuRender.setBlendColor(r, g, b, a);
+    gpuRender->setBlendColor(r, g, b, a);
 }
 
 void Gpu::writeAlphaTest(uint32_t mask, uint32_t value) {
     // Write to the alpha test register and update the renderer's state
     mask &= 0xFF71;
     gpuAlphaTest = (gpuAlphaTest & ~mask) | (value & mask);
-    core->gpuRender.setAlphaFunc((gpuAlphaTest & BIT(0)) ? TestFunc((gpuAlphaTest >> 4) & 0x7) : TEST_AL);
-    core->gpuRender.setAlphaValue(float(gpuAlphaTest >> 8) / 0xFF);
+    gpuRender->setAlphaFunc((gpuAlphaTest & BIT(0)) ? TestFunc((gpuAlphaTest >> 4) & 0x7) : TEST_AL);
+    gpuRender->setAlphaValue(float(gpuAlphaTest >> 8) / 0xFF);
 }
 
 void Gpu::writeStencilTest(uint32_t mask, uint32_t value) {
     // Write to the stencil test register and update the renderer's state
     mask &= 0xFFFFFF71;
     gpuStencilTest = (gpuStencilTest & ~mask) | (value & mask);
-    core->gpuRender.setStencilTest(TestFunc((gpuStencilTest >> 4) & 0x7), gpuStencilTest & BIT(0));
-    core->gpuRender.setStencilMasks(gpuStencilTest >> 8, gpuStencilTest >> 24);
-    core->gpuRender.setStencilValue(gpuStencilTest >> 16);
+    gpuRender->setStencilTest(TestFunc((gpuStencilTest >> 4) & 0x7), gpuStencilTest & BIT(0));
+    gpuRender->setStencilMasks(gpuStencilTest >> 8, gpuStencilTest >> 24);
+    gpuRender->setStencilValue(gpuStencilTest >> 16);
 }
 
 void Gpu::writeStencilOp(uint32_t mask, uint32_t value) {
     // Write to the stencil operation register and update the renderer's state
     mask &= 0x777;
     gpuStencilOp = (gpuStencilOp & ~mask) | (value & mask);
-    core->gpuRender.setStencilOps(StenOper(gpuStencilOp & 0x7),
+    gpuRender->setStencilOps(StenOper(gpuStencilOp & 0x7),
         StenOper((gpuStencilOp >> 4) & 0x7), StenOper((gpuStencilOp >> 8) & 0x7));
 }
 
@@ -502,23 +504,23 @@ void Gpu::writeDepcolMask(uint32_t mask, uint32_t value) {
     // Write to the depth/color mask register and update the renderer's state
     mask &= 0x1F71;
     gpuDepcolMask = (gpuDepcolMask & ~mask) | (value & mask);
-    core->gpuRender.setDepthFunc((gpuDepcolMask & BIT(0)) ? TestFunc((gpuDepcolMask >> 4) & 0x7) : TEST_AL);
-    core->gpuRender.setColbufMask(gpuColbufWrite ? ((gpuDepcolMask >> 8) & 0xF) : 0);
-    core->gpuRender.setDepbufMask(gpuDepbufWrite ? (((gpuDepcolMask >> 11) & 0x2) | 0x1) : 0);
+    gpuRender->setDepthFunc((gpuDepcolMask & BIT(0)) ? TestFunc((gpuDepcolMask >> 4) & 0x7) : TEST_AL);
+    gpuRender->setColbufMask(gpuColbufWrite ? ((gpuDepcolMask >> 8) & 0xF) : 0);
+    gpuRender->setDepbufMask(gpuDepbufWrite ? (((gpuDepcolMask >> 11) & 0x2) | 0x1) : 0);
 }
 
 void Gpu::writeColbufWrite(uint32_t mask, uint32_t value) {
     // Write to the color buffer write enable and update the renderer's color mask
     mask &= 0xF;
     gpuColbufWrite = (gpuColbufWrite & ~mask) | (value & mask);
-    core->gpuRender.setColbufMask(gpuColbufWrite ? ((gpuDepcolMask >> 8) & 0xF) : 0);
+    gpuRender->setColbufMask(gpuColbufWrite ? ((gpuDepcolMask >> 8) & 0xF) : 0);
 }
 
 void Gpu::writeDepbufWrite(uint32_t mask, uint32_t value) {
     // Write to the depth buffer write enable and update the renderer's depth mask
     mask &= 0x3;
     gpuDepbufWrite = (gpuDepbufWrite & ~mask) | (value & mask);
-    core->gpuRender.setDepbufMask(gpuDepbufWrite ? ((gpuDepcolMask >> 11) & 0x2) : 0);
+    gpuRender->setDepbufMask(gpuDepbufWrite ? ((gpuDepcolMask >> 11) & 0x2) : 0);
 }
 
 void Gpu::writeDepbufFmt(uint32_t mask, uint32_t value) {
@@ -528,14 +530,14 @@ void Gpu::writeDepbufFmt(uint32_t mask, uint32_t value) {
 
     // Set the format for the renderer if it's valid
     switch (gpuDepbufFmt) {
-        case 0x0: return core->gpuRender.setDepbufFmt(DEP_16);
-        case 0x2: return core->gpuRender.setDepbufFmt(DEP_24);
-        case 0x3: return core->gpuRender.setDepbufFmt(DEP_24S8);
+        case 0x0: return gpuRender->setDepbufFmt(DEP_16);
+        case 0x2: return gpuRender->setDepbufFmt(DEP_24);
+        case 0x3: return gpuRender->setDepbufFmt(DEP_24S8);
 
     default:
         // Catch unknown depth buffer formats
         LOG_CRIT("Setting unknown GPU depth buffer format: 0x%X\n", gpuDepbufFmt);
-        return core->gpuRender.setDepbufFmt(DEP_UNK);
+        return gpuRender->setDepbufFmt(DEP_UNK);
     }
 }
 
@@ -546,16 +548,16 @@ void Gpu::writeColbufFmt(uint32_t mask, uint32_t value) {
 
     // Set the format for the renderer if it's valid
     switch (gpuColbufFmt) {
-        case 0x00002: return core->gpuRender.setColbufFmt(COL_RGBA8);
-        case 0x10001: return core->gpuRender.setColbufFmt(COL_RGB8);
-        case 0x20000: return core->gpuRender.setColbufFmt(COL_RGB5A1);
-        case 0x30000: return core->gpuRender.setColbufFmt(COL_RGB565);
-        case 0x40000: return core->gpuRender.setColbufFmt(COL_RGBA4);
+        case 0x00002: return gpuRender->setColbufFmt(COL_RGBA8);
+        case 0x10001: return gpuRender->setColbufFmt(COL_RGB8);
+        case 0x20000: return gpuRender->setColbufFmt(COL_RGB5A1);
+        case 0x30000: return gpuRender->setColbufFmt(COL_RGB565);
+        case 0x40000: return gpuRender->setColbufFmt(COL_RGBA4);
 
     default:
         // Catch unknown color buffer formats
         LOG_CRIT("Setting unknown GPU color buffer format: 0x%X\n", gpuColbufFmt);
-        return core->gpuRender.setColbufFmt(COL_UNK);
+        return gpuRender->setColbufFmt(COL_UNK);
     }
 }
 
@@ -563,21 +565,21 @@ void Gpu::writeDepbufLoc(uint32_t mask, uint32_t value) {
     // Write to the depth buffer location and send its address to the renderer
     mask &= 0xFFFFFFF;
     gpuDepbufLoc = (gpuDepbufLoc & ~mask) | (value & mask);
-    core->gpuRender.setDepbufAddr((gpuDepbufLoc & ~0x7) << 3);
+    gpuRender->setDepbufAddr((gpuDepbufLoc & ~0x7) << 3);
 }
 
 void Gpu::writeColbufLoc(uint32_t mask, uint32_t value) {
     // Write to the color buffer location and send its address to the renderer
     mask &= 0xFFFFFFF;
     gpuColbufLoc = (gpuColbufLoc & ~mask) | (value & mask);
-    core->gpuRender.setColbufAddr((gpuColbufLoc & ~0x7) << 3);
+    gpuRender->setColbufAddr((gpuColbufLoc & ~0x7) << 3);
 }
 
 void Gpu::writeBufferDim(uint32_t mask, uint32_t value) {
     // Write to the render buffer dimensions and send them to the renderer
     mask &= 0x13FF7FF;
     gpuColbufLoc = (gpuColbufLoc & ~mask) | (value & mask);
-    core->gpuRender.setBufferDims(gpuColbufLoc & 0x7FF, ((gpuColbufLoc >> 12) & 0x3FF) + 1, gpuColbufLoc & BIT(24));
+    gpuRender->setBufferDims(gpuColbufLoc & 0x7FF, ((gpuColbufLoc >> 12) & 0x3FF) + 1, gpuColbufLoc & BIT(24));
 }
 
 void Gpu::writeAttrBase(uint32_t mask, uint32_t value) {
@@ -629,7 +631,7 @@ void Gpu::writeGshConfig(uint32_t mask, uint32_t value) {
     // TODO: use the other bits for something?
     mask &= 0x800F0303;
     gpuGshConfig = (gpuGshConfig & ~mask) | (value & mask);
-    core->gpuRender.setGshInCount((gpuGshConfig & BIT(1)) ? (gpuVshOutTotal + 1) : 0);
+    gpuRender->setGshInCount((gpuGshConfig & BIT(1)) ? (gpuVshOutTotal + 1) : 0);
     shdMapDirty = true;
 }
 
@@ -641,7 +643,7 @@ void Gpu::writeAttrFirstIdx(uint32_t mask, uint32_t value) {
 void Gpu::writeAttrDrawArrays(uint32_t mask, uint32_t value) {
     // Update renderer state before a new vertex batch
     if (shdMapDirty) updateShdMaps();
-    core->gpuRender.startList();
+    gpuRender->startList();
 
     // Draw vertices from the attribute buffer using increasing indices
     LOG_INFO("GPU sending %d linear vertices to be rendered\n", gpuAttrNumVerts);
@@ -652,7 +654,7 @@ void Gpu::writeAttrDrawArrays(uint32_t mask, uint32_t value) {
 void Gpu::writeAttrDrawElems(uint32_t mask, uint32_t value) {
     // Update renderer state before a new vertex batch
     if (shdMapDirty) updateShdMaps();
-    core->gpuRender.startList();
+    gpuRender->startList();
 
     // Draw vertices from the attribute buffer using indices from a list
     LOG_INFO("GPU sending %d indexed vertices to be rendered\n", gpuAttrNumVerts);
@@ -699,7 +701,7 @@ void Gpu::writeAttrFixedData(uint32_t mask, uint32_t value) {
 
     // Pass the finished input to the renderer and handle primitive restarts
     if (shdMapDirty) updateShdMaps();
-    core->gpuRender.processVtx(input, restart ? PrimMode(((gpuPrimConfig >> 8) & 0x3) + 1) : SAME_PRIM);
+    gpuRender->processVtx(input, restart ? PrimMode(((gpuPrimConfig >> 8) & 0x3) + 1) : SAME_PRIM);
     restart = false;
 }
 
@@ -734,7 +736,7 @@ void Gpu::writeVshOutTotal(uint32_t mask, uint32_t value) {
     // Write to the vertex shader output attribute count and send it to the renderer
     mask &= 0xF;
     gpuVshOutTotal = (gpuVshOutTotal & ~mask) | (value & mask);
-    core->gpuRender.setGshInCount((gpuGshConfig & BIT(1)) ? (gpuVshOutTotal + 1) : 0);
+    gpuRender->setGshInCount((gpuGshConfig & BIT(1)) ? (gpuVshOutTotal + 1) : 0);
 }
 
 void Gpu::writePrimConfig(uint32_t mask, uint32_t value) {
@@ -758,7 +760,7 @@ void Gpu::writeGshBools(uint32_t mask, uint32_t value) {
 
     // Update the uniform booleans in the renderer
     for (int i = 0; i < 16; i++)
-        core->gpuRender.setGshBool(i, gpuGshBools & BIT(i));
+        gpuRender->setGshBool(i, gpuGshBools & BIT(i));
 }
 
 template <int i> void Gpu::writeGshInts(uint32_t mask, uint32_t value) {
@@ -768,7 +770,7 @@ template <int i> void Gpu::writeGshInts(uint32_t mask, uint32_t value) {
 
     // Update some of the uniform integers in the renderer
     for (int j = 0; j < 3; j++)
-        core->gpuRender.setGshInt(i, j, gpuGshInts[i] >> (j << 3));
+        gpuRender->setGshInt(i, j, gpuGshInts[i] >> (j << 3));
 }
 
 void Gpu::writeGshInputCfg(uint32_t mask, uint32_t value) {
@@ -783,7 +785,7 @@ void Gpu::writeGshEntry(uint32_t mask, uint32_t value) {
     // Write to the geometry shader entry/end and send them to the renderer
     mask &= 0xFFF0FFF;
     gpuGshEntry = (gpuGshEntry & ~mask) | (value & mask);
-    core->gpuRender.setGshEntry(gpuGshEntry >> 0, gpuGshEntry >> 16);
+    gpuRender->setGshEntry(gpuGshEntry >> 0, gpuGshEntry >> 16);
 }
 
 void Gpu::writeGshAttrIdsL(uint32_t mask, uint32_t value) {
@@ -825,7 +827,7 @@ void Gpu::writeGshFloatData(uint32_t mask, uint32_t value) {
     // Increment the index and update the renderer once 4 floats are received
     if (gshFloatIdx++ < (96 << 2) && !(gshFloatIdx & 0x3))
         for (int i = 0; i < 4; i++)
-            core->gpuRender.setGshFloat((gshFloatIdx >> 2) - 1, i, *(float*)&gshFloatData[i]);
+            gpuRender->setGshFloat((gshFloatIdx >> 2) - 1, i, *(float*)&gshFloatData[i]);
 }
 
 void Gpu::writeGshCodeIdx(uint32_t mask, uint32_t value) {
@@ -835,7 +837,7 @@ void Gpu::writeGshCodeIdx(uint32_t mask, uint32_t value) {
 
 void Gpu::writeGshCodeData(uint32_t mask, uint32_t value) {
     // Write to the current geometry shader program index and increment it
-    core->gpuRender.writeGshCode(gpuGshCodeIdx++ & 0xFFF, value & mask);
+    gpuRender->writeGshCode(gpuGshCodeIdx++ & 0xFFF, value & mask);
 }
 
 void Gpu::writeGshDescIdx(uint32_t mask, uint32_t value) {
@@ -845,7 +847,7 @@ void Gpu::writeGshDescIdx(uint32_t mask, uint32_t value) {
 
 void Gpu::writeGshDescData(uint32_t mask, uint32_t value) {
     // Write to the current geometry operand descriptor index and increment it
-    core->gpuRender.writeGshDesc(gpuGshDescIdx++ & 0x7F, value & mask);
+    gpuRender->writeGshDesc(gpuGshDescIdx++ & 0x7F, value & mask);
 }
 
 void Gpu::writeVshBools(uint32_t mask, uint32_t value) {
@@ -856,7 +858,7 @@ void Gpu::writeVshBools(uint32_t mask, uint32_t value) {
 
     // Update the uniform booleans in the renderer
     for (int i = 0; i < 16; i++)
-        core->gpuRender.setVshBool(i, gpuVshBools & BIT(i));
+        gpuRender->setVshBool(i, gpuVshBools & BIT(i));
 }
 
 template <int i> void Gpu::writeVshInts(uint32_t mask, uint32_t value) {
@@ -866,14 +868,14 @@ template <int i> void Gpu::writeVshInts(uint32_t mask, uint32_t value) {
 
     // Update some of the uniform integers in the renderer
     for (int j = 0; j < 3; j++)
-        core->gpuRender.setVshInt(i, j, gpuVshInts[i] >> (j << 3));
+        gpuRender->setVshInt(i, j, gpuVshInts[i] >> (j << 3));
 }
 
 void Gpu::writeVshEntry(uint32_t mask, uint32_t value) {
     // Write to the vertex shader entry/end and send them to the renderer
     mask &= 0x1FF01FF;
     gpuVshEntry = (gpuVshEntry & ~mask) | (value & mask);
-    core->gpuRender.setVshEntry(gpuVshEntry >> 0, gpuVshEntry >> 16);
+    gpuRender->setVshEntry(gpuVshEntry >> 0, gpuVshEntry >> 16);
 }
 
 void Gpu::writeVshAttrIdsL(uint32_t mask, uint32_t value) {
@@ -914,7 +916,7 @@ void Gpu::writeVshFloatData(uint32_t mask, uint32_t value) {
     // Increment the index and update the renderer once 4 floats are received
     if (vshFloatIdx++ < (96 << 2) && !(vshFloatIdx & 0x3))
         for (int i = 0; i < 4; i++)
-            core->gpuRender.setVshFloat((vshFloatIdx >> 2) - 1, i, *(float*)&vshFloatData[i]);
+            gpuRender->setVshFloat((vshFloatIdx >> 2) - 1, i, *(float*)&vshFloatData[i]);
 }
 
 void Gpu::writeVshCodeIdx(uint32_t mask, uint32_t value) {
@@ -924,7 +926,7 @@ void Gpu::writeVshCodeIdx(uint32_t mask, uint32_t value) {
 
 void Gpu::writeVshCodeData(uint32_t mask, uint32_t value) {
     // Write to the current vertex shader program index and increment it
-    core->gpuRender.writeVshCode(gpuVshCodeIdx++ & 0x1FF, value & mask);
+    gpuRender->writeVshCode(gpuVshCodeIdx++ & 0x1FF, value & mask);
 }
 
 void Gpu::writeVshDescIdx(uint32_t mask, uint32_t value) {
@@ -934,7 +936,7 @@ void Gpu::writeVshDescIdx(uint32_t mask, uint32_t value) {
 
 void Gpu::writeVshDescData(uint32_t mask, uint32_t value) {
     // Write to the current vertex operand descriptor index and increment it
-    core->gpuRender.writeVshDesc(gpuVshDescIdx++ & 0x7F, value & mask);
+    gpuRender->writeVshDesc(gpuVshDescIdx++ & 0x7F, value & mask);
 }
 
 void Gpu::writeUnkCmd(uint32_t mask, uint32_t value) {
