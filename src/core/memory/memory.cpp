@@ -161,6 +161,11 @@ void Memory::updateMap(bool arm9, uint32_t start, uint32_t end) {
             write = &fcram[address & 0x7FFFFFF]; // 128MB FCRAM
         else if (extend && address >= 0x28000000 && address < 0x30000000)
             write = &fcramExt[address & 0x7FFFFFF]; // 128MB extended FCRAM
+
+        // Use a hack to work around boot9strap 1.4's uninitialized stack
+        // TODO: fix this properly (it works on hardware)
+        else if (!arm9 && address >= 0xFFFFE000)
+            write = &boot11[address & 0xFFFF];
     }
 
     // Update the virtual memory maps as well
