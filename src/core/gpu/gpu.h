@@ -197,7 +197,7 @@ struct GpuThreadTask {
 
 class Gpu {
 public:
-    Gpu(Core *core);
+    Gpu(Core *core, std::function<void()> *contextFunc);
     ~Gpu();
 
     void syncThread();
@@ -390,7 +390,10 @@ public:
 
 private:
     Core *core;
-    GpuRender *gpuRender;
+    std::function<void()> *contextFunc;
+
+    GpuRender *gpuRender = nullptr;
+    int curRenderer = -1;
 
     static void (Gpu::*cmdWrites[0x400])(uint32_t, uint32_t);
     static uint32_t maskTable[0x10];

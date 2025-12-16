@@ -23,6 +23,7 @@
 #include <thread>
 #include <wx/wx.h>
 #include <wx/joystick.h>
+
 #include "../core/core.h"
 
 #define MIN_SIZE wxSize(400, 480)
@@ -44,6 +45,7 @@ public:
 
 private:
     wxMenu *fileMenu, *systemMenu;
+    wxWindow *canvas;
     wxJoystick *joystick;
     wxTimer *timer;
 
@@ -56,6 +58,7 @@ private:
     int frameCount = 0;
     int swapInterval = 0;
     int refreshRate = 0;
+    bool glSupport = true;
 
     void runCore();
     void startCore(bool full);
@@ -69,8 +72,9 @@ private:
     void restart(wxCommandEvent &event);
     void stop(wxCommandEvent &event);
     void fpsLimiter(wxCommandEvent &event);
-    void threadedGpu(wxCommandEvent &event);
     void cartAutoBoot(wxCommandEvent &event);
+    void threadedGpu(wxCommandEvent &event);
+    template <int i> void gpuRenderer(wxCommandEvent &event);
     void pathSettings(wxCommandEvent &event);
     void inputBindings(wxCommandEvent &event);
     void updateJoystick(wxTimerEvent &event);

@@ -59,7 +59,8 @@ public:
     GpuRenderSoft(Core *core);
 
     void startList();
-    void processVtx(float (*input)[4], PrimMode mode, uint32_t idx = -1);
+    void processVtx(float (*input)[4], PrimMode mode, uint32_t idx);
+    void flushData() {}
 
     void setOutMap(uint8_t (*map)[2]);
     void setGshInMap(uint8_t *map);

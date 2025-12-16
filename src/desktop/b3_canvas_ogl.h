@@ -36,16 +36,21 @@ struct CanvasVtx {
 class b3CanvasOgl: public wxGLCanvas {
 public:
     b3CanvasOgl(b3Frame *frame);
+    std::function<void()> contextFunc;
 
 private:
     b3Frame *frame;
-    wxGLContext *context;
+    wxGLContext *contexts[2];
+    wxGLCanvas *coreCanvas;
     GLint winSizeLoc;
+
+    bool inited = false;
+    bool toggle = false;
 
     float scrW = 0, scrH = 0;
     float scrX = 0, scrY = 0;
-    bool inited = false;
 
+    void coreContext();
     void glInit();
 
     void draw(wxPaintEvent &event);

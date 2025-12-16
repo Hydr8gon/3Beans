@@ -151,7 +151,7 @@ public:
     std::vector<Event> events;
     uint64_t globalCycles = 0;
 
-    Core(std::string &cartPath);
+    Core(std::string &cartPath, std::function<void()> *contextFunc = nullptr);
     void runFrame() { (*runFunc)(this); }
     void schedule(Task task, uint64_t cycles);
 

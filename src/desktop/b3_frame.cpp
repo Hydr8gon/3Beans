@@ -17,7 +17,6 @@
     along with 3Beans. If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <thread>
 #include "b3_frame.h"
 #include "b3_canvas_ogl.h"
 #include "b3_canvas_soft.h"
@@ -32,8 +31,10 @@ enum FrameEvent {
     RESTART,
     STOP,
     FPS_LIMITER,
-    THREADED_GPU,
     CART_AUTO_BOOT,
+    THREADED_GPU,
+    GPU_RENDER_SOFT,
+    GPU_RENDER_OGL,
     PATH_SETTINGS,
     INPUT_BINDINGS,
     UPDATE_JOYSTICK
@@ -47,8 +48,10 @@ EVT_MENU(PAUSE, b3Frame::pause)
 EVT_MENU(RESTART, b3Frame::restart)
 EVT_MENU(STOP, b3Frame::stop)
 EVT_MENU(FPS_LIMITER, b3Frame::fpsLimiter)
-EVT_MENU(THREADED_GPU, b3Frame::threadedGpu)
 EVT_MENU(CART_AUTO_BOOT, b3Frame::cartAutoBoot)
+EVT_MENU(THREADED_GPU, b3Frame::threadedGpu)
+EVT_MENU(GPU_RENDER_SOFT, b3Frame::gpuRenderer<0>)
+EVT_MENU(GPU_RENDER_OGL, b3Frame::gpuRenderer<1>)
 EVT_MENU(PATH_SETTINGS, b3Frame::pathSettings)
 EVT_MENU(INPUT_BINDINGS, b3Frame::inputBindings)
 EVT_TIMER(UPDATE_JOYSTICK, b3Frame::updateJoystick)
@@ -70,19 +73,21 @@ b3Frame::b3Frame(): wxFrame(nullptr, wxID_ANY, "3Beans") {
     systemMenu->Append(RESTART, "&Restart");
     systemMenu->Append(STOP, "&Stop");
 
+    // Set up the renderer submenu
+    wxMenu *renderMenu = new wxMenu();
+    renderMenu->AppendRadioItem(GPU_RENDER_SOFT, "&Software");
+    renderMenu->AppendRadioItem(GPU_RENDER_OGL, "&OpenGL");
+
     // Set up the settings menu
     wxMenu *settingsMenu = new wxMenu();
     settingsMenu->AppendCheckItem(FPS_LIMITER, "&FPS Limiter");
-    settingsMenu->AppendCheckItem(THREADED_GPU, "&Threaded GPU");
     settingsMenu->AppendCheckItem(CART_AUTO_BOOT, "&Cart Auto-Boot");
+    settingsMenu->AppendSeparator();
+    settingsMenu->AppendCheckItem(THREADED_GPU, "&Threaded GPU");
+    settingsMenu->AppendSubMenu(renderMenu, "&GPU Renderer");
     settingsMenu->AppendSeparator();
     settingsMenu->Append(PATH_SETTINGS, "&Path Settings");
     settingsMenu->Append(INPUT_BINDINGS, "&Input Bindings");
-
-    // Set the initial settings checkbox states
-    settingsMenu->Check(FPS_LIMITER, Settings::fpsLimiter);
-    settingsMenu->Check(THREADED_GPU, Settings::threadedGpu);
-    settingsMenu->Check(CART_AUTO_BOOT, Settings::cartAutoBoot);
 
     // Set up the menu bar
     wxMenuBar *menuBar = new wxMenuBar();
@@ -98,20 +103,30 @@ b3Frame::b3Frame(): wxFrame(nullptr, wxID_ANY, "3Beans") {
     Centre();
     Show(true);
 
-    // Create an OpenGL canvas if supported, or fall back to software
-    wxWindow *canvas;
+    // Create a canvas for drawing the screens
     try {
+        // Use an OpenGL canvas if supported
         canvas = new b3CanvasOgl(this);
     }
     catch (CanvasError e) {
+        // Fall back to software and disable OpenGL
         canvas = new b3CanvasSoft(this);
+        renderMenu->Enable(GPU_RENDER_OGL, false);
+        Settings::gpuRenderer = 0;
+        glSupport = false;
     }
 
     // Add the canvas to the frame
     wxBoxSizer *sizer = new wxBoxSizer(wxHORIZONTAL);
     sizer->Add(canvas, 1, wxEXPAND);
     SetSizer(sizer);
-    
+
+    // Set the initial setting states
+    settingsMenu->Check(FPS_LIMITER, Settings::fpsLimiter);
+    settingsMenu->Check(CART_AUTO_BOOT, Settings::cartAutoBoot);
+    settingsMenu->Check(THREADED_GPU, Settings::threadedGpu);
+    renderMenu->Check(GPU_RENDER_SOFT + std::min(Settings::gpuRenderer, 1), true);
+
     // Prepare a joystick if one is connected
     joystick = new wxJoystick();
     if (joystick->IsOk()) {
@@ -157,7 +172,7 @@ void b3Frame::startCore(bool full) {
         stopCore(true);
         try {
             mutex.lock();
-            core = new Core(cartPath);
+            core = new Core(cartPath, glSupport ? &((b3CanvasOgl*)canvas)->contextFunc : nullptr);
             mutex.unlock();
         }
         catch (CoreError e) {
@@ -347,15 +362,21 @@ void b3Frame::fpsLimiter(wxCommandEvent &event) {
     Settings::save();
 }
 
+void b3Frame::cartAutoBoot(wxCommandEvent &event) {
+    // Toggle the cart auto-boot setting
+    Settings::cartAutoBoot = !Settings::cartAutoBoot;
+    Settings::save();
+}
+
 void b3Frame::threadedGpu(wxCommandEvent &event) {
     // Toggle the threaded GPU setting
     Settings::threadedGpu = !Settings::threadedGpu;
     Settings::save();
 }
 
-void b3Frame::cartAutoBoot(wxCommandEvent &event) {
-    // Toggle the cart auto-boot setting
-    Settings::cartAutoBoot = !Settings::cartAutoBoot;
+template <int i> void b3Frame::gpuRenderer(wxCommandEvent &event) {
+    // Set the GPU renderer to a specific value
+    Settings::gpuRenderer = i;
     Settings::save();
 }
 

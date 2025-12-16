@@ -18,11 +18,12 @@
 */
 
 #include "../core.h"
+#include "gpu_render_ogl.h"
 #include "gpu_render_soft.h"
 
-Gpu::Gpu(Core *core): core(core) {
-    // Initialize the software renderer
-    gpuRender = new GpuRenderSoft(core);
+Gpu::Gpu(Core *core, std::function<void()> *contextFunc): core(core), contextFunc(contextFunc) {
+    // Initialize the renderer
+    syncThread();
 }
 
 Gpu::~Gpu() {
@@ -33,9 +34,21 @@ Gpu::~Gpu() {
 
 void Gpu::syncThread() {
     // Tell the GPU thread to stop and wait for it to finish
-    if (!running.exchange(false)) return;
-    thread->join();
-    delete thread;
+    if (running.exchange(false)) {
+        thread->join();
+        delete thread;
+    }
+
+    // Check if the renderer changed and reset it if so
+    if (curRenderer == Settings::gpuRenderer) return;
+    curRenderer = Settings::gpuRenderer;
+    delete gpuRender;
+
+    // Initialize a new renderer of the current type
+    switch (curRenderer) {
+        default: gpuRender = new GpuRenderSoft(core); return;
+        case 1: gpuRender = new GpuRenderOgl(core, *contextFunc); return;
+    }
 }
 
 void Gpu::runThreaded() {
@@ -127,6 +140,7 @@ void Gpu::startFill(GpuFillRegs &regs) {
     // Get the start and end addresses for a GPU fill
     uint32_t start = (regs.dstAddr << 3), end = (regs.dstEnd << 3);
     LOG_INFO("Performing GPU memory fill at 0x%X with size 0x%X\n", start, end - start);
+    gpuRender->flushData();
 
     // Perform a memory fill using the selected data width
     switch ((regs.cnt >> 8) & 0x3) {
@@ -149,6 +163,7 @@ void Gpu::startCopy(GpuCopyRegs &regs) {
     // Get the source and destination addresses for a GPU copy
     uint32_t srcAddr = (regs.srcAddr << 3);
     uint32_t dstAddr = (regs.dstAddr << 3);
+    gpuRender->flushData();
 
     // Perform a texture copy if enabled, which ignores most settings
     if (regs.flags & BIT(3)) {

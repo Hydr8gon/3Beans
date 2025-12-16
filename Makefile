@@ -3,8 +3,8 @@ BUILD := build
 META := meta
 SRCS := src src/core src/core/arm src/core/convert src/core/gpu src/core/io src/core/memory src/core/teak src/desktop
 ARGS := -O3 -flto -std=c++11 -DLOG_LEVEL=0
-LIBS := $(shell pkg-config --libs portaudio-2.0) -lepoxy
-INCS := $(shell pkg-config --cflags portaudio-2.0)
+LIBS := $(shell wx-config --libs --gl-libs) $(shell pkg-config --libs portaudio-2.0) -lepoxy
+INCS := $(shell wx-config --cxxflags) $(shell pkg-config --cflags portaudio-2.0)
 
 APPNAME := 3Beans
 PKGNAME := com.hydra.threebeans
@@ -15,8 +15,6 @@ ifeq ($(OS),Windows_NT)
   LIBS += $(shell wx-config-static --libs --gl-libs) -lole32 -lsetupapi -lwinmm
   INCS += $(shell wx-config-static --cxxflags)
 else
-  LIBS += $(shell wx-config --libs --gl-libs)
-  INCS += $(shell wx-config --cxxflags)
   ifeq ($(shell uname -s),Darwin)
     ARGS += -DMACOS
     LIBS += -headerpad_max_install_names

@@ -58,14 +58,29 @@ const char *fragCode = R"(
 )";
 
 b3CanvasOgl::b3CanvasOgl(b3Frame *frame): wxGLCanvas(frame), frame(frame) {
-    // Prepare an OpenGL 3.2 context if it's supported
+    // Prepare two OpenGL 3.2 contexts if they're supported
     wxGLContextAttrs ctxAttrs;
     ctxAttrs.PlatformDefaults().CoreProfile().OGLVersion(3, 2).EndList();
-    context = new wxGLContext(this, nullptr, &ctxAttrs);
-    if (!context->IsOK()) throw OPENGL_FAIL;
+    for (int i = 0; i < 2; i++) {
+        contexts[i] = new wxGLContext(this, nullptr, &ctxAttrs);
+        if (!contexts[i]->IsOK()) throw OPENGL_FAIL;
+    }
+
+    // Create a canvas for the core and bind the context function
+    coreCanvas = new wxGLCanvas(frame);
+    coreCanvas->SetSize(0, 0);
+    contextFunc = std::bind(&b3CanvasOgl::coreContext, this);
 
     // Set focus for key presses
     SetFocus();
+}
+
+void b3CanvasOgl::coreContext() {
+    // Toggle the core's context on a thread
+    if (toggle = !toggle)
+        coreCanvas->SetCurrent(*contexts[1]);
+    else
+        wxGLContext::ClearCurrent();
 }
 
 void b3CanvasOgl::glInit() {
@@ -116,7 +131,7 @@ void b3CanvasOgl::glInit() {
 
 void b3CanvasOgl::draw(wxPaintEvent &event) {
     // Initialize GL here to ensure the canvas is ready
-    SetCurrent(*context);
+    SetCurrent(*contexts[0]);
     if (!inited) {
         glInit();
         inited = true;
@@ -149,7 +164,7 @@ void b3CanvasOgl::draw(wxPaintEvent &event) {
 
 void b3CanvasOgl::resize(wxSizeEvent &event) {
     // Update the canvas dimensions
-    SetCurrent(*context);
+    SetCurrent(*contexts[0]);
     wxSize size = GetSize();
     glViewport(0, 0, size.x, size.y);
     glUniform2f(winSizeLoc, size.x, size.y);

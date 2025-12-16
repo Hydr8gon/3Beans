@@ -26,6 +26,7 @@ class GpuRender {
 public:
     virtual void startList() = 0;
     virtual void processVtx(float (*input)[4], PrimMode mode, uint32_t idx = -1) = 0;
+    virtual void flushData() = 0;
 
     virtual void setOutMap(uint8_t (*map)[2]) = 0;
     virtual void setGshInMap(uint8_t *map) = 0;

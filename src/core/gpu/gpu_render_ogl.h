@@ -1,0 +1,102 @@
+/*
+    Copyright 2023-2025 Hydr8gon
+
+    This file is part of 3Beans.
+
+    3Beans is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    3Beans is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+    General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with 3Beans. If not, see <https://www.gnu.org/licenses/>.
+*/
+
+#pragma once
+
+#include <cstdint>
+#include <epoxy/gl.h>
+
+#include "gpu_render.h"
+
+class Core;
+
+class GpuRenderOgl: public GpuRender {
+public:
+    GpuRenderOgl(Core *core, std::function<void()> &contextFunc);
+
+    void startList() {}
+    void processVtx(float (*input)[4], PrimMode mode, uint32_t idx);
+    void flushData();
+
+    void setOutMap(uint8_t (*map)[2]) {}
+    void setGshInMap(uint8_t *map) {}
+    void setGshInCount(uint8_t count) {}
+
+    void writeVshCode(int i, uint32_t value) {}
+    void writeVshDesc(int i, uint32_t value) {}
+    void setVshEntry(uint16_t entry, uint16_t end) {}
+    void setVshBool(int i, bool value) {}
+    void setVshInt(int i, int j, uint8_t value) {}
+    void setVshFloat(int i, int j, float value) {}
+
+    void writeGshCode(int i, uint32_t value) {}
+    void writeGshDesc(int i, uint32_t value) {}
+    void setGshEntry(uint16_t entry, uint16_t end) {}
+    void setGshBool(int i, bool value) {}
+    void setGshInt(int i, int j, uint8_t value) {}
+    void setGshFloat(int i, int j, float value) {}
+
+    void setTexAddr(int i, uint32_t address) {}
+    void setTexDims(int i, uint16_t width, uint16_t height) {}
+    void setTexBorder(int i, float r, float g, float b, float a) {}
+    void setTexFmt(int i, TexFmt format) {}
+    void setTexWrapS(int i, TexWrap wrap) {}
+    void setTexWrapT(int i, TexWrap wrap) {}
+    void setCombSrc(int i, int j, CombSrc src) {}
+    void setCombOper(int i, int j, CombOper oper) {}
+    void setCombMode(int i, int j, CalcMode mode) {}
+    void setCombColor(int i, float r, float g, float b, float a) {}
+    void setCombBufColor(float r, float g, float b, float a) {}
+    void setCombBufMask(uint8_t mask) {}
+    void setBlendOper(int i, BlendOper oper) {}
+    void setBlendMode(int i, CalcMode mode) {}
+    void setBlendColor(float r, float g, float b, float a) {}
+    void setAlphaFunc(TestFunc func) {}
+    void setAlphaValue(float value) {}
+    void setStencilTest(TestFunc Func, bool enable) {}
+    void setStencilOps(StenOper fail, StenOper depFail, StenOper depPass) {}
+    void setStencilMasks(uint8_t bufMask, uint8_t refMask) {}
+    void setStencilValue(uint8_t value) {}
+
+    void setCullMode(CullMode mode) {}
+    void setViewScaleH(float scale) {}
+    void setViewStepH(float step) {}
+    void setViewScaleV(float scale) {}
+    void setViewStepV(float step) {}
+    void setBufferDims(uint16_t width, uint16_t height, bool flip);
+    void setColbufAddr(uint32_t address);
+    void setColbufFmt(ColbufFmt format);
+    void setColbufMask(uint8_t mask) {}
+    void setDepbufAddr(uint32_t address) {}
+    void setDepbufFmt(DepbufFmt format) {}
+    void setDepbufMask(uint8_t mask) {}
+    void setDepthFunc(TestFunc func) {}
+
+private:
+    Core *core;
+    std::function<void()> &contextFunc;
+
+    uint16_t bufWidth = 0;
+    uint16_t bufHeight = 0;
+    uint32_t colbufAddr = 0;
+    ColbufFmt colbufFmt = COL_UNK;
+    bool drawDirty = false;
+
+    uint32_t getSwizzle(int x, int y);
+};
