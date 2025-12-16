@@ -58,18 +58,18 @@ const char *fragCode = R"(
 )";
 
 b3CanvasOgl::b3CanvasOgl(b3Frame *frame): wxGLCanvas(frame), frame(frame) {
-    // Prepare two OpenGL 3.2 contexts if they're supported
-    wxGLContextAttrs ctxAttrs;
-    ctxAttrs.PlatformDefaults().CoreProfile().OGLVersion(3, 2).EndList();
-    for (int i = 0; i < 2; i++) {
-        contexts[i] = new wxGLContext(this, nullptr, &ctxAttrs);
-        if (!contexts[i]->IsOK()) throw OPENGL_FAIL;
-    }
-
     // Create a canvas for the core and bind the context function
     coreCanvas = new wxGLCanvas(frame);
     coreCanvas->SetSize(0, 0);
     contextFunc = std::bind(&b3CanvasOgl::coreContext, this);
+
+    // Prepare two OpenGL 3.2 contexts if they're supported
+    wxGLContextAttrs ctxAttrs;
+    ctxAttrs.PlatformDefaults().CoreProfile().OGLVersion(3, 2).EndList();
+    for (int i = 0; i < 2; i++) {
+        contexts[i] = new wxGLContext(i ? coreCanvas : this, nullptr, &ctxAttrs);
+        if (!contexts[i]->IsOK()) throw OPENGL_FAIL;
+    }
 
     // Set focus for key presses
     SetFocus();
