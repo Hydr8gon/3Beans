@@ -9,8 +9,6 @@ jobs:
   build-windows:
     runs-on: windows-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
     - name: Install MSYS2
       uses: msys2/setup-msys2@v2
       with:
@@ -19,6 +17,8 @@ jobs:
     - name: Install tools and dependencies
       run: pacman -S mingw-w64-x86_64-{gcc,pkg-config,portaudio,libepoxy,jbigkit} make git --noconfirm
       shell: msys2 {0}
+    - name: Checkout
+      uses: actions/checkout@v4
     - name: Build wxWidgets
       run: |
         git clone --recursive https://github.com/wxWidgets/wxWidgets.git
@@ -47,16 +47,17 @@ jobs:
       uses: cachix/install-nix-action@v31
       with:
         nix_path: nixpkgs=channel:nixpkgs-25.05-darwin
+    - name: Checkout
+      uses: actions/checkout@v4
     - name: Build wxWidgets
       run: |
         git clone --recursive https://github.com/wxWidgets/wxWidgets.git
         cd wxWidgets
         git reset --hard eb4bcf5ede3dd5476d51e40b8daa49c1cba4490c
+        git apply ../meta/wxmac-context.patch
         ./configure --disable-sys-libs --disable-shared --disable-tests --without-libcurl
         make -j$(sysctl -n hw.logicalcpu)
         sudo make install
-    - name: Checkout
-      uses: actions/checkout@v4
     - name: Compile
       shell: 'nix-shell -p portaudio libepoxy libGL pkg-config --run "bash {0}"'
       run: make -j$(sysctl -n hw.logicalcpu)

@@ -38,8 +38,20 @@ Navigate to the project root directory and run `make -j$(nproc)` to start buildi
 
 **macOS/Linux:** On the target system, install [wxWidgets](https://www.wxwidgets.org),
 [PortAudio](https://www.portaudio.com), and [Epoxy](https://github.com/anholt/libepoxy). This can be done with a package
-manager like [Homebrew](https://brew.sh) on macOS, or a built-in one on Linux. Run `make -j$(nproc)` in the project root
-directory to start building.
+manager like [Homebrew](https://brew.sh) on macOS, or a built-in one on Linux. Run `make` in the project root directory
+to start building.
+
+**Notice:** Current wxWidgets releases might not have features that 3Beans requires. As a temporary workaround, you can
+install a custom build by running the following commands in the 3Beans root directory:
+```
+git clone --recursive https://github.com/wxWidgets/wxWidgets.git
+cd wxWidgets
+git reset --hard eb4bcf5ede3dd5476d51e40b8daa49c1cba4490c
+git apply ../meta/wxmac-context.patch
+./configure --disable-sys-libs --disable-shared --disable-tests --without-libcurl
+make -j4
+sudo make install
+```
 
 ### Hardware References
 * [GBATEK](https://problemkaputt.de/gbatek.htm) - Incomplete but great reference for the 3DS hardware
