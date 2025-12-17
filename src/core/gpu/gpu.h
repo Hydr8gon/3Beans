@@ -25,9 +25,9 @@
 
 class Core;
 class GpuRender;
+class GpuShaderInterp;
 
 enum PrimMode {
-    SAME_PRIM,
     TRIANGLES,
     TRI_STRIPS,
     TRI_FANS,
@@ -392,6 +392,7 @@ private:
     Core *core;
     std::function<void()> *contextFunc;
 
+    GpuShaderInterp *gpuShader = nullptr;
     GpuRender *gpuRender = nullptr;
     int curRenderer = -1;
 
@@ -407,7 +408,6 @@ private:
     uint32_t cmdEnd = 0;
     uint16_t curCmd = 0;
 
-    bool restart = false;
     bool shdMapDirty = false;
     bool fixedDirty = false;
     float fixedBase[16][4] = {};

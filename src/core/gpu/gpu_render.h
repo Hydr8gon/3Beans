@@ -20,31 +20,17 @@
 #pragma once
 
 #include <cstdint>
+
 #include "gpu.h"
+#include "gpu_shader_interp.h"
 
 class GpuRender {
 public:
-    virtual void startList() = 0;
-    virtual void processVtx(float (*input)[4], PrimMode mode, uint32_t idx = -1) = 0;
+    virtual void submitVertex(SoftVertex &vertex) = 0;
     virtual void flushData() = 0;
 
-    virtual void setOutMap(uint8_t (*map)[2]) = 0;
-    virtual void setGshInMap(uint8_t *map) = 0;
-    virtual void setGshInCount(uint8_t count) = 0;
-
-    virtual void writeVshCode(int i, uint32_t value) = 0;
-    virtual void writeVshDesc(int i, uint32_t value) = 0;
-    virtual void setVshEntry(uint16_t entry, uint16_t end) = 0;
-    virtual void setVshBool(int i, bool value) = 0;
-    virtual void setVshInt(int i, int j, uint8_t value) = 0;
-    virtual void setVshFloat(int i, int j, float value) = 0;
-
-    virtual void writeGshCode(int i, uint32_t value) = 0;
-    virtual void writeGshDesc(int i, uint32_t value) = 0;
-    virtual void setGshEntry(uint16_t entry, uint16_t end) = 0;
-    virtual void setGshBool(int i, bool value) = 0;
-    virtual void setGshInt(int i, int j, uint8_t value) = 0;
-    virtual void setGshFloat(int i, int j, float value) = 0;
+    virtual void setPrimMode(PrimMode mode) = 0;
+    virtual void setCullMode(CullMode mode) = 0;
 
     virtual void setTexAddr(int i, uint32_t address) = 0;
     virtual void setTexDims(int i, uint16_t width, uint16_t height) = 0;
@@ -68,7 +54,6 @@ public:
     virtual void setStencilMasks(uint8_t bufMask, uint8_t refMask) = 0;
     virtual void setStencilValue(uint8_t value) = 0;
 
-    virtual void setCullMode(CullMode mode) = 0;
     virtual void setViewScaleH(float scale) = 0;
     virtual void setViewStepH(float step) = 0;
     virtual void setViewScaleV(float scale) = 0;

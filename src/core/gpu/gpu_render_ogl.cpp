@@ -48,7 +48,7 @@ uint32_t GpuRenderOgl::getSwizzle(int x, int y) {
     return ofs;
 }
 
-void GpuRenderOgl::processVtx(float (*input)[4], PrimMode mode, uint32_t idx) {
+void GpuRenderOgl::submitVertex(SoftVertex &vertex) {
     // Pretend to draw something for now
     drawDirty = true;
 }

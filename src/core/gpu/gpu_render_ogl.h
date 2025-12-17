@@ -30,27 +30,11 @@ class GpuRenderOgl: public GpuRender {
 public:
     GpuRenderOgl(Core *core, std::function<void()> &contextFunc);
 
-    void startList() {}
-    void processVtx(float (*input)[4], PrimMode mode, uint32_t idx);
+    void submitVertex(SoftVertex &vertex);
     void flushData();
 
-    void setOutMap(uint8_t (*map)[2]) {}
-    void setGshInMap(uint8_t *map) {}
-    void setGshInCount(uint8_t count) {}
-
-    void writeVshCode(int i, uint32_t value) {}
-    void writeVshDesc(int i, uint32_t value) {}
-    void setVshEntry(uint16_t entry, uint16_t end) {}
-    void setVshBool(int i, bool value) {}
-    void setVshInt(int i, int j, uint8_t value) {}
-    void setVshFloat(int i, int j, float value) {}
-
-    void writeGshCode(int i, uint32_t value) {}
-    void writeGshDesc(int i, uint32_t value) {}
-    void setGshEntry(uint16_t entry, uint16_t end) {}
-    void setGshBool(int i, bool value) {}
-    void setGshInt(int i, int j, uint8_t value) {}
-    void setGshFloat(int i, int j, float value) {}
+    void setPrimMode(PrimMode mode) {}
+    void setCullMode(CullMode mode) {}
 
     void setTexAddr(int i, uint32_t address) {}
     void setTexDims(int i, uint16_t width, uint16_t height) {}
@@ -74,7 +58,6 @@ public:
     void setStencilMasks(uint8_t bufMask, uint8_t refMask) {}
     void setStencilValue(uint8_t value) {}
 
-    void setCullMode(CullMode mode) {}
     void setViewScaleH(float scale) {}
     void setViewStepH(float step) {}
     void setViewScaleV(float scale) {}
