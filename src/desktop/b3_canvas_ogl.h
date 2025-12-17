@@ -44,6 +44,9 @@ private:
     wxGLCanvas *coreCanvas;
     GLint winSizeLoc;
 
+    static const char *vtxCode;
+    static const char *fragCode;
+
     bool inited = false;
     bool toggle = false;
 

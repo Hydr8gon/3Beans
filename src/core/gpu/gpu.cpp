@@ -141,7 +141,7 @@ void Gpu::startFill(GpuFillRegs &regs) {
     // Get the start and end addresses for a GPU fill
     uint32_t start = (regs.dstAddr << 3), end = (regs.dstEnd << 3);
     LOG_INFO("Performing GPU memory fill at 0x%X with size 0x%X\n", start, end - start);
-    gpuRender->flushData();
+    gpuRender->flushBuffers();
 
     // Perform a memory fill using the selected data width
     switch ((regs.cnt >> 8) & 0x3) {
@@ -164,7 +164,7 @@ void Gpu::startCopy(GpuCopyRegs &regs) {
     // Get the source and destination addresses for a GPU copy
     uint32_t srcAddr = (regs.srcAddr << 3);
     uint32_t dstAddr = (regs.dstAddr << 3);
-    gpuRender->flushData();
+    gpuRender->flushBuffers();
 
     // Perform a texture copy if enabled, which ignores most settings
     if (regs.flags & BIT(3)) {

@@ -31,7 +31,7 @@ EVT_MOTION(b3CanvasOgl::pressScreen)
 EVT_LEFT_UP(b3CanvasOgl::releaseScreen)
 wxEND_EVENT_TABLE()
 
-const char *vtxCode = R"(
+const char *b3CanvasOgl::vtxCode = R"(
     #version 150
 
     in vec2 inPosition;
@@ -45,7 +45,7 @@ const char *vtxCode = R"(
     }
 )";
 
-const char *fragCode = R"(
+const char *b3CanvasOgl::fragCode = R"(
     #version 150
 
     in vec2 vtxTexCoord;

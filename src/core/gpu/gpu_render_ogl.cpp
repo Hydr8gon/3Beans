@@ -20,9 +20,69 @@
 #include "../core.h"
 #include "gpu_render_ogl.h"
 
+const char *GpuRenderOgl::vtxCode = R"(
+    #version 150
+
+    in vec4 inPosition;
+    in vec4 inColor;
+    out vec4 vtxColor;
+    uniform vec4 yFlip;
+
+    void main() {
+        gl_Position = inPosition * yFlip;
+        vtxColor = inColor;
+    }
+)";
+
+const char *GpuRenderOgl::fragCode = R"(
+    #version 150
+
+    in vec4 vtxColor;
+    out vec4 fragColor;
+
+    void main() {
+        fragColor = vtxColor;
+    }
+)";
+
 GpuRenderOgl::GpuRenderOgl(Core *core, std::function<void()> &contextFunc): core(core), contextFunc(contextFunc) {
-    // Create a framebuffer for rendering
+    // Compile the vertex and fragment shaders
     contextFunc();
+    GLint vtxShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vtxShader, 1, &vtxCode, nullptr);
+    glCompileShader(vtxShader);
+    GLint fragShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragShader, 1, &fragCode, nullptr);
+    glCompileShader(fragShader);
+
+    // Create a program with the shaders
+    GLuint program = glCreateProgram();
+    glAttachShader(program, vtxShader);
+    glAttachShader(program, fragShader);
+    glLinkProgram(program);
+    glUseProgram(program);
+    glDeleteShader(vtxShader);
+    glDeleteShader(fragShader);
+
+    // Set default uniform values
+    yFlipLoc = glGetUniformLocation(program, "yFlip");
+    glUniform4f(yFlipLoc, 1.0f, 1.0f, 1.0f, 1.0f);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
+    // Set up vertex array and buffer objects
+    GLuint vao, vbo;
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    GLint loc = glGetAttribLocation(program, "inPosition");
+    glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, sizeof(SoftVertex), (void*)offsetof(SoftVertex, x));
+    glEnableVertexAttribArray(loc);
+    loc = glGetAttribLocation(program, "inColor");
+    glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, sizeof(SoftVertex), (void*)offsetof(SoftVertex, r));
+    glEnableVertexAttribArray(loc);
+
+    // Create a framebuffer for rendering
     GLuint fb, tex;
     glGenFramebuffers(1, &fb);
     glBindFramebuffer(GL_FRAMEBUFFER, fb);
@@ -49,18 +109,26 @@ uint32_t GpuRenderOgl::getSwizzle(int x, int y) {
 }
 
 void GpuRenderOgl::submitVertex(SoftVertex &vertex) {
-    // Pretend to draw something for now
-    drawDirty = true;
+    // Queue a vertex to be drawn
+    vertices.push_back(vertex);
 }
 
-void GpuRenderOgl::flushData() {
-    // Check if anything has been drawn
-    if (!drawDirty) return;
+void GpuRenderOgl::flushVertices() {
+    // Draw queued vertices and clear them
+    if (vertices.empty()) return;
     contextFunc();
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(SoftVertex), &vertices[0], GL_DYNAMIC_DRAW);
+    glDrawArrays(primMode, 0, vertices.size());
+    contextFunc();
+    vertices = {};
+    bufDirty = true;
+}
 
-    // Stub the color buffer with magenta
-    glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
+void GpuRenderOgl::flushBuffers() {
+    // Check if anything has been drawn and make sure it's done
+    flushVertices();
+    if (!bufDirty) return;
+    contextFunc();
     glFinish();
 
     // Read the color buffer and write it to memory based on format
@@ -111,31 +179,45 @@ void GpuRenderOgl::flushData() {
     // Clean up and finish
     contextFunc();
     delete[] data;
-    drawDirty = false;
+    bufDirty = false;
+}
+
+void GpuRenderOgl::setPrimMode(PrimMode mode) {
+    // Flush old vertices and set a new primitive mode
+    flushVertices();
+    switch (mode) {
+        case TRIANGLES: primMode = GL_TRIANGLES; break;
+        case TRI_STRIPS: primMode = GL_TRIANGLE_STRIP; break;
+        case TRI_FANS: primMode = GL_TRIANGLE_FAN; break;
+        case GEO_PRIM: primMode = GL_TRIANGLES; break;
+    }
 }
 
 void GpuRenderOgl::setBufferDims(uint16_t width, uint16_t height, bool flip) {
     // Flush the old buffers and set new dimensions
-    // TODO: use the Y-flip value
-    flushData();
+    flushBuffers();
     bufWidth = width;
     bufHeight = height;
 
-    // Create a render texture with the dimensions and update the viewport
+    // Update the uniform that handles Y-flipping
     contextFunc();
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bufWidth, bufHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+    glUniform4f(yFlipLoc, 1.0f, flip ? -1.0f : 1.0f, 1.0f, 1.0f);
+
+    // Create an empty render texture with the new dimensions
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bufWidth, bufHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     glViewport(0, 0, bufWidth, bufHeight);
+    glClear(GL_COLOR_BUFFER_BIT);
     contextFunc();
 }
 
 void GpuRenderOgl::setColbufAddr(uint32_t address) {
     // Flush the old color buffer and set a new address
-    flushData();
+    flushBuffers();
     colbufAddr = address;
 }
 
 void GpuRenderOgl::setColbufFmt(ColbufFmt format) {
     // Flush the old color buffer and set a new format
-    flushData();
+    flushBuffers();
     colbufFmt = format;
 }

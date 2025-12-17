@@ -31,9 +31,9 @@ public:
     GpuRenderOgl(Core *core, std::function<void()> &contextFunc);
 
     void submitVertex(SoftVertex &vertex);
-    void flushData();
+    void flushBuffers();
 
-    void setPrimMode(PrimMode mode) {}
+    void setPrimMode(PrimMode mode);
     void setCullMode(CullMode mode) {}
 
     void setTexAddr(int i, uint32_t address) {}
@@ -74,12 +74,20 @@ public:
 private:
     Core *core;
     std::function<void()> &contextFunc;
+    GLint yFlipLoc;
+
+    static const char *vtxCode;
+    static const char *fragCode;
+
+    std::vector<SoftVertex> vertices;
+    GLint primMode = GL_TRIANGLES;
+    bool bufDirty = false;
 
     uint16_t bufWidth = 0;
     uint16_t bufHeight = 0;
     uint32_t colbufAddr = 0;
     ColbufFmt colbufFmt = COL_UNK;
-    bool drawDirty = false;
 
+    void flushVertices();
     uint32_t getSwizzle(int x, int y);
 };
