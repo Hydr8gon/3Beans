@@ -26,10 +26,10 @@ const char *GpuRenderOgl::vtxCode = R"(
     in vec4 inPosition;
     in vec4 inColor;
     out vec4 vtxColor;
-    uniform vec4 yFlip;
+    uniform vec4 posScale;
 
     void main() {
-        gl_Position = inPosition * yFlip;
+        gl_Position = inPosition * posScale;
         vtxColor = inColor;
     }
 )";
@@ -63,10 +63,14 @@ GpuRenderOgl::GpuRenderOgl(Core *core): core(core) {
     glDeleteShader(vtxShader);
     glDeleteShader(fragShader);
 
-    // Set default uniform values
-    yFlipLoc = glGetUniformLocation(program, "yFlip");
-    glUniform4f(yFlipLoc, 1.0f, 1.0f, 1.0f, 1.0f);
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    // Set initial uniforms and constant parameters
+    posScaleLoc = glGetUniformLocation(program, "posScale");
+    glUniform4f(posScaleLoc, 1.0f, 1.0f, -1.0f, 1.0f);
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_ALPHA_TEST);
+    glEnable(GL_BLEND);
+    glFrontFace(GL_CW);
 
     // Set up vertex array and buffer objects
     GLuint vao, vbo;
@@ -81,12 +85,15 @@ GpuRenderOgl::GpuRenderOgl(Core *core): core(core) {
     glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, sizeof(SoftVertex), (void*)offsetof(SoftVertex, r));
     glEnableVertexAttribArray(loc);
 
-    // Create a framebuffer for rendering
-    GLuint fb, tex;
-    glGenFramebuffers(1, &fb);
-    glBindFramebuffer(GL_FRAMEBUFFER, fb);
+    // Create color and depth buffers for rendering
+    GLuint col, dep;
+    glGenFramebuffers(1, &col);
+    glBindFramebuffer(GL_FRAMEBUFFER, col);
+    glGenRenderbuffers(1, &dep);
+    glBindRenderbuffer(GL_RENDERBUFFER, dep);
 
-    // Create a texture to back the framebuffer
+    // Create a texture to back the color buffer
+    GLuint tex;
     glGenTextures(1, &tex);
     glBindTexture(GL_TEXTURE_2D, tex);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -94,6 +101,7 @@ GpuRenderOgl::GpuRenderOgl(Core *core): core(core) {
 
     // Bind everything for drawing and reading
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, tex, 0);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, dep);
     glDrawBuffer(GL_COLOR_ATTACHMENT0);
     glReadBuffer(GL_COLOR_ATTACHMENT0);
 }
@@ -187,19 +195,138 @@ void GpuRenderOgl::setPrimMode(PrimMode mode) {
     }
 }
 
+void GpuRenderOgl::setCullMode(CullMode mode) {
+    // Change or disable the culling mode
+    glEnable(GL_CULL_FACE);
+    switch (mode) {
+        case CULL_NONE: return glDisable(GL_CULL_FACE);
+        case CULL_FRONT: return glCullFace(GL_FRONT);
+        case CULL_BACK: return glCullFace(GL_BACK);
+    }
+}
+
+void GpuRenderOgl::setBlendOper(int i, BlendOper oper) {
+    // Update one of the source or destination RGB/alpha blend functions
+    switch (oper) {
+        case BLND_ZERO: blendOpers[i] = GL_ZERO; break;
+        case BLND_ONE: blendOpers[i] = GL_ONE; break;
+        case BLND_SRC: blendOpers[i] = GL_SRC_COLOR; break;
+        case BLND_1MSRC: blendOpers[i] = GL_ONE_MINUS_SRC_COLOR; break;
+        case BLND_DST: blendOpers[i] = GL_DST_COLOR; break;
+        case BLND_1MDST: blendOpers[i] = GL_ONE_MINUS_DST_COLOR; break;
+        case BLND_SRCA: blendOpers[i] = GL_SRC_ALPHA; break;
+        case BLND_1MSRCA: blendOpers[i] = GL_ONE_MINUS_SRC_ALPHA; break;
+        case BLND_DSTA: blendOpers[i] = GL_DST_ALPHA; break;
+        case BLND_1MDSTA: blendOpers[i] = GL_ONE_MINUS_DST_ALPHA; break;
+        case BLND_CONST: blendOpers[i] = GL_CONSTANT_COLOR; break;
+        case BLND_1MCON: blendOpers[i] = GL_ONE_MINUS_CONSTANT_COLOR; break;
+        case BLND_CONSTA: blendOpers[i] = GL_CONSTANT_ALPHA; break;
+        case BLND_1MCONA: blendOpers[i] = GL_ONE_MINUS_CONSTANT_ALPHA; break;
+    }
+    glBlendFuncSeparate(blendOpers[0], blendOpers[1], blendOpers[2], blendOpers[3]);
+}
+
+void GpuRenderOgl::setBlendMode(int i, CalcMode mode) {
+    // Update one of the RGB or alpha blend equations
+    switch (mode) {
+        default: blendModes[i] = GL_FUNC_ADD; break;
+        case MODE_SUB: blendModes[i] = GL_FUNC_SUBTRACT; break;
+        case MODE_RSUB: blendModes[i] = GL_FUNC_REVERSE_SUBTRACT; break;
+        case MODE_MIN: blendModes[i] = GL_MIN; break;
+        case MODE_MAX: blendModes[i] = GL_MAX; break;
+    }
+    glBlendEquationSeparate(blendModes[0], blendModes[1]);
+}
+
+void GpuRenderOgl::setBlendColor(float r, float g, float b, float a) {
+    // Update the blend color
+    glBlendColor(r, g, b, a);
+}
+
+void GpuRenderOgl::setAlphaFunc(TestFunc func) {
+    // Update the alpha test function
+    switch (func) {
+        case TEST_NV: alphaFunc = GL_NEVER; break;
+        case TEST_AL: alphaFunc = GL_ALWAYS; break;
+        case TEST_EQ: alphaFunc = GL_EQUAL; break;
+        case TEST_NE: alphaFunc = GL_NOTEQUAL; break;
+        case TEST_LT: alphaFunc = GL_LESS; break;
+        case TEST_LE: alphaFunc = GL_LEQUAL; break;
+        case TEST_GT: alphaFunc = GL_GREATER; break;
+        case TEST_GE: alphaFunc = GL_GEQUAL; break;
+    }
+    glAlphaFunc(alphaFunc, alphaValue);
+}
+
+void GpuRenderOgl::setAlphaValue(float value) {
+    // Update the alpha test reference value
+    alphaValue = value;
+    glAlphaFunc(alphaFunc, alphaValue);
+}
+
+void GpuRenderOgl::setStencilTest(TestFunc func, bool enable) {
+    // Update the stencil test function
+    switch (func) {
+        case TEST_NV: stencilFunc = GL_NEVER; break;
+        case TEST_AL: stencilFunc = GL_ALWAYS; break;
+        case TEST_EQ: stencilFunc = GL_EQUAL; break;
+        case TEST_NE: stencilFunc = GL_NOTEQUAL; break;
+        case TEST_LT: stencilFunc = GL_LESS; break;
+        case TEST_LE: stencilFunc = GL_LEQUAL; break;
+        case TEST_GT: stencilFunc = GL_GREATER; break;
+        case TEST_GE: stencilFunc = GL_GEQUAL; break;
+    }
+
+    // Toggle stencil test and set the function
+    enable ? glEnable(GL_STENCIL_TEST) : glDisable(GL_STENCIL_TEST);
+    glStencilFunc(stencilFunc, stencilValue, stencilMask);
+}
+
+void GpuRenderOgl::setStencilOps(StenOper fail, StenOper depFail, StenOper depPass) {
+    // Update the stencil test conditional operations
+    StenOper opers[] = { fail, depFail, depPass };
+    GLenum glOps[3];
+    for (int i = 0; i < 3; i++) {
+        switch (opers[i]) {
+            case STEN_KEEP: glOps[i] = GL_KEEP; continue;
+            case STEN_ZERO: glOps[i] = GL_ZERO; continue;
+            case STEN_REPLACE: glOps[i] = GL_REPLACE; continue;
+            case STEN_INCR: glOps[i] = GL_INCR; continue;
+            case STEN_DECR: glOps[i] = GL_DECR; continue;
+            case STEN_INVERT: glOps[i] = GL_INVERT; continue;
+            case STEN_INCWR: glOps[i] = GL_INCR_WRAP; continue;
+            case STEN_DECWR: glOps[i] = GL_DECR_WRAP; continue;
+        }
+    }
+    glStencilOp(glOps[0], glOps[1], glOps[2]);
+}
+
+void GpuRenderOgl::setStencilMasks(uint8_t bufMask, uint8_t refMask) {
+    // Update the stencil test masks
+    glStencilMask(bufMask);
+    glStencilFunc(stencilFunc, stencilValue, stencilMask = refMask);
+}
+
+void GpuRenderOgl::setStencilValue(uint8_t value) {
+    // Update the stencil reference value
+    stencilValue = value;
+    glStencilFunc(stencilFunc, stencilValue, stencilMask);
+}
+
 void GpuRenderOgl::setBufferDims(uint16_t width, uint16_t height, bool flip) {
     // Flush the old buffers and set new dimensions
     flushBuffers();
     bufWidth = width;
     bufHeight = height;
 
-    // Update the uniform that handles Y-flipping
-    glUniform4f(yFlipLoc, 1.0f, flip ? -1.0f : 1.0f, 1.0f, 1.0f);
+    // Update the position scale to flip the Y-axis if enabled
+    glUniform4f(posScaleLoc, 1.0f, flip ? -1.0f : 1.0f, -1.0f, 1.0f);
 
-    // Create an empty render texture with the new dimensions
+    // Resize and clear the color and depth buffers
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bufWidth, bufHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, bufWidth, bufHeight);
     glViewport(0, 0, bufWidth, bufHeight);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 }
 
 void GpuRenderOgl::setColbufAddr(uint32_t address) {
@@ -212,4 +339,28 @@ void GpuRenderOgl::setColbufFmt(ColbufFmt format) {
     // Flush the old color buffer and set a new format
     flushBuffers();
     colbufFmt = format;
+}
+
+void GpuRenderOgl::setColbufMask(uint8_t mask) {
+    // Update the color write mask
+    glColorMask(bool(mask & BIT(0)), bool(mask & BIT(1)), bool(mask & BIT(2)), bool(mask & BIT(3)));
+}
+
+void GpuRenderOgl::setDepbufMask(uint8_t mask) {
+    // Update the depth write mask
+    glDepthMask(bool(mask & BIT(1)));
+}
+
+void GpuRenderOgl::setDepthFunc(TestFunc func) {
+    // Update the depth testing function
+    switch (func) {
+        case TEST_NV: return glDepthFunc(GL_NEVER);
+        case TEST_AL: return glDepthFunc(GL_ALWAYS);
+        case TEST_EQ: return glDepthFunc(GL_EQUAL);
+        case TEST_NE: return glDepthFunc(GL_NOTEQUAL);
+        case TEST_LT: return glDepthFunc(GL_LESS);
+        case TEST_LE: return glDepthFunc(GL_LEQUAL);
+        case TEST_GT: return glDepthFunc(GL_GREATER);
+        case TEST_GE: return glDepthFunc(GL_GEQUAL);
+    }
 }

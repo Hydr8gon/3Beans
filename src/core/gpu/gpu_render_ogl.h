@@ -34,7 +34,7 @@ public:
     void flushBuffers();
 
     void setPrimMode(PrimMode mode);
-    void setCullMode(CullMode mode) {}
+    void setCullMode(CullMode mode);
 
     void setTexAddr(int i, uint32_t address) {}
     void setTexDims(int i, uint16_t width, uint16_t height) {}
@@ -48,15 +48,15 @@ public:
     void setCombColor(int i, float r, float g, float b, float a) {}
     void setCombBufColor(float r, float g, float b, float a) {}
     void setCombBufMask(uint8_t mask) {}
-    void setBlendOper(int i, BlendOper oper) {}
-    void setBlendMode(int i, CalcMode mode) {}
-    void setBlendColor(float r, float g, float b, float a) {}
-    void setAlphaFunc(TestFunc func) {}
-    void setAlphaValue(float value) {}
-    void setStencilTest(TestFunc Func, bool enable) {}
-    void setStencilOps(StenOper fail, StenOper depFail, StenOper depPass) {}
-    void setStencilMasks(uint8_t bufMask, uint8_t refMask) {}
-    void setStencilValue(uint8_t value) {}
+    void setBlendOper(int i, BlendOper oper);
+    void setBlendMode(int i, CalcMode mode);
+    void setBlendColor(float r, float g, float b, float a);
+    void setAlphaFunc(TestFunc func);
+    void setAlphaValue(float value);
+    void setStencilTest(TestFunc Func, bool enable);
+    void setStencilOps(StenOper fail, StenOper depFail, StenOper depPass);
+    void setStencilMasks(uint8_t bufMask, uint8_t refMask);
+    void setStencilValue(uint8_t value);
 
     void setViewScaleH(float scale) {}
     void setViewStepH(float step) {}
@@ -65,15 +65,15 @@ public:
     void setBufferDims(uint16_t width, uint16_t height, bool flip);
     void setColbufAddr(uint32_t address);
     void setColbufFmt(ColbufFmt format);
-    void setColbufMask(uint8_t mask) {}
+    void setColbufMask(uint8_t mask);
     void setDepbufAddr(uint32_t address) {}
     void setDepbufFmt(DepbufFmt format) {}
-    void setDepbufMask(uint8_t mask) {}
-    void setDepthFunc(TestFunc func) {}
+    void setDepbufMask(uint8_t mask);
+    void setDepthFunc(TestFunc func);
 
 private:
     Core *core;
-    GLint yFlipLoc;
+    GLint posScaleLoc;
 
     static const char *vtxCode;
     static const char *fragCode;
@@ -82,10 +82,18 @@ private:
     GLint primMode = GL_TRIANGLES;
     bool bufDirty = false;
 
+    GLenum blendOpers[4] = {};
+    GLenum blendModes[2] = {};
+    GLenum alphaFunc = GL_NEVER;
+    GLclampf alphaValue = 0.0f;
+
     uint16_t bufWidth = 0;
     uint16_t bufHeight = 0;
     uint32_t colbufAddr = 0;
     ColbufFmt colbufFmt = COL_UNK;
+    GLenum stencilFunc = GL_NEVER;
+    GLint stencilValue = 0;
+    GLuint stencilMask = 0;
 
     void flushVertices();
     uint32_t getSwizzle(int x, int y);
