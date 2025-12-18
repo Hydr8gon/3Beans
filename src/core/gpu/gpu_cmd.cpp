@@ -69,9 +69,13 @@ FORCE_INLINE uint32_t Gpu::flt32e7to32e8(uint32_t value) {
 }
 
 void Gpu::runCommands() {
-    // Start the GPU thread if enabled but not running
-    if (Settings::threadedGpu && !running.exchange(true))
-        thread = new std::thread(&Gpu::runThreaded, this);
+    // Start the GPU thread or set context on this thread depending on settings
+    if (!running.exchange(true)) {
+        if (Settings::threadedGpu)
+            thread = new std::thread(&Gpu::runThreaded, this);
+        else if (curRenderer == 1)
+            (*contextFunc)();
+    }
 
     // Execute GPU commands until the end is reached
     while (cmdAddr < cmdEnd) {
@@ -86,7 +90,7 @@ void Gpu::runCommands() {
         cmdAddr += ((count + 3) << 2) & ~0x7;
 
         // Forward parameters to the thread if running, except for IRQ and jump commands
-        if (running.load() && (curCmd & 0x3F0) != 0x10 && (curCmd < 0x238 || curCmd > 0x23D)) {
+        if (thread && (curCmd & 0x3F0) != 0x10 && (curCmd < 0x238 || curCmd > 0x23D)) {
             uint32_t *data = new uint32_t[count + 2];
             data[0] = header;
             data[1] = core->memory.read<uint32_t>(ARM11, address - 4);

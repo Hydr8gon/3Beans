@@ -45,9 +45,8 @@ const char *GpuRenderOgl::fragCode = R"(
     }
 )";
 
-GpuRenderOgl::GpuRenderOgl(Core *core, std::function<void()> &contextFunc): core(core), contextFunc(contextFunc) {
+GpuRenderOgl::GpuRenderOgl(Core *core): core(core) {
     // Compile the vertex and fragment shaders
-    contextFunc();
     GLint vtxShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vtxShader, 1, &vtxCode, nullptr);
     glCompileShader(vtxShader);
@@ -97,7 +96,6 @@ GpuRenderOgl::GpuRenderOgl(Core *core, std::function<void()> &contextFunc): core
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, tex, 0);
     glDrawBuffer(GL_COLOR_ATTACHMENT0);
     glReadBuffer(GL_COLOR_ATTACHMENT0);
-    contextFunc();
 }
 
 uint32_t GpuRenderOgl::getSwizzle(int x, int y) {
@@ -116,10 +114,8 @@ void GpuRenderOgl::submitVertex(SoftVertex &vertex) {
 void GpuRenderOgl::flushVertices() {
     // Draw queued vertices and clear them
     if (vertices.empty()) return;
-    contextFunc();
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(SoftVertex), &vertices[0], GL_DYNAMIC_DRAW);
     glDrawArrays(primMode, 0, vertices.size());
-    contextFunc();
     vertices = {};
     bufDirty = true;
 }
@@ -128,7 +124,6 @@ void GpuRenderOgl::flushBuffers() {
     // Check if anything has been drawn and make sure it's done
     flushVertices();
     if (!bufDirty) return;
-    contextFunc();
     glFinish();
 
     // Read the color buffer and write it to memory based on format
@@ -177,7 +172,6 @@ void GpuRenderOgl::flushBuffers() {
     }
 
     // Clean up and finish
-    contextFunc();
     delete[] data;
     bufDirty = false;
 }
@@ -186,10 +180,10 @@ void GpuRenderOgl::setPrimMode(PrimMode mode) {
     // Flush old vertices and set a new primitive mode
     flushVertices();
     switch (mode) {
-        case TRIANGLES: primMode = GL_TRIANGLES; break;
-        case TRI_STRIPS: primMode = GL_TRIANGLE_STRIP; break;
-        case TRI_FANS: primMode = GL_TRIANGLE_FAN; break;
-        case GEO_PRIM: primMode = GL_TRIANGLES; break;
+        case TRIANGLES: primMode = GL_TRIANGLES; return;
+        case TRI_STRIPS: primMode = GL_TRIANGLE_STRIP; return;
+        case TRI_FANS: primMode = GL_TRIANGLE_FAN; return;
+        case GEO_PRIM: primMode = GL_TRIANGLES; return;
     }
 }
 
@@ -200,14 +194,12 @@ void GpuRenderOgl::setBufferDims(uint16_t width, uint16_t height, bool flip) {
     bufHeight = height;
 
     // Update the uniform that handles Y-flipping
-    contextFunc();
     glUniform4f(yFlipLoc, 1.0f, flip ? -1.0f : 1.0f, 1.0f, 1.0f);
 
     // Create an empty render texture with the new dimensions
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bufWidth, bufHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     glViewport(0, 0, bufWidth, bufHeight);
     glClear(GL_COLOR_BUFFER_BIT);
-    contextFunc();
 }
 
 void GpuRenderOgl::setColbufAddr(uint32_t address) {

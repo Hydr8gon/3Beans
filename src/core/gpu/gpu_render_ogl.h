@@ -28,7 +28,7 @@ class Core;
 
 class GpuRenderOgl: public GpuRender {
 public:
-    GpuRenderOgl(Core *core, std::function<void()> &contextFunc);
+    GpuRenderOgl(Core *core);
 
     void submitVertex(SoftVertex &vertex);
     void flushBuffers();
@@ -73,7 +73,6 @@ public:
 
 private:
     Core *core;
-    std::function<void()> &contextFunc;
     GLint yFlipLoc;
 
     static const char *vtxCode;

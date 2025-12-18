@@ -33,10 +33,16 @@ Gpu::~Gpu() {
 }
 
 void Gpu::syncThread() {
-    // Tell the GPU thread to stop and wait for it to finish
+    // Stop the GPU thread or release context on this thread depending on settings
     if (running.exchange(false)) {
-        thread->join();
-        delete thread;
+        if (thread) {
+            thread->join();
+            delete thread;
+            thread = nullptr;
+        }
+        else if (curRenderer == 1) {
+            (*contextFunc)();
+        }
     }
 
     // Check if the renderer changed and reset it if so
@@ -47,17 +53,24 @@ void Gpu::syncThread() {
     // Initialize a new renderer of the current type
     switch (curRenderer) {
         default: gpuRender = new GpuRenderSoft(core); break;
-        case 1: gpuRender = new GpuRenderOgl(core, *contextFunc); break;
+        case 1: (*contextFunc)(), gpuRender = new GpuRenderOgl(core), (*contextFunc)(); break;
     }
     gpuShader = new GpuShaderInterp(*gpuRender);
 }
 
 void Gpu::runThreaded() {
+    // Set the OpenGL context on this thread if needed
+    if (curRenderer == 1)
+        (*contextFunc)();
+
     // Process GPU thread tasks
     while (true) {
-        // Wait for more tasks or finish execution if stopped
+        // Wait for more tasks or finish and release context if stopped
         while (tasks.empty()) {
-            if (!running.load()) return;
+            if (!running.load()) {
+                if (curRenderer == 1) (*contextFunc)();
+                return;
+            }
             std::this_thread::yield();
         }
 
@@ -544,7 +557,7 @@ void Gpu::writeFillCnt(int i, uint32_t mask, uint32_t value) {
     core->schedule(Task(GPU_END_FILL0 + i), gpuFill[i].dstEnd - gpuFill[i].dstAddr);
 
     // Start the fill now or forward it to the thread if running
-    if (!running.load()) return startFill(gpuFill[i]);
+    if (!thread) return startFill(gpuFill[i]);
     GpuFillRegs *regs = new GpuFillRegs(gpuFill[i]);
     mutex.lock();
     tasks.emplace(TASK_FILL, regs);
@@ -592,7 +605,7 @@ void Gpu::writeCopyCnt(uint32_t mask, uint32_t value) {
         : ((gpuCopy.dispDstSize & 0xFFFF) * (gpuCopy.dispDstSize >> 16)));
 
     // Start the copy now or forward it to the thread if running
-    if (!running.load()) return startCopy(gpuCopy);
+    if (!thread) return startCopy(gpuCopy);
     GpuCopyRegs *regs = new GpuCopyRegs(gpuCopy);
     mutex.lock();
     tasks.emplace(TASK_COPY, regs);
