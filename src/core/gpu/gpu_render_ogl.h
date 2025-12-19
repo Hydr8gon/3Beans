@@ -58,9 +58,9 @@ public:
     void setStencilMasks(uint8_t bufMask, uint8_t refMask);
     void setStencilValue(uint8_t value);
 
-    void setViewScaleH(float scale) {}
+    void setViewScaleH(float scale);
     void setViewStepH(float step) {}
-    void setViewScaleV(float scale) {}
+    void setViewScaleV(float scale);
     void setViewStepV(float step) {}
     void setBufferDims(uint16_t width, uint16_t height, bool flip);
     void setColbufAddr(uint32_t address);
@@ -73,7 +73,10 @@ public:
 
 private:
     Core *core;
+
     GLint posScaleLoc;
+    GLint alphaFuncLoc;
+    GLint alphaValueLoc;
 
     static const char *vtxCode;
     static const char *fragCode;
@@ -84,17 +87,20 @@ private:
 
     GLenum blendOpers[4] = {};
     GLenum blendModes[2] = {};
-    GLenum alphaFunc = GL_NEVER;
-    GLclampf alphaValue = 0.0f;
 
+    float viewScaleH = 0;
+    float viewScaleV = 0;
     uint16_t bufWidth = 0;
     uint16_t bufHeight = 0;
     uint32_t colbufAddr = 0;
     ColbufFmt colbufFmt = COL_UNK;
+    GLboolean colbufMask[4] = {};
+    GLboolean depbufMask = GL_FALSE;
     GLenum stencilFunc = GL_NEVER;
     GLint stencilValue = 0;
-    GLuint stencilMask = 0;
+    GLuint stencilMasks[2] = {};
 
-    void flushVertices();
     uint32_t getSwizzle(int x, int y);
+    void flushVertices();
+    void updateViewport();
 };

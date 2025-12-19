@@ -39,8 +39,20 @@ const char *GpuRenderOgl::fragCode = R"(
 
     in vec4 vtxColor;
     out vec4 fragColor;
+    uniform int alphaFunc;
+    uniform float alphaValue;
 
     void main() {
+        switch (alphaFunc) {
+            case 0: discard;
+            case 1: break;
+            case 2: if (vtxColor.a == alphaValue) break; discard;
+            case 3: if (vtxColor.a != alphaValue) break; discard;
+            case 4: if (vtxColor.a < alphaValue) break; discard;
+            case 5: if (vtxColor.a <= alphaValue) break; discard;
+            case 6: if (vtxColor.a > alphaValue) break; discard;
+            case 7: if (vtxColor.a >= alphaValue) break; discard;
+        }
         fragColor = vtxColor;
     }
 )";
@@ -63,27 +75,36 @@ GpuRenderOgl::GpuRenderOgl(Core *core): core(core) {
     glDeleteShader(vtxShader);
     glDeleteShader(fragShader);
 
-    // Set initial uniforms and constant parameters
-    posScaleLoc = glGetUniformLocation(program, "posScale");
-    glUniform4f(posScaleLoc, 1.0f, 1.0f, -1.0f, 1.0f);
-    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_ALPHA_TEST);
-    glEnable(GL_BLEND);
-    glFrontFace(GL_CW);
-
-    // Set up vertex array and buffer objects
+    // Create vertex array and buffer objects
     GLuint vao, vbo;
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+    // Configure vertex input attributes
     GLint loc = glGetAttribLocation(program, "inPosition");
     glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, sizeof(SoftVertex), (void*)offsetof(SoftVertex, x));
     glEnableVertexAttribArray(loc);
     loc = glGetAttribLocation(program, "inColor");
     glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, sizeof(SoftVertex), (void*)offsetof(SoftVertex, r));
     glEnableVertexAttribArray(loc);
+
+    // Set initial uniform values
+    posScaleLoc = glGetUniformLocation(program, "posScale");
+    glUniform4f(posScaleLoc, 1.0f, 1.0f, -1.0f, 1.0f);
+    alphaFuncLoc = glGetUniformLocation(program, "alphaFunc");
+    glUniform1i(alphaFuncLoc, TEST_NV);
+    alphaValueLoc = glGetUniformLocation(program, "alphaValue");
+    glUniform1f(alphaValueLoc, 0.0f);
+
+    // Set some state that only has to be done once
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClearDepth(1.0f);
+    glClearStencil(0);
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glFrontFace(GL_CW);
 
     // Create color and depth buffers for rendering
     GLuint col, dep;
@@ -184,6 +205,13 @@ void GpuRenderOgl::flushBuffers() {
     bufDirty = false;
 }
 
+void GpuRenderOgl::updateViewport() {
+    // Update the viewport using buffer size and view scale
+    GLint x = bufWidth - viewScaleH;
+    GLint y = bufHeight - viewScaleV;
+    glViewport(x, y, bufWidth - x, bufHeight - y);
+}
+
 void GpuRenderOgl::setPrimMode(PrimMode mode) {
     // Flush old vertices and set a new primitive mode
     flushVertices();
@@ -244,24 +272,13 @@ void GpuRenderOgl::setBlendColor(float r, float g, float b, float a) {
 }
 
 void GpuRenderOgl::setAlphaFunc(TestFunc func) {
-    // Update the alpha test function
-    switch (func) {
-        case TEST_NV: alphaFunc = GL_NEVER; break;
-        case TEST_AL: alphaFunc = GL_ALWAYS; break;
-        case TEST_EQ: alphaFunc = GL_EQUAL; break;
-        case TEST_NE: alphaFunc = GL_NOTEQUAL; break;
-        case TEST_LT: alphaFunc = GL_LESS; break;
-        case TEST_LE: alphaFunc = GL_LEQUAL; break;
-        case TEST_GT: alphaFunc = GL_GREATER; break;
-        case TEST_GE: alphaFunc = GL_GEQUAL; break;
-    }
-    glAlphaFunc(alphaFunc, alphaValue);
+    // Update the alpha test function uniform
+    glUniform1i(alphaFuncLoc, func);
 }
 
 void GpuRenderOgl::setAlphaValue(float value) {
-    // Update the alpha test reference value
-    alphaValue = value;
-    glAlphaFunc(alphaFunc, alphaValue);
+    // Update the alpha test reference uniform
+    glUniform1f(alphaValueLoc, value);
 }
 
 void GpuRenderOgl::setStencilTest(TestFunc func, bool enable) {
@@ -279,7 +296,7 @@ void GpuRenderOgl::setStencilTest(TestFunc func, bool enable) {
 
     // Toggle stencil test and set the function
     enable ? glEnable(GL_STENCIL_TEST) : glDisable(GL_STENCIL_TEST);
-    glStencilFunc(stencilFunc, stencilValue, stencilMask);
+    glStencilFunc(stencilFunc, stencilValue, stencilMasks[1]);
 }
 
 void GpuRenderOgl::setStencilOps(StenOper fail, StenOper depFail, StenOper depPass) {
@@ -303,14 +320,26 @@ void GpuRenderOgl::setStencilOps(StenOper fail, StenOper depFail, StenOper depPa
 
 void GpuRenderOgl::setStencilMasks(uint8_t bufMask, uint8_t refMask) {
     // Update the stencil test masks
-    glStencilMask(bufMask);
-    glStencilFunc(stencilFunc, stencilValue, stencilMask = refMask);
+    glStencilMask(stencilMasks[0] = bufMask);
+    glStencilFunc(stencilFunc, stencilValue, stencilMasks[1] = refMask);
 }
 
 void GpuRenderOgl::setStencilValue(uint8_t value) {
-    // Update the stencil reference value
+    // Update the stencil test reference value
     stencilValue = value;
-    glStencilFunc(stencilFunc, stencilValue, stencilMask);
+    glStencilFunc(stencilFunc, stencilValue, stencilMasks[1]);
+}
+
+void GpuRenderOgl::setViewScaleH(float scale) {
+    // Update the horizontal view scale
+    viewScaleH = scale * 2;
+    updateViewport();
+}
+
+void GpuRenderOgl::setViewScaleV(float scale) {
+    // Update the vertical view scale
+    viewScaleV = scale * 2;
+    updateViewport();
 }
 
 void GpuRenderOgl::setBufferDims(uint16_t width, uint16_t height, bool flip) {
@@ -322,11 +351,20 @@ void GpuRenderOgl::setBufferDims(uint16_t width, uint16_t height, bool flip) {
     // Update the position scale to flip the Y-axis if enabled
     glUniform4f(posScaleLoc, 1.0f, flip ? -1.0f : 1.0f, -1.0f, 1.0f);
 
-    // Resize and clear the color and depth buffers
+    // Resize the color and depth buffers
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bufWidth, bufHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, bufWidth, bufHeight);
+
+    // Change state to clear buffers and then restore it
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    glDepthMask(GL_TRUE);
+    glStencilMask(0xFF);
     glViewport(0, 0, bufWidth, bufHeight);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    glColorMask(colbufMask[0], colbufMask[1], colbufMask[2], colbufMask[3]);
+    glDepthMask(depbufMask);
+    glStencilMask(stencilMasks[0]);
+    updateViewport();
 }
 
 void GpuRenderOgl::setColbufAddr(uint32_t address) {
@@ -343,12 +381,14 @@ void GpuRenderOgl::setColbufFmt(ColbufFmt format) {
 
 void GpuRenderOgl::setColbufMask(uint8_t mask) {
     // Update the color write mask
-    glColorMask(bool(mask & BIT(0)), bool(mask & BIT(1)), bool(mask & BIT(2)), bool(mask & BIT(3)));
+    for (int i = 0; i < 4; i++) colbufMask[i] = (mask & BIT(i)) ? GL_TRUE : GL_FALSE;
+    glColorMask(colbufMask[0], colbufMask[1], colbufMask[2], colbufMask[3]);
 }
 
 void GpuRenderOgl::setDepbufMask(uint8_t mask) {
     // Update the depth write mask
-    glDepthMask(bool(mask & BIT(1)));
+    depbufMask = (mask & BIT(1)) ? GL_TRUE : GL_FALSE;
+    glDepthMask(depbufMask);
 }
 
 void GpuRenderOgl::setDepthFunc(TestFunc func) {
