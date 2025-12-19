@@ -39,21 +39,101 @@ const char *GpuRenderOgl::fragCode = R"(
 
     in vec4 vtxColor;
     out vec4 fragColor;
+
+    uniform int combSrcs[6 * 6];
+    uniform int combOpers[6 * 6];
+    uniform int combModes[6 * 2];
+    uniform vec4 combColors[6];
+    uniform vec4 combBufColor;
+    uniform int combBufMask;
     uniform int alphaFunc;
     uniform float alphaValue;
 
+    vec4 prevColor = vec4(0.0, 0.0, 0.0, 0.0);
+    vec4 combBuffer = combBufColor;
+
+    float dot3(vec3 c0, vec3 c1) {
+        return 4.0 * c0.r - 0.5 * c1.r - 0.5 + c0.g - 0.5 * c1.g - 0.5 + c0.b - 0.5 * c1.b - 0.5;
+    }
+
+    vec4 getSrc(int i, int j) {
+        vec4 color;
+        switch (combSrcs[i * 6 + j]) {
+            case 0: color = vtxColor; break;
+            case 1: color = vec4(0.5, 0.5, 0.5, 1.0); break;
+            case 2: color = vec4(0.5, 0.5, 0.5, 1.0); break;
+            case 3: color = vec4(1.0, 1.0, 1.0, 1.0); break;
+            case 4: color = vec4(1.0, 1.0, 1.0, 1.0); break;
+            case 5: color = vec4(1.0, 1.0, 1.0, 1.0); break;
+            case 6: color = vec4(1.0, 1.0, 1.0, 1.0); break;
+            case 7: color = combBuffer; break;
+            case 8: color = combColors[i]; break;
+            case 9: color = prevColor; break;
+            default: color = vec4(0.0, 0.0, 0.0, 0.0); break;
+        }
+
+        switch (combOpers[i * 6 + j]) {
+            default: return color;
+            case 1: return 1.0 - color;
+            case 2: return color.aaaa;
+            case 3: return 1.0 - color.aaaa;
+            case 4: return color.rrrr;
+            case 5: return 1.0 - color.rrrr;
+            case 6: return color.gggg;
+            case 7: return 1.0 - color.gggg;
+            case 8: return color.bbbb;
+            case 9: return 1.0 - color.bbbb;
+        }
+    }
+
     void main() {
+        vec4 color;
+        for (int i = 0; i < 6; i++) {
+            switch (combModes[i * 2 + 0]) {
+                case 0: color.rgb = getSrc(i, 0).rgb; break;
+                case 1: color.rgb = getSrc(i, 0).rgb * getSrc(i, 1).rgb; break;
+                case 2: color.rgb = getSrc(i, 0).rgb + getSrc(i, 1).rgb; break;
+                case 3: color.rgb = getSrc(i, 0).rgb + getSrc(i, 1).rgb - 0.5; break;
+                case 4: color.rgb = mix(getSrc(i, 0).rgb, getSrc(i, 1).rgb, getSrc(i, 2).rgb); break;
+                case 5: color.rgb = getSrc(i, 0).rgb - getSrc(i, 1).rgb; break;
+                case 6: color.rgb = vec3(dot3(getSrc(i, 0).rgb, getSrc(i, 1).rgb)); break;
+                case 7: color.rgb = vec3(dot3(getSrc(i, 0).rgb, getSrc(i, 1).rgb)); break;
+                case 8: color.rgb = (getSrc(i, 0).rgb * getSrc(i, 1).rgb) + getSrc(i, 2).rgb; break;
+                case 9: color.rgb = (getSrc(i, 0).rgb + getSrc(i, 1).rgb) * getSrc(i, 2).rgb; break;
+                default: color.rgb = vec3(0.0, 0.0, 0.0); break;
+            }
+
+            switch (combModes[i * 2 + 1]) {
+                case 0: color.a = getSrc(i, 3).a; break;
+                case 1: color.a = getSrc(i, 3).a * getSrc(i, 4).a; break;
+                case 2: color.a = getSrc(i, 3).a + getSrc(i, 4).a; break;
+                case 3: color.a = getSrc(i, 3).a + getSrc(i, 4).a - 0.5; break;
+                case 4: color.a = mix(getSrc(i, 3).a, getSrc(i, 4).a, getSrc(i, 5).a); break;
+                case 5: color.a = getSrc(i, 3).a - getSrc(i, 4).a; break;
+                case 6: color.a = 1.0; break;
+                case 7: color.a = dot3(getSrc(i, 3).aaa, getSrc(i, 4).aaa); break;
+                case 8: color.a = (getSrc(i, 3).a * getSrc(i, 4).a) + getSrc(i, 5).a; break;
+                case 9: color.a = (getSrc(i, 3).a + getSrc(i, 4).a) * getSrc(i, 5).a; break;
+                default: color.a = 1.0; break;
+            }
+
+            prevColor = color;
+            if (i >= 4) continue;
+            if ((combBufMask & (0x01 << i)) != 0) combBuffer.rgb = color.rgb;
+            if ((combBufMask & (0x10 << i)) != 0) combBuffer.a = color.a;
+        }
+
         switch (alphaFunc) {
             case 0: discard;
             case 1: break;
-            case 2: if (vtxColor.a == alphaValue) break; discard;
-            case 3: if (vtxColor.a != alphaValue) break; discard;
-            case 4: if (vtxColor.a < alphaValue) break; discard;
-            case 5: if (vtxColor.a <= alphaValue) break; discard;
-            case 6: if (vtxColor.a > alphaValue) break; discard;
-            case 7: if (vtxColor.a >= alphaValue) break; discard;
+            case 2: if (color.a == alphaValue) break; discard;
+            case 3: if (color.a != alphaValue) break; discard;
+            case 4: if (color.a < alphaValue) break; discard;
+            case 5: if (color.a <= alphaValue) break; discard;
+            case 6: if (color.a > alphaValue) break; discard;
+            case 7: if (color.a >= alphaValue) break; discard;
         }
-        fragColor = vtxColor;
+        fragColor = color;
     }
 )";
 
@@ -90,13 +170,36 @@ GpuRenderOgl::GpuRenderOgl(Core *core): core(core) {
     glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, sizeof(SoftVertex), (void*)offsetof(SoftVertex, r));
     glEnableVertexAttribArray(loc);
 
-    // Set initial uniform values
+    // Set single uniform locations and initial values
     posScaleLoc = glGetUniformLocation(program, "posScale");
     glUniform4f(posScaleLoc, 1.0f, 1.0f, -1.0f, 1.0f);
+    combBufColorLoc = glGetUniformLocation(program, "combBufColor");
+    glUniform4f(combBufColorLoc, 0.0f, 0.0f, 0.0f, 0.0f);
+    combBufMaskLoc = glGetUniformLocation(program, "combBufMask");
+    glUniform1i(combBufMaskLoc, 0);
     alphaFuncLoc = glGetUniformLocation(program, "alphaFunc");
-    glUniform1i(alphaFuncLoc, TEST_NV);
+    glUniform1i(alphaFuncLoc, 0);
     alphaValueLoc = glGetUniformLocation(program, "alphaValue");
     glUniform1f(alphaValueLoc, 0.0f);
+
+    // Set array uniform locations and initial values
+    for (int i = 0; i < 6; i++) {
+        std::string name = "combColors[" + std::to_string(i) + "]";
+        combColorLocs[i] = glGetUniformLocation(program, name.c_str());
+        glUniform4f(combColorLocs[i], 0.0f, 0.0f, 0.0f, 0.0f);
+        for (int j = 0; j < 6; j++) {
+            name = "combSrcs[" + std::to_string(i * 6 + j) + "]";
+            combSrcLocs[i][j] = glGetUniformLocation(program, name.c_str());
+            glUniform1i(combSrcLocs[i][j], 0);
+            name = "combOpers[" + std::to_string(i * 6 + j) + "]";
+            combOperLocs[i][j] = glGetUniformLocation(program, name.c_str());
+            glUniform1i(combOperLocs[i][j], 0);
+            if (j >= 2) continue;
+            name = "combModes[" + std::to_string(i * 2 + j) + "]";
+            combModeLocs[i][j] = glGetUniformLocation(program, name.c_str());
+            glUniform1i(combModeLocs[i][j], 0);
+        }
+    }
 
     // Set some state that only has to be done once
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -231,6 +334,36 @@ void GpuRenderOgl::setCullMode(CullMode mode) {
         case CULL_FRONT: return glCullFace(GL_FRONT);
         case CULL_BACK: return glCullFace(GL_BACK);
     }
+}
+
+void GpuRenderOgl::setCombSrc(int i, int j, CombSrc src) {
+    // Update one of the texture combiner source uniforms
+    glUniform1i(combSrcLocs[i][j], src);
+}
+
+void GpuRenderOgl::setCombOper(int i, int j, CombOper oper) {
+    // Update one of the texture combiner operand uniforms
+    glUniform1i(combOperLocs[i][j], oper);
+}
+
+void GpuRenderOgl::setCombMode(int i, int j, CalcMode mode) {
+    // Update one of the texture combiner mode uniforms
+    glUniform1i(combModeLocs[i][j], mode);
+}
+
+void GpuRenderOgl::setCombColor(int i, float r, float g, float b, float a) {
+    // Update one of the texture combiner color uniforms
+    glUniform4f(combColorLocs[i], r, g, b, a);
+}
+
+void GpuRenderOgl::setCombBufColor(float r, float g, float b, float a) {
+    // Update the texture combiner buffer color uniform
+    glUniform4f(combBufColorLoc, r, g, b, a);
+}
+
+void GpuRenderOgl::setCombBufMask(uint8_t mask) {
+    // Update the texture combiner buffer mask uniform
+    glUniform1i(combBufMaskLoc, mask);
 }
 
 void GpuRenderOgl::setBlendOper(int i, BlendOper oper) {

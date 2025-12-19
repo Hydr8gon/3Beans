@@ -42,12 +42,12 @@ public:
     void setTexFmt(int i, TexFmt format) {}
     void setTexWrapS(int i, TexWrap wrap) {}
     void setTexWrapT(int i, TexWrap wrap) {}
-    void setCombSrc(int i, int j, CombSrc src) {}
-    void setCombOper(int i, int j, CombOper oper) {}
-    void setCombMode(int i, int j, CalcMode mode) {}
-    void setCombColor(int i, float r, float g, float b, float a) {}
-    void setCombBufColor(float r, float g, float b, float a) {}
-    void setCombBufMask(uint8_t mask) {}
+    void setCombSrc(int i, int j, CombSrc src);
+    void setCombOper(int i, int j, CombOper oper);
+    void setCombMode(int i, int j, CalcMode mode);
+    void setCombColor(int i, float r, float g, float b, float a);
+    void setCombBufColor(float r, float g, float b, float a);
+    void setCombBufMask(uint8_t mask);
     void setBlendOper(int i, BlendOper oper);
     void setBlendMode(int i, CalcMode mode);
     void setBlendColor(float r, float g, float b, float a);
@@ -75,6 +75,12 @@ private:
     Core *core;
 
     GLint posScaleLoc;
+    GLint combSrcLocs[6][6];
+    GLint combOperLocs[6][6];
+    GLint combModeLocs[6][2];
+    GLint combColorLocs[6];
+    GLint combBufColorLoc;
+    GLint combBufMaskLoc;
     GLint alphaFuncLoc;
     GLint alphaValueLoc;
 
