@@ -32,7 +32,7 @@ EVT_LEFT_UP(b3CanvasOgl::releaseScreen)
 wxEND_EVENT_TABLE()
 
 const char *b3CanvasOgl::vtxCode = R"(
-    #version 150
+    #version 330
 
     in vec2 inPosition;
     in vec2 inTexCoord;
@@ -46,7 +46,7 @@ const char *b3CanvasOgl::vtxCode = R"(
 )";
 
 const char *b3CanvasOgl::fragCode = R"(
-    #version 150
+    #version 330
 
     in vec2 vtxTexCoord;
     out vec4 fragColor;
@@ -63,9 +63,9 @@ b3CanvasOgl::b3CanvasOgl(b3Frame *frame): wxGLCanvas(frame), frame(frame) {
     coreCanvas->SetSize(0, 0);
     contextFunc = std::bind(&b3CanvasOgl::coreContext, this);
 
-    // Prepare two OpenGL 3.2 contexts if they're supported
+    // Prepare two OpenGL 3.3 contexts if they're supported
     wxGLContextAttrs ctxAttrs;
-    ctxAttrs.PlatformDefaults().CoreProfile().OGLVersion(3, 2).EndList();
+    ctxAttrs.PlatformDefaults().CoreProfile().OGLVersion(3, 3).EndList();
     for (int i = 0; i < 2; i++) {
         contexts[i] = new wxGLContext(i ? coreCanvas : this, nullptr, &ctxAttrs);
         if (!contexts[i]->IsOK()) throw OPENGL_FAIL;

@@ -89,7 +89,6 @@ public:
 private:
     Core *core;
 
-    static const int16_t etc1Tables[8][4];
     static const uint8_t paramCounts[MODE_UNK + 1];
     static SoftColor zeroColor, oneColor;
     static SoftColor stubColor;

@@ -3,9 +3,9 @@ A low-level 3DS emulator.
 
 ### Overview
 3Beans emulates the 3DS at a low level, which means that it runs the entire OS as if it were on real hardware. It can
-boot the home menu and launch some games, but it's still young and has plenty of issues. It's currently fully
-interpreted and software-rendered, which makes it portable but slow. If the project matures enough, I might try to
-incorporate hardware acceleration or high-level elements to achieve reasonable speeds.
+boot the home menu and launch some games, but it's still young and has plenty of issues. It has both software and
+hardware GPU rendering, but CPUs are still fully interpreted. My goal for this project is to achieve viable speeds with
+full low-level emulation, and maybe explore some high-level elements down the road.
 
 ### Downloads
 3Beans is available for Windows, macOS, and Linux. The latest builds are automatically provided via GitHub Actions,

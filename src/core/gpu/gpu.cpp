@@ -21,6 +21,17 @@
 #include "gpu_render_ogl.h"
 #include "gpu_render_soft.h"
 
+const int16_t GpuRender::etc1Tables[][4] {
+    { 2, 8, -2, -8 },
+    { 5, 17, -5, -17 },
+    { 9, 29, -9, -29 },
+    { 13, 42, -13, -42 },
+    { 18, 60, -18, -60 },
+    { 24, 80, -24, -80 },
+    { 33, 106, -33, -106 },
+    { 47, 183, -47, -183 }
+};
+
 Gpu::Gpu(Core *core, std::function<void()> *contextFunc): core(core), contextFunc(contextFunc) {
     // Initialize the renderer
     syncThread();

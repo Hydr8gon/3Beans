@@ -66,4 +66,7 @@ public:
     virtual void setDepbufFmt(DepbufFmt format) = 0;
     virtual void setDepbufMask(uint8_t mask) = 0;
     virtual void setDepthFunc(TestFunc func) = 0;
+
+protected:
+    static const int16_t etc1Tables[8][4];
 };

@@ -36,12 +36,12 @@ public:
     void setPrimMode(PrimMode mode);
     void setCullMode(CullMode mode);
 
-    void setTexAddr(int i, uint32_t address) {}
-    void setTexDims(int i, uint16_t width, uint16_t height) {}
-    void setTexBorder(int i, float r, float g, float b, float a) {}
-    void setTexFmt(int i, TexFmt format) {}
-    void setTexWrapS(int i, TexWrap wrap) {}
-    void setTexWrapT(int i, TexWrap wrap) {}
+    void setTexAddr(int i, uint32_t address);
+    void setTexDims(int i, uint16_t width, uint16_t height);
+    void setTexBorder(int i, float r, float g, float b, float a);
+    void setTexFmt(int i, TexFmt format);
+    void setTexWrapS(int i, TexWrap wrap);
+    void setTexWrapT(int i, TexWrap wrap);
     void setCombSrc(int i, int j, CombSrc src);
     void setCombOper(int i, int j, CombOper oper);
     void setCombMode(int i, int j, CalcMode mode);
@@ -89,8 +89,13 @@ private:
 
     std::vector<SoftVertex> vertices;
     GLint primMode = GL_TRIANGLES;
+    uint8_t texDirty = 0;
     bool bufDirty = false;
 
+    uint32_t texAddrs[3] = {};
+    uint16_t texWidths[3] = {};
+    uint16_t texHeights[3] = {};
+    TexFmt texFmts[3] = {};
     GLenum blendOpers[4] = {};
     GLenum blendModes[2] = {};
 
@@ -106,7 +111,10 @@ private:
     GLint stencilValue = 0;
     GLuint stencilMasks[2] = {};
 
-    uint32_t getSwizzle(int x, int y);
+    static uint32_t getSwizzle(int x, int y, int width);
+    template <bool alpha> uint32_t etc1Texel(int i, int x, int y);
+
     void flushVertices();
+    void updateTextures();
     void updateViewport();
 };

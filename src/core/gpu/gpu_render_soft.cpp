@@ -23,17 +23,6 @@
 #include "../core.h"
 #include "gpu_render_soft.h"
 
-const int16_t GpuRenderSoft::etc1Tables[][4] {
-    { 2, 8, -2, -8 },
-    { 5, 17, -5, -17 },
-    { 9, 29, -9, -29 },
-    { 13, 42, -13, -42 },
-    { 18, 60, -18, -60 },
-    { 24, 80, -24, -80 },
-    { 33, 106, -33, -106 },
-    { 47, 183, -47, -183 }
-};
-
 const uint8_t GpuRenderSoft::paramCounts[] = { 1, 2, 2, 2, 3, 2, 2, 2, 3, 3 };
 SoftColor GpuRenderSoft::zeroColor = { 0.0f, 0.0f, 0.0f, 0.0f };
 SoftColor GpuRenderSoft::oneColor = { 1.0f, 1.0f, 1.0f, 1.0f };
