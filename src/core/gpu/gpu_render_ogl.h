@@ -90,7 +90,8 @@ private:
     std::vector<SoftVertex> vertices;
     GLint primMode = GL_TRIANGLES;
     uint8_t texDirty = 0;
-    bool bufDirty = false;
+    bool readDirty = false;
+    bool writeDirty = false;
 
     uint32_t texAddrs[3] = {};
     uint16_t texWidths[3] = {};
@@ -105,7 +106,6 @@ private:
     uint16_t bufHeight = 0;
     uint32_t colbufAddr = 0;
     ColbufFmt colbufFmt = COL_UNK;
-    GLboolean colbufMask[4] = {};
     GLboolean depbufMask = GL_FALSE;
     GLenum stencilFunc = GL_NEVER;
     GLint stencilValue = 0;
@@ -115,6 +115,7 @@ private:
     template <bool alpha> uint32_t etc1Texel(int i, int x, int y);
 
     void flushVertices();
+    void updateBuffers();
     void updateTextures();
     void updateViewport();
 };

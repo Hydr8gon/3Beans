@@ -327,22 +327,23 @@ void GpuRenderOgl::submitVertex(SoftVertex &vertex) {
 }
 
 void GpuRenderOgl::flushVertices() {
-    // Draw queued vertices and clear them
+    // Update state and draw queued vertices
     if (vertices.empty()) return;
+    if (readDirty) updateBuffers();
     if (texDirty) updateTextures();
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(SoftVertex), &vertices[0], GL_DYNAMIC_DRAW);
     glDrawArrays(primMode, 0, vertices.size());
     vertices = {};
-    bufDirty = true;
+    writeDirty = true;
 }
 
 void GpuRenderOgl::flushBuffers() {
     // Check if anything has been drawn and make sure it's done
     flushVertices();
-    if (!bufDirty) return;
+    if (!writeDirty) return;
     glFinish();
 
-    // Read the color buffer and write it to memory based on format
+    // Copy data from the color buffer to memory based on format
     uint32_t *data;
     uint16_t w = bufWidth, h = bufHeight;
     switch (colbufFmt) {
@@ -390,7 +391,65 @@ void GpuRenderOgl::flushBuffers() {
 
     // Clean up and finish
     delete[] data;
-    bufDirty = false;
+    writeDirty = false;
+}
+
+void GpuRenderOgl::updateBuffers() {
+    // Copy data from memory to the color buffer based on format
+    uint32_t *data;
+    uint16_t w = bufWidth, h = bufHeight;
+    glActiveTexture(GL_TEXTURE4);
+    switch (colbufFmt) {
+    case COL_RGBA8:
+        data = new uint32_t[w * h];
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+                data[y * w + x] = core->memory.read<uint32_t>(ARM11, colbufAddr + getSwizzle(x, y, w) * 4);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bufWidth, bufHeight, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, data);
+        break;
+    case COL_RGB8:
+        data = new uint32_t[w * h];
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+                data[y * w + x] = core->memory.read<uint32_t>(ARM11, colbufAddr + getSwizzle(x, y, w) * 3 - 1) | 0xFF;
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bufWidth, bufHeight, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, data);
+        break;
+    case COL_RGB565:
+        data = new uint32_t[w * h / 2];
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x += 2)
+                data[(y * w + x) / 2] = core->memory.read<uint32_t>(ARM11, colbufAddr + getSwizzle(x, y, w) * 2);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bufWidth, bufHeight, 0, GL_RGB, GL_UNSIGNED_SHORT_5_6_5, data);
+        break;
+    case COL_RGB5A1:
+        data = new uint32_t[w * h / 2];
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x += 2)
+                data[(y * w + x) / 2] = core->memory.read<uint32_t>(ARM11, colbufAddr + getSwizzle(x, y, w) * 2);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bufWidth, bufHeight, 0, GL_RGBA, GL_UNSIGNED_SHORT_5_5_5_1, data);
+        break;
+    case COL_RGBA4:
+        data = new uint32_t[w * h / 2];
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x += 2)
+                data[(y * w + x) / 2] = core->memory.read<uint32_t>(ARM11, colbufAddr + getSwizzle(x, y, w) * 2);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bufWidth, bufHeight, 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, data);
+        break;
+    }
+
+    // Resize and clear the depth/stencil buffer, restoring write masks after
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, bufWidth, bufHeight);
+    glDepthMask(GL_TRUE);
+    glStencilMask(0xFF);
+    glViewport(0, 0, bufWidth, bufHeight);
+    glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    glDepthMask(depbufMask);
+    glStencilMask(stencilMasks[0]);
+    updateViewport();
+
+    // Clean up and finish
+    delete[] data;
+    readDirty = false;
 }
 
 void GpuRenderOgl::updateTextures() {
@@ -779,48 +838,34 @@ void GpuRenderOgl::setViewScaleV(float scale) {
 }
 
 void GpuRenderOgl::setBufferDims(uint16_t width, uint16_t height, bool flip) {
-    // Flush the old buffers and set new dimensions
+    // Set new buffer dimensions and mark them as dirty
     flushBuffers();
     bufWidth = width;
     bufHeight = height;
+    readDirty = true;
 
     // Update the position scale to flip the Y-axis if enabled
     glUniform4f(posScaleLoc, 1.0f, flip ? -1.0f : 1.0f, -1.0f, 1.0f);
-
-    // Resize the color and depth buffers
-    glActiveTexture(GL_TEXTURE4);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bufWidth, bufHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, bufWidth, bufHeight);
-
-    // Change state to clear buffers and then restore it
-    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-    glDepthMask(GL_TRUE);
-    glStencilMask(0xFF);
-    glViewport(0, 0, bufWidth, bufHeight);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-    glColorMask(colbufMask[0], colbufMask[1], colbufMask[2], colbufMask[3]);
-    glDepthMask(depbufMask);
-    glStencilMask(stencilMasks[0]);
-    updateViewport();
 }
 
 void GpuRenderOgl::setColbufAddr(uint32_t address) {
-    // Flush the old color buffer and set a new address
+    // Set a new color buffer address and mark it as dirty
     flushBuffers();
     colbufAddr = address;
+    readDirty = true;
 }
 
 void GpuRenderOgl::setColbufFmt(ColbufFmt format) {
-    // Flush the old color buffer and set a new format
+    // Set a new color buffer format and mark it as dirty
     flushBuffers();
     colbufFmt = format;
+    readDirty = true;
 }
 
 void GpuRenderOgl::setColbufMask(uint8_t mask) {
     // Update the color write mask
     flushVertices();
-    for (int i = 0; i < 4; i++) colbufMask[i] = (mask & BIT(i)) ? GL_TRUE : GL_FALSE;
-    glColorMask(colbufMask[0], colbufMask[1], colbufMask[2], colbufMask[3]);
+    glColorMask(bool(mask & BIT(0)), bool(mask & BIT(1)), bool(mask & BIT(2)), bool(mask & BIT(3)));
 }
 
 void GpuRenderOgl::setDepbufMask(uint8_t mask) {
