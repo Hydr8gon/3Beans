@@ -23,7 +23,7 @@ jobs:
       run: |
         git clone --recursive https://github.com/wxWidgets/wxWidgets.git
         cd wxWidgets
-        git reset --hard eb4bcf5ede3dd5476d51e40b8daa49c1cba4490c
+        git reset --hard 1fd12d7bd6987603b8d63000a593a4286f5cad46
         ./configure --disable-sys-libs --disable-shared --disable-tests --without-libcurl
         make -j$(nproc)
         make install
@@ -53,8 +53,7 @@ jobs:
       run: |
         git clone --recursive https://github.com/wxWidgets/wxWidgets.git
         cd wxWidgets
-        git reset --hard eb4bcf5ede3dd5476d51e40b8daa49c1cba4490c
-        git apply ../meta/wxmac-context.patch
+        git reset --hard 1fd12d7bd6987603b8d63000a593a4286f5cad46
         ./configure --disable-sys-libs --disable-shared --disable-tests --without-libcurl
         make -j$(sysctl -n hw.logicalcpu)
         sudo make install

@@ -42,12 +42,11 @@ manager like [Homebrew](https://brew.sh) on macOS, or a built-in one on Linux. R
 to start building.
 
 **Notice:** Current wxWidgets releases might not have features that 3Beans requires. As a temporary workaround, you can
-install a custom build by running the following commands in the 3Beans root directory:
+install a custom build by running the following commands:
 ```
 git clone --recursive https://github.com/wxWidgets/wxWidgets.git
 cd wxWidgets
-git reset --hard eb4bcf5ede3dd5476d51e40b8daa49c1cba4490c
-git apply ../meta/wxmac-context.patch
+git reset --hard 1fd12d7bd6987603b8d63000a593a4286f5cad46
 ./configure --disable-sys-libs --disable-shared --disable-tests --without-libcurl
 make -j4
 sudo make install

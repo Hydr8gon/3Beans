@@ -4,7 +4,7 @@ Name=3Beans
 Comment=A low-level 3DS emulator
 GenericName=Nintendo 3DS Emulator
 Icon=com.hydra.threebeans
-Exec=3beans %U
+Exec=env GDK_BACKEND=x11 3beans %U
 StartupNotify=true
 Terminal=false
 MimeType=application/x-nintendo-3ds-rom
