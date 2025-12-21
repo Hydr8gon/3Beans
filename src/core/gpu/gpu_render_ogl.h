@@ -100,10 +100,11 @@ private:
     GLenum blendOpers[4] = {};
     GLenum blendModes[2] = {};
 
-    float viewScaleH = 0;
-    float viewScaleV = 0;
-    uint16_t bufWidth = 0;
-    uint16_t bufHeight = 0;
+    GLsizei viewWidth = 0;
+    GLsizei viewHeight = 0;
+    bool flipY = false;
+    GLsizei bufWidth = 0;
+    GLsizei bufHeight = 0;
     uint32_t colbufAddr = 0;
     ColbufFmt colbufFmt = COL_UNK;
     GLboolean depbufMask = GL_FALSE;

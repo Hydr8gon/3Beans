@@ -437,7 +437,7 @@ void GpuRenderOgl::updateBuffers() {
         break;
     }
 
-    // Resize and clear the depth/stencil buffer, restoring write masks after
+    // Resize and clear the depth/stencil buffer, restoring state after
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, bufWidth, bufHeight);
     glDepthMask(GL_TRUE);
     glStencilMask(0xFF);
@@ -599,10 +599,9 @@ void GpuRenderOgl::updateTextures() {
 }
 
 void GpuRenderOgl::updateViewport() {
-    // Update the viewport using buffer size and view scale
-    GLint x = bufWidth - viewScaleH;
-    GLint y = bufHeight - viewScaleV;
-    glViewport(x, y, bufWidth - x, bufHeight - y);
+    // Update the viewport, adjusting Y-position when flipped
+    GLint y = flipY ? (bufHeight - viewHeight) : 0;
+    glViewport(0, y, viewWidth, viewHeight);
 }
 
 void GpuRenderOgl::setPrimMode(PrimMode mode) {
@@ -824,16 +823,16 @@ void GpuRenderOgl::setStencilValue(uint8_t value) {
 }
 
 void GpuRenderOgl::setViewScaleH(float scale) {
-    // Update the horizontal view scale
+    // Update the viewport width
     flushVertices();
-    viewScaleH = scale * 2;
+    viewWidth = scale * 2;
     updateViewport();
 }
 
 void GpuRenderOgl::setViewScaleV(float scale) {
-    // Update the vertical view scale
+    // Update the viewport height
     flushVertices();
-    viewScaleV = scale * 2;
+    viewHeight = scale * 2;
     updateViewport();
 }
 
@@ -846,6 +845,7 @@ void GpuRenderOgl::setBufferDims(uint16_t width, uint16_t height, bool flip) {
 
     // Update the position scale to flip the Y-axis if enabled
     glUniform4f(posScaleLoc, 1.0f, flip ? -1.0f : 1.0f, -1.0f, 1.0f);
+    flipY = flip;
 }
 
 void GpuRenderOgl::setColbufAddr(uint32_t address) {
