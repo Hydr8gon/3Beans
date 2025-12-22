@@ -58,8 +58,10 @@ void Gpu::syncThread() {
 
     // Check if the renderer changed and reset it if so
     if (curRenderer == Settings::gpuRenderer) return;
-    curRenderer = Settings::gpuRenderer;
+    if (curRenderer == 1) (*contextFunc)();
     delete gpuShader, delete gpuRender;
+    if (curRenderer == 1) (*contextFunc)();
+    curRenderer = Settings::gpuRenderer;
 
     // Initialize a new renderer of the current type
     switch (curRenderer) {

@@ -26,6 +26,8 @@
 
 class GpuRender {
 public:
+    virtual ~GpuRender() {}
+
     virtual void submitVertex(SoftVertex &vertex) = 0;
     virtual void flushBuffers() = 0;
 

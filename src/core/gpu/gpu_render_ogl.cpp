@@ -17,6 +17,8 @@
     along with 3Beans. If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <algorithm>
+
 #include "../core.h"
 #include "gpu_render_ogl.h"
 
@@ -157,7 +159,7 @@ GpuRenderOgl::GpuRenderOgl(Core *core): core(core) {
     glCompileShader(fragShader);
 
     // Create a program with the shaders
-    GLuint program = glCreateProgram();
+    program = glCreateProgram();
     glAttachShader(program, vtxShader);
     glAttachShader(program, fragShader);
     glLinkProgram(program);
@@ -166,7 +168,6 @@ GpuRenderOgl::GpuRenderOgl(Core *core): core(core) {
     glDeleteShader(fragShader);
 
     // Create vertex array and buffer objects
-    GLuint vao, vbo;
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
     glGenBuffers(1, &vbo);
@@ -215,6 +216,9 @@ GpuRenderOgl::GpuRenderOgl(Core *core): core(core) {
             combModeLocs[i][j] = glGetUniformLocation(program, name.c_str());
             glUniform1i(combModeLocs[i][j], 0);
         }
+        if (i >= 3) continue;
+        name = "texUnits[" + std::to_string(i) + "]";
+        glUniform1i(glGetUniformLocation(program, name.c_str()), i);
     }
 
     // Set some state that only has to be done once
@@ -226,37 +230,36 @@ GpuRenderOgl::GpuRenderOgl(Core *core): core(core) {
     glEnable(GL_BLEND);
     glFrontFace(GL_CW);
 
-    // Create and bind textures for combiner inputs
-    GLuint tex[3];
-    glGenTextures(3, tex);
-    for (int i = 0; i < 3; i++) {
-        glActiveTexture(GL_TEXTURE0 + i);
-        glBindTexture(GL_TEXTURE_2D, tex[i]);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        std::string name = "texUnits[" + std::to_string(i) + "]";
-        glUniform1i(glGetUniformLocation(program, name.c_str()), i);
-    }
-
     // Create color and depth buffers for rendering
-    GLuint col, dep;
-    glGenFramebuffers(1, &col);
-    glBindFramebuffer(GL_FRAMEBUFFER, col);
-    glGenRenderbuffers(1, &dep);
-    glBindRenderbuffer(GL_RENDERBUFFER, dep);
+    glGenFramebuffers(1, &colBuf);
+    glBindFramebuffer(GL_FRAMEBUFFER, colBuf);
+    glGenRenderbuffers(1, &depBuf);
+    glBindRenderbuffer(GL_RENDERBUFFER, depBuf);
 
     // Create a texture to back the color buffer
-    glGenTextures(1, tex);
+    glGenTextures(1, &texture);
     glActiveTexture(GL_TEXTURE4);
-    glBindTexture(GL_TEXTURE_2D, tex[0]);
+    glBindTexture(GL_TEXTURE_2D, texture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
     // Bind everything for drawing and reading
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, tex[0], 0);
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, dep);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, texture, 0);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depBuf);
     glDrawBuffer(GL_COLOR_ATTACHMENT0);
     glReadBuffer(GL_COLOR_ATTACHMENT0);
+}
+
+GpuRenderOgl::~GpuRenderOgl() {
+    // Clean up everything that was generated
+    for (int i = 0; i < texCache.size(); i++)
+        glDeleteTextures(1, &texCache[i].tex);
+    glDeleteTextures(1, &texture);
+    glDeleteRenderbuffers(1, &depBuf);
+    glDeleteFramebuffers(1, &colBuf);
+    glDeleteBuffers(1, &vbo);
+    glDeleteVertexArrays(1, &vao);
+    glDeleteProgram(program);
 }
 
 uint32_t GpuRenderOgl::getSwizzle(int x, int y, int width) {
@@ -458,6 +461,39 @@ void GpuRenderOgl::updateTextures() {
         if (~texDirty & BIT(i)) continue;
         glActiveTexture(GL_TEXTURE0 + i);
 
+        // Check for a matching texture in the cache
+        // TODO: invalidate modified textures
+        const TexCache *cache = nullptr;
+        TexCache cmp; cmp.addr = texAddrs[i];
+        auto it = std::lower_bound(texCache.cbegin(), texCache.cend(), cmp);
+        while (it < texCache.cend() && it->addr == texAddrs[i]) {
+            if (it->width == texWidths[i] && it->height == texHeights[i] && it->fmt == texFmts[i]) {
+                cache = &*it;
+                break;
+            }
+            it++;
+        }
+
+        // Create a new cached texture or bind an existing one
+        if (!cache) {
+            TexCache tex = { texAddrs[i], texWidths[i], texHeights[i], texFmts[i] };
+            glGenTextures(1, &tex.tex);
+            glBindTexture(GL_TEXTURE_2D, tex.tex);
+            it = std::upper_bound(texCache.cbegin(), texCache.cend(), tex);
+            texCache.insert(it, tex);
+        }
+        else {
+            glBindTexture(GL_TEXTURE_2D, cache->tex);
+        }
+
+        // Update texture parameters and finish if already cached
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, texWrapS[i]);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, texWrapT[i]);
+        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, texBorders[i]);
+        if (cache) continue;
+
         // Set texture swizzling based on format
         switch (texFmts[i]) {
         case TEX_RG8:
@@ -642,11 +678,10 @@ void GpuRenderOgl::setTexDims(int i, uint16_t width, uint16_t height) {
 }
 
 void GpuRenderOgl::setTexBorder(int i, float r, float g, float b, float a) {
-    // Update a texture unit's border color
+    // Set a texture unit's border and mark it as dirty
     flushVertices();
-    glActiveTexture(GL_TEXTURE0 + i);
-    float color[] = { r, g, b, a };
-    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, color);
+    texBorders[i][0] = r, texBorders[i][1] = g, texBorders[i][2] = b, texBorders[i][3] = a;
+    texDirty |= BIT(i);
 }
 
 void GpuRenderOgl::setTexFmt(int i, TexFmt format) {
@@ -657,26 +692,26 @@ void GpuRenderOgl::setTexFmt(int i, TexFmt format) {
 }
 
 void GpuRenderOgl::setTexWrapS(int i, TexWrap wrap) {
-    // Update a texture unit's S-wrap mode
+    // Set a texture unit's S-wrap and mark it as dirty
     flushVertices();
-    glActiveTexture(GL_TEXTURE0 + i);
+    texDirty |= BIT(i);
     switch (wrap) {
-        case WRAP_CLAMP: return glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        case WRAP_BORDER: return glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-        case WRAP_REPEAT: return glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        case WRAP_MIRROR: return glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+        case WRAP_CLAMP: texWrapS[i] = GL_CLAMP_TO_EDGE; return;
+        case WRAP_BORDER: texWrapS[i] = GL_CLAMP_TO_BORDER; return;
+        case WRAP_REPEAT: texWrapS[i] = GL_REPEAT; return;
+        case WRAP_MIRROR: texWrapS[i] = GL_MIRRORED_REPEAT; return;
     }
 }
 
 void GpuRenderOgl::setTexWrapT(int i, TexWrap wrap) {
-    // Update a texture unit's T-wrap mode
+    // Set a texture unit's T-wrap and mark it as dirty
     flushVertices();
-    glActiveTexture(GL_TEXTURE0 + i);
+    texDirty |= BIT(i);
     switch (wrap) {
-        case WRAP_CLAMP: return glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        case WRAP_BORDER: return glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-        case WRAP_REPEAT: return glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        case WRAP_MIRROR: return glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+        case WRAP_CLAMP: texWrapT[i] = GL_CLAMP_TO_EDGE; return;
+        case WRAP_BORDER: texWrapT[i] = GL_CLAMP_TO_BORDER; return;
+        case WRAP_REPEAT: texWrapT[i] = GL_REPEAT; return;
+        case WRAP_MIRROR: texWrapT[i] = GL_MIRRORED_REPEAT; return;
     }
 }
 

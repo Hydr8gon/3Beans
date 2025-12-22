@@ -26,9 +26,20 @@
 
 class Core;
 
+struct TexCache {
+    uint32_t addr;
+    uint16_t width;
+    uint16_t height;
+    TexFmt fmt;
+    GLuint tex;
+
+    bool operator<(const TexCache &t) const { return addr < t.addr; }
+};
+
 class GpuRenderOgl: public GpuRender {
 public:
     GpuRenderOgl(Core *core);
+    ~GpuRenderOgl();
 
     void submitVertex(SoftVertex &vertex);
     void flushBuffers();
@@ -73,6 +84,10 @@ public:
 
 private:
     Core *core;
+    GLuint program;
+    GLuint vao, vbo;
+    GLuint colBuf, depBuf;
+    GLuint texture;
 
     GLint posScaleLoc;
     GLint combSrcLocs[6][6];
@@ -88,6 +103,7 @@ private:
     static const char *fragCode;
 
     std::vector<SoftVertex> vertices;
+    std::vector<TexCache> texCache;
     GLint primMode = GL_TRIANGLES;
     uint8_t texDirty = 0;
     bool readDirty = false;
@@ -96,7 +112,10 @@ private:
     uint32_t texAddrs[3] = {};
     uint16_t texWidths[3] = {};
     uint16_t texHeights[3] = {};
+    float texBorders[3][4] = {};
     TexFmt texFmts[3] = {};
+    GLint texWrapS[3] = {};
+    GLint texWrapT[3] = {};
     GLenum blendOpers[4] = {};
     GLenum blendModes[2] = {};
 
