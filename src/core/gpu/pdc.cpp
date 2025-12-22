@@ -113,7 +113,7 @@ void Pdc::drawFrame() {
     // Update screen base addresses and sync the GPU thread if one changed
     for (int i = 0; i < 2; i++) {
         uint32_t base = (pdcFramebufSelAck[i] & BIT(0)) ? pdcFramebufLt1[i] : pdcFramebufLt0[i];
-        if (screenBases[i] != base) core->gpu.syncThread();
+        if (screenBases[i] != base) core->gpu.syncRender();
         screenBases[i] = base;
     }
 

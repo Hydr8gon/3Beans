@@ -618,8 +618,32 @@ void GpuShaderInterp::setVshEntry(uint16_t entry, uint16_t end) {
     vshEnd = end;
 }
 
+void GpuShaderInterp::setVshInts(int i, uint8_t int0, uint8_t int1, uint8_t int2) {
+    // Set a group of 3 vertex shader integers
+    vshInts[i][0] = int0;
+    vshInts[i][1] = int1;
+    vshInts[i][2] = int2;
+}
+
+void GpuShaderInterp::setVshFloats(int i, float *floats) {
+    // Set a group of 4 vertex shader floats
+    memcpy(vshFloats[i], floats, 4 * sizeof(float));
+}
+
 void GpuShaderInterp::setGshEntry(uint16_t entry, uint16_t end) {
     // Set the geometry shader entry and end points
     gshEntry = entry;
     gshEnd = end;
+}
+
+void GpuShaderInterp::setGshInts(int i, uint8_t int0, uint8_t int1, uint8_t int2) {
+    // Set a group of 3 geometry shader integers
+    gshInts[i][0] = int0;
+    gshInts[i][1] = int1;
+    gshInts[i][2] = int2;
+}
+
+void GpuShaderInterp::setGshFloats(int i, float *floats) {
+    // Set a group of 4 geometry shader floats
+    memcpy(gshFloats[i], floats, 4 * sizeof(float));
 }

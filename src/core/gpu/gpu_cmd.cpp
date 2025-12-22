@@ -766,13 +766,10 @@ void Gpu::writeGshBools(uint32_t mask, uint32_t value) {
 }
 
 template <int i> void Gpu::writeGshInts(uint32_t mask, uint32_t value) {
-    // Write to one of the geometry uniform integer registers
+    // Write to one of the geometry uniform integer registers and update the shader
     mask &= 0xFFFFFF;
     gpuGshInts[i] = (gpuGshInts[i] & ~mask) | (value & mask);
-
-    // Update some of the uniform integers in the shader
-    for (int j = 0; j < 3; j++)
-        gpuShader->setGshInt(i, j, gpuGshInts[i] >> (j << 3));
+    gpuShader->setGshInts(i, gpuGshInts[i], gpuGshInts[i] >> 8, gpuGshInts[i] >> 16);
 }
 
 void Gpu::writeGshInputCfg(uint32_t mask, uint32_t value) {
@@ -827,9 +824,9 @@ void Gpu::writeGshFloatData(uint32_t mask, uint32_t value) {
     }
 
     // Increment the index and update the shader once 4 floats are received
-    if (gshFloatIdx++ < (96 << 2) && !(gshFloatIdx & 0x3))
-        for (int i = 0; i < 4; i++)
-            gpuShader->setGshFloat((gshFloatIdx >> 2) - 1, i, *(float*)&gshFloatData[i]);
+    if (gshFloatIdx++ >= (96 * 4) || (gshFloatIdx & 0x3)) return;
+    memcpy(&gshFloats[gshFloatIdx - 4], gshFloatData, 4 * sizeof(float));
+    gpuShader->setGshFloats((gshFloatIdx - 4) / 4, &gshFloats[gshFloatIdx - 4]);
 }
 
 void Gpu::writeGshCodeIdx(uint32_t mask, uint32_t value) {
@@ -839,7 +836,8 @@ void Gpu::writeGshCodeIdx(uint32_t mask, uint32_t value) {
 
 void Gpu::writeGshCodeData(uint32_t mask, uint32_t value) {
     // Write to the current geometry shader program index and increment it
-    gpuShader->writeGshCode(gpuGshCodeIdx++ & 0xFFF, value & mask);
+    uint32_t idx = (gpuGshCodeIdx++ & 0xFFF);
+    gpuShader->setGshCode(idx, gshCode[idx] = value & mask);
 }
 
 void Gpu::writeGshDescIdx(uint32_t mask, uint32_t value) {
@@ -849,7 +847,8 @@ void Gpu::writeGshDescIdx(uint32_t mask, uint32_t value) {
 
 void Gpu::writeGshDescData(uint32_t mask, uint32_t value) {
     // Write to the current geometry operand descriptor index and increment it
-    gpuShader->writeGshDesc(gpuGshDescIdx++ & 0x7F, value & mask);
+    uint32_t idx = (gpuGshDescIdx++ & 0x7F);
+    gpuShader->setGshDesc(idx, gshDesc[idx] = value & mask);
 }
 
 void Gpu::writeVshBools(uint32_t mask, uint32_t value) {
@@ -864,13 +863,10 @@ void Gpu::writeVshBools(uint32_t mask, uint32_t value) {
 }
 
 template <int i> void Gpu::writeVshInts(uint32_t mask, uint32_t value) {
-    // Write to one of the vertex uniform integer registers
+    // Write to one of the vertex uniform integer registers and update the shader
     mask &= 0xFFFFFF;
     gpuVshInts[i] = (gpuVshInts[i] & ~mask) | (value & mask);
-
-    // Update some of the uniform integers in the shader
-    for (int j = 0; j < 3; j++)
-        gpuShader->setVshInt(i, j, gpuVshInts[i] >> (j << 3));
+    gpuShader->setVshInts(i, gpuVshInts[i], gpuVshInts[i] >> 8, gpuVshInts[i] >> 16);
 }
 
 void Gpu::writeVshEntry(uint32_t mask, uint32_t value) {
@@ -916,9 +912,9 @@ void Gpu::writeVshFloatData(uint32_t mask, uint32_t value) {
     }
 
     // Increment the index and update the shader once 4 floats are received
-    if (vshFloatIdx++ < (96 << 2) && !(vshFloatIdx & 0x3))
-        for (int i = 0; i < 4; i++)
-            gpuShader->setVshFloat((vshFloatIdx >> 2) - 1, i, *(float*)&vshFloatData[i]);
+    if (vshFloatIdx++ >= (96 * 4) || (vshFloatIdx & 0x3)) return;
+    memcpy(&vshFloats[vshFloatIdx - 4], vshFloatData, 4 * sizeof(float));
+    gpuShader->setVshFloats((vshFloatIdx - 4) / 4, &vshFloats[vshFloatIdx - 4]);
 }
 
 void Gpu::writeVshCodeIdx(uint32_t mask, uint32_t value) {
@@ -928,7 +924,8 @@ void Gpu::writeVshCodeIdx(uint32_t mask, uint32_t value) {
 
 void Gpu::writeVshCodeData(uint32_t mask, uint32_t value) {
     // Write to the current vertex shader program index and increment it
-    gpuShader->writeVshCode(gpuVshCodeIdx++ & 0x1FF, value & mask);
+    uint32_t idx = (gpuVshCodeIdx++ & 0x1FF);
+    gpuShader->setVshCode(idx, vshCode[idx] = value & mask);
 }
 
 void Gpu::writeVshDescIdx(uint32_t mask, uint32_t value) {
@@ -938,7 +935,8 @@ void Gpu::writeVshDescIdx(uint32_t mask, uint32_t value) {
 
 void Gpu::writeVshDescData(uint32_t mask, uint32_t value) {
     // Write to the current vertex operand descriptor index and increment it
-    gpuShader->writeVshDesc(gpuVshDescIdx++ & 0x7F, value & mask);
+    uint32_t idx = (gpuVshDescIdx++ & 0x7F);
+    gpuShader->setVshDesc(idx, vshDesc[idx] = value & mask);
 }
 
 void Gpu::writeUnkCmd(uint32_t mask, uint32_t value) {

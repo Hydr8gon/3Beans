@@ -34,16 +34,32 @@ const int16_t GpuRender::etc1Tables[][4] {
 
 Gpu::Gpu(Core *core, std::function<void()> *contextFunc): core(core), contextFunc(contextFunc) {
     // Initialize the renderer
-    syncThread();
+    createRender();
 }
 
 Gpu::~Gpu() {
-    // Finish and clean up the renderer
-    syncThread();
-    delete gpuRender;
+    // Finish and clean up
+    syncRender();
+    destroyRender();
 }
 
-void Gpu::syncThread() {
+void Gpu::createRender() {
+    // Initialize a new renderer of the current type
+    switch (curRenderer = Settings::gpuRenderer) {
+        default: gpuRender = new GpuRenderSoft(core); break;
+        case 1: (*contextFunc)(), gpuRender = new GpuRenderOgl(core), (*contextFunc)(); break;
+    }
+    gpuShader = new GpuShaderInterp(*gpuRender);
+}
+
+void Gpu::destroyRender() {
+    // Clean up the initialized renderer
+    if (curRenderer == 1) (*contextFunc)();
+    delete gpuShader, delete gpuRender;
+    if (curRenderer == 1) (*contextFunc)();
+}
+
+void Gpu::syncRender() {
     // Stop the GPU thread or release context on this thread depending on settings
     if (running.exchange(false)) {
         if (thread) {
@@ -56,19 +72,95 @@ void Gpu::syncThread() {
         }
     }
 
-    // Check if the renderer changed and reset it if so
+    // Reset the renderer if it was changed
     if (curRenderer == Settings::gpuRenderer) return;
-    if (curRenderer == 1) (*contextFunc)();
-    delete gpuShader, delete gpuRender;
-    if (curRenderer == 1) (*contextFunc)();
-    curRenderer = Settings::gpuRenderer;
+    destroyRender();
+    createRender();
 
-    // Initialize a new renderer of the current type
-    switch (curRenderer) {
-        default: gpuRender = new GpuRenderSoft(core); break;
-        case 1: (*contextFunc)(), gpuRender = new GpuRenderOgl(core), (*contextFunc)(); break;
-    }
-    gpuShader = new GpuShaderInterp(*gpuRender);
+    // Restore the renderer state
+    if (curRenderer == 1) (*contextFunc)();
+    writeFaceCulling(0xFFFFFFFF, gpuFaceCulling);
+    writeViewScaleH(0xFFFFFFFF, gpuViewScaleH);
+    writeViewStepH(0xFFFFFFFF, gpuViewStepH);
+    writeViewScaleV(0xFFFFFFFF, gpuViewScaleV);
+    writeViewStepV(0xFFFFFFFF, gpuViewStepV);
+    writeTexBorder<0>(0xFFFFFFFF, gpuTexBorder[0]);
+    writeTexBorder<1>(0xFFFFFFFF, gpuTexBorder[1]);
+    writeTexBorder<2>(0xFFFFFFFF, gpuTexBorder[2]);
+    writeTexDim<0>(0xFFFFFFFF, gpuTexDim[0]);
+    writeTexDim<1>(0xFFFFFFFF, gpuTexDim[1]);
+    writeTexDim<2>(0xFFFFFFFF, gpuTexDim[2]);
+    writeTexParam<0>(0xFFFFFFFF, gpuTexParam[0]);
+    writeTexParam<1>(0xFFFFFFFF, gpuTexParam[1]);
+    writeTexParam<2>(0xFFFFFFFF, gpuTexParam[2]);
+    writeTexAddr1<0>(0xFFFFFFFF, gpuTexAddr1[0]);
+    writeTexAddr1<1>(0xFFFFFFFF, gpuTexAddr1[1]);
+    writeTexAddr1<2>(0xFFFFFFFF, gpuTexAddr1[2]);
+    writeTexType<0>(0xFFFFFFFF, gpuTexType[0]);
+    writeTexType<1>(0xFFFFFFFF, gpuTexType[1]);
+    writeTexType<2>(0xFFFFFFFF, gpuTexType[2]);
+    writeCombSrc<0>(0xFFFFFFFF, gpuCombSrc[0]);
+    writeCombSrc<1>(0xFFFFFFFF, gpuCombSrc[1]);
+    writeCombSrc<2>(0xFFFFFFFF, gpuCombSrc[2]);
+    writeCombSrc<3>(0xFFFFFFFF, gpuCombSrc[3]);
+    writeCombSrc<4>(0xFFFFFFFF, gpuCombSrc[4]);
+    writeCombSrc<5>(0xFFFFFFFF, gpuCombSrc[5]);
+    writeCombOper<0>(0xFFFFFFFF, gpuCombOper[0]);
+    writeCombOper<1>(0xFFFFFFFF, gpuCombOper[1]);
+    writeCombOper<2>(0xFFFFFFFF, gpuCombOper[2]);
+    writeCombOper<3>(0xFFFFFFFF, gpuCombOper[3]);
+    writeCombOper<4>(0xFFFFFFFF, gpuCombOper[4]);
+    writeCombOper<5>(0xFFFFFFFF, gpuCombOper[5]);
+    writeCombMode<0>(0xFFFFFFFF, gpuCombMode[0]);
+    writeCombMode<1>(0xFFFFFFFF, gpuCombMode[1]);
+    writeCombMode<2>(0xFFFFFFFF, gpuCombMode[2]);
+    writeCombMode<3>(0xFFFFFFFF, gpuCombMode[3]);
+    writeCombMode<4>(0xFFFFFFFF, gpuCombMode[4]);
+    writeCombMode<5>(0xFFFFFFFF, gpuCombMode[5]);
+    writeCombColor<0>(0xFFFFFFFF, gpuCombColor[0]);
+    writeCombColor<1>(0xFFFFFFFF, gpuCombColor[1]);
+    writeCombColor<2>(0xFFFFFFFF, gpuCombColor[2]);
+    writeCombColor<3>(0xFFFFFFFF, gpuCombColor[3]);
+    writeCombColor<4>(0xFFFFFFFF, gpuCombColor[4]);
+    writeCombColor<5>(0xFFFFFFFF, gpuCombColor[5]);
+    writeCombBufUpd(0xFFFFFFFF, gpuCombBufUpd);
+    writeCombBufCol(0xFFFFFFFF, gpuCombBufCol);
+    writeBlendFunc(0xFFFFFFFF, gpuBlendFunc);
+    writeBlendColor(0xFFFFFFFF, gpuBlendColor);
+    writeAlphaTest(0xFFFFFFFF, gpuAlphaTest);
+    writeStencilTest(0xFFFFFFFF, gpuStencilTest);
+    writeStencilOp(0xFFFFFFFF, gpuStencilOp);
+    writeDepcolMask(0xFFFFFFFF, gpuDepcolMask);
+    writeColbufWrite(0xFFFFFFFF, gpuColbufWrite);
+    writeDepbufWrite(0xFFFFFFFF, gpuDepbufWrite);
+    writeDepbufFmt(0xFFFFFFFF, gpuDepbufFmt);
+    writeColbufFmt(0xFFFFFFFF, gpuColbufFmt);
+    writeDepbufLoc(0xFFFFFFFF, gpuDepbufLoc);
+    writeColbufLoc(0xFFFFFFFF, gpuColbufLoc);
+    writeBufferDim(0xFFFFFFFF, gpuBufferDim);
+    writePrimRestart(0xFFFFFFFF, gpuPrimRestart);
+    if (curRenderer == 1) (*contextFunc)();
+
+    // Restore the shader state
+    writeGshConfig(0xFFFFFFFF, gpuGshConfig);
+    writeVshOutTotal(0xFFFFFFFF, gpuVshOutTotal);
+    writeGshBools(0xFFFFFFFF, gpuGshBools);
+    writeGshInts<0>(0xFFFFFFFF, gpuGshInts[0]);
+    writeGshInts<1>(0xFFFFFFFF, gpuGshInts[1]);
+    writeGshInts<2>(0xFFFFFFFF, gpuGshInts[2]);
+    writeGshEntry(0xFFFFFFFF, gpuGshEntry);
+    writeVshBools(0xFFFFFFFF, gpuVshBools);
+    writeVshInts<0>(0xFFFFFFFF, gpuVshInts[0]);
+    writeVshInts<1>(0xFFFFFFFF, gpuVshInts[1]);
+    writeVshInts<2>(0xFFFFFFFF, gpuVshInts[2]);
+    writeVshEntry(0xFFFFFFFF, gpuVshEntry);
+    for (int i = 0; i < 96; i++) gpuShader->setGshFloats(i, &gshFloats[i * 4]);
+    for (int i = 0; i < 0x1000; i++) gpuShader->setGshCode(i, gshCode[i]);
+    for (int i = 0; i < 0x80; i++) gpuShader->setGshDesc(i, gshDesc[i]);
+    for (int i = 0; i < 96; i++) gpuShader->setVshFloats(i, &vshFloats[i * 4]);
+    for (int i = 0; i < 0x200; i++) gpuShader->setVshCode(i, vshCode[i]);
+    for (int i = 0; i < 0x80; i++) gpuShader->setVshDesc(i, vshDesc[i]);
+    shdMapDirty = true;
 }
 
 void Gpu::runThreaded() {

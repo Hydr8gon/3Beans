@@ -47,19 +47,19 @@ public:
     void setGshInMap(uint8_t *map);
     void setGshInCount(uint8_t count) { gshInCount = count; }
 
-    void writeVshCode(int i, uint32_t value) { vshCode[i] = value; }
-    void writeVshDesc(int i, uint32_t value) { vshDesc[i] = value; }
+    void setVshCode(int i, uint32_t value) { vshCode[i] = value; }
+    void setVshDesc(int i, uint32_t value) { vshDesc[i] = value; }
     void setVshEntry(uint16_t entry, uint16_t end);
     void setVshBool(int i, bool value) { vshBools[i] = value; }
-    void setVshInt(int i, int j, uint8_t value) { vshInts[i][j] = value; }
-    void setVshFloat(int i, int j, float value) { vshFloats[i][j] = value; }
+    void setVshInts(int i, uint8_t int0, uint8_t int1, uint8_t int2);
+    void setVshFloats(int i, float *floats);
 
-    void writeGshCode(int i, uint32_t value) { gshCode[i] = value; }
-    void writeGshDesc(int i, uint32_t value) { gshDesc[i] = value; }
+    void setGshCode(int i, uint32_t value) { gshCode[i] = value; }
+    void setGshDesc(int i, uint32_t value) { gshDesc[i] = value; }
     void setGshEntry(uint16_t entry, uint16_t end);
     void setGshBool(int i, bool value) { gshBools[i] = value; }
-    void setGshInt(int i, int j, uint8_t value) { gshInts[i][j] = value; }
-    void setGshFloat(int i, int j, float value) { gshFloats[i][j] = value; }
+    void setGshInts(int i, uint8_t int0, uint8_t int1, uint8_t int2);
+    void setGshFloats(int i, float *floats);
 
 private:
     GpuRender &gpuRender;

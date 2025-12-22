@@ -200,7 +200,7 @@ public:
     Gpu(Core *core, std::function<void()> *contextFunc);
     ~Gpu();
 
-    void syncThread();
+    void syncRender();
     void endFill(int i);
     void endCopy();
 
@@ -414,12 +414,19 @@ private:
     uint32_t attrFixedData[31][3] = {};
     uint8_t attrFixedIdx = 0;
 
-    uint32_t gshFloatData[4] = {};
-    uint16_t gshFloatIdx = 0;
-    bool gshFloat32 = false;
+    uint32_t vshCode[0x200] = {};
+    uint32_t vshDesc[0x80] = {};
+    float vshFloats[96 * 4] = {};
     uint32_t vshFloatData[4] = {};
     uint16_t vshFloatIdx = 0;
     bool vshFloat32 = false;
+
+    uint32_t gshCode[0x1000] = {};
+    uint32_t gshDesc[0x80] = {};
+    float gshFloats[96 * 4] = {};
+    uint32_t gshFloatData[4] = {};
+    uint16_t gshFloatIdx = 0;
+    bool gshFloat32 = false;
 
     uint32_t cfg11GpuCnt = 0;
     GpuFillRegs gpuFill[2];
@@ -490,6 +497,9 @@ private:
     uint32_t gpuVshOutMask = 0;
     uint32_t gpuVshCodeIdx = 0;
     uint32_t gpuVshDescIdx = 0;
+
+    void createRender();
+    void destroyRender();
 
     void runThreaded();
     bool checkInterrupt(int i);
