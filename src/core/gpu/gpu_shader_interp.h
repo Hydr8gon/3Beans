@@ -36,6 +36,25 @@ struct VertexCache {
     uint32_t tag;
 };
 
+struct SourceDesc {
+    uint8_t map[4];
+    bool negate;
+};
+
+struct ShaderDesc {
+    SourceDesc src[3];
+    bool dstMask[4];
+};
+
+struct ShaderCode {
+    void (GpuShaderInterp::*instr)(ShaderCode&);
+    ShaderDesc *desc;
+    float *dst;
+    uint8_t src[3];
+    uint8_t idx;
+    uint32_t value;
+};
+
 class GpuShaderInterp {
 public:
     GpuShaderInterp(GpuRender &gpuRender);
@@ -47,15 +66,15 @@ public:
     void setGshInMap(uint8_t *map);
     void setGshInCount(uint8_t count) { gshInCount = count; }
 
-    void setVshCode(int i, uint32_t value) { vshCode[i] = value; }
-    void setVshDesc(int i, uint32_t value) { vshDesc[i] = value; }
+    void setVshCode(int i, uint32_t value) { cacheCode(vshCode[i], value, false); }
+    void setVshDesc(int i, uint32_t value) { cacheDesc(vshDesc[i], value); }
     void setVshEntry(uint16_t entry, uint16_t end);
     void setVshBool(int i, bool value) { vshBools[i] = value; }
     void setVshInts(int i, uint8_t int0, uint8_t int1, uint8_t int2);
     void setVshFloats(int i, float *floats);
 
-    void setGshCode(int i, uint32_t value) { gshCode[i] = value; }
-    void setGshDesc(int i, uint32_t value) { gshDesc[i] = value; }
+    void setGshCode(int i, uint32_t value) { cacheCode(gshCode[i], value, true); }
+    void setGshDesc(int i, uint32_t value) { cacheDesc(gshDesc[i], value); }
     void setGshEntry(uint16_t entry, uint16_t end);
     void setGshBool(int i, bool value) { gshBools[i] = value; }
     void setGshInts(int i, uint8_t int0, uint8_t int1, uint8_t int2);
@@ -64,15 +83,14 @@ public:
 private:
     GpuRender &gpuRender;
 
-    static void (GpuShaderInterp::*vshInstrs[0x40])(uint32_t);
-    static void (GpuShaderInterp::*gshInstrs[0x40])(uint32_t);
+    static void (GpuShaderInterp::*vshInstrs[0x40])(ShaderCode&);
+    static void (GpuShaderInterp::*gshInstrs[0x40])(ShaderCode&);
 
     VertexCache vtxCache[0x101] = {};
     uint32_t vtxTag = 1;
 
     float **srcRegs;
     float *dstRegs[0x20];
-    uint32_t *shdDesc;
     uint8_t (*shdInts)[3];
     bool *shdBools;
 
@@ -98,8 +116,8 @@ private:
     uint8_t gshInMap[0x10] = {};
     uint8_t gshInCount = 0;
 
-    uint32_t vshCode[0x200] = {};
-    uint32_t vshDesc[0x80] = {};
+    ShaderCode vshCode[0x200] = {};
+    ShaderDesc vshDesc[0x80] = {};
     uint16_t vshEntry = 0;
     uint16_t vshEnd = 0;
     bool vshBools[16] = {};
@@ -107,8 +125,8 @@ private:
     float vshFloats[96][4] = {};
     float *vshRegs[0x80] = {};
 
-    uint32_t gshCode[0x1000] = {};
-    uint32_t gshDesc[0x80] = {};
+    ShaderCode gshCode[0x1000] = {};
+    ShaderDesc gshDesc[0x80] = {};
     uint16_t gshEntry = 0;
     uint16_t gshEnd = 0;
     bool gshBools[16] = {};
@@ -116,49 +134,52 @@ private:
     float gshFloats[96][4] = {};
     float *gshRegs[0x80] = {};
 
+    void cacheCode(ShaderCode &code, uint32_t value, bool geo);
+    void cacheDesc(ShaderDesc &desc, uint32_t value);
+
     template <bool geo> void runShader();
     void buildVertex(SoftVertex &vertex);
 
     static float mult(float a, float b);
-    float *getSrc(uint8_t src, uint32_t desc, uint8_t idx);
-    void setDst(uint8_t dst, uint32_t desc, float *value);
+    template <bool relative> float *getSrc(ShaderCode &op, int i);
+    void setDst(ShaderCode &op, float *value);
 
-    void shdAdd(uint32_t opcode);
-    void shdDp3(uint32_t opcode);
-    void shdDp4(uint32_t opcode);
-    void shdDph(uint32_t opcode);
-    void shdEx2(uint32_t opcode);
-    void shdLg2(uint32_t opcode);
-    void shdMul(uint32_t opcode);
-    void shdSge(uint32_t opcode);
-    void shdSlt(uint32_t opcode);
-    void shdFlr(uint32_t opcode);
-    void shdMax(uint32_t opcode);
-    void shdMin(uint32_t opcode);
-    void shdRcp(uint32_t opcode);
-    void shdRsq(uint32_t opcode);
-    void shdMova(uint32_t opcode);
-    void shdMov(uint32_t opcode);
-    void shdDphi(uint32_t opcode);
-    void shdSgei(uint32_t opcode);
-    void shdSlti(uint32_t opcode);
-    void shdBreak(uint32_t opcode);
-    void shdNop(uint32_t opcode);
-    void shdEnd(uint32_t opcode);
-    void shdBreakc(uint32_t opcode);
-    void shdCall(uint32_t opcode);
-    void shdCallc(uint32_t opcode);
-    void shdCallu(uint32_t opcode);
-    void shdIfu(uint32_t opcode);
-    void shdIfc(uint32_t opcode);
-    void shdLoop(uint32_t opcode);
-    void gshEmit(uint32_t opcode);
-    void gshSetemit(uint32_t opcode);
-    void shdJmpc(uint32_t opcode);
-    void shdJmpu(uint32_t opcode);
-    void shdCmp(uint32_t opcode);
-    void shdMadi(uint32_t opcode);
-    void shdMad(uint32_t opcode);
-    void vshUnk(uint32_t opcode);
-    void gshUnk(uint32_t opcode);
+    void shdAdd(ShaderCode &op);
+    void shdDp3(ShaderCode &op);
+    void shdDp4(ShaderCode &op);
+    void shdDph(ShaderCode &op);
+    void shdEx2(ShaderCode &op);
+    void shdLg2(ShaderCode &op);
+    void shdMul(ShaderCode &op);
+    void shdSge(ShaderCode &op);
+    void shdSlt(ShaderCode &op);
+    void shdFlr(ShaderCode &op);
+    void shdMax(ShaderCode &op);
+    void shdMin(ShaderCode &op);
+    void shdRcp(ShaderCode &op);
+    void shdRsq(ShaderCode &op);
+    void shdMova(ShaderCode &op);
+    void shdMov(ShaderCode &op);
+    void shdDphi(ShaderCode &op);
+    void shdSgei(ShaderCode &op);
+    void shdSlti(ShaderCode &op);
+    void shdBreak(ShaderCode &op);
+    void shdNop(ShaderCode &op);
+    void shdEnd(ShaderCode &op);
+    void shdBreakc(ShaderCode &op);
+    void shdCall(ShaderCode &op);
+    void shdCallc(ShaderCode &op);
+    void shdCallu(ShaderCode &op);
+    void shdIfu(ShaderCode &op);
+    void shdIfc(ShaderCode &op);
+    void shdLoop(ShaderCode &op);
+    void gshEmit(ShaderCode &op);
+    void gshSetemit(ShaderCode &op);
+    void shdJmpc(ShaderCode &op);
+    void shdJmpu(ShaderCode &op);
+    void shdCmp(ShaderCode &op);
+    void shdMadi(ShaderCode &op);
+    void shdMad(ShaderCode &op);
+    void vshUnk(ShaderCode &op);
+    void gshUnk(ShaderCode &op);
 };
