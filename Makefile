@@ -3,8 +3,8 @@ BUILD := build
 META := meta
 SRCS := src src/core src/core/arm src/core/convert src/core/gpu src/core/io src/core/memory src/core/teak src/desktop
 ARGS := -O3 -flto -std=c++11 -DLOG_LEVEL=0
-LIBS := $(shell wx-config --libs --gl-libs) $(shell pkg-config --libs portaudio-2.0) -lepoxy
-INCS := $(shell wx-config --cxxflags) $(shell pkg-config --cflags portaudio-2.0)
+LIBS := $(shell wx-config --libs --gl-libs) $(shell pkg-config --libs portaudio-2.0 epoxy)
+INCS := $(shell wx-config --cxxflags) $(shell pkg-config --cflags portaudio-2.0 epoxy)
 
 APPNAME := 3Beans
 PKGNAME := com.hydra.threebeans

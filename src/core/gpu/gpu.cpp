@@ -179,8 +179,13 @@ void Gpu::runThreaded() {
             std::this_thread::yield();
         }
 
-        // Handle the next task based on its type
-        GpuThreadTask &task = tasks.front();
+        // Get and pop the next task from the queue
+        mutex.lock();
+        GpuThreadTask task = tasks.front();
+        tasks.pop();
+        mutex.unlock();
+
+        // Handle the task based on its type
         switch (task.type) {
         case TASK_CMD: {
             // Decode a GPU command header
@@ -198,7 +203,7 @@ void Gpu::runThreaded() {
                 for (int i = 0; i < count; i++)
                     (this->*cmdWrites[cmd])(mask, cmds[i + 2]);
             delete[] cmds;
-            break;
+            continue;
         }
 
         case TASK_FILL: {
@@ -206,7 +211,7 @@ void Gpu::runThreaded() {
             GpuFillRegs *regs = (GpuFillRegs*)task.data;
             startFill(*regs);
             delete regs;
-            break;
+            continue;
         }
 
         case TASK_COPY: {
@@ -214,13 +219,8 @@ void Gpu::runThreaded() {
             GpuCopyRegs *regs = (GpuCopyRegs*)task.data;
             startCopy(*regs);
             delete regs;
-            break;
+            continue;
         }}
-
-        // Remove finished tasks from the queue
-        mutex.lock();
-        tasks.pop();
-        mutex.unlock();
     }
 }
 
