@@ -73,6 +73,30 @@ SoftVertex GpuRenderSoft::intersect(SoftVertex &v1, SoftVertex &v2, float x1, fl
     return v;
 }
 
+int32_t GpuRenderSoft::procTexCoord(float c, uint16_t size, TexWrap wrap) {
+    // Scale a float coordinate and return it if within texture bounds
+    int32_t i = int32_t(c * size);
+    if (uint32_t(i) < size) return i;
+
+    // Handle texture wrapping explicitly for each side based on mode
+    if (i < 0) { // Negative
+        switch (wrap) {
+            case WRAP_CLAMP: return 0;
+            case WRAP_BORDER: return -1;
+            case WRAP_REPEAT: return i + (~i / size + 1) * size;
+            case WRAP_MIRROR: return ((i += (~i / (size * 2) + 1) * (size * 2)) < size) ? i : (size * 2 + ~i);
+        }
+    }
+    else { // Positive
+        switch (wrap) {
+            case WRAP_CLAMP: return size - 1;
+            case WRAP_BORDER: return -1;
+            case WRAP_REPEAT: return i % size;
+            case WRAP_MIRROR: return ((i %= size * 2) < size) ? i : (size * 2 + ~i);
+        }
+    }
+}
+
 uint8_t GpuRenderSoft::stencilOp(uint8_t value, StenOper oper) {
     // Adjust a stencil value based on the given operation
     switch (oper) {
@@ -94,47 +118,16 @@ void GpuRenderSoft::updateTexel(int i, float s, float t) {
         return;
     }
 
-    // Scale the S-coordinate to texels and handle wrapping based on mode
-    uint32_t u = uint32_t(s * texWidths[i]);
-    if (u >= texWidths[i]) {
-        switch (texWrapS[i]) {
-        case WRAP_CLAMP:
-            u = (int32_t(u) < 0) ? 0 : (texWidths[i] - 1);
-            break;
-        case WRAP_BORDER:
-            texColors[i] = texBorders[i];
-            return;
-        case WRAP_REPEAT:
-            u %= texWidths[i];
-            break;
-        case WRAP_MIRROR:
-            if ((u %= texWidths[i] * 2) >= texWidths[i])
-                u = (texWidths[i] * 2) - u - 1;
-            break;
-        }
+    // Process texture coordinates and return the border color if used
+    int32_t u = procTexCoord(s, texWidths[i], texWrapS[i]);
+    int32_t v = procTexCoord(t, texHeights[i], texWrapT[i]);
+    if (u < 0 || v < 0) {
+        texColors[i] = texBorders[i];
+        return;
     }
 
-    // Scale the T-coordinate to texels and handle wrapping based on mode
-    uint32_t v = texHeights[i] - uint32_t(t * texHeights[i]) - 1;
-    if (v >= texHeights[i]) {
-        switch (texWrapT[i]) {
-        case WRAP_CLAMP:
-            v = (int32_t(v) < 0) ? 0 : (texHeights[i] - 1);
-            break;
-        case WRAP_BORDER:
-            texColors[i] = texBorders[i];
-            return;
-        case WRAP_REPEAT:
-            v %= texHeights[i];
-            break;
-        case WRAP_MIRROR:
-            if ((v %= texHeights[i] * 2) >= texHeights[i])
-                v = (texHeights[i] * 2) - v - 1;
-            break;
-        }
-    }
-
-    // Use the cached texel if coordinates are unchanged
+    // Flip the Y-axis and use cached texel if coordinates are unchanged
+    v = texHeights[i] - v - 1;
     if (lastU[i] == u && lastV[i] == v)
         return;
 

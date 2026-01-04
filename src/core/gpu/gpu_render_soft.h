@@ -151,6 +151,7 @@ private:
 
     template <bool doX> static SoftVertex interpolate(SoftVertex &v1, SoftVertex &v2, float x1, float x, float x2);
     static SoftVertex intersect(SoftVertex &v1, SoftVertex &v2, float x1, float x2);
+    static int32_t procTexCoord(float c, uint16_t size, TexWrap wrap);
     uint8_t stencilOp(uint8_t value, StenOper oper);
 
     void updateTexel(int i, float s, float t);
