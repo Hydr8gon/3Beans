@@ -21,6 +21,31 @@
 
 #include <cstdint>
 
+#define DEF_IO08(addr, func) \
+    case addr + 0: \
+        base -= addr; \
+        size = 1; \
+        func; \
+        goto next;
+
+#define DEF_IO16(addr, func) \
+    case addr + 0: case addr + 1: \
+        base -= addr; \
+        size = 2; \
+        func; \
+        goto next;
+
+#define DEF_IO32(addr, func) \
+    case addr + 0: case addr + 1: \
+    case addr + 2: case addr + 3: \
+        base -= addr; \
+        size = 4; \
+        func; \
+        goto next;
+
+#define IO_PARAMS mask << (base << 3), data << (base << 3)
+#define IO_PARAMS8 data << (base << 3)
+
 class Core;
 
 class Memory {
