@@ -415,7 +415,7 @@ void Dsp::dmaTransfer(int i) {
 
     // Set end bits for each size and signal interrupts if enabled
     for (int j = 0; j < 3; j++) {
-        dmaEnd[i] |= BIT(i);
+        dmaEnd[j] |= BIT(i);
         if (dmaCtrl[i] & BIT(j))
             dmaSignals[j] = true;
     }

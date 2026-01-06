@@ -17,7 +17,6 @@
     along with 3Beans. If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <cstring>
 #include "../core.h"
 
 const int8_t Csnd::indexTable[] = { -1, -1, -1, -1, 2, 4, 6, 8 };

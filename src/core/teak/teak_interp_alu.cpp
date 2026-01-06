@@ -388,8 +388,8 @@ LIM_FUNC(limA1, 1, 1) // LIM A1, A1
 LIM_FUNC(limA0a1, 0, 1) // LIM A0, A1
 LIM_FUNC(limA1a0, 1, 0) // LIM A1, A0
 
-// Add shifted P0 to an A accumulator, set flags, load X0 and Y0, and multiply them
-#define MAA_FUNC(name, op0a, op1, cyc) int TeakInterp::name(uint16_t opcode) { \
+// Add aligned P0 to an A accumulator, set flags, load X0 and Y0, and multiply them
+#define MAA_FUNC(name, xu, yu, op0a, op1, cyc) int TeakInterp::name(uint16_t opcode) { \
     int64_t val1 = regA[(opcode >> 11) & 0x1].v; \
     int32_t val2 = (shiftP[0].v >> 16); \
     int64_t res = ((val1 + val2) << 24) >> 24; \
@@ -399,15 +399,17 @@ LIM_FUNC(limA1a0, 1, 0) // LIM A1, A0
     regY[0] = core->dsp.readData(getRnStepZids(op0a)); \
     writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
     (this->*writeAx40S[(opcode >> 11) & 0x1])(res); \
-    multiplyXY<int16_t, int16_t>(0); \
+    multiplyXY<xu##int16_t, yu##int16_t>(0); \
     return cyc; \
 }
 
-MAA_FUNC(maaMrmr, ((opcode >> 2) & 0x19) + 4, core->dsp.readData(getRnStepZids(opcode & 0x1B)), 1) // MAA MR45, MR03, Ax
-MAA_FUNC(maaMrni16, (opcode & 0x1F), readParam(), 2) // MAA MemRnStepZids, Imm16, Ax
+MAA_FUNC(maaMrmr, ,, ((opcode >> 2) & 0x19) + 4, core->dsp.readData(getRnStepZids(opcode & 0x1B)), 1) // MAA MR, MR, Ax
+MAA_FUNC(maaMrni16, ,, (opcode & 0x1F), readParam(), 2) // MAA MemRnStepZids, Imm16, Ax
+MAA_FUNC(maasuMrmr, u,, ((opcode >> 2) & 0x19) + 4, core->dsp.readData(getRnStepZids(opcode & 0x1B)), 1) // MAASU M,M,Ax
+MAA_FUNC(maasuMrni16, u,, (opcode & 0x1F), readParam(), 2) // MAASU MemRnStepZids, Imm16, Ax
 
-// Add shifted P0 to an A accumulator, set flags, load X0, and multiply it with Y0
-#define MAAY_FUNC(name, op1, op2s) int TeakInterp::name(uint16_t opcode) { \
+// Add aligned P0 to an A accumulator, set flags, load X0, and multiply it with Y0
+#define MAAY_FUNC(name, xu, yu, op1, op2s) int TeakInterp::name(uint16_t opcode) { \
     int64_t val1 = regA[(opcode >> op2s) & 0x1].v; \
     int32_t val2 = (shiftP[0].v >> 16); \
     int64_t res = ((val1 + val2) << 24) >> 24; \
@@ -416,14 +418,70 @@ MAA_FUNC(maaMrni16, (opcode & 0x1F), readParam(), 2) // MAA MemRnStepZids, Imm16
     regX[0] = op1; \
     writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
     (this->*writeAx40S[(opcode >> op2s) & 0x1])(res); \
-    multiplyXY<int16_t, int16_t>(0); \
+    multiplyXY<xu##int16_t, yu##int16_t>(0); \
     return 1; \
 }
 
-MAAY_FUNC(maaY0mi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 11) // MAA Y0, MemImm8, Ax
-MAAY_FUNC(maaY0mrn, core->dsp.readData(getRnStepZids(opcode)), 11) // MAA Y0, MemRnStepZids, Ax
-MAAY_FUNC(maaY0reg, *readReg[opcode & 0x1F], 11) // MAA Y0, Register, Ax
-MAAY_FUNC(maaY0r6, regR[6], 0) // MAA Y0, R6, Ax
+MAAY_FUNC(maaY0mi8, ,, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 11) // MAA Y0, MemImm8, Ax
+MAAY_FUNC(maaY0mrn, ,, core->dsp.readData(getRnStepZids(opcode)), 11) // MAA Y0, MemRnStepZids, Ax
+MAAY_FUNC(maaY0reg, ,, *readReg[opcode & 0x1F], 11) // MAA Y0, Register, Ax
+MAAY_FUNC(maaY0r6, ,, regR[6], 0) // MAA Y0, R6, Ax
+MAAY_FUNC(maasuY0mrn, u,, core->dsp.readData(getRnStepZids(opcode)), 11) // MAASU Y0, MemRnStepZids, Ax
+MAAY_FUNC(maasuY0reg, u,, *readReg[opcode & 0x1F], 11) // MAASU Y0, Register, Ax
+MAAY_FUNC(maasuY0r6, u,, regR[6], 0) // MAASU Y0, R6, Ax
+
+// Add shifted P0 to an A accumulator, set flags, load X0 and Y0, and multiply them
+#define MAC_FUNC(name, xu, yu, op0a, op1, cyc) int TeakInterp::name(uint16_t opcode) { \
+    int64_t val1 = regA[(opcode >> 11) & 0x1].v; \
+    int64_t val2 = shiftP[0].v; \
+    int64_t res = ((val1 + val2) << 24) >> 24; \
+    bool v = (~(val2 ^ val1) & (res ^ val2)) >> 39; \
+    bool c = (uint64_t(val1) > uint64_t(res)); \
+    regX[0] = op1; \
+    regY[0] = core->dsp.readData(getRnStepZids(op0a)); \
+    writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
+    (this->*writeAx40S[(opcode >> 11) & 0x1])(res); \
+    multiplyXY<xu##int16_t, yu##int16_t>(0); \
+    return cyc; \
+}
+
+MAC_FUNC(macMrmr, ,, ((opcode >> 2) & 0x19) + 4, core->dsp.readData(getRnStepZids(opcode & 0x1B)), 1) // MAC MR, MR, Ax
+MAC_FUNC(macMrni16, ,, (opcode & 0x1F), readParam(), 2) // MAC MemRnStepZids, Imm16, Ax
+MAC_FUNC(macsuMrmr, u,, ((opcode >> 2) & 0x19) + 4, core->dsp.readData(getRnStepZids(opcode & 0x1B)), 1) // MACSU M,M,Ax
+MAC_FUNC(macsuMrni16, u,, (opcode & 0x1F), readParam(), 2) // MACSU MemRnStepZids, Imm16, Ax
+MAC_FUNC(macusMrmr, ,u, ((opcode >> 2) & 0x19) + 4, core->dsp.readData(getRnStepZids(opcode & 0x1B)), 1) // MACUS M,M,Ax
+MAC_FUNC(macusMrni16, ,u, (opcode & 0x1F), readParam(), 2) // MACUS MemRnStepZids, Imm16, Ax
+MAC_FUNC(macuuMrmr, u,u, ((opcode >> 2) & 0x19) + 4, core->dsp.readData(getRnStepZids(opcode & 0x1B)), 1) // MACUU M,M,A
+MAC_FUNC(macuuMrni16, u,u, (opcode & 0x1F), readParam(), 2) // MACUU MemRnStepZids, Imm16, Ax
+
+// Add shifted P0 to an A accumulator, set flags, load X0, and multiply it with Y0
+#define MACY_FUNC(name, xu, yu, op1, op2s) int TeakInterp::name(uint16_t opcode) { \
+    int64_t val1 = regA[(opcode >> op2s) & 0x1].v; \
+    int64_t val2 = shiftP[0].v; \
+    int64_t res = ((val1 + val2) << 24) >> 24; \
+    bool v = (~(val2 ^ val1) & (res ^ val2)) >> 39; \
+    bool c = (uint64_t(val1) > uint64_t(res)); \
+    regX[0] = op1; \
+    writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
+    (this->*writeAx40S[(opcode >> op2s) & 0x1])(res); \
+    multiplyXY<xu##int16_t, yu##int16_t>(0); \
+    return 1; \
+}
+
+MACY_FUNC(macY0mi8, ,, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 11) // MAC Y0, MemImm8, Ax
+MACY_FUNC(macY0mrn, ,, core->dsp.readData(getRnStepZids(opcode)), 11) // MAC Y0, MemRnStepZids, Ax
+MACY_FUNC(macY0reg, ,, *readReg[opcode & 0x1F], 11) // MAC Y0, Register, Ax
+MACY_FUNC(macY0r6, ,, regR[6], 0) // MAC Y0, R6, Ax
+MACY_FUNC(macsuY0mi8, u,, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 11) // MACSU Y0, MemImm8, Ax
+MACY_FUNC(macsuY0mrn, u,, core->dsp.readData(getRnStepZids(opcode)), 11) // MACSU Y0, MemRnStepZids, Ax
+MACY_FUNC(macsuY0reg, u,, *readReg[opcode & 0x1F], 11) // MACSU Y0, Register, Ax
+MACY_FUNC(macsuY0r6, u,, regR[6], 0) // MACSU Y0, R6, Ax
+MACY_FUNC(macusY0mrn, ,u, core->dsp.readData(getRnStepZids(opcode)), 11) // MACUS Y0, MemRnStepZids, Ax
+MACY_FUNC(macusY0reg, ,u, *readReg[opcode & 0x1F], 11) // MACUS Y0, Register, Ax
+MACY_FUNC(macusY0r6, ,u, regR[6], 0) // MACUS Y0, R6, Ax
+MACY_FUNC(macuuY0mrn, u,u, core->dsp.readData(getRnStepZids(opcode)), 11) // MACUU Y0, MemRnStepZids, Ax
+MACY_FUNC(macuuY0reg, u,u, *readReg[opcode & 0x1F], 11) // MACUU Y0, Register, Ax
+MACY_FUNC(macuuY0r6, u,u, regR[6], 0) // MACUU Y0, R6, Ax
 
 // Take the min/max of A accumulators, set MIXP if changed, and post-adjust R0
 #define MINMAX_FUNC(name, op) int TeakInterp::name(uint16_t opcode) { \

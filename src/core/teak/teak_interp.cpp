@@ -22,6 +22,7 @@
 template void TeakInterp::multiplyXY<int16_t, int16_t>(int);
 template void TeakInterp::multiplyXY<int16_t, uint16_t>(int);
 template void TeakInterp::multiplyXY<uint16_t, int16_t>(int);
+template void TeakInterp::multiplyXY<uint16_t, uint16_t>(int);
 
 TEMPLATE2(int64_t TeakInterp::readA40S, 0)
 TEMPLATE2(uint16_t TeakInterp::readAl, 0)

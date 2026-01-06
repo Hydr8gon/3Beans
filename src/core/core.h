@@ -38,7 +38,6 @@
 #include "gpu/gpu.h"
 #include "gpu/pdc.h"
 #include "io/cartridge.h"
-#include "io/csnd.h"
 #include "io/i2c.h"
 #include "io/input.h"
 #include "io/pxi.h"
@@ -47,6 +46,7 @@
 #include "memory/cdma.h"
 #include "memory/memory.h"
 #include "memory/ndma.h"
+#include "teak/csnd.h"
 #include "teak/dsp.h"
 #include "teak/teak_interp.h"
 
