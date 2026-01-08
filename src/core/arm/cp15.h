@@ -26,7 +26,13 @@ class Core;
 
 struct MmuMap {
     uint8_t *read, *write;
+    uint32_t *memTag;
     uint32_t addr, tag;
+};
+
+struct TcmMap {
+    uint8_t *read, *write;
+    uint32_t *memTag;
 };
 
 class Cp15 {
@@ -49,8 +55,7 @@ private:
     Core *core;
 
     MmuMap mmuMaps[MAX_CPUS - 1][0x100000] = {};
-    uint8_t *readMap9[0x100000] = {};
-    uint8_t *writeMap9[0x100000] = {};
+    TcmMap tcmMap[0x100000] = {};
 
     uint32_t mmuTags[MAX_CPUS - 1] = { 1, 1, 1, 1 };
     bool mmuEnables[MAX_CPUS - 1] = {};

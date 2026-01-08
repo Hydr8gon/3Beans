@@ -73,13 +73,12 @@ void Memory::loadOtp(FILE *file) {
 }
 
 void Memory::updateMap(bool arm9, uint32_t start, uint32_t end) {
-    // Update the ARM9 or ARM11 physical memory maps with 4KB pages
+    // Update the ARM9 or ARM11 physical memory map with 4KB pages
     bool extend = (core->interrupts.readCfg11MpClkcnt() & 0x70000);
     for (uint64_t address = start; address <= end; address += 0x1000) {
         // Look up and reset pointers for the current address
-        uint8_t *&read = (arm9 ? readMap9 : readMap11)[address >> 12];
-        uint8_t *&write = (arm9 ? writeMap9 : writeMap11)[address >> 12];
-        read = write = nullptr;
+        MemMap &map = (arm9 ? memMap9 : memMap11)[address >> 12];
+        map.read = map.write = nullptr;
 
         // Map DSP WRAM based on the code and data 32KB block registers
         if (address >= 0x1FF00000 && address < 0x1FF80000) { // 512KB area
@@ -87,14 +86,14 @@ void Memory::updateMap(bool arm9, uint32_t start, uint32_t end) {
             if (address < 0x1FF40000) { // 256KB code
                 for (int i = 0; i < 8; i++) {
                     if (!(cfg11Wram32kCode[i] & BIT(7)) || ((cfg11Wram32kCode[i] >> 2) & 0x7) != slot) continue;
-                    read = write = &dspWram[(i << 15) | (address & 0x7FFF)];
+                    map.read = map.write = &dspWram[(i << 15) | (address & 0x7FFF)];
                     break;
                 }
             }
             else { // 256KB data
                 for (int i = 0; i < 8; i++) {
                     if (!(cfg11Wram32kData[i] & BIT(7)) || ((cfg11Wram32kData[i] >> 2) & 0x7) != slot) continue;
-                    read = write = &dspWram[(i << 15) | (address & 0x47FFF)];
+                    map.read = map.write = &dspWram[(i << 15) | (address & 0x47FFF)];
                     break;
                 }
             }
@@ -103,40 +102,40 @@ void Memory::updateMap(bool arm9, uint32_t start, uint32_t end) {
 
         // Set a pointer to readable memory if it exists at the current address
         if (arm9 && address >= 0x8000000 && address < (cfg9Extmemcnt9 ? 0x8180000 : 0x8100000))
-            read = &arm9Ram[address & 0x1FFFFF]; // 1.5MB ARM9 internal RAM
+            map.read = &arm9Ram[address & 0x1FFFFF]; // 1.5MB ARM9 internal RAM
         else if (address >= 0x18000000 && address < 0x18600000)
-            read = &vram[address & 0x7FFFFF]; // 6MB VRAM
+            map.read = &vram[address & 0x7FFFFF]; // 6MB VRAM
         else if (!arm9 && (cfg11MpCnt & BIT(0)) && address >= 0x1F000000 && address < 0x1F400000)
-            read = &vramExt[address & 0x3FFFFF]; // 4MB extended VRAM
+            map.read = &vramExt[address & 0x3FFFFF]; // 4MB extended VRAM
         else if (address >= 0x1FF80000 && address < 0x20000000)
-            read = &axiWram[address & 0x7FFFF]; // 512KB AXI WRAM
+            map.read = &axiWram[address & 0x7FFFF]; // 512KB AXI WRAM
         else if (address >= 0x20000000 && address < 0x28000000)
-            read = &fcram[address & 0x7FFFFFF]; // 128MB FCRAM
+            map.read = &fcram[address & 0x7FFFFFF]; // 128MB FCRAM
         else if (extend && address >= 0x28000000 && address < 0x30000000)
-            read = &fcramExt[address & 0x7FFFFFF]; // 128MB extended FCRAM
+            map.read = &fcramExt[address & 0x7FFFFFF]; // 128MB extended FCRAM
         else if (!arm9 && (address < 0x20000 || address >= 0xFFFF0000) && ((address & 0xF000) || !cfg11BrOverlayCnt))
-            read = &boot11[address & 0xFFFF]; // 64KB ARM11 boot ROM
+            map.read = &boot11[address & 0xFFFF]; // 64KB ARM11 boot ROM
         else if (arm9 && address >= 0xFFFF0000)
-            read = &boot9[address & 0xFFFF]; // 64KB ARM9 boot ROM
+            map.read = &boot9[address & 0xFFFF]; // 64KB ARM9 boot ROM
 
         // Set a pointer to writable memory if it exists at the current address
         if (arm9 && address >= 0x8000000 && address < (cfg9Extmemcnt9 ? 0x8180000 : 0x8100000))
-            write = &arm9Ram[address & 0x1FFFFF]; // 1.5MB ARM9 internal RAM
+            map.write = &arm9Ram[address & 0x1FFFFF]; // 1.5MB ARM9 internal RAM
         else if (address >= 0x18000000 && address < 0x18600000)
-            write = &vram[address & 0x7FFFFF]; // 6MB VRAM
+            map.write = &vram[address & 0x7FFFFF]; // 6MB VRAM
         else if (!arm9 && (cfg11MpCnt & BIT(0)) && address >= 0x1F000000 && address < 0x1F400000)
-            write = &vramExt[address & 0x3FFFFF]; // 4MB extended VRAM
+            map.write = &vramExt[address & 0x3FFFFF]; // 4MB extended VRAM
         else if (address >= 0x1FF80000 && address < 0x20000000)
-            write = &axiWram[address & 0x7FFFF]; // 512KB AXI WRAM
+            map.write = &axiWram[address & 0x7FFFF]; // 512KB AXI WRAM
         else if (address >= 0x20000000 && address < 0x28000000)
-            write = &fcram[address & 0x7FFFFFF]; // 128MB FCRAM
+            map.write = &fcram[address & 0x7FFFFFF]; // 128MB FCRAM
         else if (extend && address >= 0x28000000 && address < 0x30000000)
-            write = &fcramExt[address & 0x7FFFFFF]; // 128MB extended FCRAM
+            map.write = &fcramExt[address & 0x7FFFFFF]; // 128MB extended FCRAM
 
         // Use a hack to work around boot9strap 1.4's uninitialized stack
         // TODO: fix this properly (it works on hardware)
         else if (!arm9 && address >= 0xFFFFE000)
-            write = &boot11[address & 0xFFFF];
+            map.write = &boot11[address & 0xFFFF];
     }
 
     // Update the virtual memory maps as well
@@ -258,4 +257,9 @@ void Memory::writeCfg9Extmemcnt9(uint32_t mask, uint32_t value) {
 
     // Update the ARM9 memory map in affected regions
     updateMap(true, 0x8100000, 0x817FFFF);
+}
+
+void Memory::writeCfg9Bootenv(uint32_t mask, uint32_t value) {
+    // Write to the CFG9_BOOTENV register
+    cfg9Bootenv = (cfg9Bootenv & ~mask) | (value & mask);
 }

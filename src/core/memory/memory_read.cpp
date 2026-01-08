@@ -1375,6 +1375,7 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x1000D80C, data = core->cartridge.readSpiFifoData()) // SPICARD_FIFO_DATA
                 DEF_IO32(0x1000D818, data = core->cartridge.readSpiFifoIntMask()) // SPICARD_FIFO_INT_MASK
                 DEF_IO32(0x1000D81C, data = core->cartridge.readSpiFifoIntStat()) // SPICARD_FIFO_INT_STAT
+                DEF_IO32(0x10010000, data = readCfg9Bootenv()) // CFG9_BOOTENV
                 DEF_IO32(0x10011000, data = readPrngSource(0)) // PRNG_SOURCE0
                 DEF_IO32(0x10011010, data = readPrngSource(1)) // PRNG_SOURCE1
                 DEF_IO32(0x10011020, data = readPrngSource(2)) // PRNG_CONSTANT

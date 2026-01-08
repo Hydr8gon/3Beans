@@ -1642,6 +1642,7 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x1000D80C, core->cartridge.writeSpiFifoData(IO_PARAMS)) // SPICARD_FIFO_DATA
                 DEF_IO32(0x1000D818, core->cartridge.writeSpiFifoIntMask(IO_PARAMS)) // SPICARD_FIFO_INT_MASK
                 DEF_IO32(0x1000D81C, core->cartridge.writeSpiFifoIntStat(IO_PARAMS)) // SPICARD_FIFO_INT_STAT
+                DEF_IO32(0x10010000, writeCfg9Bootenv(IO_PARAMS)) // CFG9_BOOTENV
             }
         }
 

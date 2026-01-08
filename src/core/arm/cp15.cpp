@@ -29,8 +29,8 @@ template void Cp15::write(CpuId, uint32_t, uint32_t);
 
 uint8_t *Cp15::getReadPtr(CpuId id, uint32_t address) {
     // Get a readable memory pointer to use for caching
-    if (id == ARM9) return readMap9[address >> 12];
-    if (!mmuEnables[id]) return core->memory.readMap11[address >> 12];
+    if (id == ARM9) return tcmMap[address >> 12].read;
+    if (!mmuEnables[id]) return core->memory.memMap11[address >> 12].read;
     MmuMap &map = mmuMaps[id][address >> 12];
     if (map.tag != mmuTags[id]) updateEntry(id, address);
     return map.read;
@@ -87,28 +87,31 @@ void Cp15::updateEntry(CpuId id, uint32_t address) {
     // Cache an MMU read/write mapping with the current tag
     MmuMap &map = mmuMaps[id][address >> 12];
     address = mmuTranslate(id, address);
-    map.read = core->memory.readMap11[address >> 12];
-    map.write = core->memory.writeMap11[address >> 12];
+    map.read = core->memory.memMap11[address >> 12].read;
+    map.write = core->memory.memMap11[address >> 12].write;
+    map.memTag = &core->memory.memMap11[address >> 12].tag;
     map.addr = (address & ~0xFFF);
     map.tag = mmuTags[id];
 }
 
 void Cp15::updateMap9(uint32_t start, uint32_t end) {
-    // Use the ARM9 physical read/write maps as a base
-    uint32_t size = ((uint64_t(end) - start + 0xFFF) >> 12) * sizeof(uint8_t*);
-    memcpy(&readMap9[start >> 12], &core->memory.readMap9[start >> 12], size);
-    memcpy(&writeMap9[start >> 12], &core->memory.writeMap9[start >> 12], size);
+    // Rebuild part of the ARM9 TCM memory map
     core->arms[ARM9].invalidatePc();
-
-    // Overlay TCM mappings if enabled for read/write
     for (uint64_t address = start; address <= end; address += 0x1000) {
+        // Use the ARM9 physical memory map as a base
+        TcmMap &map = tcmMap[address >> 12];
+        map.read = core->memory.memMap9[address >> 12].read;
+        map.write = core->memory.memMap9[address >> 12].write;
+        map.memTag = &core->memory.memMap9[address >> 12].tag;
+
+        // Overlay TCM read/write mappings if enabled
         if (address < itcmSize) {
-            if (itcmRead) readMap9[address >> 12] = &itcm[address & 0x7FFF];
-            if (itcmWrite) writeMap9[address >> 12] = &itcm[address & 0x7FFF];
+            if (itcmRead) map.read = &itcm[address & 0x7FFF];
+            if (itcmWrite) map.write = &itcm[address & 0x7FFF];
         }
         else if (address >= dtcmAddr && address < dtcmAddr + dtcmSize) {
-            if (dtcmRead) readMap9[address >> 12] = &dtcm[(address - dtcmAddr) & 0x3FFF];
-            if (dtcmWrite) writeMap9[address >> 12] = &dtcm[(address - dtcmAddr) & 0x3FFF];
+            if (dtcmRead) map.read = &dtcm[(address - dtcmAddr) & 0x3FFF];
+            if (dtcmWrite) map.write = &dtcm[(address - dtcmAddr) & 0x3FFF];
         }
     }
 }
@@ -119,7 +122,7 @@ template <typename T> T Cp15::read(CpuId id, uint32_t address) {
     if (id == ARM9) {
         // Align the address and read from ARM9 memory with TCM
         address &= ~(sizeof(T) - 1);
-        data = readMap9[address >> 12];
+        data = tcmMap[address >> 12].read;
     }
     else if (mmuEnables[id]) {
         // Read from ARM11 virtual memory, updating the cache if necessary
@@ -129,7 +132,7 @@ template <typename T> T Cp15::read(CpuId id, uint32_t address) {
     }
     else {
         // Read from ARM11 physical memory
-        data = core->memory.readMap11[address >> 12];
+        data = core->memory.memMap11[address >> 12].read;
     }
 
     // Fall back to read handlers for special cases
@@ -145,18 +148,21 @@ template <typename T> T Cp15::read(CpuId id, uint32_t address) {
 }
 
 template <typename T> void Cp15::write(CpuId id, uint32_t address, T value) {
-    // Get a pointer to mapped writable memory if it exists
+    // Get a pointer to mapped writable memory and adjust its tag to signal change
     uint8_t *data;
     if (id == ARM9) {
         // Align the address and write to ARM9 memory with TCM
         address &= ~(sizeof(T) - 1);
-        data = writeMap9[address >> 12];
+        TcmMap &map = tcmMap[address >> 12];
+        data = map.write;
+        (*map.memTag)++;
     }
     else if (mmuEnables[id]) {
         // Write to ARM11 virtual memory, updating the cache if necessary
         MmuMap &map = mmuMaps[id][address >> 12];
         if (map.tag != mmuTags[id]) updateEntry(id, address);
         if (!(data = map.write)) address = map.addr | (address & 0xFFF);
+        (*map.memTag)++;
 
         #if LOG_LEVEL > 3
         // Catch writes to special memory used by the 3DS OS
@@ -176,7 +182,9 @@ template <typename T> void Cp15::write(CpuId id, uint32_t address, T value) {
     }
     else {
         // Write to ARM11 physical memory
-        data = core->memory.writeMap11[address >> 12];
+        MemMap &map = core->memory.memMap11[address >> 12];
+        data = map.write;
+        map.tag++;
     }
 
     // Fall back to write handlers for special cases

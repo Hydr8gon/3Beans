@@ -31,7 +31,10 @@ struct TexCache {
     uint16_t width;
     uint16_t height;
     TexFmt fmt;
+
     GLuint tex;
+    uint32_t size;
+    uint32_t *tags;
 
     bool operator<(const TexCache &t) const { return addr < t.addr; }
 };

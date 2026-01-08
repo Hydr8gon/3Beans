@@ -251,9 +251,13 @@ GpuRenderOgl::GpuRenderOgl(Core *core): core(core) {
 }
 
 GpuRenderOgl::~GpuRenderOgl() {
-    // Clean up everything that was generated
-    for (int i = 0; i < texCache.size(); i++)
+    // Clean up resources allocated in the texture cache
+    for (int i = 0; i < texCache.size(); i++) {
         glDeleteTextures(1, &texCache[i].tex);
+        delete[] texCache[i].tags;
+    }
+
+    // Clean up everything else that was generated
     glDeleteTextures(1, &texture);
     glDeleteRenderbuffers(1, &depBuf);
     glDeleteFramebuffers(1, &colBuf);
@@ -462,7 +466,6 @@ void GpuRenderOgl::updateTextures() {
         glActiveTexture(GL_TEXTURE0 + i);
 
         // Check for a matching texture in the cache
-        // TODO: invalidate modified textures
         const TexCache *cache = nullptr;
         TexCache cmp; cmp.addr = texAddrs[i];
         auto it = std::lower_bound(texCache.cbegin(), texCache.cend(), cmp);
@@ -474,16 +477,34 @@ void GpuRenderOgl::updateTextures() {
             it++;
         }
 
-        // Create a new cached texture or bind an existing one
-        if (!cache) {
+        // Process the cache entry or create it if missing
+        if (cache) {
+            // Bind an existing texture from the cache
+            glBindTexture(GL_TEXTURE_2D, cache->tex);
+            const TexCache *c = cache;
+
+            // Verify memory tags and invalidate the cache if they changed
+            for (int j = 0; j < c->size; j++) {
+                uint32_t tag = core->memory.memMap11[(c->addr >> 12) + j].tag;
+                if (c->tags[j] == tag) continue;
+                c->tags[j] = tag;
+                cache = nullptr;
+            }
+        }
+        else {
+            // Create a new texture with current tags for the memory it uses
             TexCache tex = { texAddrs[i], texWidths[i], texHeights[i], texFmts[i] };
+            static const uint8_t nybs[] = { 8, 6, 4, 4, 4, 4, 4, 2, 2, 2, 1, 1, 1, 2, 1 };
+            tex.size = (tex.width * tex.height * nybs[tex.fmt] / 2 + 0xFFF) >> 12;
+            tex.tags = new uint32_t[tex.size];
+            for (int j = 0; j < tex.size; j++)
+                tex.tags[j] = core->memory.memMap11[(tex.addr >> 12) + j].tag;
+
+            // Bind the new texture and add it to the cache
             glGenTextures(1, &tex.tex);
             glBindTexture(GL_TEXTURE_2D, tex.tex);
             it = std::upper_bound(texCache.cbegin(), texCache.cend(), tex);
             texCache.insert(it, tex);
-        }
-        else {
-            glBindTexture(GL_TEXTURE_2D, cache->tex);
         }
 
         // Update texture parameters and finish if already cached
