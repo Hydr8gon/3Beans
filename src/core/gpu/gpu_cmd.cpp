@@ -133,8 +133,7 @@ void Gpu::drawAttrIdx(uint32_t idx) {
     }
 
     // Build an input list on top of the base by parsing attribute arrays at the given index
-    float input[16][4];
-    memcpy(input, fixedBase, sizeof(input));
+    memcpy(shdInput, fixedBase, sizeof(shdInput));
     for (int i = 0; i < 12; i++) {
         uint8_t count = std::min<uint8_t>(12, gpuAttrCfg[i] >> 60);
         uint32_t base = (gpuAttrBase << 3) + gpuAttrOfs[i] + uint8_t(gpuAttrCfg[i] >> 48) * idx;
@@ -150,24 +149,24 @@ void Gpu::drawAttrIdx(uint32_t idx) {
             uint8_t fmt = (gpuAttrFmt >> (comp << 2)) & 0xF;
             uint8_t id = (gpuVshAttrIds >> (comp << 2)) & 0xF;
             for (int k = 3; k > (fmt >> 2); k--)
-                input[id][k] = (k == 3) ? 1.0f : 0.0f;
+                shdInput[id][k] = (k == 3) ? 1.0f : 0.0f;
 
             // Handle components based on format and write them to their mapped input ID
             switch (fmt & 0x3) {
             case 0: // Signed byte
                 for (int k = 0; k <= (fmt >> 2); k++)
-                    input[id][k] = int8_t(core->memory.read<uint8_t>(ARM11, base++));
+                    shdInput[id][k] = int8_t(core->memory.read<uint8_t>(ARM11, base++));
                 continue;
 
             case 1: // Unsigned byte
                 for (int k = 0; k <= (fmt >> 2); k++)
-                    input[id][k] = core->memory.read<uint8_t>(ARM11, base++);
+                    shdInput[id][k] = core->memory.read<uint8_t>(ARM11, base++);
                 continue;
 
             case 2: // Signed half-word
                 base = (base + 1) & ~0x1;
                 for (int k = 0; k <= (fmt >> 2); k++) {
-                    input[id][k] = int16_t(core->memory.read<uint16_t>(ARM11, base));
+                    shdInput[id][k] = int16_t(core->memory.read<uint16_t>(ARM11, base));
                     base += 2;
                 }
                 continue;
@@ -176,7 +175,7 @@ void Gpu::drawAttrIdx(uint32_t idx) {
                 base = (base + 2) & ~0x3;
                 for (int k = 0; k <= (fmt >> 2); k++) {
                     uint32_t value = core->memory.read<uint32_t>(ARM11, base);
-                    input[id][k] = *(float*)&value;
+                    shdInput[id][k] = *(float*)&value;
                     base += 4;
                 }
                 continue;
@@ -185,7 +184,7 @@ void Gpu::drawAttrIdx(uint32_t idx) {
     }
 
     // Pass the finished input to the shader
-    gpuShader->processVtx(input, idx);
+    gpuShader->processVtx(idx);
 }
 
 void Gpu::updateShdMaps() {
@@ -693,18 +692,18 @@ void Gpu::writeAttrFixedData(uint32_t mask, uint32_t value) {
     attrFixedIdx = (0xF << 2); // Reset index
 
     // Build a shader input list using the immediate attributes
-    float input[16][4] = {};
+    memset(shdInput, 0, sizeof(shdInput));
     for (uint32_t i = 0, f; i <= gpuVshNumAttr; i++) {
         uint32_t j = i + 0xF;
-        input[i][0] = *(float*)&(f = flt24e7to32e8(attrFixedData[j][2]));
-        input[i][1] = *(float*)&(f = flt24e7to32e8((attrFixedData[j][1] << 8) | (attrFixedData[j][2] >> 24)));
-        input[i][2] = *(float*)&(f = flt24e7to32e8((attrFixedData[j][0] << 16) | (attrFixedData[j][1] >> 16)));
-        input[i][3] = *(float*)&(f = flt24e7to32e8(attrFixedData[j][0] >> 8));
+        shdInput[i][0] = *(float*)&(f = flt24e7to32e8(attrFixedData[j][2]));
+        shdInput[i][1] = *(float*)&(f = flt24e7to32e8((attrFixedData[j][1] << 8) | (attrFixedData[j][2] >> 24)));
+        shdInput[i][2] = *(float*)&(f = flt24e7to32e8((attrFixedData[j][0] << 16) | (attrFixedData[j][1] >> 16)));
+        shdInput[i][3] = *(float*)&(f = flt24e7to32e8(attrFixedData[j][0] >> 8));
     }
 
     // Pass the finished input to the shader
     if (shdMapDirty) updateShdMaps();
-    gpuShader->processVtx(input);
+    gpuShader->processVtx();
 }
 
 template <int i> void Gpu::writeCmdSize(uint32_t mask, uint32_t value) {

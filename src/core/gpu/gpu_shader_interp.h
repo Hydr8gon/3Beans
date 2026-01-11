@@ -23,6 +23,7 @@
 #include <deque>
 
 class GpuRender;
+class GpuShaderInterp;
 
 struct SoftVertex {
     float x, y, z, w;
@@ -38,29 +39,29 @@ struct VertexCache {
 
 struct SourceDesc {
     uint8_t map[4];
-    bool negate;
+    float sign;
 };
 
 struct ShaderDesc {
     SourceDesc src[3];
-    bool dstMask[4];
+    bool mask[4];
 };
 
 struct ShaderCode {
     void (GpuShaderInterp::*instr)(ShaderCode&);
     ShaderDesc *desc;
+    float *src[3];
     float *dst;
-    uint8_t src[3];
-    uint8_t idx;
+    int16_t *addr;
     uint32_t value;
 };
 
 class GpuShaderInterp {
 public:
-    GpuShaderInterp(GpuRender &gpuRender);
+    GpuShaderInterp(GpuRender &gpuRender, float (*input)[4]);
 
     void startList();
-    void processVtx(float (*input)[4], uint32_t idx = -1);
+    void processVtx(uint32_t idx = -1);
 
     void setOutMap(uint8_t (*map)[2]);
     void setGshInMap(uint8_t *map);
@@ -89,8 +90,8 @@ private:
     VertexCache vtxCache[0x101] = {};
     uint32_t vtxTag = 1;
 
-    float **srcRegs;
     float *dstRegs[0x20];
+    float (*shdFloats)[4];
     uint8_t (*shdInts)[3];
     bool *shdBools;
 
@@ -142,7 +143,6 @@ private:
 
     static float mult(float a, float b);
     template <bool relative> float *getSrc(ShaderCode &op, int i);
-    void setDst(ShaderCode &op, float *value);
 
     void shdAdd(ShaderCode &op);
     void shdDp3(ShaderCode &op);

@@ -63,17 +63,17 @@ void (GpuShaderInterp::*GpuShaderInterp::gshInstrs[])(ShaderCode&) {
     &GpuShaderInterp::shdMad, &GpuShaderInterp::shdMad, &GpuShaderInterp::shdMad, &GpuShaderInterp::shdMad // 0x3C-0x3F
 };
 
-GpuShaderInterp::GpuShaderInterp(GpuRender &gpuRender): gpuRender(gpuRender) {
-    // Map the constant shader source and destination registers
+GpuShaderInterp::GpuShaderInterp(GpuRender &gpuRender, float (*input)[4]): gpuRender(gpuRender) {
+    // Map the shader source and destination registers
     for (int i = 0x0; i < 0x10; i++)
-        gshRegs[i] = gshInput[i], dstRegs[i] = shdOut[i];
+        vshRegs[i] = input[i], gshRegs[i] = gshInput[i], dstRegs[i] = shdOut[i];
     for (int i = 0x10; i < 0x20; i++)
         vshRegs[i] = gshRegs[i] = dstRegs[i] = shdTmp[i - 0x10];
     for (int i = 0x20; i < 0x80; i++)
         vshRegs[i] = vshFloats[i - 0x20], gshRegs[i] = gshFloats[i - 0x20];
 
     // Set up the vertex shader by default
-    srcRegs = vshRegs;
+    shdFloats = vshFloats;
     shdInts = vshInts;
     shdBools = vshBools;
 }
@@ -91,35 +91,35 @@ void GpuShaderInterp::cacheCode(ShaderCode &code, uint32_t value, bool geo) {
     case 0x0C: case 0x0D: case 0x0E: case 0x0F:
     case 0x12: case 0x13: case 0x2E: case 0x2F: // Format 1
         code.desc = &(geo ? gshDesc : vshDesc)[value & 0x7F];
+        code.src[0] = (geo ? gshRegs : vshRegs)[(value >> 12) & 0x7F];
+        code.src[1] = (geo ? gshRegs : vshRegs)[(value >> 7) & 0x1F];
         code.dst = dstRegs[(value >> 21) & 0x1F];
-        code.src[0] = (value >> 12) & 0x7F;
-        code.src[1] = (value >> 7) & 0x1F;
-        code.idx = (value >> 19) & 0x3;
+        code.addr = ((value >> 19) & 0x3) ? &shdAddr[((value >> 19) & 0x3) - 1] : nullptr;
         return;
     case 0x18: case 0x19: case 0x1A: case 0x1B: // Format 1i
         code.desc = &(geo ? gshDesc : vshDesc)[value & 0x7F];
+        code.src[0] = (geo ? gshRegs : vshRegs)[(value >> 14) & 0x1F];
+        code.src[1] = (geo ? gshRegs : vshRegs)[(value >> 7) & 0x7F];
         code.dst = dstRegs[(value >> 21) & 0x1F];
-        code.src[0] = (value >> 14) & 0x1F;
-        code.src[1] = (value >> 7) & 0x7F;
-        code.idx = (value >> 19) & 0x3;
+        code.addr = ((value >> 19) & 0x3) ? &shdAddr[((value >> 19) & 0x3) - 1] : nullptr;
         return;
     case 0x38: case 0x39: case 0x3A: case 0x3B:
     case 0x3C: case 0x3D: case 0x3E: case 0x3F: // Format 5
         code.desc = &(geo ? gshDesc : vshDesc)[value & 0x1F];
+        code.src[0] = (geo ? gshRegs : vshRegs)[(value >> 17) & 0x1F];
+        code.src[1] = (geo ? gshRegs : vshRegs)[(value >> 10) & 0x7F];
+        code.src[2] = (geo ? gshRegs : vshRegs)[(value >> 5) & 0x1F];
         code.dst = dstRegs[(value >> 24) & 0x1F];
-        code.src[0] = (value >> 17) & 0x1F;
-        code.src[1] = (value >> 10) & 0x7F;
-        code.src[2] = (value >> 5) & 0x1F;
-        code.idx = (value >> 22) & 0x3;
+        code.addr = ((value >> 22) & 0x3) ? &shdAddr[((value >> 22) & 0x3) - 1] : nullptr;
         return;
     case 0x30: case 0x31: case 0x32: case 0x33:
     case 0x34: case 0x35: case 0x36: case 0x37: // Format 5i
         code.desc = &(geo ? gshDesc : vshDesc)[value & 0x1F];
+        code.src[0] = (geo ? gshRegs : vshRegs)[(value >> 17) & 0x1F];
+        code.src[1] = (geo ? gshRegs : vshRegs)[(value >> 12) & 0x1F];
+        code.src[2] = (geo ? gshRegs : vshRegs)[(value >> 5) & 0x7F];
         code.dst = dstRegs[(value >> 24) & 0x1F];
-        code.src[0] = (value >> 17) & 0x1F;
-        code.src[1] = (value >> 12) & 0x1F;
-        code.src[2] = (value >> 5) & 0x7F;
-        code.idx = (value >> 22) & 0x3;
+        code.addr = ((value >> 22) & 0x3) ? &shdAddr[((value >> 22) & 0x3) - 1] : nullptr;
         return;
     }
 }
@@ -131,12 +131,12 @@ void GpuShaderInterp::cacheDesc(ShaderDesc &desc, uint32_t value) {
         desc.src[i].map[1] = (value >> (i * 9 + 9)) & 0x3;
         desc.src[i].map[2] = (value >> (i * 9 + 7)) & 0x3;
         desc.src[i].map[3] = (value >> (i * 9 + 5)) & 0x3;
-        desc.src[i].negate = (value & BIT(i * 9 + 4));
+        desc.src[i].sign = (value & BIT(i * 9 + 4)) ? -1.0f : 1.0f;
     }
 
     // Cache a descriptor's destination mask
     for (int i = 0; i < 4; i++)
-        desc.dstMask[i] = (value & BIT(3 - i));
+        desc.mask[i] = (value & BIT(3 - i));
 }
 
 void GpuShaderInterp::startList() {
@@ -146,7 +146,7 @@ void GpuShaderInterp::startList() {
     vtxTag = 1;
 }
 
-void GpuShaderInterp::processVtx(float (*input)[4], uint32_t idx) {
+void GpuShaderInterp::processVtx(uint32_t idx) {
     // Get an entry in the vertex cache, up to the first 256 in a list
     idx = std::min<uint32_t>(0x100, idx);
     VertexCache &cache = vtxCache[idx];
@@ -155,9 +155,7 @@ void GpuShaderInterp::processVtx(float (*input)[4], uint32_t idx) {
     if (idx < 0x100 && cache.tag == vtxTag && !gshInCount)
         return gpuRender.submitVertex(cache.vtx);
 
-    // Update source registers and run the vertex shader
-    for (int i = 0x0; i < 0x10; i++)
-        vshRegs[i] = input[i];
+    // Run the vertex shader
     runShader<false>();
 
     // Cache and submit a vertex from the output if geometry shader is disabled
@@ -176,9 +174,9 @@ void GpuShaderInterp::processVtx(float (*input)[4], uint32_t idx) {
 
 geometry:
     // Run the geometry shader and then switch back to vertex
-    srcRegs = gshRegs, shdInts = gshInts, shdBools = gshBools;
+    shdFloats = gshFloats, shdInts = gshInts, shdBools = gshBools;
     runShader<true>();
-    srcRegs = vshRegs, shdInts = vshInts, shdBools = vshBools;
+    shdFloats = vshFloats, shdInts = vshInts, shdBools = vshBools;
     gshInTotal = 0;
 }
 
@@ -251,199 +249,172 @@ template <bool relative> float *GpuShaderInterp::getSrc(ShaderCode &op, int i) {
     // Get parameters for the indexed source
     float *value = getRegs[getIdx++ & 0x3];
     SourceDesc &desc = op.desc->src[i];
-    uint8_t src = op.src[i];
+    float *src = op.src[i];
 
     // Apply relative addressing for uniform registers if enabled
-    if (relative && op.idx && src >= 0x20) {
-        src += shdAddr[op.idx - 1];
-        if (src < 0x20 || src >= 0x80) {
-            value[0] = value[1] = value[2] = value[3] = 0.0f;
-            return value;
-        }
+    if (relative && op.addr) {
+        uintptr_t ofs = uintptr_t(src) - uintptr_t(shdFloats);
+        if (ofs < sizeof(vshFloats) && (ofs += *op.addr * sizeof(float[4])) < sizeof(vshFloats))
+            src = (float*)(uintptr_t(shdFloats) + ofs);
     }
 
     // Swizzle and negate a source register based on its descriptor
-    if (desc.negate) {
-        value[0] = -srcRegs[src][desc.map[0]];
-        value[1] = -srcRegs[src][desc.map[1]];
-        value[2] = -srcRegs[src][desc.map[2]];
-        value[3] = -srcRegs[src][desc.map[3]];
-    }
-    else {
-        value[0] = srcRegs[src][desc.map[0]];
-        value[1] = srcRegs[src][desc.map[1]];
-        value[2] = srcRegs[src][desc.map[2]];
-        value[3] = srcRegs[src][desc.map[3]];
-    }
+    for (int j = 0; j < 4; j++)
+        value[j] = src[desc.map[j]] * desc.sign;
     return value;
-}
-
-void GpuShaderInterp::setDst(ShaderCode &op, float *value) {
-    // Set a destination register using the descriptor mask
-    bool *mask = op.desc->dstMask;
-    if (mask[0]) op.dst[0] = value[0];
-    if (mask[1]) op.dst[1] = value[1];
-    if (mask[2]) op.dst[2] = value[2];
-    if (mask[3]) op.dst[3] = value[3];
 }
 
 void GpuShaderInterp::shdAdd(ShaderCode &op) {
     // Add each component of two source registers with each other
-    float *src1 = getSrc<true>(op, 0);
-    float *src2 = getSrc<false>(op, 1);
+    float *s1 = getSrc<true>(op, 0);
+    float *s2 = getSrc<false>(op, 1);
     for (int i = 0; i < 4; i++)
-        src1[i] = src1[i] + src2[i];
-    setDst(op, src1);
+        if (op.desc->mask[i]) op.dst[i] = s1[i] + s2[i];
 }
 
 void GpuShaderInterp::shdDp3(ShaderCode &op) {
     // Calculate the dot product of two 3-component source registers
-    float *src1 = getSrc<true>(op, 0);
-    float *src2 = getSrc<false>(op, 1);
-    src1[0] = mult(src1[0], src2[0]) + mult(src1[1], src2[1]) + mult(src1[2], src2[2]);
-    src1[3] = src1[2] = src1[1] = src1[0];
-    setDst(op, src1);
+    float *s1 = getSrc<true>(op, 0);
+    float *s2 = getSrc<false>(op, 1);
+    s1[0] = mult(s1[0], s2[0]) + mult(s1[1], s2[1]) + mult(s1[2], s2[2]);
+    for (int i = 0; i < 4; i++)
+        if (op.desc->mask[i]) op.dst[i] = s1[0];
 }
 
 void GpuShaderInterp::shdDp4(ShaderCode &op) {
     // Calculate the dot product of two 4-component source registers
-    float *src1 = getSrc<true>(op, 0);
-    float *src2 = getSrc<false>(op, 1);
-    src1[0] = mult(src1[0], src2[0]) + mult(src1[1], src2[1]) + mult(src1[2], src2[2]) + mult(src1[3], src2[3]);
-    src1[3] = src1[2] = src1[1] = src1[0];
-    setDst(op, src1);
+    float *s1 = getSrc<true>(op, 0);
+    float *s2 = getSrc<false>(op, 1);
+    s1[0] = mult(s1[0], s2[0]) + mult(s1[1], s2[1]) + mult(s1[2], s2[2]) + mult(s1[3], s2[3]);
+    for (int i = 0; i < 4; i++)
+        if (op.desc->mask[i]) op.dst[i] = s1[0];
 }
 
 void GpuShaderInterp::shdDph(ShaderCode &op) {
     // Calculate the dot product of a 3-component and a 4-component source register
-    float *src1 = getSrc<true>(op, 0);
-    float *src2 = getSrc<false>(op, 1);
-    src1[0] = mult(src1[0], src2[0]) + mult(src1[1], src2[1]) + mult(src1[2], src2[2]) + src2[3];
-    src1[3] = src1[2] = src1[1] = src1[0];
-    setDst(op, src1);
+    float *s1 = getSrc<true>(op, 0);
+    float *s2 = getSrc<false>(op, 1);
+    s1[0] = mult(s1[0], s2[0]) + mult(s1[1], s2[1]) + mult(s1[2], s2[2]) + s2[3];
+    for (int i = 0; i < 4; i++)
+        if (op.desc->mask[i]) op.dst[i] = s1[0];
 }
 
 void GpuShaderInterp::shdEx2(ShaderCode &op) {
     // Calculate the base-2 exponent of a source register's first component
-    float *src1 = getSrc<true>(op, 0);
-    src1[3] = src1[2] = src1[1] = src1[0] = exp2f(src1[0]);
-    setDst(op, src1);
+    float *s1 = getSrc<true>(op, 0);
+    s1[0] = exp2f(s1[0]);
+    for (int i = 0; i < 4; i++)
+        if (op.desc->mask[i]) op.dst[i] = s1[0];
 }
 
 void GpuShaderInterp::shdLg2(ShaderCode &op) {
     // Calculate the base-2 logarithm of a source register's first component
-    float *src1 = getSrc<true>(op, 0);
-    src1[3] = src1[2] = src1[1] = src1[0] = log2f(src1[0]);
-    setDst(op, src1);
+    float *s1 = getSrc<true>(op, 0);
+    s1[0] = log2f(s1[0]);
+    for (int i = 0; i < 4; i++)
+        if (op.desc->mask[i]) op.dst[i] = s1[0];
 }
 
 void GpuShaderInterp::shdMul(ShaderCode &op) {
     // Multiply each component of two source registers with each other
-    float *src1 = getSrc<true>(op, 0);
-    float *src2 = getSrc<false>(op, 1);
+    float *s1 = getSrc<true>(op, 0);
+    float *s2 = getSrc<false>(op, 1);
     for (int i = 0; i < 4; i++)
-        src1[i] = mult(src1[i], src2[i]);
-    setDst(op, src1);
+        if (op.desc->mask[i]) op.dst[i] = mult(s1[i], s2[i]);
 }
 
 void GpuShaderInterp::shdSge(ShaderCode &op) {
     // Output 1 or 0 based on if source 1's components are greater or equal to source 2's
-    float *src1 = getSrc<true>(op, 0);
-    float *src2 = getSrc<false>(op, 1);
+    float *s1 = getSrc<true>(op, 0);
+    float *s2 = getSrc<false>(op, 1);
     for (int i = 0; i < 4; i++)
-        src1[i] = (src1[i] >= src2[i]) ? 1.0f : 0.0f;
-    setDst(op, src1);
+        if (op.desc->mask[i]) op.dst[i] = (s1[i] >= s2[i]) ? 1.0f : 0.0f;
 }
 
 void GpuShaderInterp::shdSlt(ShaderCode &op) {
     // Output 1 or 0 based on if source 1's components are less than source 2's
-    float *src1 = getSrc<true>(op, 0);
-    float *src2 = getSrc<false>(op, 1);
+    float *s1 = getSrc<true>(op, 0);
+    float *s2 = getSrc<false>(op, 1);
     for (int i = 0; i < 4; i++)
-        src1[i] = (src1[i] < src2[i]) ? 1.0f : 0.0f;
-    setDst(op, src1);
+        if (op.desc->mask[i]) op.dst[i] = (s1[i] < s2[i]) ? 1.0f : 0.0f;
 }
 
 void GpuShaderInterp::shdFlr(ShaderCode &op) {
     // Set the destination components to the floor of the source components
-    float *src1 = getSrc<true>(op, 0);
+    float *s1 = getSrc<true>(op, 0);
     for (int i = 0; i < 4; i++)
-        src1[i] = floorf(src1[i]);
-    setDst(op, src1);
+        if (op.desc->mask[i]) op.dst[i] = floorf(s1[i]);
 }
 
 void GpuShaderInterp::shdMax(ShaderCode &op) {
     // Set the destination components to the maximum of two source components
-    float *src1 = getSrc<true>(op, 0);
-    float *src2 = getSrc<false>(op, 1);
+    float *s1 = getSrc<true>(op, 0);
+    float *s2 = getSrc<false>(op, 1);
     for (int i = 0; i < 4; i++)
-        src1[i] = std::max(src1[i], src2[i]);
-    setDst(op, src1);
+        if (op.desc->mask[i]) op.dst[i] = std::max(s1[i], s2[i]);
 }
 
 void GpuShaderInterp::shdMin(ShaderCode &op) {
     // Set the destination components to the minimum of two source components
-    float *src1 = getSrc<true>(op, 0);
-    float *src2 = getSrc<false>(op, 1);
+    float *s1 = getSrc<true>(op, 0);
+    float *s2 = getSrc<false>(op, 1);
     for (int i = 0; i < 4; i++)
-        src1[i] = std::min(src1[i], src2[i]);
-    setDst(op, src1);
+        if (op.desc->mask[i]) op.dst[i] = std::min(s1[i], s2[i]);
 }
 
 void GpuShaderInterp::shdRcp(ShaderCode &op) {
     // Calculate the reciprocal of a source register's first component
-    float *src1 = getSrc<true>(op, 0);
-    src1[0] = 1.0f / src1[0];
-    src1[3] = src1[2] = src1[1] = src1[0];
-    setDst(op, src1);
+    float *s1 = getSrc<true>(op, 0);
+    s1[0] = 1.0f / s1[0];
+    for (int i = 0; i < 4; i++)
+        if (op.desc->mask[i]) op.dst[i] = s1[0];
 }
 
 void GpuShaderInterp::shdRsq(ShaderCode &op) {
     // Calculate the reverse square root of a source register's first component
-    float *src1 = getSrc<true>(op, 0);
-    src1[0] = 1.0f / sqrtf(src1[0]);
-    src1[3] = src1[2] = src1[1] = src1[0];
-    setDst(op, src1);
+    float *s1 = getSrc<true>(op, 0);
+    s1[0] = 1.0f / sqrtf(s1[0]);
+    for (int i = 0; i < 4; i++)
+        if (op.desc->mask[i]) op.dst[i] = s1[0];
 }
 
 void GpuShaderInterp::shdMova(ShaderCode &op) {
     // Move a value from a source register to the X/Y address register
-    float *src1 = getSrc<true>(op, 0);
-    if (op.desc->dstMask[0]) shdAddr[0] = src1[0];
-    if (op.desc->dstMask[1]) shdAddr[1] = src1[1];
+    float *s1 = getSrc<true>(op, 0);
+    for (int i = 0; i < 2; i++)
+        if (op.desc->mask[i]) shdAddr[i] = s1[i];
 }
 
 void GpuShaderInterp::shdMov(ShaderCode &op) {
     // Move a value from a source register to a destination register
-    float *src1 = getSrc<true>(op, 0);
-    setDst(op, src1);
+    float *s1 = getSrc<true>(op, 0);
+    for (int i = 0; i < 4; i++)
+        if (op.desc->mask[i]) op.dst[i] = s1[i];
 }
 
 void GpuShaderInterp::shdDphi(ShaderCode &op) {
     // Calculate the dot product of a 3-component and a 4-component source register (alternate)
-    float *src1 = getSrc<false>(op, 0);
-    float *src2 = getSrc<true>(op, 1);
-    src1[0] = mult(src1[0], src2[0]) + mult(src1[1], src2[1]) + mult(src1[2], src2[2]) + src2[3];
-    src1[3] = src1[2] = src1[1] = src1[0];
-    setDst(op, src1);
+    float *s1 = getSrc<false>(op, 0);
+    float *s2 = getSrc<true>(op, 1);
+    s1[0] = mult(s1[0], s2[0]) + mult(s1[1], s2[1]) + mult(s1[2], s2[2]) + s2[3];
+    for (int i = 0; i < 4; i++)
+        if (op.desc->mask[i]) op.dst[i] = s1[0];
 }
 
 void GpuShaderInterp::shdSgei(ShaderCode &op) {
     // Output 1 or 0 based on if source 1's components are greater or equal to source 2's (alternate)
-    float *src1 = getSrc<false>(op, 0);
-    float *src2 = getSrc<true>(op, 1);
+    float *s1 = getSrc<false>(op, 0);
+    float *s2 = getSrc<true>(op, 1);
     for (int i = 0; i < 4; i++)
-        src1[i] = (src1[i] >= src2[i]) ? 1.0f : 0.0f;
-    setDst(op, src1);
+        if (op.desc->mask[i]) op.dst[i] = (s1[i] >= s2[i]) ? 1.0f : 0.0f;
 }
 
 void GpuShaderInterp::shdSlti(ShaderCode &op) {
     // Output 1 or 0 based on if source 1's components are less than source 2's (alternate)
-    float *src1 = getSrc<false>(op, 0);
-    float *src2 = getSrc<true>(op, 1);
+    float *s1 = getSrc<false>(op, 0);
+    float *s2 = getSrc<true>(op, 1);
     for (int i = 0; i < 4; i++)
-        src1[i] = (src1[i] < src2[i]) ? 1.0f : 0.0f;
-    setDst(op, src1);
+        if (op.desc->mask[i]) op.dst[i] = (s1[i] < s2[i]) ? 1.0f : 0.0f;
 }
 
 void GpuShaderInterp::shdBreak(ShaderCode &op) {
@@ -599,16 +570,16 @@ void GpuShaderInterp::shdJmpu(ShaderCode &op) {
 
 void GpuShaderInterp::shdCmp(ShaderCode &op) {
     // Set the X/Y condition values by comparing X/Y of two source registers
-    float *src1 = getSrc<true>(op, 0);
-    float *src2 = getSrc<false>(op, 1);
+    float *s1 = getSrc<true>(op, 0);
+    float *s2 = getSrc<false>(op, 1);
     for (int i = 0; i < 2; i++) {
         switch ((op.value >> (24 - i * 3)) & 0x7) {
-            case 0x0: shdCond[i] = (src1[i] == src2[i]); continue; // EQ
-            case 0x1: shdCond[i] = (src1[i] != src2[i]); continue; // NE
-            case 0x2: shdCond[i] = (src1[i] < src2[i]); continue; // LT
-            case 0x3: shdCond[i] = (src1[i] <= src2[i]); continue; // LE
-            case 0x4: shdCond[i] = (src1[i] > src2[i]); continue; // GT
-            case 0x5: shdCond[i] = (src1[i] >= src2[i]); continue; // GE
+            case 0x0: shdCond[i] = (s1[i] == s2[i]); continue; // EQ
+            case 0x1: shdCond[i] = (s1[i] != s2[i]); continue; // NE
+            case 0x2: shdCond[i] = (s1[i] < s2[i]); continue; // LT
+            case 0x3: shdCond[i] = (s1[i] <= s2[i]); continue; // LE
+            case 0x4: shdCond[i] = (s1[i] > s2[i]); continue; // GT
+            case 0x5: shdCond[i] = (s1[i] >= s2[i]); continue; // GE
             default: shdCond[i] = true; continue;
         }
     }
@@ -616,22 +587,20 @@ void GpuShaderInterp::shdCmp(ShaderCode &op) {
 
 void GpuShaderInterp::shdMadi(ShaderCode &op) {
     // Multiply each component of two source registers and add a third one (alternate)
-    float *src1 = getSrc<false>(op, 0);
-    float *src2 = getSrc<false>(op, 1);
-    float *src3 = getSrc<true>(op, 2);
+    float *s1 = getSrc<false>(op, 0);
+    float *s2 = getSrc<false>(op, 1);
+    float *s3 = getSrc<true>(op, 2);
     for (int i = 0; i < 4; i++)
-        src1[i] = mult(src1[i], src2[i]) + src3[i];
-    setDst(op, src1);
+        if (op.desc->mask[i]) op.dst[i] = mult(s1[i], s2[i]) + s3[i];
 }
 
 void GpuShaderInterp::shdMad(ShaderCode &op) {
     // Multiply each component of two source registers and add a third one
-    float *src1 = getSrc<false>(op, 0);
-    float *src2 = getSrc<true>(op, 1);
-    float *src3 = getSrc<false>(op, 2);
+    float *s1 = getSrc<false>(op, 0);
+    float *s2 = getSrc<true>(op, 1);
+    float *s3 = getSrc<false>(op, 2);
     for (int i = 0; i < 4; i++)
-        src1[i] = mult(src1[i], src2[i]) + src3[i];
-    setDst(op, src1);
+        if (op.desc->mask[i]) op.dst[i] = mult(s1[i], s2[i]) + s3[i];
 }
 
 void GpuShaderInterp::vshUnk(ShaderCode &op) {

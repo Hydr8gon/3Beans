@@ -49,7 +49,7 @@ void Gpu::createRender() {
         default: gpuRender = new GpuRenderSoft(core); break;
         case 1: (*contextFunc)(), gpuRender = new GpuRenderOgl(core), (*contextFunc)(); break;
     }
-    gpuShader = new GpuShaderInterp(*gpuRender);
+    gpuShader = new GpuShaderInterp(*gpuRender, shdInput);
 }
 
 void Gpu::destroyRender() {

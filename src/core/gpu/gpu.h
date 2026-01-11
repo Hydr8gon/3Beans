@@ -411,6 +411,7 @@ private:
     bool shdMapDirty = false;
     bool fixedDirty = false;
     float fixedBase[16][4] = {};
+    float shdInput[16][4] = {};
     uint32_t attrFixedData[31][3] = {};
     uint8_t attrFixedIdx = 0;
 
