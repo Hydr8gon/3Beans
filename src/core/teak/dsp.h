@@ -26,7 +26,7 @@ class Core;
 
 class Dsp {
 public:
-    Dsp(Core *core): core(core) {}
+    Dsp(Core &core): core(core) {}
     void resetCycles();
 
     uint16_t readData(uint16_t address);
@@ -57,7 +57,7 @@ public:
     void writeCmd(int i, uint16_t mask, uint16_t value);
 
 private:
-    Core *core;
+    Core &core;
 
     std::queue<uint16_t> audOutFifo;
     std::queue<uint16_t> readFifo;

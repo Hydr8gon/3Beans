@@ -30,7 +30,7 @@ template void Cp15::write(CpuId, uint32_t, uint32_t);
 uint8_t *Cp15::getReadPtr(CpuId id, uint32_t address) {
     // Get a readable memory pointer to use for caching
     if (id == ARM9) return tcmMap[address >> 12].read;
-    if (!mmuEnables[id]) return core->memory.memMap11[address >> 12].read;
+    if (!mmuEnables[id]) return core.memory.memMap11[address >> 12].read;
     MmuMap &map = mmuMaps[id][address >> 12];
     if (map.tag != mmuTags[id]) updateEntry(id, address);
     return map.read;
@@ -51,10 +51,10 @@ uint32_t Cp15::mmuTranslate(CpuId id, uint32_t address) {
 
     // Translate a virtual address to physical using MMU translation tables
     // TODO: handle all the extra bits
-    uint32_t entry = core->memory.read<uint32_t>(id, base + ((address >> 18) & 0x3FFC));
+    uint32_t entry = core.memory.read<uint32_t>(id, base + ((address >> 18) & 0x3FFC));
     switch (entry & 0x3) {
     case 0x1: // Coarse
-        entry = core->memory.read<uint32_t>(id, (entry & 0xFFFFFC00) + ((address >> 10) & 0x3FC));
+        entry = core.memory.read<uint32_t>(id, (entry & 0xFFFFFC00) + ((address >> 10) & 0x3FC));
         switch (entry & 0x3) {
         case 0x1: // 64KB large page
             return (entry & 0xFFFF0000) | (address & 0xFFFF);
@@ -77,7 +77,7 @@ uint32_t Cp15::mmuTranslate(CpuId id, uint32_t address) {
 
 void Cp15::mmuInvalidate(CpuId id) {
     // Increment the MMU tag to invalidate maps and reset on overflow to avoid false positives
-    core->arms[id].invalidatePc();
+    core.arms[id].invalidatePc();
     if (++mmuTags[id]) return;
     memset(mmuMaps[id], 0, sizeof(mmuMaps[id]));
     mmuTags[id] = 1;
@@ -87,22 +87,22 @@ void Cp15::updateEntry(CpuId id, uint32_t address) {
     // Cache an MMU read/write mapping with the current tag
     MmuMap &map = mmuMaps[id][address >> 12];
     address = mmuTranslate(id, address);
-    map.read = core->memory.memMap11[address >> 12].read;
-    map.write = core->memory.memMap11[address >> 12].write;
-    map.memTag = &core->memory.memMap11[address >> 12].tag;
+    map.read = core.memory.memMap11[address >> 12].read;
+    map.write = core.memory.memMap11[address >> 12].write;
+    map.memTag = &core.memory.memMap11[address >> 12].tag;
     map.addr = (address & ~0xFFF);
     map.tag = mmuTags[id];
 }
 
 void Cp15::updateMap9(uint32_t start, uint32_t end) {
     // Rebuild part of the ARM9 TCM memory map
-    core->arms[ARM9].invalidatePc();
+    core.arms[ARM9].invalidatePc();
     for (uint64_t address = start; address <= end; address += 0x1000) {
         // Use the ARM9 physical memory map as a base
         TcmMap &map = tcmMap[address >> 12];
-        map.read = core->memory.memMap9[address >> 12].read;
-        map.write = core->memory.memMap9[address >> 12].write;
-        map.memTag = &core->memory.memMap9[address >> 12].tag;
+        map.read = core.memory.memMap9[address >> 12].read;
+        map.write = core.memory.memMap9[address >> 12].write;
+        map.memTag = &core.memory.memMap9[address >> 12].tag;
 
         // Overlay TCM read/write mappings if enabled
         if (address < itcmSize) {
@@ -132,12 +132,12 @@ template <typename T> T Cp15::read(CpuId id, uint32_t address) {
     }
     else {
         // Read from ARM11 physical memory
-        data = core->memory.memMap11[address >> 12].read;
+        data = core.memory.memMap11[address >> 12].read;
     }
 
     // Fall back to read handlers for special cases
     if (!data)
-        return core->memory.readFallback<T>(id, address);
+        return core.memory.readFallback<T>(id, address);
 
     // Load an LSB-first value from a direct memory pointer
     T value = 0;
@@ -168,7 +168,7 @@ template <typename T> void Cp15::write(CpuId id, uint32_t address, T value) {
         // Catch writes to special memory used by the 3DS OS
         if (address == 0xFFFF9004 && value) {
             // Log process names when the active 3DS kernel process struct changes
-            uint32_t kCodeSet = read<uint32_t>(id, value + 0xB0 + core->n3dsMode * 8);
+            uint32_t kCodeSet = read<uint32_t>(id, value + 0xB0 + core.n3dsMode * 8);
             uint8_t procName[9] = {};
             for (int i = 0; i < 8; i++)
                 procName[i] = read<uint8_t>(id, kCodeSet + 0x50 + i);
@@ -182,14 +182,14 @@ template <typename T> void Cp15::write(CpuId id, uint32_t address, T value) {
     }
     else {
         // Write to ARM11 physical memory
-        MemMap &map = core->memory.memMap11[address >> 12];
+        MemMap &map = core.memory.memMap11[address >> 12];
         data = map.write;
         map.tag++;
     }
 
     // Fall back to write handlers for special cases
     if (!data)
-        return core->memory.writeFallback<T>(id, address, value);
+        return core.memory.writeFallback<T>(id, address, value);
 
     // Write an LSB-first value to a direct memory pointer
     data += (address & 0xFFF);
@@ -344,7 +344,7 @@ void Cp15::writeThreadId(CpuId id, int i, uint32_t value) {
 
 void Cp15::writeWfi(CpuId id, uint32_t value) {
     // Halt the CPU
-    core->interrupts.halt(id);
+    core.interrupts.halt(id);
 }
 
 void Cp15::writeDtcm(CpuId id, uint32_t value) {

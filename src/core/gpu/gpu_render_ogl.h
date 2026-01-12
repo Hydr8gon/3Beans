@@ -41,7 +41,7 @@ struct TexCache {
 
 class GpuRenderOgl: public GpuRender {
 public:
-    GpuRenderOgl(Core *core);
+    GpuRenderOgl(Core &core);
     ~GpuRenderOgl();
 
     void submitVertex(SoftVertex &vertex);
@@ -86,7 +86,7 @@ public:
     void setDepthFunc(TestFunc func);
 
 private:
-    Core *core;
+    Core &core;
     GLuint program;
     GLuint vao, vbo;
     GLuint colBuf, depBuf;

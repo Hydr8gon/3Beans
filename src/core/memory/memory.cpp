@@ -35,7 +35,7 @@ Memory::~Memory() {
 
 bool Memory::init() {
     // Allocate extended FCRAM and VRAM if running in new 3DS mode
-    if (core->n3dsMode) {
+    if (core.n3dsMode) {
         fcramExt = new uint8_t[0x8000000];
         memset(fcramExt, 0, 0x8000000);
         vramExt = new uint8_t[0x400000];
@@ -74,7 +74,7 @@ void Memory::loadOtp(FILE *file) {
 
 void Memory::updateMap(bool arm9, uint32_t start, uint32_t end) {
     // Update the ARM9 or ARM11 physical memory map with 4KB pages
-    bool extend = (core->interrupts.readCfg11MpClkcnt() & 0x70000);
+    bool extend = (core.interrupts.readCfg11MpClkcnt() & 0x70000);
     for (uint64_t address = start; address <= end; address += 0x1000) {
         // Look up and reset pointers for the current address
         MemMap &map = (arm9 ? memMap9 : memMap11)[address >> 12];
@@ -139,9 +139,9 @@ void Memory::updateMap(bool arm9, uint32_t start, uint32_t end) {
     }
 
     // Update the virtual memory maps as well
-    if (arm9) return core->cp15.updateMap9(start, end);
+    if (arm9) return core.cp15.updateMap9(start, end);
     for (int i = 0; i < MAX_CPUS - 1; i++)
-        core->cp15.mmuInvalidate(CpuId(i));
+        core.cp15.mmuInvalidate(CpuId(i));
 }
 
 template <typename T> T Memory::readFallback(CpuId id, uint32_t address) {
@@ -151,7 +151,7 @@ template <typename T> T Memory::readFallback(CpuId id, uint32_t address) {
 
     // Handle the ARM11 bootrom overlay if reads to it have fallen through
     if (id != ARM9 && (address < 0x20000 || address >= 0xFFFF0000))
-        return (address == *core->arms[id].registers[15]) ? 0xE59FF018 : cfg11BrOverlayVal;
+        return (address == *core.arms[id].registers[15]) ? 0xE59FF018 : cfg11BrOverlayVal;
 
     // Catch reads from unmapped memory
     if (id == ARM9)
@@ -210,7 +210,7 @@ void Memory::writeCfg11Wram32kData(int i, uint8_t value) {
 
 void Memory::writeCfg11BrOverlayCnt(uint32_t mask, uint32_t value) {
     // Write to the CFG11_BR_OVERLAY_CNT register
-    if (!core->n3dsMode) return; // N3DS-exclusive
+    if (!core.n3dsMode) return; // N3DS-exclusive
     mask &= 0x1;
     cfg11BrOverlayCnt = (cfg11BrOverlayCnt & ~mask) | (value & mask);
 
@@ -222,13 +222,13 @@ void Memory::writeCfg11BrOverlayCnt(uint32_t mask, uint32_t value) {
 
 void Memory::writeCfg11BrOverlayVal(uint32_t mask, uint32_t value) {
     // Write to the CFG11_BR_OVERLAY_VAL register
-    if (!core->n3dsMode) return; // N3DS-exclusive
+    if (!core.n3dsMode) return; // N3DS-exclusive
     cfg11BrOverlayVal = (cfg11BrOverlayVal & ~mask) | (value & mask);
 }
 
 void Memory::writeCfg11MpCnt(uint32_t mask, uint32_t value) {
     // Write to the CFG11_MP_CNT register
-    if (!core->n3dsMode) return; // N3DS-exclusive
+    if (!core.n3dsMode) return; // N3DS-exclusive
     mask &= 0x101;
     cfg11MpCnt = (cfg11MpCnt & ~mask) | (value & mask);
 
@@ -251,7 +251,7 @@ void Memory::writeCfg9Sysprot11(uint8_t value) {
 
 void Memory::writeCfg9Extmemcnt9(uint32_t mask, uint32_t value) {
     // Write to the CFG9_EXTMEMCNT9 register
-    if (!core->n3dsMode) return; // N3DS-exclusive
+    if (!core.n3dsMode) return; // N3DS-exclusive
     mask &= 0x1;
     cfg9Extmemcnt9 = (cfg9Extmemcnt9 & ~mask) | (value & mask);
 

@@ -19,7 +19,7 @@
 
 #include "../core.h"
 
-Cdma::Cdma(Core *core, CdmaId id): core(core), id(id) {
+Cdma::Cdma(Core &core, CdmaId id): core(core), id(id) {
     // Set the CPU for memory accesses
     cpu = (id == XDMA) ? ARM9 : ARM11;
 }
@@ -42,7 +42,7 @@ void Cdma::clearDrq(uint8_t type) {
 void Cdma::triggerUpdate() {
     // Schedule a CDMA update if one hasn't been already
     if (scheduled) return;
-    core->schedule(Task(CDMA0_UPDATE + id), 1);
+    core.schedule(Task(CDMA0_UPDATE + id), 1);
     scheduled = true;
 }
 
@@ -68,7 +68,7 @@ void Cdma::runOpcodes(int i) {
         }
 
         // Decode and execute a CDMA opcode
-        switch (uint8_t op = core->memory.read<uint8_t>(cpu, cpcs[i]++)) {
+        switch (uint8_t op = core.memory.read<uint8_t>(cpu, cpcs[i]++)) {
             case 0x00: dmaEnd(i); break; // DMAEND
             case 0x01: dmaEnd(i); break; // DMAKILL (stub)
             case 0x04: dmaLd(i); break; // DMALD
@@ -118,7 +118,7 @@ void Cdma::fault(int i, int type) {
     fsrc |= BIT(i);
 
     // Send a fault interrupt to the CPU
-    core->interrupts.sendInterrupt(cpu, (id == XDMA) ? 29 : ((id == CDMA0) ? 0x39 : 0x3B));
+    core.interrupts.sendInterrupt(cpu, (id == XDMA) ? 29 : ((id == CDMA0) ? 0x39 : 0x3B));
 }
 
 void Cdma::dmaStubC(int i, int inc) {
@@ -153,14 +153,14 @@ void Cdma::dmaLd(int i) { // DMALD
     switch (size) {
     case 1: // 8-bit
         for (int j = 0; j < len; j++) {
-            fifos[i].push(core->memory.read<uint8_t>(cpu, sars[i]));
+            fifos[i].push(core.memory.read<uint8_t>(cpu, sars[i]));
             if (ccrs[i] & BIT(0)) sars[i]++;
         }
         return;
 
     case 2: // 16-bit
         for (int j = 0; j < len; j++) {
-            uint16_t value = core->memory.read<uint16_t>(cpu, sars[i]);
+            uint16_t value = core.memory.read<uint16_t>(cpu, sars[i]);
             for (int k = 0; k < 16; k += 8)
                 fifos[i].push(value >> k);
             if (ccrs[i] & BIT(0)) sars[i] += 2;
@@ -169,7 +169,7 @@ void Cdma::dmaLd(int i) { // DMALD
 
     case 4: // 32-bit
         for (int j = 0; j < len; j++) {
-            uint32_t value = core->memory.read<uint32_t>(cpu, sars[i]);
+            uint32_t value = core.memory.read<uint32_t>(cpu, sars[i]);
             for (int k = 0; k < 32; k += 8)
                 fifos[i].push(value >> k);
             if (ccrs[i] & BIT(0)) sars[i] += 4;
@@ -178,8 +178,8 @@ void Cdma::dmaLd(int i) { // DMALD
 
     case 8: // 64-bit
         for (int j = 0; j < len; j++) {
-            uint64_t value = core->memory.read<uint32_t>(cpu, sars[i]);
-            value |= uint64_t(core->memory.read<uint32_t>(cpu, sars[i] + 4)) << 32;
+            uint64_t value = core.memory.read<uint32_t>(cpu, sars[i]);
+            value |= uint64_t(core.memory.read<uint32_t>(cpu, sars[i] + 4)) << 32;
             for (int k = 0; k < 64; k += 8)
                 fifos[i].push(value >> k);
             if (ccrs[i] & BIT(0)) sars[i] += 8;
@@ -218,7 +218,7 @@ void Cdma::dmaSt(int i) { // DMAST
     switch (size) {
     case 1: // 8-bit
         for (int j = 0; j < len; j++) {
-            core->memory.write<uint8_t>(cpu, dars[i], fifos[i].front());
+            core.memory.write<uint8_t>(cpu, dars[i], fifos[i].front());
             fifos[i].pop();
             if (ccrs[i] & BIT(14)) dars[i]++;
         }
@@ -231,7 +231,7 @@ void Cdma::dmaSt(int i) { // DMAST
                 value |= fifos[i].front() << k;
                 fifos[i].pop();
             }
-            core->memory.write<uint16_t>(cpu, dars[i], value);
+            core.memory.write<uint16_t>(cpu, dars[i], value);
             if (ccrs[i] & BIT(14)) dars[i] += 2;
         }
         return;
@@ -243,7 +243,7 @@ void Cdma::dmaSt(int i) { // DMAST
                 value |= fifos[i].front() << k;
                 fifos[i].pop();
             }
-            core->memory.write<uint32_t>(cpu, dars[i], value);
+            core.memory.write<uint32_t>(cpu, dars[i], value);
             if (ccrs[i] & BIT(14)) dars[i] += 4;
         }
         return;
@@ -255,8 +255,8 @@ void Cdma::dmaSt(int i) { // DMAST
                 value |= uint64_t(fifos[i].front()) << k;
                 fifos[i].pop();
             }
-            core->memory.write<uint32_t>(cpu, dars[i], value);
-            core->memory.write<uint32_t>(cpu, dars[i] + 4, value >> 32);
+            core.memory.write<uint32_t>(cpu, dars[i], value);
+            core.memory.write<uint32_t>(cpu, dars[i] + 4, value >> 32);
             if (ccrs[i] & BIT(14)) dars[i] += 8;
         }
         return;
@@ -285,19 +285,19 @@ void Cdma::dmaStb(int i) { // DMASTB
 void Cdma::dmaLp0(int i) { // DMALP lpc0,len
     // Set a channel's loop count 0 register
     if (i == 8) return fault(i, 0); // Channel-exclusive
-    lc0s[i] = core->memory.read<uint8_t>(cpu, cpcs[i]++);
+    lc0s[i] = core.memory.read<uint8_t>(cpu, cpcs[i]++);
 }
 
 void Cdma::dmaLp1(int i) { // DMALP lpc1,len
     // Set a channel's loop count 1 register
     if (i == 8) return fault(i, 0); // Channel-exclusive
-    lc1s[i] = core->memory.read<uint8_t>(cpu, cpcs[i]++);
+    lc1s[i] = core.memory.read<uint8_t>(cpu, cpcs[i]++);
 }
 
 void Cdma::dmaLdps(int i) { // DMALDPS periph
     // Stub notifying a peripheral and perform a single load if requested
     if (i == 8) return fault(i, 0); // Channel-exclusive
-    uint8_t periph = core->memory.read<uint8_t>(cpu, cpcs[i]++) >> 3;
+    uint8_t periph = core.memory.read<uint8_t>(cpu, cpcs[i]++) >> 3;
     if ((id == XDMA && periph >= 8) || (id == CDMA0 && periph >= 18)) return fault(i, 1);
     if (!burstReq) dmaLd(i);
 }
@@ -305,7 +305,7 @@ void Cdma::dmaLdps(int i) { // DMALDPS periph
 void Cdma::dmaLdpb(int i) { // DMALDPB periph
     // Stub notifying a peripheral and perform a burst load if requested
     if (i == 8) return fault(i, 0); // Channel-exclusive
-    uint8_t periph = core->memory.read<uint8_t>(cpu, cpcs[i]++) >> 3;
+    uint8_t periph = core.memory.read<uint8_t>(cpu, cpcs[i]++) >> 3;
     if ((id == XDMA && periph >= 8) || (id == CDMA0 && periph >= 18)) return fault(i, 1);
     if (burstReq) dmaLd(i);
 }
@@ -313,7 +313,7 @@ void Cdma::dmaLdpb(int i) { // DMALDPB periph
 void Cdma::dmaStps(int i) { // DMASTPS periph
     // Stub notifying a peripheral and perform a single store if requested
     if (i == 8) return fault(i, 0); // Channel-exclusive
-    uint8_t periph = core->memory.read<uint8_t>(cpu, cpcs[i]++) >> 3;
+    uint8_t periph = core.memory.read<uint8_t>(cpu, cpcs[i]++) >> 3;
     if ((id == XDMA && periph >= 8) || (id == CDMA0 && periph >= 18)) return fault(i, 1);
     if (!burstReq) dmaSt(i);
 }
@@ -321,7 +321,7 @@ void Cdma::dmaStps(int i) { // DMASTPS periph
 void Cdma::dmaStpb(int i) { // DMASTPB periph
     // Stub notifying a peripheral and perform a burst store if requested
     if (i == 8) return fault(i, 0); // Channel-exclusive
-    uint8_t periph = core->memory.read<uint8_t>(cpu, cpcs[i]++) >> 3;
+    uint8_t periph = core.memory.read<uint8_t>(cpu, cpcs[i]++) >> 3;
     if ((id == XDMA && periph >= 8) || (id == CDMA0 && periph >= 18)) return fault(i, 1);
     if (burstReq) dmaSt(i);
 }
@@ -329,7 +329,7 @@ void Cdma::dmaStpb(int i) { // DMASTPB periph
 void Cdma::dmaWfp(int i, uint16_t burst) { // DMAWFP periph,type
     // Put a channel in peripheral wait mode and set its burst state
     if (i == 8) return fault(i, 0); // Channel-exclusive
-    uint8_t periph = core->memory.read<uint8_t>(cpu, cpcs[i]++) >> 3;
+    uint8_t periph = core.memory.read<uint8_t>(cpu, cpcs[i]++) >> 3;
     if ((id == XDMA && periph >= 8) || (id == CDMA0 && periph >= 18)) return fault(i, 1);
     csrs[i] = (csrs[i] & ~0xC1FF) | burst | (periph << 4) | 0x7;
     burstReq = burst; // Assume burst for peripheral
@@ -351,7 +351,7 @@ void Cdma::dmaWfp(int i, uint16_t burst) { // DMAWFP periph,type
 
 void Cdma::dmaSev(int i) { // DMASEV event
     // Send an event and check if it's in interrupt mode
-    uint8_t event = core->memory.read<uint8_t>(cpu, cpcs[i]++) >> 3;
+    uint8_t event = core.memory.read<uint8_t>(cpu, cpcs[i]++) >> 3;
     if ((id == XDMA && event >= 12) || (id == CDMA0 && event >= 16)) return fault(i, 1);
     intEventRis |= BIT(event);
     if (~inten & BIT(event)) return;
@@ -359,47 +359,47 @@ void Cdma::dmaSev(int i) { // DMASEV event
     // Send an interrupt to the CPU depending on event type
     intmis |= BIT(event);
     if (id == XDMA && event < 5)
-        core->interrupts.sendInterrupt(ARM9, 28);
+        core.interrupts.sendInterrupt(ARM9, 28);
     else if (id == CDMA0 && event < 9)
-        core->interrupts.sendInterrupt(ARM11, 0x30 + event);
+        core.interrupts.sendInterrupt(ARM11, 0x30 + event);
     else if (id == CDMA1)
-        core->interrupts.sendInterrupt(ARM11, 0x3A);
+        core.interrupts.sendInterrupt(ARM11, 0x3A);
 }
 
 void Cdma::dmaLpend0(int i) { // DMALPEND lpc0
     // Decrement a channel's loop count 0 register and jump backwards if non-zero
     if (i == 8) return fault(i, 0); // Channel-exclusive
-    uint8_t jump = core->memory.read<uint8_t>(cpu, cpcs[i]++);
+    uint8_t jump = core.memory.read<uint8_t>(cpu, cpcs[i]++);
     if (lc0s[i]-- != 0) cpcs[i] -= jump + 2;
 }
 
 void Cdma::dmaLpend1(int i) { // DMALPEND lpc1
     // Decrement a channel's loop count 1 register and jump backwards if non-zero
     if (i == 8) return fault(i, 0); // Channel-exclusive
-    uint8_t jump = core->memory.read<uint8_t>(cpu, cpcs[i]++);
+    uint8_t jump = core.memory.read<uint8_t>(cpu, cpcs[i]++);
     if (lc1s[i]-- != 0) cpcs[i] -= jump + 2;
 }
 
 void Cdma::dmaAddhS(int i) { // DMAADDH SAR,imm16
     // Add a positive 16-bit immediate to a channel's source address register
     if (i == 8) return fault(i, 0); // Channel-exclusive
-    sars[i] += core->memory.read<uint16_t>(cpu, cpcs[i]);
+    sars[i] += core.memory.read<uint16_t>(cpu, cpcs[i]);
     cpcs[i] += 2;
 }
 
 void Cdma::dmaAddhD(int i) { // DMAADDH DAR,imm16
     // Add a positive 16-bit immediate to a channel's destination address register
     if (i == 8) return fault(i, 0); // Channel-exclusive
-    dars[i] += core->memory.read<uint16_t>(cpu, cpcs[i]);
+    dars[i] += core.memory.read<uint16_t>(cpu, cpcs[i]);
     cpcs[i] += 2;
 }
 
 void Cdma::dmaGoNs(int i) { // DMAGO chan,imm32,ns
     // Set a channel's program counter and start non-secure execution
     if (i != 8) return fault(i, 0); // Manager-exclusive
-    uint8_t chan = core->memory.read<uint8_t>(cpu, cpcs[i]++);
+    uint8_t chan = core.memory.read<uint8_t>(cpu, cpcs[i]++);
     if (chan >= (8 >> (id == XDMA))) return fault(i, 1);
-    cpcs[chan] = core->memory.read<uint32_t>(cpu, (cpcs[i] += 4) - 4);
+    cpcs[chan] = core.memory.read<uint32_t>(cpu, (cpcs[i] += 4) - 4);
     csrs[chan] = (csrs[chan] & ~0xC1FF) | 0x1; // Executing
     triggerUpdate();
 
@@ -413,10 +413,10 @@ void Cdma::dmaGoNs(int i) { // DMAGO chan,imm32,ns
 void Cdma::dmaMov(int i) { // DMAMOV reg,imm32
     // Set one of a channel's registers
     if (i == 8) return fault(i, 0); // Channel-exclusive
-    uint8_t reg = core->memory.read<uint8_t>(cpu, cpcs[i]++);
+    uint8_t reg = core.memory.read<uint8_t>(cpu, cpcs[i]++);
     if (reg >= 3) return fault(i, 1);
     uint32_t *regs[] = { sars, ccrs, dars };
-    regs[reg][i] = core->memory.read<uint32_t>(cpu, (cpcs[i] += 4) - 4);
+    regs[reg][i] = core.memory.read<uint32_t>(cpu, (cpcs[i] += 4) - 4);
 
     // Catch unimplemented endian bits being set
     if (reg != 1 || !(ccrs[i] & 0x70000000)) return;
@@ -428,7 +428,7 @@ void Cdma::dmaMov(int i) { // DMAMOV reg,imm32
 
 void Cdma::writeInten(uint32_t mask, uint32_t value) {
     // Ensure the new CDMA engine is enabled if accessed
-    if (id == CDMA1 && !(core->interrupts.readCfg11MpClkcnt() & 0x70000))
+    if (id == CDMA1 && !(core.interrupts.readCfg11MpClkcnt() & 0x70000))
         return;
 
     // Write to the CDMA INTEN register
@@ -437,7 +437,7 @@ void Cdma::writeInten(uint32_t mask, uint32_t value) {
 
 void Cdma::writeIntclr(uint32_t mask, uint32_t value) {
     // Ensure the new CDMA engine is enabled if accessed
-    if (id == CDMA1 && !(core->interrupts.readCfg11MpClkcnt() & 0x70000))
+    if (id == CDMA1 && !(core.interrupts.readCfg11MpClkcnt() & 0x70000))
         return;
 
     // Clear enabled interrupt bits in the CDMA registers
@@ -448,7 +448,7 @@ void Cdma::writeIntclr(uint32_t mask, uint32_t value) {
 
 void Cdma::writeDbgcmd(uint32_t mask, uint32_t value) {
     // Ensure the new CDMA engine is enabled if accessed
-    if (id == CDMA1 && !(core->interrupts.readCfg11MpClkcnt() & 0x70000))
+    if (id == CDMA1 && !(core.interrupts.readCfg11MpClkcnt() & 0x70000))
         return;
 
     // Start executing a DMA channel or manager thread from the DBGINST registers
@@ -463,7 +463,7 @@ void Cdma::writeDbgcmd(uint32_t mask, uint32_t value) {
 
 void Cdma::writeDbginst0(uint32_t mask, uint32_t value) {
     // Ensure the new CDMA engine is enabled if accessed
-    if (id == CDMA1 && !(core->interrupts.readCfg11MpClkcnt() & 0x70000))
+    if (id == CDMA1 && !(core.interrupts.readCfg11MpClkcnt() & 0x70000))
         return;
 
     // Write to one of the CDMA DBGINST0 registers
@@ -473,7 +473,7 @@ void Cdma::writeDbginst0(uint32_t mask, uint32_t value) {
 
 void Cdma::writeDbginst1(uint32_t mask, uint32_t value) {
     // Ensure the new CDMA engine is enabled if accessed
-    if (id == CDMA1 && !(core->interrupts.readCfg11MpClkcnt() & 0x70000))
+    if (id == CDMA1 && !(core.interrupts.readCfg11MpClkcnt() & 0x70000))
         return;
 
     // Write to one of the CDMA DBGINST1 registers

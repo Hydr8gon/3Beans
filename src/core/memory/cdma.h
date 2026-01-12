@@ -32,7 +32,7 @@ enum CdmaId {
 
 class Cdma {
 public:
-    Cdma(Core *core, CdmaId id);
+    Cdma(Core &core, CdmaId id);
 
     void setDrq(uint8_t type);
     void clearDrq(uint8_t type);
@@ -62,7 +62,7 @@ public:
     void writeDbginst1(uint32_t mask, uint32_t value);
 
 private:
-    Core *core;
+    Core &core;
     CdmaId id;
     CpuId cpu;
 

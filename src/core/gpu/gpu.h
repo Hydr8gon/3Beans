@@ -197,7 +197,7 @@ struct GpuThreadTask {
 
 class Gpu {
 public:
-    Gpu(Core *core, std::function<void()> *contextFunc);
+    Gpu(Core &core, std::function<void()> *contextFunc);
     ~Gpu();
 
     void syncRender();
@@ -389,7 +389,7 @@ public:
     void writeUnkCmd(uint32_t mask, uint32_t value);
 
 private:
-    Core *core;
+    Core &core;
     std::function<void()> *contextFunc;
 
     GpuShaderInterp *gpuShader = nullptr;

@@ -80,7 +80,7 @@ void Gpu::runCommands() {
     // Execute GPU commands until the end is reached
     while (cmdAddr < cmdEnd) {
         // Decode the command header
-        uint32_t header = core->memory.read<uint32_t>(ARM11, cmdAddr + 4);
+        uint32_t header = core.memory.read<uint32_t>(ARM11, cmdAddr + 4);
         uint32_t mask = maskTable[(header >> 16) & 0xF];
         uint8_t count = (header >> 20) & 0xFF;
         curCmd = (header & 0x3FF);
@@ -93,9 +93,9 @@ void Gpu::runCommands() {
         if (thread && (curCmd & 0x3F0) != 0x10 && (curCmd < 0x238 || curCmd > 0x23D)) {
             uint32_t *data = new uint32_t[count + 2];
             data[0] = header;
-            data[1] = core->memory.read<uint32_t>(ARM11, address - 4);
+            data[1] = core.memory.read<uint32_t>(ARM11, address - 4);
             for (int i = 0; i < count; i++)
-                data[i + 2] = core->memory.read<uint32_t>(ARM11, address += 4);
+                data[i + 2] = core.memory.read<uint32_t>(ARM11, address += 4);
             mutex.lock();
             tasks.emplace(TASK_CMD, data);
             mutex.unlock();
@@ -103,13 +103,13 @@ void Gpu::runCommands() {
         }
 
         // Write command parameters to GPU registers, with optionally increasing ID
-        (this->*cmdWrites[curCmd])(mask, core->memory.read<uint32_t>(ARM11, address - 4));
+        (this->*cmdWrites[curCmd])(mask, core.memory.read<uint32_t>(ARM11, address - 4));
         if (header & BIT(31)) // Increasing
             for (int i = 0; i < count; i++)
-                (this->*cmdWrites[++curCmd & 0x3FF])(mask, core->memory.read<uint32_t>(ARM11, address += 4));
+                (this->*cmdWrites[++curCmd & 0x3FF])(mask, core.memory.read<uint32_t>(ARM11, address += 4));
         else // Fixed
             for (int i = 0; i < count; i++)
-                (this->*cmdWrites[curCmd])(mask, core->memory.read<uint32_t>(ARM11, address += 4));
+                (this->*cmdWrites[curCmd])(mask, core.memory.read<uint32_t>(ARM11, address += 4));
     }
 
     // Reset the command address to indicate being stopped
@@ -155,18 +155,18 @@ void Gpu::drawAttrIdx(uint32_t idx) {
             switch (fmt & 0x3) {
             case 0: // Signed byte
                 for (int k = 0; k <= (fmt >> 2); k++)
-                    shdInput[id][k] = int8_t(core->memory.read<uint8_t>(ARM11, base++));
+                    shdInput[id][k] = int8_t(core.memory.read<uint8_t>(ARM11, base++));
                 continue;
 
             case 1: // Unsigned byte
                 for (int k = 0; k <= (fmt >> 2); k++)
-                    shdInput[id][k] = core->memory.read<uint8_t>(ARM11, base++);
+                    shdInput[id][k] = core.memory.read<uint8_t>(ARM11, base++);
                 continue;
 
             case 2: // Signed half-word
                 base = (base + 1) & ~0x1;
                 for (int k = 0; k <= (fmt >> 2); k++) {
-                    shdInput[id][k] = int16_t(core->memory.read<uint16_t>(ARM11, base));
+                    shdInput[id][k] = int16_t(core.memory.read<uint16_t>(ARM11, base));
                     base += 2;
                 }
                 continue;
@@ -174,7 +174,7 @@ void Gpu::drawAttrIdx(uint32_t idx) {
             case 3: // Single float
                 base = (base + 2) & ~0x3;
                 for (int k = 0; k <= (fmt >> 2); k++) {
-                    uint32_t value = core->memory.read<uint32_t>(ARM11, base);
+                    uint32_t value = core.memory.read<uint32_t>(ARM11, base);
                     shdInput[id][k] = *(float*)&value;
                     base += 4;
                 }
@@ -663,10 +663,10 @@ void Gpu::writeAttrDrawElems(uint32_t mask, uint32_t value) {
     uint32_t base = (gpuAttrBase << 3) + (gpuAttrIdxList & 0xFFFFFFF);
     if (gpuAttrIdxList & BIT(31)) // 16-bit
         for (uint32_t i = 0; i < gpuAttrNumVerts; i++)
-            drawAttrIdx(core->memory.read<uint16_t>(ARM11, base + (i << 1)));
+            drawAttrIdx(core.memory.read<uint16_t>(ARM11, base + (i << 1)));
     else // 8-bit
         for (uint32_t i = 0; i < gpuAttrNumVerts; i++)
-            drawAttrIdx(core->memory.read<uint8_t>(ARM11, base + i));
+            drawAttrIdx(core.memory.read<uint8_t>(ARM11, base + i));
 }
 
 void Gpu::writeAttrFixedIdx(uint32_t mask, uint32_t value) {

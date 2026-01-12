@@ -139,71 +139,71 @@ void GpuRenderSoft::updateTexel(int i, float s, float t) {
     // Read a texel and convert it to floats based on format
     switch (texFmts[i]) {
     case TEX_RGBA8:
-        value = core->memory.read<uint32_t>(ARM11, texAddrs[i] + ofs * 4);
+        value = core.memory.read<uint32_t>(ARM11, texAddrs[i] + ofs * 4);
         texColors[i].r = float((value >> 24) & 0xFF) / 0xFF;
         texColors[i].g = float((value >> 16) & 0xFF) / 0xFF;
         texColors[i].b = float((value >> 8) & 0xFF) / 0xFF;
         texColors[i].a = float((value >> 0) & 0xFF) / 0xFF;
         break;
     case TEX_RGB8:
-        texColors[i].r = float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs * 3 + 2)) / 0xFF;
-        texColors[i].g = float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs * 3 + 1)) / 0xFF;
-        texColors[i].b = float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs * 3 + 0)) / 0xFF;
+        texColors[i].r = float(core.memory.read<uint8_t>(ARM11, texAddrs[i] + ofs * 3 + 2)) / 0xFF;
+        texColors[i].g = float(core.memory.read<uint8_t>(ARM11, texAddrs[i] + ofs * 3 + 1)) / 0xFF;
+        texColors[i].b = float(core.memory.read<uint8_t>(ARM11, texAddrs[i] + ofs * 3 + 0)) / 0xFF;
         texColors[i].a = 1.0f;
         break;
     case TEX_RGB5A1:
-        value = core->memory.read<uint16_t>(ARM11, texAddrs[i] + ofs * 2);
+        value = core.memory.read<uint16_t>(ARM11, texAddrs[i] + ofs * 2);
         texColors[i].r = float((value >> 11) & 0x1F) / 0x1F;
         texColors[i].g = float((value >> 6) & 0x1F) / 0x1F;
         texColors[i].b = float((value >> 1) & 0x1F) / 0x1F;
         texColors[i].a = (value & BIT(0)) ? 1.0f : 0.0f;
         break;
     case TEX_RGB565:
-        value = core->memory.read<uint16_t>(ARM11, texAddrs[i] + ofs * 2);
+        value = core.memory.read<uint16_t>(ARM11, texAddrs[i] + ofs * 2);
         texColors[i].r = float((value >> 11) & 0x1F) / 0x1F;
         texColors[i].g = float((value >> 5) & 0x3F) / 0x3F;
         texColors[i].b = float((value >> 0) & 0x1F) / 0x1F;
         texColors[i].a = 1.0f;
         break;
     case TEX_RGBA4:
-        value = core->memory.read<uint16_t>(ARM11, texAddrs[i] + ofs * 2);
+        value = core.memory.read<uint16_t>(ARM11, texAddrs[i] + ofs * 2);
         texColors[i].r = float((value >> 12) & 0xF) / 0xF;
         texColors[i].g = float((value >> 8) & 0xF) / 0xF;
         texColors[i].b = float((value >> 4) & 0xF) / 0xF;
         texColors[i].a = float((value >> 0) & 0xF) / 0xF;
         break;
     case TEX_LA8:
-        value = core->memory.read<uint16_t>(ARM11, texAddrs[i] + ofs * 2);
+        value = core.memory.read<uint16_t>(ARM11, texAddrs[i] + ofs * 2);
         texColors[i].r = texColors[i].g = texColors[i].b = float((value >> 8) & 0xFF) / 0xFF;
         texColors[i].a = float((value >> 0) & 0xFF) / 0xFF;
         break;
     case TEX_RG8:
-        value = core->memory.read<uint16_t>(ARM11, texAddrs[i] + ofs * 2);
+        value = core.memory.read<uint16_t>(ARM11, texAddrs[i] + ofs * 2);
         texColors[i].r = float((value >> 8) & 0xFF) / 0xFF;
         texColors[i].g = float((value >> 0) & 0xFF) / 0xFF;
         texColors[i].b = 0.0f, texColors[i].a = 1.0f;
         break;
     case TEX_L8:
         texColors[i].r = texColors[i].g = texColors[i].b =
-            float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs)) / 0xFF;
+            float(core.memory.read<uint8_t>(ARM11, texAddrs[i] + ofs)) / 0xFF;
         texColors[i].a = 1.0f;
         break;
     case TEX_A8:
         texColors[i].r = texColors[i].g = texColors[i].b = 0.0f;
-        texColors[i].a = float(core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs)) / 0xFF;
+        texColors[i].a = float(core.memory.read<uint8_t>(ARM11, texAddrs[i] + ofs)) / 0xFF;
         break;
     case TEX_LA4:
-        value = core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs);
+        value = core.memory.read<uint8_t>(ARM11, texAddrs[i] + ofs);
         texColors[i].r = texColors[i].g = texColors[i].b = float((value >> 4) & 0xF) / 0xF;
         texColors[i].a = float((value >> 0) & 0xF) / 0xF;
         break;
     case TEX_L4:
-        value = core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs / 2);
+        value = core.memory.read<uint8_t>(ARM11, texAddrs[i] + ofs / 2);
         texColors[i].r = texColors[i].g = texColors[i].b = float((value >> ((ofs & 0x1) * 4)) & 0xF) / 0xF;
         texColors[i].a = 1.0f;
         break;
     case TEX_A4:
-        value = core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs / 2);
+        value = core.memory.read<uint8_t>(ARM11, texAddrs[i] + ofs / 2);
         texColors[i].r = texColors[i].g = texColors[i].b = 0.0f;
         texColors[i].a = float((value >> ((ofs & 0x1) * 4)) & 0xF) / 0xF;
         break;
@@ -216,7 +216,7 @@ void GpuRenderSoft::updateTexel(int i, float s, float t) {
         uint8_t idx = (u & 0x3) * 4 + (v & 0x3);
         if (texFmts[i] == TEX_ETC1A4) {
             ofs = (ofs & ~0xF) + 8;
-            value = core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs - 8 + idx / 2);
+            value = core.memory.read<uint8_t>(ARM11, texAddrs[i] + ofs - 8 + idx / 2);
             texColors[i].a = float((value >> ((idx & 0x1) * 4)) & 0xF) / 0xF;
         }
         else {
@@ -225,8 +225,8 @@ void GpuRenderSoft::updateTexel(int i, float s, float t) {
         }
 
         // Decode an ETC1 texel based on the block it falls in and the base color mode
-        int32_t val1 = core->memory.read<uint32_t>(ARM11, texAddrs[i] + ofs + 0);
-        int32_t val2 = core->memory.read<uint32_t>(ARM11, texAddrs[i] + ofs + 4);
+        int32_t val1 = core.memory.read<uint32_t>(ARM11, texAddrs[i] + ofs + 0);
+        int32_t val2 = core.memory.read<uint32_t>(ARM11, texAddrs[i] + ofs + 4);
         if ((((val2 & BIT(0)) ? v : u) & 0x3) < 2) { // Block 1
             int16_t tbl = etc1Tables[(val2 >> 5) & 0x7][((val1 >> (idx + 15)) & 0x2) | ((val1 >> idx) & 0x1)];
             if (val2 & BIT(1)) { // Differential
@@ -517,7 +517,7 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
     if (stencilEnable) {
         // Read and mask the buffer and reference values
         if (depbufFmt == DEP_24S8)
-            stencil = core->memory.read<uint8_t>(ARM11, depbufAddr + ofs * 4 + 3) & stencilMasks[0];
+            stencil = core.memory.read<uint8_t>(ARM11, depbufAddr + ofs * 4 + 3) & stencilMasks[0];
         uint8_t ref = (stencilValue & stencilMasks[1]);
 
         // Compare the incoming stencil value with the reference
@@ -536,7 +536,7 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
         // If failed, perform the fail operation on the buffer and don't draw
         if (!pass) {
             if (depbufFmt == DEP_24S8)
-                core->memory.write<uint8_t>(ARM11, depbufAddr + ofs * 4 + 3, stencilOp(stencil, stencilFail));
+                core.memory.write<uint8_t>(ARM11, depbufAddr + ofs * 4 + 3, stencilOp(stencil, stencilFail));
             return;
         }
     }
@@ -545,15 +545,15 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
     uint32_t depth = 0;
     switch (depbufFmt) {
     case DEP_16:
-        depth = core->memory.read<uint16_t>(ARM11, depbufAddr + ofs * 2);
+        depth = core.memory.read<uint16_t>(ARM11, depbufAddr + ofs * 2);
         val = std::max<int>(0, p.z * -0xFFFF);
         break;
     case DEP_24:
-        depth = core->memory.read<uint32_t>(ARM11, depbufAddr + ofs * 3) & 0xFFFFFF;
+        depth = core.memory.read<uint32_t>(ARM11, depbufAddr + ofs * 3) & 0xFFFFFF;
         val = std::max<int>(0, p.z * -0xFFFFFF);
         break;
     case DEP_24S8:
-        depth = core->memory.read<uint32_t>(ARM11, depbufAddr + ofs * 4) & 0xFFFFFF;
+        depth = core.memory.read<uint32_t>(ARM11, depbufAddr + ofs * 4) & 0xFFFFFF;
         val = std::max<int>(0, p.z * -0xFFFFFF);
         break;
     }
@@ -574,11 +574,11 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
     // Perform the stencil depth pass/fail operation if enabled, and don't draw if failed
     if (!pass) {
         if (stencilEnable && depbufFmt == DEP_24S8)
-            core->memory.write<uint8_t>(ARM11, depbufAddr + ofs * 4 + 3, stencilOp(stencil, stenDepFail));
+            core.memory.write<uint8_t>(ARM11, depbufAddr + ofs * 4 + 3, stencilOp(stencil, stenDepFail));
         return;
     }
     else if (stencilEnable && depbufFmt == DEP_24S8) {
-        core->memory.write<uint8_t>(ARM11, depbufAddr + ofs * 4 + 3, stencilOp(stencil, stenDepPass));
+        core.memory.write<uint8_t>(ARM11, depbufAddr + ofs * 4 + 3, stencilOp(stencil, stenDepPass));
     }
 
     // Get source color values from the texture combiner
@@ -601,15 +601,15 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
     if (depbufMask & BIT(1)) {
         switch (depbufFmt) {
         case DEP_16:
-            core->memory.write<uint16_t>(ARM11, depbufAddr + ofs * 2, val);
+            core.memory.write<uint16_t>(ARM11, depbufAddr + ofs * 2, val);
             break;
         case DEP_24:
-            val |= core->memory.read<uint8_t>(ARM11, depbufAddr + ofs * 3 + 3) << 24;
-            core->memory.write<uint32_t>(ARM11, depbufAddr + ofs * 3, val);
+            val |= core.memory.read<uint8_t>(ARM11, depbufAddr + ofs * 3 + 3) << 24;
+            core.memory.write<uint32_t>(ARM11, depbufAddr + ofs * 3, val);
             break;
         case DEP_24S8:
-            val |= core->memory.read<uint8_t>(ARM11, depbufAddr + ofs * 4 + 3) << 24;
-            core->memory.write<uint32_t>(ARM11, depbufAddr + ofs * 4, val);
+            val |= core.memory.read<uint8_t>(ARM11, depbufAddr + ofs * 4 + 3) << 24;
+            core.memory.write<uint32_t>(ARM11, depbufAddr + ofs * 4, val);
             break;
         }
     }
@@ -617,34 +617,34 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
     // Read color values to blend with based on buffer format
     switch (colbufFmt) {
     case COL_RGBA8:
-        val = core->memory.read<uint32_t>(ARM11, colbufAddr + ofs * 4);
+        val = core.memory.read<uint32_t>(ARM11, colbufAddr + ofs * 4);
         d0.r = float((val >> 24) & 0xFF) / 0xFF;
         d0.g = float((val >> 16) & 0xFF) / 0xFF;
         d0.b = float((val >> 8) & 0xFF) / 0xFF;
         d0.a = float((val >> 0) & 0xFF) / 0xFF;
         break;
     case COL_RGB8:
-        d0.r = float(core->memory.read<uint8_t>(ARM11, colbufAddr + ofs * 3 + 2)) / 0xFF;
-        d0.g = float(core->memory.read<uint8_t>(ARM11, colbufAddr + ofs * 3 + 1)) / 0xFF;
-        d0.b = float(core->memory.read<uint8_t>(ARM11, colbufAddr + ofs * 3 + 0)) / 0xFF;
+        d0.r = float(core.memory.read<uint8_t>(ARM11, colbufAddr + ofs * 3 + 2)) / 0xFF;
+        d0.g = float(core.memory.read<uint8_t>(ARM11, colbufAddr + ofs * 3 + 1)) / 0xFF;
+        d0.b = float(core.memory.read<uint8_t>(ARM11, colbufAddr + ofs * 3 + 0)) / 0xFF;
         d0.a = 1.0f;
         break;
     case COL_RGB565:
-        val = core->memory.read<uint16_t>(ARM11, colbufAddr + ofs * 2);
+        val = core.memory.read<uint16_t>(ARM11, colbufAddr + ofs * 2);
         d0.r = float((val >> 11) & 0x1F) / 0x1F;
         d0.g = float((val >> 5) & 0x3F) / 0x3F;
         d0.b = float((val >> 0) & 0x1F) / 0x1F;
         d0.a = 1.0f;
         break;
     case COL_RGB5A1:
-        val = core->memory.read<uint16_t>(ARM11, colbufAddr + ofs * 2);
+        val = core.memory.read<uint16_t>(ARM11, colbufAddr + ofs * 2);
         d0.r = float((val >> 11) & 0x1F) / 0x1F;
         d0.g = float((val >> 6) & 0x1F) / 0x1F;
         d0.b = float((val >> 1) & 0x1F) / 0x1F;
         d0.a = (val & BIT(0)) ? 1.0f : 0.0f;
         break;
     case COL_RGBA4:
-        val = core->memory.read<uint16_t>(ARM11, colbufAddr + ofs * 2);
+        val = core.memory.read<uint16_t>(ARM11, colbufAddr + ofs * 2);
         d0.r = float((val >> 12) & 0xF) / 0xF;
         d0.g = float((val >> 8) & 0xF) / 0xF;
         d0.b = float((val >> 4) & 0xF) / 0xF;
@@ -754,20 +754,20 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
     switch (colbufFmt) {
     case COL_RGBA8:
         val = (int(r * 255) << 24) | (int(g * 255) << 16) | (int(b * 255) << 8) | int(a * 255);
-        return core->memory.write<uint32_t>(ARM11, colbufAddr + ofs * 4, val);
+        return core.memory.write<uint32_t>(ARM11, colbufAddr + ofs * 4, val);
     case COL_RGB8:
-        core->memory.write<uint8_t>(ARM11, colbufAddr + ofs * 3 + 2, r * 255);
-        core->memory.write<uint8_t>(ARM11, colbufAddr + ofs * 3 + 1, g * 255);
-        return core->memory.write<uint8_t>(ARM11, colbufAddr + ofs * 3 + 0, b * 255);
+        core.memory.write<uint8_t>(ARM11, colbufAddr + ofs * 3 + 2, r * 255);
+        core.memory.write<uint8_t>(ARM11, colbufAddr + ofs * 3 + 1, g * 255);
+        return core.memory.write<uint8_t>(ARM11, colbufAddr + ofs * 3 + 0, b * 255);
     case COL_RGB565:
         val = (int(r * 31) << 11) | (int(g * 63) << 5) | int(b * 31);
-        return core->memory.write<uint16_t>(ARM11, colbufAddr + ofs * 2, val);
+        return core.memory.write<uint16_t>(ARM11, colbufAddr + ofs * 2, val);
     case COL_RGB5A1:
         val = (int(r * 31) << 11) | (int(g * 31) << 6) | (int(b * 31) << 1) | (a > 0);
-        return core->memory.write<uint16_t>(ARM11, colbufAddr + ofs * 2, val);
+        return core.memory.write<uint16_t>(ARM11, colbufAddr + ofs * 2, val);
     case COL_RGBA4:
         val = (int(r * 15) << 12) | (int(g * 15) << 8) | (int(b * 15) << 4) | int(a * 15);
-        return core->memory.write<uint16_t>(ARM11, colbufAddr + ofs * 2, val);
+        return core.memory.write<uint16_t>(ARM11, colbufAddr + ofs * 2, val);
     }
 }
 

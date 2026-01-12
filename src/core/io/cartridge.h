@@ -37,7 +37,7 @@ enum ReplyCmd {
 
 class Cartridge {
 public:
-    Cartridge(Core *core, std::string &cartPath);
+    Cartridge(Core &core, std::string &cartPath);
     ~Cartridge();
 
     void updateSave();
@@ -76,7 +76,7 @@ public:
     void writeSpiFifoIntStat(uint32_t mask, uint32_t value);
 
 private:
-    Core *core;
+    Core &core;
     static const uint16_t ctrClocks[8];
 
     FILE *cartFile = nullptr;

@@ -25,7 +25,7 @@ class Core;
 
 class I2c {
 public:
-    I2c(Core *core): core(core) {}
+    I2c(Core &core): core(core) {}
     void mcuInterrupt(uint32_t mask);
 
     uint8_t readBusData(int i) { return i2cBusData[i]; }
@@ -35,7 +35,7 @@ public:
     void writeBusCnt(int i, uint8_t value);
 
 private:
-    Core *core;
+    Core &core;
 
     uint32_t writeCount = 0;
     uint8_t devAddr = 0;

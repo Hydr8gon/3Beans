@@ -64,7 +64,7 @@ TEMPLATE2(void TeakInterp::writeCfg, 0, uint16_t)
 TEMPLATE2(void TeakInterp::writeAr, 0, uint16_t)
 TEMPLATE4(void TeakInterp::writeArp, 0, uint16_t)
 
-TeakInterp::TeakInterp(Core *core): core(core) {
+TeakInterp::TeakInterp(Core &core): core(core) {
     // Initialize the lookup table if it hasn't been done
     if (!teakInstrs[0])
         initLookup();
@@ -73,7 +73,7 @@ TeakInterp::TeakInterp(Core *core): core(core) {
 void TeakInterp::resetCycles() {
     // Adjust CPU cycles for a global cycle reset
     if (cycles != -1)
-        cycles -= std::min(core->globalCycles, cycles);
+        cycles -= std::min(core.globalCycles, cycles);
 }
 
 void TeakInterp::stopCycles() {
@@ -110,14 +110,14 @@ int TeakInterp::runOpcode() {
     }
 
     // Look up an instruction to execute and increment the program counter
-    uint16_t opcode = core->memory.read<uint16_t>(ARM11, 0x1FF00000 + (regPc << 1));
+    uint16_t opcode = core.memory.read<uint16_t>(ARM11, 0x1FF00000 + (regPc << 1));
     incrementPc();
     return (this->*teakInstrs[opcode])(opcode);
 }
 
 uint16_t TeakInterp::readParam() {
     // Read an additional parameter word and increment the program counter
-    uint16_t param = core->memory.read<uint16_t>(ARM11, 0x1FF00000 + (regPc << 1));
+    uint16_t param = core.memory.read<uint16_t>(ARM11, 0x1FF00000 + (regPc << 1));
     incrementPc();
     return param;
 }
@@ -131,7 +131,7 @@ void TeakInterp::setPendingIrqs(uint8_t mask) {
     if (!(regMod[3] & BIT(7)) || scheduled) return;
     for (int i = 0; i < 4; i++) {
         if (!(regStt[2] & (regMod[3] >> 8) & BIT(i))) continue;
-        core->schedule(Task(TEAK_INTERRUPT0 + i), 2);
+        core.schedule(Task(TEAK_INTERRUPT0 + i), 2);
         scheduled = true;
         return;
     }
@@ -153,8 +153,8 @@ void TeakInterp::interrupt(int i) {
         cycles += (runOpcode() << 1);
 
     // Push PC to the stack and clear the IE and IPx bits
-    core->dsp.writeData(--regSp, regPc >> ((regMod[3] & BIT(14)) ? 16 : 0));
-    core->dsp.writeData(--regSp, regPc >> ((regMod[3] & BIT(14)) ? 0 : 16));
+    core.dsp.writeData(--regSp, regPc >> ((regMod[3] & BIT(14)) ? 16 : 0));
+    core.dsp.writeData(--regSp, regPc >> ((regMod[3] & BIT(14)) ? 0 : 16));
     regSt[0] &= ~BIT(1);
     regMod[3] &= ~BIT(7);
     regStt[2] &= ~BIT(i);
@@ -168,7 +168,7 @@ void TeakInterp::interrupt(int i) {
     }
 
     // For vector interrupts, jump to a vector handler with optional context save
-    uint32_t vector = core->dsp.getIcuVector();
+    uint32_t vector = core.dsp.getIcuVector();
     if (vector & BIT(31)) cntxS(0);
     regPc = vector & 0x1FFFF;
 }
@@ -568,7 +568,7 @@ void TeakInterp::writeSt0(uint16_t value) {
     regMod[0] = (regMod[0] & ~0x1) | (regSt[0] & 0x1);
     regMod[3] = (regMod[3] & ~0x380) | ((regSt[0] << 6) & 0x380);
     regA[0].e = int16_t(regSt[0]) >> 12;
-    core->dsp.updateIcuState();
+    core.dsp.updateIcuState();
 }
 
 void TeakInterp::writeSt1(uint16_t value) {
@@ -586,7 +586,7 @@ void TeakInterp::writeSt2(uint16_t value) {
     regMod[0] = (regMod[0] & ~0x380) | (regSt[2] & 0x380);
     regMod[2] = (regMod[2] & ~0x3F) | (regSt[2] & 0x3F);
     regMod[3] = (regMod[3] & ~0x400) | ((regSt[2] << 4) & 0x400);
-    core->dsp.updateIcuState();
+    core.dsp.updateIcuState();
 }
 
 void TeakInterp::writeStt0(uint16_t value) {
@@ -637,7 +637,7 @@ void TeakInterp::writeMod3(uint16_t value) {
     regSt[0] = (regSt[0] & ~0xE) | ((regMod[3] >> 6) & 0xE);
     regSt[2] = (regSt[2] & ~0x40) | ((regMod[3] >> 4) & 0x40);
     regIcr = (regIcr & ~0xF) | (regMod[3] & 0xF);
-    core->dsp.updateIcuState();
+    core.dsp.updateIcuState();
 }
 
 void TeakInterp::writeNone(uint16_t value) {

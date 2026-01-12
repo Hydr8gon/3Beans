@@ -26,7 +26,7 @@ class Core;
 
 class Y2r {
 public:
-    Y2r(Core *core, bool id): core(core), id(id) {}
+    Y2r(Core &core, bool id): core(core), id(id) {}
     void update();
 
     uint32_t readCnt() { return y2rCnt; }
@@ -60,7 +60,7 @@ public:
     void writeInputV(uint32_t mask, uint32_t value);
 
 private:
-    Core *core;
+    Core &core;
     bool id;
 
     std::deque<uint8_t> inputs[3];

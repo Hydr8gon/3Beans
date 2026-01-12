@@ -62,7 +62,7 @@ void Wifi::extInterrupt(int bit) {
 
     // Send an interrupt to the ARM11 if the new bit is unmasked
     if (~wifiIrqMask & BIT(bit))
-        core->interrupts.sendInterrupt(ARM11, 0x40);
+        core.interrupts.sendInterrupt(ARM11, 0x40);
 }
 
 void Wifi::cardInterrupt(int bit) {
@@ -71,7 +71,7 @@ void Wifi::cardInterrupt(int bit) {
 
     // Send an interrupt to the ARM11 if the new bit is unmasked
     if (~wifiCardIrqMask & BIT(bit))
-        core->interrupts.sendInterrupt(ARM11, 0x40);
+        core.interrupts.sendInterrupt(ARM11, 0x40);
 }
 
 void Wifi::f0Interrupt(int bit) {
@@ -95,19 +95,19 @@ void Wifi::f1Interrupt(int bit) {
 void Wifi::startWrite() {
     // Change to write state and trigger an initial DRQ
     cardStatus = (cardStatus & ~0x1E00) | (0x6 << 9);
-    core->cdmas[CDMA0].setDrq(0x4);
-    core->cdmas[CDMA1].setDrq(0x4);
+    core.cdmas[CDMA0].setDrq(0x4);
+    core.cdmas[CDMA1].setDrq(0x4);
 
     // Write a block right away if the FIFO is full, or trigger a FIFO empty interrupt
     if (wifiDataCtl & BIT(1)) { // 32-bit
         if ((dataFifo32.size() << 2) >= wifiData32Blklen)
-            core->schedule(WIFI_WRITE_BLOCK, 1);
+            core.schedule(WIFI_WRITE_BLOCK, 1);
         else if (dataFifo32.empty() && (wifiData32Irq & BIT(12)))
-            core->interrupts.sendInterrupt(ARM11, 0x40);
+            core.interrupts.sendInterrupt(ARM11, 0x40);
     }
     else { // 16-bit
         if ((dataFifo16.size() << 1) >= wifiData16Blklen)
-            core->schedule(WIFI_WRITE_BLOCK, 1);
+            core.schedule(WIFI_WRITE_BLOCK, 1);
         else if (dataFifo16.empty())
             extInterrupt(25);
     }
@@ -126,7 +126,7 @@ uint32_t Wifi::popFifo() {
         // Trigger a 32-bit FIFO empty interrupt if enabled and finish a block
         wifiData32Irq &= ~BIT(9); // Empty
         if (wifiData32Irq & BIT(12))
-            core->interrupts.sendInterrupt(ARM11, 0x40);
+            core.interrupts.sendInterrupt(ARM11, 0x40);
         curBlock--;
         return value;
     }
@@ -160,7 +160,7 @@ void Wifi::pushFifo(uint32_t value) {
         // Trigger a 32-bit FIFO full interrupt if enabled and finish a block
         wifiData32Irq |= BIT(8);
         if (wifiData32Irq & BIT(11))
-            core->interrupts.sendInterrupt(ARM11, 0x40);
+            core.interrupts.sendInterrupt(ARM11, 0x40);
         curBlock--;
         return;
     }
@@ -197,8 +197,8 @@ void Wifi::readBlock() {
     // Change to read or idle state based on blocks left and trigger a DRQ
     cardStatus = (cardStatus & ~0x1E00) | ((curBlock ? 0x5 : 0x4) << 9);
     curAddress += blockLen;
-    core->cdmas[CDMA0].setDrq(0x4);
-    core->cdmas[CDMA1].setDrq(0x4);
+    core.cdmas[CDMA0].setDrq(0x4);
+    core.cdmas[CDMA1].setDrq(0x4);
 }
 
 void Wifi::writeBlock() {
@@ -213,8 +213,8 @@ void Wifi::writeBlock() {
     cardStatus = (cardStatus & ~0x1E00) | ((curBlock ? 0x6 : 0x4) << 9);
     curAddress += blockLen;
     if (!curBlock) return extInterrupt(2);
-    core->cdmas[CDMA0].setDrq(0x4);
-    core->cdmas[CDMA1].setDrq(0x4);
+    core.cdmas[CDMA0].setDrq(0x4);
+    core.cdmas[CDMA1].setDrq(0x4);
 }
 
 uint8_t Wifi::ioRead(uint8_t func, uint32_t address) {
@@ -619,7 +619,7 @@ void Wifi::ioRwExtended() {
     if (wifiCmdParam & BIT(31)) // Write
         startWrite();
     else // Read
-        core->schedule(WIFI_READ_BLOCK, 1);
+        core.schedule(WIFI_READ_BLOCK, 1);
     pushResponse(0);
 }
 
@@ -632,9 +632,9 @@ uint16_t Wifi::readData16Fifo() {
 
     // Trigger a 16-bit FIFO empty interrupt and read another block or finish with a data end interrupt
     extInterrupt(25);
-    core->cdmas[CDMA0].clearDrq(0x4);
-    core->cdmas[CDMA1].clearDrq(0x4);
-    (cardStatus & 0x1E00) == (0x5 << 9) ? core->schedule(WIFI_READ_BLOCK, 1) : extInterrupt(2);
+    core.cdmas[CDMA0].clearDrq(0x4);
+    core.cdmas[CDMA1].clearDrq(0x4);
+    (cardStatus & 0x1E00) == (0x5 << 9) ? core.schedule(WIFI_READ_BLOCK, 1) : extInterrupt(2);
     return wifiData16Fifo;
 }
 
@@ -649,12 +649,12 @@ uint32_t Wifi::readData32Fifo() {
     // Trigger a 32-bit FIFO empty interrupt if enabled
     wifiData32Irq &= ~BIT(9);
     if (wifiData32Irq & BIT(12))
-        core->interrupts.sendInterrupt(ARM11, 0x40);
-    core->cdmas[CDMA0].clearDrq(0x4);
-    core->cdmas[CDMA1].clearDrq(0x4);
+        core.interrupts.sendInterrupt(ARM11, 0x40);
+    core.cdmas[CDMA0].clearDrq(0x4);
+    core.cdmas[CDMA1].clearDrq(0x4);
 
     // Read another block or finish with a data end interrupt
-    (cardStatus & 0x1E00) == (0x5 << 9) ? core->schedule(WIFI_READ_BLOCK, 1) : extInterrupt(2);
+    (cardStatus & 0x1E00) == (0x5 << 9) ? core.schedule(WIFI_READ_BLOCK, 1) : extInterrupt(2);
     return wifiData32Fifo;
 }
 
@@ -695,7 +695,7 @@ void Wifi::writeIrqMask(uint32_t mask, uint32_t value) {
 
     // Trigger an ARM11 interrupt if a requested bit was newly unmasked
     if (wifiIrqStatus & old & ~wifiIrqMask)
-        core->interrupts.sendInterrupt(ARM11, 0x40);
+        core.interrupts.sendInterrupt(ARM11, 0x40);
 }
 
 void Wifi::writeData16Blklen(uint16_t mask, uint16_t value) {
@@ -709,14 +709,14 @@ void Wifi::writeData16Fifo(uint16_t mask, uint16_t value) {
     uint32_t size = (dataFifo16.size() << 1);
     if (size >= 0x200) return;
     dataFifo16.push(value & mask);
-    core->cdmas[CDMA0].clearDrq(0x4);
-    core->cdmas[CDMA1].clearDrq(0x4);
+    core.cdmas[CDMA0].clearDrq(0x4);
+    core.cdmas[CDMA1].clearDrq(0x4);
     if (size + 2 < wifiData16Blklen) return;
 
     // Trigger a 16-bit FIFO full interrupt and write a block if in write mode
     extInterrupt(24);
     if ((cardStatus & 0x1E00) == (0x6 << 9))
-        core->schedule(WIFI_WRITE_BLOCK, 1);
+        core.schedule(WIFI_WRITE_BLOCK, 1);
 }
 
 void Wifi::writeCardIrqStat(uint16_t mask, uint16_t value) {
@@ -733,7 +733,7 @@ void Wifi::writeCardIrqMask(uint16_t mask, uint16_t value) {
 
     // Trigger an ARM11 interrupt if a requested bit was newly unmasked
     if (wifiCardIrqStat & old & ~wifiCardIrqMask)
-        core->interrupts.sendInterrupt(ARM11, 0x40);
+        core.interrupts.sendInterrupt(ARM11, 0x40);
 }
 
 void Wifi::writeDataCtl(uint16_t mask, uint16_t value) {
@@ -766,16 +766,16 @@ void Wifi::writeData32Fifo(uint32_t mask, uint32_t value) {
     if (size >= 0x200) return;
     dataFifo32.push(value & mask);
     wifiData32Irq |= BIT(9); // Not empty
-    core->cdmas[CDMA0].clearDrq(0x4);
-    core->cdmas[CDMA1].clearDrq(0x4);
+    core.cdmas[CDMA0].clearDrq(0x4);
+    core.cdmas[CDMA1].clearDrq(0x4);
     if (size + 4 < wifiData32Blklen) return;
 
     // Trigger a 32-bit FIFO full interrupt if enabled
     wifiData32Irq |= BIT(8);
     if (wifiData32Irq & BIT(11))
-        core->interrupts.sendInterrupt(ARM11, 0x40);
+        core.interrupts.sendInterrupt(ARM11, 0x40);
 
     // Write a block if in write mode
     if ((cardStatus & 0x1E00) == (0x6 << 9))
-        core->schedule(WIFI_WRITE_BLOCK, 1);
+        core.schedule(WIFI_WRITE_BLOCK, 1);
 }

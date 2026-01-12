@@ -26,7 +26,7 @@ class Core;
 
 class Rsa {
 public:
-    Rsa(Core *core): core(core) {}
+    Rsa(Core &core): core(core) {}
 
     uint32_t readCnt() { return rsaCnt; }
     uint32_t readSlotcnt(int i) { return rsaSlotcnt[i]; }
@@ -41,7 +41,7 @@ public:
     void writeExpfifo(uint32_t mask, uint32_t value);
 
 private:
-    Core *core;
+    Core &core;
     std::deque<uint32_t> expFifos[4];
 
     uint32_t rsaCnt = 0;

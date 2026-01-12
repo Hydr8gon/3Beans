@@ -25,7 +25,7 @@ class Core;
 
 class Input {
 public:
-    Input(Core *core): core(core) {}
+    Input(Core &core): core(core) {}
 
     void pressKey(int key);
     void releaseKey(int key);
@@ -53,7 +53,7 @@ public:
     void writeSpiFifoIntStat(uint32_t mask, uint32_t value);
 
 private:
-    Core *core;
+    Core &core;
     uint8_t homeState = 0;
 
     uint16_t stickLX = 0x7FF;

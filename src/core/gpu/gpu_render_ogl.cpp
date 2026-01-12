@@ -149,7 +149,7 @@ const char *GpuRenderOgl::fragCode = R"(
     }
 )";
 
-GpuRenderOgl::GpuRenderOgl(Core *core): core(core) {
+GpuRenderOgl::GpuRenderOgl(Core &core): core(core) {
     // Compile the vertex and fragment shaders
     GLint vtxShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vtxShader, 1, &vtxCode, nullptr);
@@ -283,7 +283,7 @@ template <bool alpha> uint32_t GpuRenderOgl::etc1Texel(int i, int x, int y) {
     // Adjust the offset for 4x4 ETC1 tiles and read alpha if provided
     if (alpha) {
         ofs = (ofs & ~0xF) + 8;
-        value = core->memory.read<uint8_t>(ARM11, texAddrs[i] + ofs - 8 + idx / 2);
+        value = core.memory.read<uint8_t>(ARM11, texAddrs[i] + ofs - 8 + idx / 2);
         a = ((value >> ((idx & 0x1) * 4)) & 0xF) * 0xFF / 0xF;
     }
     else {
@@ -292,8 +292,8 @@ template <bool alpha> uint32_t GpuRenderOgl::etc1Texel(int i, int x, int y) {
     }
 
     // Decode an ETC1 texel based on the block it falls in and the base color mode
-    int32_t val1 = core->memory.read<uint32_t>(ARM11, texAddrs[i] + ofs + 0);
-    int32_t val2 = core->memory.read<uint32_t>(ARM11, texAddrs[i] + ofs + 4);
+    int32_t val1 = core.memory.read<uint32_t>(ARM11, texAddrs[i] + ofs + 0);
+    int32_t val2 = core.memory.read<uint32_t>(ARM11, texAddrs[i] + ofs + 4);
     if ((((val2 & BIT(0)) ? y : x) & 0x3) < 2) { // Block 1
         int16_t tbl = etc1Tables[(val2 >> 5) & 0x7][((val1 >> (idx + 15)) & 0x2) | ((val1 >> idx) & 0x1)];
         if (val2 & BIT(1)) { // Differential
@@ -359,7 +359,7 @@ void GpuRenderOgl::flushBuffers() {
         glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, data);
         for (int y = 0; y < h; y++)
             for (int x = 0; x < w; x++)
-                core->memory.write<uint32_t>(ARM11, colbufAddr + getSwizzle(x, y, w) * 4, data[y * w + x]);
+                core.memory.write<uint32_t>(ARM11, colbufAddr + getSwizzle(x, y, w) * 4, data[y * w + x]);
         break;
     case COL_RGB8:
         data = new uint32_t[w * h];
@@ -367,9 +367,9 @@ void GpuRenderOgl::flushBuffers() {
         for (int y = 0; y < h; y++) {
             for (int x = 0; x < w; x++) {
                 uint32_t src = data[y * w + x], dst = colbufAddr + getSwizzle(x, y, w) * 3;
-                core->memory.write<uint8_t>(ARM11, dst + 0, src >> 8);
-                core->memory.write<uint8_t>(ARM11, dst + 1, src >> 16);
-                core->memory.write<uint8_t>(ARM11, dst + 2, src >> 24);
+                core.memory.write<uint8_t>(ARM11, dst + 0, src >> 8);
+                core.memory.write<uint8_t>(ARM11, dst + 1, src >> 16);
+                core.memory.write<uint8_t>(ARM11, dst + 2, src >> 24);
             }
         }
         break;
@@ -378,21 +378,21 @@ void GpuRenderOgl::flushBuffers() {
         glReadPixels(0, 0, w, h, GL_RGB, GL_UNSIGNED_SHORT_5_6_5, data);
         for (int y = 0; y < h; y++)
             for (int x = 0; x < w; x += 2)
-                core->memory.write<uint32_t>(ARM11, colbufAddr + getSwizzle(x, y, w) * 2, data[(y * w + x) / 2]);
+                core.memory.write<uint32_t>(ARM11, colbufAddr + getSwizzle(x, y, w) * 2, data[(y * w + x) / 2]);
         break;
     case COL_RGB5A1:
         data = new uint32_t[w * h / 2];
         glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_SHORT_5_5_5_1, data);
         for (int y = 0; y < h; y++)
             for (int x = 0; x < w; x += 2)
-                core->memory.write<uint32_t>(ARM11, colbufAddr + getSwizzle(x, y, w) * 2, data[(y * w + x) / 2]);
+                core.memory.write<uint32_t>(ARM11, colbufAddr + getSwizzle(x, y, w) * 2, data[(y * w + x) / 2]);
         break;
     case COL_RGBA4:
         data = new uint32_t[w * h / 2];
         glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, data);
         for (int y = 0; y < h; y++)
             for (int x = 0; x < w; x += 2)
-                core->memory.write<uint32_t>(ARM11, colbufAddr + getSwizzle(x, y, w) * 2, data[(y * w + x) / 2]);
+                core.memory.write<uint32_t>(ARM11, colbufAddr + getSwizzle(x, y, w) * 2, data[(y * w + x) / 2]);
         break;
     }
 
@@ -411,35 +411,35 @@ void GpuRenderOgl::updateBuffers() {
         data = new uint32_t[w * h];
         for (int y = 0; y < h; y++)
             for (int x = 0; x < w; x++)
-                data[y * w + x] = core->memory.read<uint32_t>(ARM11, colbufAddr + getSwizzle(x, y, w) * 4);
+                data[y * w + x] = core.memory.read<uint32_t>(ARM11, colbufAddr + getSwizzle(x, y, w) * 4);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bufWidth, bufHeight, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, data);
         break;
     case COL_RGB8:
         data = new uint32_t[w * h];
         for (int y = 0; y < h; y++)
             for (int x = 0; x < w; x++)
-                data[y * w + x] = core->memory.read<uint32_t>(ARM11, colbufAddr + getSwizzle(x, y, w) * 3 - 1) | 0xFF;
+                data[y * w + x] = core.memory.read<uint32_t>(ARM11, colbufAddr + getSwizzle(x, y, w) * 3 - 1) | 0xFF;
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bufWidth, bufHeight, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, data);
         break;
     case COL_RGB565:
         data = new uint32_t[w * h / 2];
         for (int y = 0; y < h; y++)
             for (int x = 0; x < w; x += 2)
-                data[(y * w + x) / 2] = core->memory.read<uint32_t>(ARM11, colbufAddr + getSwizzle(x, y, w) * 2);
+                data[(y * w + x) / 2] = core.memory.read<uint32_t>(ARM11, colbufAddr + getSwizzle(x, y, w) * 2);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bufWidth, bufHeight, 0, GL_RGB, GL_UNSIGNED_SHORT_5_6_5, data);
         break;
     case COL_RGB5A1:
         data = new uint32_t[w * h / 2];
         for (int y = 0; y < h; y++)
             for (int x = 0; x < w; x += 2)
-                data[(y * w + x) / 2] = core->memory.read<uint32_t>(ARM11, colbufAddr + getSwizzle(x, y, w) * 2);
+                data[(y * w + x) / 2] = core.memory.read<uint32_t>(ARM11, colbufAddr + getSwizzle(x, y, w) * 2);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bufWidth, bufHeight, 0, GL_RGBA, GL_UNSIGNED_SHORT_5_5_5_1, data);
         break;
     case COL_RGBA4:
         data = new uint32_t[w * h / 2];
         for (int y = 0; y < h; y++)
             for (int x = 0; x < w; x += 2)
-                data[(y * w + x) / 2] = core->memory.read<uint32_t>(ARM11, colbufAddr + getSwizzle(x, y, w) * 2);
+                data[(y * w + x) / 2] = core.memory.read<uint32_t>(ARM11, colbufAddr + getSwizzle(x, y, w) * 2);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bufWidth, bufHeight, 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, data);
         break;
     }
@@ -485,7 +485,7 @@ void GpuRenderOgl::updateTextures() {
 
             // Verify memory tags and invalidate the cache if they changed
             for (int j = 0; j < c->size; j++) {
-                uint32_t tag = core->memory.memMap11[(c->addr >> 12) + j].tag;
+                uint32_t tag = core.memory.memMap11[(c->addr >> 12) + j].tag;
                 if (c->tags[j] == tag) continue;
                 c->tags[j] = tag;
                 cache = nullptr;
@@ -498,7 +498,7 @@ void GpuRenderOgl::updateTextures() {
             tex.size = (tex.width * tex.height * nybs[tex.fmt] / 2 + 0xFFF) >> 12;
             tex.tags = new uint32_t[tex.size];
             for (int j = 0; j < tex.size; j++)
-                tex.tags[j] = core->memory.memMap11[(tex.addr >> 12) + j].tag;
+                tex.tags[j] = core.memory.memMap11[(tex.addr >> 12) + j].tag;
 
             // Bind the new texture and add it to the cache
             glGenTextures(1, &tex.tex);
@@ -556,7 +556,7 @@ void GpuRenderOgl::updateTextures() {
             dat32 = new uint32_t[w * h];
             for (int y = 0; y < h; y++, y1--)
                 for (int x = 0; x < w; x++)
-                    dat32[y1 * w + x] = core->memory.read<uint32_t>(ARM11, texAddrs[i] + getSwizzle(x, y, w) * 4);
+                    dat32[y1 * w + x] = core.memory.read<uint32_t>(ARM11, texAddrs[i] + getSwizzle(x, y, w) * 4);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, dat32);
             delete[] dat32;
             continue;
@@ -564,7 +564,7 @@ void GpuRenderOgl::updateTextures() {
             dat32 = new uint32_t[w * h];
             for (int y = 0; y < h; y++, y1--)
                 for (int x = 0; x < w; x++)
-                    dat32[y1 * w + x] = core->memory.read<uint32_t>(ARM11, texAddrs[i] + getSwizzle(x, y, w) * 3 - 1);
+                    dat32[y1 * w + x] = core.memory.read<uint32_t>(ARM11, texAddrs[i] + getSwizzle(x, y, w) * 3 - 1);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, dat32);
             delete[] dat32;
             continue;
@@ -572,7 +572,7 @@ void GpuRenderOgl::updateTextures() {
             dat32 = new uint32_t[w * h / 2];
             for (int y = 0; y < h; y++, y1--)
                 for (int x = 0; x < w; x += 2)
-                    dat32[(y1 * w + x) / 2] = core->memory.read<uint32_t>(ARM11, texAddrs[i] + getSwizzle(x, y, w) * 2);
+                    dat32[(y1 * w + x) / 2] = core.memory.read<uint32_t>(ARM11, texAddrs[i] + getSwizzle(x, y, w) * 2);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_SHORT_5_5_5_1, dat32);
             delete[] dat32;
             continue;
@@ -580,7 +580,7 @@ void GpuRenderOgl::updateTextures() {
             dat32 = new uint32_t[w * h / 2];
             for (int y = 0; y < h; y++, y1--)
                 for (int x = 0; x < w; x += 2)
-                    dat32[(y1 * w + x) / 2] = core->memory.read<uint32_t>(ARM11, texAddrs[i] + getSwizzle(x, y, w) * 2);
+                    dat32[(y1 * w + x) / 2] = core.memory.read<uint32_t>(ARM11, texAddrs[i] + getSwizzle(x, y, w) * 2);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_SHORT_5_6_5, dat32);
             delete[] dat32;
             continue;
@@ -588,7 +588,7 @@ void GpuRenderOgl::updateTextures() {
             dat32 = new uint32_t[w * h / 2];
             for (int y = 0; y < h; y++, y1--)
                 for (int x = 0; x < w; x += 2)
-                    dat32[(y1 * w + x) / 2] = core->memory.read<uint32_t>(ARM11, texAddrs[i] + getSwizzle(x, y, w) * 2);
+                    dat32[(y1 * w + x) / 2] = core.memory.read<uint32_t>(ARM11, texAddrs[i] + getSwizzle(x, y, w) * 2);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, dat32);
             delete[] dat32;
             continue;
@@ -596,7 +596,7 @@ void GpuRenderOgl::updateTextures() {
             dat32 = new uint32_t[w * h / 2];
             for (int y = 0; y < h; y++, y1--)
                 for (int x = 0; x < w; x += 2)
-                    dat32[(y1 * w + x) / 2] = core->memory.read<uint32_t>(ARM11, texAddrs[i] + getSwizzle(x, y, w) * 2);
+                    dat32[(y1 * w + x) / 2] = core.memory.read<uint32_t>(ARM11, texAddrs[i] + getSwizzle(x, y, w) * 2);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RG, w, h, 0, GL_RG, GL_UNSIGNED_BYTE, dat32);
             delete[] dat32;
             continue;
@@ -604,7 +604,7 @@ void GpuRenderOgl::updateTextures() {
             dat16 = new uint16_t[w * h / 2];
             for (int y = 0; y < h; y++, y1--)
                 for (int x = 0; x < w; x += 2)
-                    dat16[(y1 * w + x) / 2] = core->memory.read<uint16_t>(ARM11, texAddrs[i] + getSwizzle(x, y, w));
+                    dat16[(y1 * w + x) / 2] = core.memory.read<uint16_t>(ARM11, texAddrs[i] + getSwizzle(x, y, w));
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w, h, 0, GL_RED, GL_UNSIGNED_BYTE, dat16);
             delete[] dat16;
             continue;
@@ -612,7 +612,7 @@ void GpuRenderOgl::updateTextures() {
             dat16 = new uint16_t[w * h];
             for (int y = 0; y < h; y++, y1--) {
                 for (int x = 0; x < w; x++) {
-                    uint8_t val = core->memory.read<uint8_t>(ARM11, texAddrs[i] + getSwizzle(x, y, w));
+                    uint8_t val = core.memory.read<uint8_t>(ARM11, texAddrs[i] + getSwizzle(x, y, w));
                     dat16[y1 * w + x] = (((val >> 4) * 0xFF / 0xF) << 8) | ((val & 0xF) * 0xFF / 0xF);
                 }
             }
@@ -623,7 +623,7 @@ void GpuRenderOgl::updateTextures() {
             dat16 = new uint16_t[w * h / 2];
             for (int y = 0; y < h; y++, y1--) {
                 for (int x = 0; x < w; x += 2) {
-                    uint8_t val = core->memory.read<uint8_t>(ARM11, texAddrs[i] + getSwizzle(x, y, w) / 2);
+                    uint8_t val = core.memory.read<uint8_t>(ARM11, texAddrs[i] + getSwizzle(x, y, w) / 2);
                     dat16[(y1 * w + x) / 2] = (((val >> 4) * 0xFF / 0xF) << 8) | ((val & 0xF) * 0xFF / 0xF);
                 }
             }

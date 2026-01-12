@@ -43,7 +43,7 @@ struct CombOpcode {
 
 class GpuRenderSoft: public GpuRender {
 public:
-    GpuRenderSoft(Core *core): core(core) {}
+    GpuRenderSoft(Core &core): core(core) {}
 
     void submitVertex(SoftVertex &vertex);
     void flushBuffers() {}
@@ -87,7 +87,7 @@ public:
     void setDepthFunc(TestFunc func) { depthFunc = func; }
 
 private:
-    Core *core;
+    Core &core;
 
     static const uint8_t paramCounts[MODE_UNK + 1];
     static SoftColor zeroColor, oneColor;

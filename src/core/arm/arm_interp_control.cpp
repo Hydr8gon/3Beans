@@ -192,26 +192,26 @@ int ArmInterp::srs(uint32_t opcode) { // SRS[DA/IA/DB/IB] sp!,#mode
     // Store return state based on the addressing mode
     switch ((opcode >> 23) & 0x3) {
     case 0x0: // DA
-        core->cp15.write<uint32_t>(id, *op0 - 4, *registers[14]);
-        core->cp15.write<uint32_t>(id, *op0 - 0, spsr ? *spsr : 0);
+        core.cp15.write<uint32_t>(id, *op0 - 4, *registers[14]);
+        core.cp15.write<uint32_t>(id, *op0 - 0, spsr ? *spsr : 0);
         if (opcode & BIT(21)) *op0 -= 8; // Writeback
         return 1;
 
     case 0x1: // IA
-        core->cp15.write<uint32_t>(id, *op0 + 0, *registers[14]);
-        core->cp15.write<uint32_t>(id, *op0 + 4, spsr ? *spsr : 0);
+        core.cp15.write<uint32_t>(id, *op0 + 0, *registers[14]);
+        core.cp15.write<uint32_t>(id, *op0 + 4, spsr ? *spsr : 0);
         if (opcode & BIT(21)) *op0 += 8; // Writeback
         return 1;
 
     case 0x2: // DB
-        core->cp15.write<uint32_t>(id, *op0 - 8, *registers[14]);
-        core->cp15.write<uint32_t>(id, *op0 - 4, spsr ? *spsr : 0);
+        core.cp15.write<uint32_t>(id, *op0 - 8, *registers[14]);
+        core.cp15.write<uint32_t>(id, *op0 - 4, spsr ? *spsr : 0);
         if (opcode & BIT(21)) *op0 -= 8; // Writeback
         return 1;
 
     case 0x3: // IB
-        core->cp15.write<uint32_t>(id, *op0 + 4, *registers[14]);
-        core->cp15.write<uint32_t>(id, *op0 + 8, spsr ? *spsr : 0);
+        core.cp15.write<uint32_t>(id, *op0 + 4, *registers[14]);
+        core.cp15.write<uint32_t>(id, *op0 + 8, spsr ? *spsr : 0);
         if (opcode & BIT(21)) *op0 += 8; // Writeback
         return 1;
     }
@@ -222,26 +222,26 @@ int ArmInterp::rfe(uint32_t opcode) { // RFE[DA/IA/DB/IB] Rn!
     uint32_t *op0 = registers[(opcode >> 16) & 0xF];
     switch ((opcode >> 23) & 0x3) {
     case 0x0: // DA
-        *registers[15] = core->cp15.read<uint32_t>(id, *op0 - 4);
-        setCpsr(core->cp15.read<uint32_t>(id, *op0 - 0));
+        *registers[15] = core.cp15.read<uint32_t>(id, *op0 - 4);
+        setCpsr(core.cp15.read<uint32_t>(id, *op0 - 0));
         if (opcode & BIT(21)) *op0 -= 8; // Writeback
         break;
 
     case 0x1: // IA
-        *registers[15] = core->cp15.read<uint32_t>(id, *op0 + 0);
-        setCpsr(core->cp15.read<uint32_t>(id, *op0 + 4));
+        *registers[15] = core.cp15.read<uint32_t>(id, *op0 + 0);
+        setCpsr(core.cp15.read<uint32_t>(id, *op0 + 4));
         if (opcode & BIT(21)) *op0 += 8; // Writeback
         break;
 
     case 0x2: // DB
-        *registers[15] = core->cp15.read<uint32_t>(id, *op0 - 8);
-        setCpsr(core->cp15.read<uint32_t>(id, *op0 - 4));
+        *registers[15] = core.cp15.read<uint32_t>(id, *op0 - 8);
+        setCpsr(core.cp15.read<uint32_t>(id, *op0 - 4));
         if (opcode & BIT(21)) *op0 -= 8; // Writeback
         break;
 
     case 0x3: // IB
-        *registers[15] = core->cp15.read<uint32_t>(id, *op0 + 4);
-        setCpsr(core->cp15.read<uint32_t>(id, *op0 + 8));
+        *registers[15] = core.cp15.read<uint32_t>(id, *op0 + 4);
+        setCpsr(core.cp15.read<uint32_t>(id, *op0 + 8));
         if (opcode & BIT(21)) *op0 += 8; // Writeback
         break;
     }
@@ -253,14 +253,14 @@ int ArmInterp::rfe(uint32_t opcode) { // RFE[DA/IA/DB/IB] Rn!
 
 int ArmInterp::wfi(uint32_t opcode) {
     // Halt the CPU until an interrupt occurs
-    core->interrupts.halt(id);
+    core.interrupts.halt(id);
     return 1;
 }
 
 int ArmInterp::wfe(uint32_t opcode) {
     // Halt the CPU until the event flag is set or an interrupt occurs
     if (!event)
-        core->interrupts.halt(id, 1);
+        core.interrupts.halt(id, 1);
     event = false;
     return 1;
 }
@@ -270,10 +270,10 @@ int ArmInterp::sev(uint32_t opcode) {
     uint8_t cores = ~BIT(id) & 0xF;
     for (int i = 0; cores >> i; i++) {
         if (~cores & BIT(i)) continue;
-        if (core->arms[i].halted & BIT(1))
-            core->arms[i].unhalt(BIT(1));
+        if (core.arms[i].halted & BIT(1))
+            core.arms[i].unhalt(BIT(1));
         else
-            core->arms[i].event = true;
+            core.arms[i].event = true;
     }
     return 1;
 }

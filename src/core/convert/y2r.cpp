@@ -75,7 +75,7 @@ void Y2r::outputPixel(uint32_t ofs, uint8_t y, uint8_t u, uint8_t v) {
 void Y2r::triggerFifo() {
     // Schedule a FIFO update if one hasn't been already
     if (scheduled) return;
-    core->schedule(Task(Y2R0_UPDATE + id), 1);
+    core.schedule(Task(Y2R0_UPDATE + id), 1);
     scheduled = true;
 }
 
@@ -143,13 +143,13 @@ finish:
         if ((y2rCnt & BIT(31)) && conds[i]) {
             y2rCnt |= BIT(24 + i);
             if (y2rCnt & BIT(22)) {
-                core->cdmas[CDMA0].setDrq((id ? 0x12 : 0x6) + i);
-                core->cdmas[CDMA1].setDrq((id ? 0x12 : 0x6) + i);
+                core.cdmas[CDMA0].setDrq((id ? 0x12 : 0x6) + i);
+                core.cdmas[CDMA1].setDrq((id ? 0x12 : 0x6) + i);
             }
         }
         else {
-            core->cdmas[CDMA0].clearDrq((id ? 0x12 : 0x6) + i);
-            core->cdmas[CDMA1].clearDrq((id ? 0x12 : 0x6) + i);
+            core.cdmas[CDMA0].clearDrq((id ? 0x12 : 0x6) + i);
+            core.cdmas[CDMA1].clearDrq((id ? 0x12 : 0x6) + i);
         }
     }
 
@@ -157,25 +157,25 @@ finish:
     if (!output.empty()) {
         y2rCnt |= BIT(28);
         if (y2rCnt & BIT(23)) {
-            core->cdmas[CDMA0].setDrq(id ? 0x16 : 0xA);
-            core->cdmas[CDMA1].setDrq(id ? 0x16 : 0xA);
+            core.cdmas[CDMA0].setDrq(id ? 0x16 : 0xA);
+            core.cdmas[CDMA1].setDrq(id ? 0x16 : 0xA);
         }
     }
     else {
-        core->cdmas[CDMA0].clearDrq(id ? 0x16 : 0xA);
-        core->cdmas[CDMA1].clearDrq(id ? 0x16 : 0xA);
+        core.cdmas[CDMA0].clearDrq(id ? 0x16 : 0xA);
+        core.cdmas[CDMA1].clearDrq(id ? 0x16 : 0xA);
     }
 
     // Trigger an ARM11 general interrupt if enabled and any condition was set
     if ((y2rCnt & BIT(29)) && (y2rCnt & 0x1F000000))
-        core->interrupts.sendInterrupt(ARM11, id ? 0x4E : 0x4B);
+        core.interrupts.sendInterrupt(ARM11, id ? 0x4E : 0x4B);
     scheduled = false;
 }
 
 uint32_t Y2r::readOutputRgba() {
     // Trigger an ARM11 transfer end interrupt if enabled and about to run out
     if ((y2rCnt & 0xC0000000) == BIT(30) && !output.empty() && output.size() <= 4)
-        core->interrupts.sendInterrupt(ARM11, id ? 0x4E : 0x4B);
+        core.interrupts.sendInterrupt(ARM11, id ? 0x4E : 0x4B);
 
     // Read up to 4 bytes from the RGBA output FIFO
     // TODO: figure out FIFO size/limits
@@ -188,7 +188,7 @@ uint32_t Y2r::readOutputRgba() {
 
 void Y2r::writeCnt(uint32_t mask, uint32_t value) {
     // Write to the Y2R control register
-    if (id && !core->n3dsMode) return; // N3DS-exclusive
+    if (id && !core.n3dsMode) return; // N3DS-exclusive
     uint32_t mask2 = (mask & 0xE0C31F07), old = y2rCnt;
     y2rCnt = (y2rCnt & ~mask2) | (value & mask2);
 
@@ -209,74 +209,74 @@ void Y2r::writeCnt(uint32_t mask, uint32_t value) {
 
 void Y2r::writeWidth(uint16_t mask, uint16_t value) {
     // Write to the Y2R input width register
-    if (id && !core->n3dsMode) return; // N3DS-exclusive
+    if (id && !core.n3dsMode) return; // N3DS-exclusive
     mask &= 0x3F8;
     y2rWidth = (y2rWidth & ~mask) | (value & mask);
 }
 
 void Y2r::writeHeight(uint16_t mask, uint16_t value) {
     // Write to the Y2R input height register
-    if (id && !core->n3dsMode) return; // N3DS-exclusive
+    if (id && !core.n3dsMode) return; // N3DS-exclusive
     mask &= 0x3FF;
     y2rHeight = (y2rHeight & ~mask) | (value & mask);
 }
 
 void Y2r::writeMultiplyY(uint16_t mask, uint16_t value) {
     // Write to the Y2R Y-to-RGB multiplier
-    if (id && !core->n3dsMode) return; // N3DS-exclusive
+    if (id && !core.n3dsMode) return; // N3DS-exclusive
     mask &= 0x3FF;
     y2rMultiplyY = (y2rMultiplyY & ~mask) | (value & mask);
 }
 
 void Y2r::writeMultiplyVr(uint16_t mask, uint16_t value) {
     // Write to the Y2R V-to-R multiplier
-    if (id && !core->n3dsMode) return; // N3DS-exclusive
+    if (id && !core.n3dsMode) return; // N3DS-exclusive
     mask &= 0x3FF;
     y2rMultiplyVr = (y2rMultiplyVr & ~mask) | (value & mask);
 }
 
 void Y2r::writeMultiplyVg(uint16_t mask, uint16_t value) {
     // Write to the Y2R V-to-G multiplier
-    if (id && !core->n3dsMode) return; // N3DS-exclusive
+    if (id && !core.n3dsMode) return; // N3DS-exclusive
     mask &= 0x3FF;
     y2rMultiplyVg = (y2rMultiplyVg & ~mask) | (value & mask);
 }
 
 void Y2r::writeMultiplyUg(uint16_t mask, uint16_t value) {
     // Write to the Y2R U-to-G multiplier
-    if (id && !core->n3dsMode) return; // N3DS-exclusive
+    if (id && !core.n3dsMode) return; // N3DS-exclusive
     mask &= 0x3FF;
     y2rMultiplyUg = (y2rMultiplyUg & ~mask) | (value & mask);
 }
 
 void Y2r::writeMultiplyUb(uint16_t mask, uint16_t value) {
     // Write to the Y2R U-to-B multiplier
-    if (id && !core->n3dsMode) return; // N3DS-exclusive
+    if (id && !core.n3dsMode) return; // N3DS-exclusive
     mask &= 0x3FF;
     y2rMultiplyUb = (y2rMultiplyUb & ~mask) | (value & mask);
 }
 
 void Y2r::writeOffsetR(uint16_t mask, uint16_t value) {
     // Write to the Y2R R-offset register
-    if (id && !core->n3dsMode) return; // N3DS-exclusive
+    if (id && !core.n3dsMode) return; // N3DS-exclusive
     y2rOffsetR = (y2rOffsetR & ~mask) | (value & mask);
 }
 
 void Y2r::writeOffsetG(uint16_t mask, uint16_t value) {
     // Write to the Y2R G-offset register
-    if (id && !core->n3dsMode) return; // N3DS-exclusive
+    if (id && !core.n3dsMode) return; // N3DS-exclusive
     y2rOffsetG = (y2rOffsetG & ~mask) | (value & mask);
 }
 
 void Y2r::writeOffsetB(uint16_t mask, uint16_t value) {
     // Write to the Y2R B-offset register
-    if (id && !core->n3dsMode) return; // N3DS-exclusive
+    if (id && !core.n3dsMode) return; // N3DS-exclusive
     y2rOffsetB = (y2rOffsetB & ~mask) | (value & mask);
 }
 
 void Y2r::writeAlpha(uint16_t mask, uint16_t value) {
     // Write to the Y2R alpha register
-    if (id && !core->n3dsMode) return; // N3DS-exclusive
+    if (id && !core.n3dsMode) return; // N3DS-exclusive
     mask &= 0xFF;
     y2rAlpha = (y2rAlpha & ~mask) | (value & mask);
 }
@@ -284,7 +284,7 @@ void Y2r::writeAlpha(uint16_t mask, uint16_t value) {
 void Y2r::writeInputY(uint32_t mask, uint32_t value) {
     // Write up to 4 bytes to the Y input FIFO
     // TODO: figure out FIFO size/limits
-    if (id && !core->n3dsMode) return; // N3DS-exclusive
+    if (id && !core.n3dsMode) return; // N3DS-exclusive
     for (int i = 0; i < 32; i += 8)
         if (mask & BIT(i)) inputs[0].push_back(value >> i);
     triggerFifo();
@@ -293,7 +293,7 @@ void Y2r::writeInputY(uint32_t mask, uint32_t value) {
 void Y2r::writeInputU(uint32_t mask, uint32_t value) {
     // Write up to 4 bytes to the U input FIFO
     // TODO: figure out FIFO size/limits
-    if (id && !core->n3dsMode) return; // N3DS-exclusive
+    if (id && !core.n3dsMode) return; // N3DS-exclusive
     for (int i = 0; i < 32; i += 8)
         if (mask & BIT(i)) inputs[1].push_back(value >> i);
     triggerFifo();
@@ -302,7 +302,7 @@ void Y2r::writeInputU(uint32_t mask, uint32_t value) {
 void Y2r::writeInputV(uint32_t mask, uint32_t value) {
     // Write up to 4 bytes to the V input FIFO
     // TODO: figure out FIFO size/limits
-    if (id && !core->n3dsMode) return; // N3DS-exclusive
+    if (id && !core.n3dsMode) return; // N3DS-exclusive
     for (int i = 0; i < 32; i += 8)
         if (mask & BIT(i)) inputs[2].push_back(value >> i);
     triggerFifo();

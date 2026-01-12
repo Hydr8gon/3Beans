@@ -43,7 +43,7 @@ void Ndma::setDrq(uint8_t type) {
     for (int i = 0; i < 8; i++)
         if (shouldTransfer(i, type)) runMask |= BIT(i);
     if (!scheduled && runMask)
-        core->schedule(NDMA_UPDATE, 1);
+        core.schedule(NDMA_UPDATE, 1);
 }
 
 void Ndma::clearDrq(uint8_t type) {
@@ -91,23 +91,23 @@ void Ndma::transferBlock(int i) {
     if (ndmaCnt[i] & (BIT(28) | BIT(29))) { // Immediate/infinite
         // Transfer a block and adjust source and destination addresses
         while (count--) {
-            uint32_t value = core->memory.read<uint32_t>(ARM9, srcAddrs[i]);
-            core->memory.write<uint32_t>(ARM9, dstAddrs[i], value);
+            uint32_t value = core.memory.read<uint32_t>(ARM9, srcAddrs[i]);
+            core.memory.write<uint32_t>(ARM9, dstAddrs[i], value);
             srcAddrs[i] += srcStep;
             dstAddrs[i] += dstStep;
         }
 
         // Trigger an interrupt if enabled and end if immediate
         if (ndmaCnt[i] & BIT(30))
-            core->interrupts.sendInterrupt(ARM9, i);
+            core.interrupts.sendInterrupt(ARM9, i);
         if (ndmaCnt[i] & BIT(28))
             ndmaCnt[i] &= ~BIT(31);
     }
     else { // Repeat until total
         while (count--) {
             // Transfer a word and adjust source and destination addresses
-            uint32_t value = core->memory.read<uint32_t>(ARM9, srcAddrs[i]);
-            core->memory.write<uint32_t>(ARM9, dstAddrs[i], value);
+            uint32_t value = core.memory.read<uint32_t>(ARM9, srcAddrs[i]);
+            core.memory.write<uint32_t>(ARM9, dstAddrs[i], value);
             srcAddrs[i] += srcStep;
             dstAddrs[i] += dstStep;
 
@@ -115,7 +115,7 @@ void Ndma::transferBlock(int i) {
             if (--ndmaTcnt[i] &= 0xFFFFFFF) continue;
             LOG_INFO("NDMA channel %d finished transferring\n", i);
             if (ndmaCnt[i] & BIT(30))
-                core->interrupts.sendInterrupt(ARM9, i);
+                core.interrupts.sendInterrupt(ARM9, i);
             ndmaCnt[i] &= ~BIT(31);
             break;
         }

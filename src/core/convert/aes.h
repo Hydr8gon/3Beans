@@ -26,7 +26,7 @@ class Core;
 
 class Aes {
 public:
-    Aes(Core *core);
+    Aes(Core &core);
 
     void autoBoot();
     void update();
@@ -51,7 +51,7 @@ public:
     void writeKeyyfifo(uint32_t mask, uint32_t value);
 
 private:
-    Core *core;
+    Core &core;
 
     int16_t iconOffset = 0;
     uint8_t hackCount = 0;

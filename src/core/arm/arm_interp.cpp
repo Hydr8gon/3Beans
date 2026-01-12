@@ -20,10 +20,10 @@
 #include "arm_interp.h"
 #include "../core.h"
 
-template void ArmInterp::runFrame<false>(Core*);
-template void ArmInterp::runFrame<true>(Core*);
+template void ArmInterp::runFrame<false>(Core&);
+template void ArmInterp::runFrame<true>(Core&);
 
-ArmInterp::ArmInterp(Core *core, CpuId id): core(core), id(id) {
+ArmInterp::ArmInterp(Core &core, CpuId id): core(core), id(id) {
     // Initialize the registers for user mode
     for (int i = 0; i < 32; i++)
         registers[i] = &registersUsr[i & 0xF];
@@ -43,7 +43,7 @@ void ArmInterp::init() {
 void ArmInterp::resetCycles() {
     // Adjust CPU cycles for a global cycle reset
     if (cycles != -1)
-        cycles -= std::min(core->globalCycles, cycles);
+        cycles -= std::min(core.globalCycles, cycles);
 }
 
 void ArmInterp::stopCycles(Core *core) {
@@ -53,33 +53,33 @@ void ArmInterp::stopCycles(Core *core) {
             core->arms[i].cycles = -1;
 }
 
-template <bool extra> void ArmInterp::runFrame(Core *core) {
+template <bool extra> void ArmInterp::runFrame(Core &core) {
     // Run a frame of CPU instructions and events
-    while (core->running.exchange(true)) {
+    while (core.running.exchange(true)) {
         // Run the CPUs until the next scheduled task
-        while (core->events[0].cycles > core->globalCycles) {
+        while (core.events[0].cycles > core.globalCycles) {
             // Run 2 or 4 ARM11 cores depending on execution mode
             for (int i = 0; i < (extra ? 4 : 2); i++)
-                if (core->globalCycles >= core->arms[i].cycles)
-                    core->arms[i].cycles = core->globalCycles + core->arms[i].runOpcode();
+                if (core.globalCycles >= core.arms[i].cycles)
+                    core.arms[i].cycles = core.globalCycles + core.arms[i].runOpcode();
 
             // Run the ARM9 and DSP at half the speed of the ARM11
-            if (core->globalCycles >= core->arms[ARM9].cycles)
-                core->arms[ARM9].cycles = core->globalCycles + (core->arms[ARM9].runOpcode() << 1);
-            if (core->globalCycles >= core->teak.cycles)
-                core->teak.cycles = core->globalCycles + (core->teak.runOpcode() << 1);
+            if (core.globalCycles >= core.arms[ARM9].cycles)
+                core.arms[ARM9].cycles = core.globalCycles + (core.arms[ARM9].runOpcode() << 1);
+            if (core.globalCycles >= core.teak.cycles)
+                core.teak.cycles = core.globalCycles + (core.teak.runOpcode() << 1);
 
             // Count cycles up to the next soonest CPU event
-            core->globalCycles = std::min(core->arms[ARM9].cycles, core->teak.cycles);
+            core.globalCycles = std::min(core.arms[ARM9].cycles, core.teak.cycles);
             for (int i = 0; i < (extra ? 4 : 2); i++)
-                core->globalCycles = std::min(core->globalCycles, core->arms[i].cycles);
+                core.globalCycles = std::min(core.globalCycles, core.arms[i].cycles);
         }
 
         // Jump to the next task and run all that are scheduled now
-        core->globalCycles = core->events[0].cycles;
-        while (core->events[0].cycles <= core->globalCycles) {
-            (*core->events[0].task)();
-            core->events.erase(core->events.begin());
+        core.globalCycles = core.events[0].cycles;
+        while (core.events[0].cycles <= core.globalCycles) {
+            (*core.events[0].task)();
+            core.events.erase(core.events.begin());
         }
     }
 }
@@ -112,16 +112,16 @@ FORCE_INLINE int ArmInterp::runOpcode() {
 
 uint16_t ArmInterp::getOpcode16() {
     // Set the opcode pointer or fall back to a regular 16-bit opcode read
-    if (!(pcData = core->cp15.getReadPtr(id, *registers[15])))
-        return core->cp15.read<uint16_t>(id, *registers[15]);
+    if (!(pcData = core.cp15.getReadPtr(id, *registers[15])))
+        return core.cp15.read<uint16_t>(id, *registers[15]);
     pcData += (*registers[15] & 0xFFE);
     return U8TO16(pcData, 0);
 }
 
 uint32_t ArmInterp::getOpcode32() {
     // Set the opcode pointer or fall back to a regular 32-bit opcode read
-    if (!(pcData = core->cp15.getReadPtr(id, *registers[15])))
-        return core->cp15.read<uint32_t>(id, *registers[15]);
+    if (!(pcData = core.cp15.getReadPtr(id, *registers[15])))
+        return core.cp15.read<uint32_t>(id, *registers[15]);
     pcData += (*registers[15] & 0xFFC);
     return U8TO32(pcData, 0);
 }
@@ -131,7 +131,7 @@ void ArmInterp::halt(uint8_t mask) {
     bool before = halted;
     halted |= mask;
     if (!before && halted)
-        core->schedule(ARM_STOP_CYCLES, 0);
+        core.schedule(ARM_STOP_CYCLES, 0);
 }
 
 void ArmInterp::unhalt(uint8_t mask) {
@@ -147,7 +147,7 @@ int ArmInterp::exception(uint8_t vector) {
     static const uint8_t modes[] = { 0x13, 0x1B, 0x13, 0x17, 0x17, 0x13, 0x12, 0x11 };
     setCpsr((cpsr & ~0x3F) | BIT(7) | modes[vector >> 2], true); // ARM, interrupts off, new mode
     *registers[14] = *registers[15] + ((*spsr & BIT(5)) >> 4);
-    *registers[15] = core->cp15.exceptAddrs[id] + vector;
+    *registers[15] = core.cp15.exceptAddrs[id] + vector;
     flushPipeline();
     return 3;
 }
@@ -155,11 +155,11 @@ int ArmInterp::exception(uint8_t vector) {
 void ArmInterp::flushPipeline() {
     // Adjust the program counter and refill the pipeline after a jump
     if (cpsr & BIT(5)) { // THUMB mode
-        pipeline[0] = core->cp15.read<uint16_t>(id, *registers[15] &= ~0x1);
+        pipeline[0] = core.cp15.read<uint16_t>(id, *registers[15] &= ~0x1);
         *registers[15] += 2, pipeline[1] = getOpcode16();
     }
     else { // ARM mode
-        pipeline[0] = core->cp15.read<uint32_t>(id, *registers[15] &= ~0x3);
+        pipeline[0] = core.cp15.read<uint32_t>(id, *registers[15] &= ~0x3);
         *registers[15] += 4, pipeline[1] = getOpcode32();
     }
 }
@@ -247,7 +247,7 @@ void ArmInterp::setCpsr(uint32_t value, bool save) {
     // Set the CPSR, save the old value, and check if an interrupt should occur
     if (save && spsr) *spsr = cpsr;
     cpsr = value;
-    core->interrupts.checkInterrupt(id);
+    core.interrupts.checkInterrupt(id);
 }
 
 int ArmInterp::handleReserved(uint32_t opcode) {

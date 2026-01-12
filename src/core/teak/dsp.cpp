@@ -23,7 +23,7 @@ void Dsp::resetCycles() {
     // Adjust timer end cycles for a global cycle reset
     for (int i = 0; i < 2; i++)
         if (tmrCycles[i] != -1)
-            tmrCycles[i] -= core->globalCycles;
+            tmrCycles[i] -= core.globalCycles;
 }
 
 uint32_t Dsp::getMiuAddr(uint16_t address) {
@@ -41,7 +41,7 @@ uint32_t Dsp::getMiuAddr(uint16_t address) {
 uint16_t Dsp::readData(uint16_t address) {
     // Read a value from DSP data memory if not within the I/O area
     if (address < miuIoBase || address >= miuIoBase + 0x800)
-        return core->memory.read<uint16_t>(ARM11, getMiuAddr(address));
+        return core.memory.read<uint16_t>(ARM11, getMiuAddr(address));
 
     // Read a value from a DSP I/O register
     switch (address - miuIoBase) {
@@ -150,7 +150,7 @@ uint16_t Dsp::readData(uint16_t address) {
 void Dsp::writeData(uint16_t address, uint16_t value) {
     // Write a value to DSP data memory if not within the I/O area
     if (address < miuIoBase || address >= miuIoBase + 0x800)
-        return core->memory.write<uint16_t>(ARM11, getMiuAddr(address), value);
+        return core.memory.write<uint16_t>(ARM11, getMiuAddr(address), value);
 
     // Write a value to a DSP I/O register
     switch (address - miuIoBase) {
@@ -246,14 +246,14 @@ void Dsp::writeData(uint16_t address, uint16_t value) {
 
 void Dsp::underflowTmr(int i) {
     // Ensure underflow should still occur at the current timestamp
-    if (tmrCycles[i] != core->globalCycles)
+    if (tmrCycles[i] != core.globalCycles)
         return;
 
     // Set a timer's signal and schedule a clear if enabled
     tmrSignals[i] = true;
     updateIcuState();
     if (uint8_t clr = tmrCtrl[i] >> 14)
-        core->schedule(Task(DSP_UNSIGNAL0 + i), 2 << clr);
+        core.schedule(Task(DSP_UNSIGNAL0 + i), 2 << clr);
 
     // Stop or reload the timer based on its mode
     switch (uint8_t mode = (tmrCtrl[i] >> 2) & 0x7) {
@@ -292,8 +292,8 @@ void Dsp::scheduleTmr(int i) {
     shift += 1 + (shift == 3);
     tmrCycles[i] = (uint64_t(tmrCount[i]) + 1) << shift;
     if (i) tmrCycles[i] = (tmrCycles[i] * 5) / 4; // 1.25x slower
-    core->schedule(Task(DSP_UNDERFLOW0 + i), tmrCycles[i]);
-    tmrCycles[i] += core->globalCycles;
+    core.schedule(Task(DSP_UNDERFLOW0 + i), tmrCycles[i]);
+    tmrCycles[i] += core.globalCycles;
 }
 
 void Dsp::flushAudOut() {
@@ -301,7 +301,7 @@ void Dsp::flushAudOut() {
     while (audOutFifo.size() >= 2) {
         uint16_t value = audOutFifo.front();
         audOutFifo.pop();
-        core->csnd.sampleDsp(value, audOutFifo.front());
+        core.csnd.sampleDsp(value, audOutFifo.front());
         audOutFifo.pop();
     }
 
@@ -319,7 +319,7 @@ void Dsp::sendAudio() {
 
     // Flush the audio output FIFO and reschedule the event
     flushAudOut();
-    core->schedule(DSP_SEND_AUDIO, audCycles);
+    core.schedule(DSP_SEND_AUDIO, audCycles);
 }
 
 void Dsp::setAudClock(DspClock clock) {
@@ -332,7 +332,7 @@ void Dsp::setAudClock(DspClock clock) {
     // Set the audio FIFO event frequency and schedule it if newly enabled
     audCycles = ((clock == CLK_32KHZ) ? 8192 : 5632) * 8;
     if (audScheduled || !audOutEnable) return;
-    core->schedule(DSP_SEND_AUDIO, audCycles);
+    core.schedule(DSP_SEND_AUDIO, audCycles);
     audScheduled = true;
 }
 
@@ -348,9 +348,9 @@ uint16_t Dsp::dmaRead(uint8_t area, uint32_t address) {
     // Read a 16-bit value from a DMA area if it exists
     // TODO: handle restricted AHBM addresses
     switch (area) {
-        case 7: return core->memory.read<uint16_t>(ARM11, address & ~0x1); // AHBM
-        case 5: return core->memory.read<uint16_t>(ARM11, 0x1FF00000 + ((address << 1) & 0x3FFFE)); // Code
-        case 0: return core->memory.read<uint16_t>(ARM11, 0x1FF40000 + ((address << 1) & 0x3FFFE)); // Data
+        case 7: return core.memory.read<uint16_t>(ARM11, address & ~0x1); // AHBM
+        case 5: return core.memory.read<uint16_t>(ARM11, 0x1FF00000 + ((address << 1) & 0x3FFFE)); // Code
+        case 0: return core.memory.read<uint16_t>(ARM11, 0x1FF40000 + ((address << 1) & 0x3FFFE)); // Data
         case 1: return readData(miuIoBase + (address & 0x7FF)); // MMIO
 
     default:
@@ -364,9 +364,9 @@ void Dsp::dmaWrite(uint8_t area, uint32_t address, uint16_t value) {
     // Write a 16-bit value to a DMA area if it exists
     // TODO: handle restricted AHBM addresses
     switch (area) {
-        case 7: return core->memory.write<uint16_t>(ARM11, address & ~0x1, value); // AHBM
-        case 5: return core->memory.write<uint16_t>(ARM11, 0x1FF00000 + ((address << 1) & 0x3FFFE), value); // Code
-        case 0: return core->memory.write<uint16_t>(ARM11, 0x1FF40000 + ((address << 1) & 0x3FFFE), value); // Data
+        case 7: return core.memory.write<uint16_t>(ARM11, address & ~0x1, value); // AHBM
+        case 5: return core.memory.write<uint16_t>(ARM11, 0x1FF00000 + ((address << 1) & 0x3FFFE), value); // Code
+        case 0: return core.memory.write<uint16_t>(ARM11, 0x1FF40000 + ((address << 1) & 0x3FFFE), value); // Data
         case 1: return writeData(miuIoBase + (address & 0x7FF), value); // MMIO
 
     default:
@@ -439,7 +439,7 @@ void Dsp::updateIcuState() {
     for (int i = 0; i < 4; i++)
         if (icuEnable[i] & edge)
             mask |= BIT(i);
-    core->teak.setPendingIrqs(mask);
+    core.teak.setPendingIrqs(mask);
 }
 
 void Dsp::updateArmSemIrq() {
@@ -448,7 +448,7 @@ void Dsp::updateArmSemIrq() {
         dspPsts &= ~BIT(9);
     }
     else if (~dspPsts & BIT(9)) {
-        core->interrupts.sendInterrupt(ARM11, 0x4A);
+        core.interrupts.sendInterrupt(ARM11, 0x4A);
         dspPsts |= BIT(9);
     }
 }
@@ -473,7 +473,7 @@ void Dsp::updateReadFifo() {
     dspPsts &= ~(readLength == 0); // Active
     dspPsts |= BIT(6) | ((readFifo.size() >= 16) << 5); // Not empty, full
     if (dspPcfg & dspPsts & 0x60)
-        core->interrupts.sendInterrupt(ARM11, 0x4A);
+        core.interrupts.sendInterrupt(ARM11, 0x4A);
 }
 
 uint32_t Dsp::readTmrCount(int i) {
@@ -481,7 +481,7 @@ uint32_t Dsp::readTmrCount(int i) {
     if (tmrCycles[i] != -1) {
         uint8_t shift = (tmrCtrl[i] & 0x3);
         shift += 1 + (shift == 3);
-        uint64_t value = std::max<int64_t>(0, tmrCycles[i] - core->globalCycles);
+        uint64_t value = std::max<int64_t>(0, tmrCycles[i] - core.globalCycles);
         if (i) value = (value * 4) / 5; // 1.25x slower
         tmrCount[i] = (value >> shift);
     }
@@ -544,7 +544,7 @@ void Dsp::writeTmrEvent(int i, uint16_t value) {
     if (mode == 3) { // Event count
         // Decrement the counter until it hits zero, and signal when it does
         if (!tmrCount[i] || --tmrCount[i]) return;
-        tmrCycles[i] = core->globalCycles;
+        tmrCycles[i] = core.globalCycles;
         underflowTmr(i);
     }
     else if (mode >= 4 && mode <= 6) { // Watchdog
@@ -573,7 +573,7 @@ void Dsp::writeHpiRep(int i, uint16_t value) {
 
     // Trigger an ARM-side interrupt if enabled for the written reply
     if (dspPcfg & BIT(9 + i))
-        core->interrupts.sendInterrupt(ARM11, 0x4A);
+        core.interrupts.sendInterrupt(ARM11, 0x4A);
 }
 
 void Dsp::writeHpiSem(uint16_t value) {
@@ -745,7 +745,7 @@ void Dsp::writeAudOutEnable(uint16_t value) {
 
     // Schedule the audio FIFO event at the current frequency if newly enabled
     if (audScheduled || !audOutEnable || !audCycles) return;
-    core->schedule(DSP_SEND_AUDIO, audCycles);
+    core.schedule(DSP_SEND_AUDIO, audCycles);
     audScheduled = true;
 }
 
@@ -788,7 +788,7 @@ void Dsp::writePdata(uint16_t mask, uint16_t value) {
 
     // Trigger a FIFO empty interrupt if enabled
     if (dspPcfg & BIT(8))
-        core->interrupts.sendInterrupt(ARM11, 0x4A);
+        core.interrupts.sendInterrupt(ARM11, 0x4A);
 }
 
 void Dsp::writePadr(uint16_t mask, uint16_t value) {
@@ -815,8 +815,8 @@ void Dsp::writePcfg(uint16_t mask, uint16_t value) {
     // Reset the DSP if the reset bit was newly set
     if (!(~old & dspPcfg & BIT(0))) return;
     LOG_INFO("Restarting Teak DSP execution\n");
-    core->teak.cycles = 0;
-    core->teak.regPc = 0;
+    core.teak.cycles = 0;
+    core.teak.regPc = 0;
 }
 
 void Dsp::writePsem(uint16_t mask, uint16_t value) {

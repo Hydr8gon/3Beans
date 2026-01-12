@@ -41,7 +41,7 @@ uint32_t Pxi::readRecv(bool arm9) {
 
         // Send a send FIFO empty interrupt to the other CPU if enabled
         if (pxiCnt[!arm9] & BIT(2))
-            core->interrupts.sendInterrupt(arm9 ? ARM11 : ARM9, arm9 ? 0x52 : 13);
+            core.interrupts.sendInterrupt(arm9 ? ARM11 : ARM9, arm9 ? 0x52 : 13);
     }
     else if (fifos[!arm9].size() == 15) {
         // Clear the full bits if the FIFO is no longer full
@@ -60,14 +60,14 @@ void Pxi::writeSync(bool arm9, uint32_t mask, uint32_t value)
     if (arm9) {
         // Send interrupts to the ARM11 if requested and enabled
         if ((value & mask & BIT(29)) && (pxiSync[0] & BIT(31)))
-            core->interrupts.sendInterrupt(ARM11, 0x50);
+            core.interrupts.sendInterrupt(ARM11, 0x50);
         if ((value & mask & BIT(30)) && (pxiSync[0] & BIT(31)))
-            core->interrupts.sendInterrupt(ARM11, 0x51);
+            core.interrupts.sendInterrupt(ARM11, 0x51);
     }
     else {
         // Send an interrupt to the ARM9 if requested and enabled
         if ((value & mask & BIT(30)) && (pxiSync[1] & BIT(31)))
-            core->interrupts.sendInterrupt(ARM9, 12);
+            core.interrupts.sendInterrupt(ARM9, 12);
     }
 
     // Write to this CPU's PXI_SYNC interrupt enable bit
@@ -101,11 +101,11 @@ void Pxi::writeCnt(bool arm9, uint16_t mask, uint16_t value) {
 
     // Trigger a send FIFO empty interrupt if the condition changed to true
     if (!sendCond && (pxiCnt[arm9] & BIT(0)) && (pxiCnt[arm9] & BIT(2)))
-        core->interrupts.sendInterrupt(arm9 ? ARM9 : ARM11, arm9 ? 13 : 0x52);
+        core.interrupts.sendInterrupt(arm9 ? ARM9 : ARM11, arm9 ? 13 : 0x52);
 
     // Trigger a receive FIFO not empty interrupt if the condition changed to true
     if (!recvCond && (~pxiCnt[arm9] & BIT(8)) && (pxiCnt[arm9] & BIT(10)))
-        core->interrupts.sendInterrupt(arm9 ? ARM9 : ARM11, arm9 ? 14 : 0x53);
+        core.interrupts.sendInterrupt(arm9 ? ARM9 : ARM11, arm9 ? 14 : 0x53);
 }
 
 void Pxi::writeSend(bool arm9, uint32_t mask, uint32_t value) {
@@ -130,7 +130,7 @@ void Pxi::writeSend(bool arm9, uint32_t mask, uint32_t value) {
 
         // Send a receive FIFO not empty interrupt to the other CPU if enabled
         if (pxiCnt[!arm9] & BIT(10))
-            core->interrupts.sendInterrupt(arm9 ? ARM11 : ARM9, arm9 ? 0x53 : 14);
+            core.interrupts.sendInterrupt(arm9 ? ARM11 : ARM9, arm9 ? 0x53 : 14);
     }
     else if (fifos[arm9].size() == 16) {
         // Set the full bits if the FIFO is now full

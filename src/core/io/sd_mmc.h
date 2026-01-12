@@ -26,7 +26,7 @@ class Core;
 
 class SdMmc {
 public:
-    SdMmc(Core *core): core(core) {}
+    SdMmc(Core &core): core(core) {}
     ~SdMmc();
 
     bool init(SdMmc &other);
@@ -62,7 +62,7 @@ public:
     void writeData32Fifo(uint32_t mask, uint32_t value);
 
 private:
-    Core *core;
+    Core &core;
     int id = 0;
 
     FILE *nand = nullptr;

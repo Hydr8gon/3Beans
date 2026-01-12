@@ -131,7 +131,7 @@ FORCE_INLINE int ArmInterp::ldrsbOf(uint32_t opcode, uint32_t op2) { // LDRSB Rd
     // Signed byte load, pre-adjust without writeback
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
-    *op0 = (int8_t)core->cp15.read<uint8_t>(id, op1 + op2);
+    *op0 = (int8_t)core.cp15.read<uint8_t>(id, op1 + op2);
 
     // Handle pipelining
     if (op0 != registers[15]) return 1;
@@ -143,7 +143,7 @@ FORCE_INLINE int ArmInterp::ldrshOf(uint32_t opcode, uint32_t op2) { // LDRSH Rd
     // Signed half-word load, pre-adjust without writeback
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
-    *op0 = (int16_t)core->cp15.read<uint16_t>(id, op1 += op2);
+    *op0 = (int16_t)core.cp15.read<uint16_t>(id, op1 += op2);
 
     // Handle pipelining
     if (op0 != registers[15]) return 1;
@@ -155,7 +155,7 @@ FORCE_INLINE int ArmInterp::ldrbOf(uint32_t opcode, uint32_t op2) { // LDRB Rd,[
     // Byte load, pre-adjust without writeback
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
-    *op0 = core->cp15.read<uint8_t>(id, op1 + op2);
+    *op0 = core.cp15.read<uint8_t>(id, op1 + op2);
 
     // Handle pipelining and THUMB switching
     if (op0 != registers[15]) return 1;
@@ -169,7 +169,7 @@ FORCE_INLINE int ArmInterp::strbOf(uint32_t opcode, uint32_t op2) { // STRB Rd,[
     // When used as Rd, the program counter is read with +4
     uint32_t op0 = *registers[(opcode >> 12) & 0xF] + (((opcode & 0xF000) == 0xF000) << 2);
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
-    core->cp15.write<uint8_t>(id, op1 + op2, op0);
+    core.cp15.write<uint8_t>(id, op1 + op2, op0);
     return 1;
 }
 
@@ -177,7 +177,7 @@ FORCE_INLINE int ArmInterp::ldrhOf(uint32_t opcode, uint32_t op2) { // LDRH Rd,[
     // Half-word load, pre-adjust without writeback
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
-    *op0 = core->cp15.read<uint16_t>(id, op1 += op2);
+    *op0 = core.cp15.read<uint16_t>(id, op1 += op2);
 
     // Handle pipelining
     if (op0 != registers[15]) return 1;
@@ -190,7 +190,7 @@ FORCE_INLINE int ArmInterp::strhOf(uint32_t opcode, uint32_t op2) { // STRH Rd,[
     // When used as Rd, the program counter is read with +4
     uint32_t op0 = *registers[(opcode >> 12) & 0xF] + (((opcode & 0xF000) == 0xF000) << 2);
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
-    core->cp15.write<uint16_t>(id, op1 + op2, op0);
+    core.cp15.write<uint16_t>(id, op1 + op2, op0);
     return 1;
 }
 
@@ -198,7 +198,7 @@ FORCE_INLINE int ArmInterp::ldrOf(uint32_t opcode, uint32_t op2) { // LDR Rd,[Rn
     // Word load, pre-adjust without writeback
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
-    *op0 = core->cp15.read<uint32_t>(id, op1 += op2);
+    *op0 = core.cp15.read<uint32_t>(id, op1 += op2);
 
     // Rotate misaligned reads on ARM9
     if (id == ARM9 && (op1 & 0x3)) {
@@ -218,7 +218,7 @@ FORCE_INLINE int ArmInterp::strOf(uint32_t opcode, uint32_t op2) { // STR Rd,[Rn
     // When used as Rd, the program counter is read with +4
     uint32_t op0 = *registers[(opcode >> 12) & 0xF] + (((opcode & 0xF000) == 0xF000) << 2);
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
-    core->cp15.write<uint32_t>(id, op1 + op2, op0);
+    core.cp15.write<uint32_t>(id, op1 + op2, op0);
     return 1;
 }
 
@@ -227,8 +227,8 @@ FORCE_INLINE int ArmInterp::ldrdOf(uint32_t opcode, uint32_t op2) { // LDRD Rd,[
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     if (op0 == registers[15]) return 1;
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
-    op0[0] = core->cp15.read<uint32_t>(id, op1 += op2);
-    op0[1] = core->cp15.read<uint32_t>(id, op1 + 4);
+    op0[0] = core.cp15.read<uint32_t>(id, op1 += op2);
+    op0[1] = core.cp15.read<uint32_t>(id, op1 + 4);
     return 2;
 }
 
@@ -237,8 +237,8 @@ FORCE_INLINE int ArmInterp::strdOf(uint32_t opcode, uint32_t op2) { // STRD Rd,[
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     if (op0 == registers[15]) return 1;
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
-    core->cp15.write<uint32_t>(id, op1 += op2, op0[0]);
-    core->cp15.write<uint32_t>(id, op1 + 4, op0[1]);
+    core.cp15.write<uint32_t>(id, op1 += op2, op0[0]);
+    core.cp15.write<uint32_t>(id, op1 + 4, op0[1]);
     return 2;
 }
 
@@ -246,7 +246,7 @@ FORCE_INLINE int ArmInterp::ldrsbPr(uint32_t opcode, uint32_t op2) { // LDRSB Rd
     // Signed byte load, pre-adjust with writeback
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
-    *op0 = (int8_t)core->cp15.read<uint8_t>(id, *op1 += op2);
+    *op0 = (int8_t)core.cp15.read<uint8_t>(id, *op1 += op2);
 
     // Handle pipelining
     if (op0 != registers[15]) return 1;
@@ -259,7 +259,7 @@ FORCE_INLINE int ArmInterp::ldrshPr(uint32_t opcode, uint32_t op2) { // LDRSH Rd
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
     uint32_t address = *op1 += op2;
-    *op0 = (int16_t)core->cp15.read<uint16_t>(id, address);
+    *op0 = (int16_t)core.cp15.read<uint16_t>(id, address);
 
     // Handle pipelining
     if (op0 != registers[15]) return 1;
@@ -271,7 +271,7 @@ FORCE_INLINE int ArmInterp::ldrbPr(uint32_t opcode, uint32_t op2) { // LDRB Rd,[
     // Byte load, pre-adjust with writeback
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
-    *op0 = core->cp15.read<uint8_t>(id, *op1 += op2);
+    *op0 = core.cp15.read<uint8_t>(id, *op1 += op2);
 
     // Handle pipelining and THUMB switching
     if (op0 != registers[15]) return 1;
@@ -285,7 +285,7 @@ FORCE_INLINE int ArmInterp::strbPr(uint32_t opcode, uint32_t op2) { // STRB Rd,[
     // When used as Rd, the program counter is read with +4
     uint32_t op0 = *registers[(opcode >> 12) & 0xF] + (((opcode & 0xF000) == 0xF000) << 2);
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
-    core->cp15.write<uint8_t>(id, *op1 += op2, op0);
+    core.cp15.write<uint8_t>(id, *op1 += op2, op0);
     return 1;
 }
 
@@ -294,7 +294,7 @@ FORCE_INLINE int ArmInterp::ldrhPr(uint32_t opcode, uint32_t op2) { // LDRH Rd,[
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
     uint32_t address = *op1 += op2;
-    *op0 = core->cp15.read<uint16_t>(id, address);
+    *op0 = core.cp15.read<uint16_t>(id, address);
 
     // Handle pipelining
     if (op0 != registers[15]) return 1;
@@ -307,7 +307,7 @@ FORCE_INLINE int ArmInterp::strhPr(uint32_t opcode, uint32_t op2) { // STRH Rd,[
     // When used as Rd, the program counter is read with +4
     uint32_t op0 = *registers[(opcode >> 12) & 0xF] + (((opcode & 0xF000) == 0xF000) << 2);
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
-    core->cp15.write<uint16_t>(id, *op1 += op2, op0);
+    core.cp15.write<uint16_t>(id, *op1 += op2, op0);
     return 1;
 }
 
@@ -316,7 +316,7 @@ FORCE_INLINE int ArmInterp::ldrPr(uint32_t opcode, uint32_t op2) { // LDR Rd,[Rn
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
     uint32_t address = *op1 += op2;
-    *op0 = core->cp15.read<uint32_t>(id, address);
+    *op0 = core.cp15.read<uint32_t>(id, address);
 
     // Rotate misaligned reads on ARM9
     if (id == ARM9 && (address & 0x3)) {
@@ -336,7 +336,7 @@ FORCE_INLINE int ArmInterp::strPr(uint32_t opcode, uint32_t op2) { // STR Rd,[Rn
     // When used as Rd, the program counter is read with +4
     uint32_t op0 = *registers[(opcode >> 12) & 0xF] + (((opcode & 0xF000) == 0xF000) << 2);
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
-    core->cp15.write<uint32_t>(id, *op1 += op2, op0);
+    core.cp15.write<uint32_t>(id, *op1 += op2, op0);
     return 1;
 }
 
@@ -345,8 +345,8 @@ FORCE_INLINE int ArmInterp::ldrdPr(uint32_t opcode, uint32_t op2) { // LDRD Rd,[
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     if (op0 == registers[15]) return 1;
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
-    op0[0] = core->cp15.read<uint32_t>(id, *op1 += op2);
-    op0[1] = core->cp15.read<uint32_t>(id, *op1 + 4);
+    op0[0] = core.cp15.read<uint32_t>(id, *op1 += op2);
+    op0[1] = core.cp15.read<uint32_t>(id, *op1 + 4);
     return 2;
 }
 
@@ -355,8 +355,8 @@ FORCE_INLINE int ArmInterp::strdPr(uint32_t opcode, uint32_t op2) { // STRD Rd,[
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     if (op0 == registers[15]) return 1;
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
-    core->cp15.write<uint32_t>(id, *op1 += op2, op0[0]);
-    core->cp15.write<uint32_t>(id, *op1 + 4, op0[1]);
+    core.cp15.write<uint32_t>(id, *op1 += op2, op0[0]);
+    core.cp15.write<uint32_t>(id, *op1 + 4, op0[1]);
     return 2;
 }
 
@@ -365,7 +365,7 @@ FORCE_INLINE int ArmInterp::ldrsbPt(uint32_t opcode, uint32_t op2) { // LDRSB Rd
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
     uint32_t address = (*op1 += op2) - op2;
-    *op0 = (int8_t)core->cp15.read<uint8_t>(id, address);
+    *op0 = (int8_t)core.cp15.read<uint8_t>(id, address);
 
     // Handle pipelining
     if (op0 != registers[15]) return 1;
@@ -378,7 +378,7 @@ FORCE_INLINE int ArmInterp::ldrshPt(uint32_t opcode, uint32_t op2) { // LDRSH Rd
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
     uint32_t address = (*op1 += op2) - op2;
-    *op0 = (int16_t)core->cp15.read<uint16_t>(id, address);
+    *op0 = (int16_t)core.cp15.read<uint16_t>(id, address);
 
     // Handle pipelining
     if (op0 != registers[15]) return 1;
@@ -391,7 +391,7 @@ FORCE_INLINE int ArmInterp::ldrbPt(uint32_t opcode, uint32_t op2) { // LDRB Rd,[
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
     uint32_t address = (*op1 += op2) - op2;
-    *op0 = core->cp15.read<uint8_t>(id, address);
+    *op0 = core.cp15.read<uint8_t>(id, address);
 
     // Handle pipelining and THUMB switching
     if (op0 != registers[15]) return 1;
@@ -405,7 +405,7 @@ FORCE_INLINE int ArmInterp::strbPt(uint32_t opcode, uint32_t op2) { // STRB Rd,[
     // When used as Rd, the program counter is read with +4
     uint32_t op0 = *registers[(opcode >> 12) & 0xF] + (((opcode & 0xF000) == 0xF000) << 2);
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
-    core->cp15.write<uint8_t>(id, *op1, op0);
+    core.cp15.write<uint8_t>(id, *op1, op0);
     *op1 += op2;
     return 1;
 }
@@ -415,7 +415,7 @@ FORCE_INLINE int ArmInterp::ldrhPt(uint32_t opcode, uint32_t op2) { // LDRH Rd,[
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
     uint32_t address = (*op1 += op2) - op2;
-    *op0 = core->cp15.read<uint16_t>(id, address);
+    *op0 = core.cp15.read<uint16_t>(id, address);
 
     // Handle pipelining
     if (op0 != registers[15]) return 1;
@@ -428,7 +428,7 @@ FORCE_INLINE int ArmInterp::strhPt(uint32_t opcode, uint32_t op2) { // STRH Rd,[
     // When used as Rd, the program counter is read with +4
     uint32_t op0 = *registers[(opcode >> 12) & 0xF] + (((opcode & 0xF000) == 0xF000) << 2);
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
-    core->cp15.write<uint16_t>(id, *op1, op0);
+    core.cp15.write<uint16_t>(id, *op1, op0);
     *op1 += op2;
     return 1;
 }
@@ -438,7 +438,7 @@ FORCE_INLINE int ArmInterp::ldrPt(uint32_t opcode, uint32_t op2) { // LDR Rd,[Rn
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
     uint32_t address = (*op1 += op2) - op2;
-    *op0 = core->cp15.read<uint32_t>(id, address);
+    *op0 = core.cp15.read<uint32_t>(id, address);
 
     // Rotate misaligned reads on ARM9
     if (id == ARM9 && (address & 0x3)) {
@@ -458,7 +458,7 @@ FORCE_INLINE int ArmInterp::strPt(uint32_t opcode, uint32_t op2) { // STR Rd,[Rn
     // When used as Rd, the program counter is read with +4
     uint32_t op0 = *registers[(opcode >> 12) & 0xF] + (((opcode & 0xF000) == 0xF000) << 2);
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
-    core->cp15.write<uint32_t>(id, *op1, op0);
+    core.cp15.write<uint32_t>(id, *op1, op0);
     *op1 += op2;
     return 1;
 }
@@ -469,8 +469,8 @@ FORCE_INLINE int ArmInterp::ldrdPt(uint32_t opcode, uint32_t op2) { // LDRD Rd,[
     if (op0 == registers[15]) return 1;
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
     uint32_t address = (*op1 += op2) - op2;
-    op0[0] = core->cp15.read<uint32_t>(id, address);
-    op0[1] = core->cp15.read<uint32_t>(id, address + 4);
+    op0[0] = core.cp15.read<uint32_t>(id, address);
+    op0[1] = core.cp15.read<uint32_t>(id, address + 4);
     return 2;
 }
 
@@ -479,8 +479,8 @@ FORCE_INLINE int ArmInterp::strdPt(uint32_t opcode, uint32_t op2) { // STRD Rd,[
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     if (op0 == registers[15]) return 1;
     uint32_t *op1 = registers[(opcode >> 16) & 0xF];
-    core->cp15.write<uint32_t>(id, *op1, op0[0]);
-    core->cp15.write<uint32_t>(id, *op1 + 4, op0[1]);
+    core.cp15.write<uint32_t>(id, *op1, op0[0]);
+    core.cp15.write<uint32_t>(id, *op1 + 4, op0[1]);
     *op1 += op2;
     return 2;
 }
@@ -491,7 +491,7 @@ int ArmInterp::ldmda(uint32_t opcode) { // LDMDA Rn, <Rlist>
     uint32_t op0 = *registers[(opcode >> 16) & 0xF] - (m << 2);
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        *registers[i] = core->cp15.read<uint32_t>(id, op0 += 4);
+        *registers[i] = core.cp15.read<uint32_t>(id, op0 += 4);
     }
 
     // Handle pipelining and THUMB switching
@@ -507,7 +507,7 @@ int ArmInterp::stmda(uint32_t opcode) { // STMDA Rn, <Rlist>
     uint32_t op0 = *registers[(opcode >> 16) & 0xF] - (m << 2);
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        core->cp15.write<uint32_t>(id, op0 += 4, *registers[i]);
+        core.cp15.write<uint32_t>(id, op0 += 4, *registers[i]);
     }
     return m + (m < 2);
 }
@@ -518,7 +518,7 @@ int ArmInterp::ldmia(uint32_t opcode) { // LDMIA Rn, <Rlist>
     uint32_t op0 = *registers[(opcode >> 16) & 0xF];
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        *registers[i] = core->cp15.read<uint32_t>(id, op0);
+        *registers[i] = core.cp15.read<uint32_t>(id, op0);
         op0 += 4;
     }
 
@@ -535,7 +535,7 @@ int ArmInterp::stmia(uint32_t opcode) { // STMIA Rn, <Rlist>
     uint32_t op0 = *registers[(opcode >> 16) & 0xF];
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        core->cp15.write<uint32_t>(id, op0, *registers[i]);
+        core.cp15.write<uint32_t>(id, op0, *registers[i]);
         op0 += 4;
     }
     return m + (m < 2);
@@ -547,7 +547,7 @@ int ArmInterp::ldmdb(uint32_t opcode) { // LDMDB Rn, <Rlist>
     uint32_t op0 = *registers[(opcode >> 16) & 0xF] - (m << 2);
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        *registers[i] = core->cp15.read<uint32_t>(id, op0);
+        *registers[i] = core.cp15.read<uint32_t>(id, op0);
         op0 += 4;
     }
 
@@ -564,7 +564,7 @@ int ArmInterp::stmdb(uint32_t opcode) { // STMDB Rn, <Rlist>
     uint32_t op0 = *registers[(opcode >> 16) & 0xF] - (m << 2);
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        core->cp15.write<uint32_t>(id, op0, *registers[i]);
+        core.cp15.write<uint32_t>(id, op0, *registers[i]);
         op0 += 4;
     }
     return m + (m < 2);
@@ -576,7 +576,7 @@ int ArmInterp::ldmib(uint32_t opcode) { // LDMIB Rn, <Rlist>
     uint32_t op0 = *registers[(opcode >> 16) & 0xF];
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        *registers[i] = core->cp15.read<uint32_t>(id, op0 += 4);
+        *registers[i] = core.cp15.read<uint32_t>(id, op0 += 4);
     }
 
     // Handle pipelining and THUMB switching
@@ -592,7 +592,7 @@ int ArmInterp::stmib(uint32_t opcode) { // STMIB Rn, <Rlist>
     uint32_t op0 = *registers[(opcode >> 16) & 0xF];
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        core->cp15.write<uint32_t>(id, op0 += 4, *registers[i]);
+        core.cp15.write<uint32_t>(id, op0 += 4, *registers[i]);
     }
     return m + (m < 2);
 }
@@ -604,7 +604,7 @@ int ArmInterp::ldmdaW(uint32_t opcode) { // LDMDA Rn!, <Rlist>
     uint32_t address = (*registers[op0] -= (m << 2));
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        *registers[i] = core->cp15.read<uint32_t>(id, address += 4);
+        *registers[i] = core.cp15.read<uint32_t>(id, address += 4);
     }
 
     // Load the writeback value if it's not last or is the only listed register
@@ -625,7 +625,7 @@ int ArmInterp::stmdaW(uint32_t opcode) { // STMDA Rn!, <Rlist>
     uint32_t address = *registers[op0] - (m << 2);
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        core->cp15.write<uint32_t>(id, address += 4, *registers[i]);
+        core.cp15.write<uint32_t>(id, address += 4, *registers[i]);
     }
     *registers[op0] = address - (m << 2);
     return m + (m < 2);
@@ -638,7 +638,7 @@ int ArmInterp::ldmiaW(uint32_t opcode) { // LDMIA Rn!, <Rlist>
     uint32_t address = (*registers[op0] += (m << 2)) - (m << 2);
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        *registers[i] = core->cp15.read<uint32_t>(id, address);
+        *registers[i] = core.cp15.read<uint32_t>(id, address);
         address += 4;
     }
 
@@ -660,7 +660,7 @@ int ArmInterp::stmiaW(uint32_t opcode) { // STMIA Rn!, <Rlist>
     uint32_t address = *registers[op0];
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        core->cp15.write<uint32_t>(id, address, *registers[i]);
+        core.cp15.write<uint32_t>(id, address, *registers[i]);
         address += 4;
     }
     *registers[op0] = address;
@@ -674,7 +674,7 @@ int ArmInterp::ldmdbW(uint32_t opcode) { // LDMDB Rn!, <Rlist>
     uint32_t address = (*registers[op0] -= (m << 2));
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        *registers[i] = core->cp15.read<uint32_t>(id, address);
+        *registers[i] = core.cp15.read<uint32_t>(id, address);
         address += 4;
     }
 
@@ -696,7 +696,7 @@ int ArmInterp::stmdbW(uint32_t opcode) { // STMDB Rn!, <Rlist>
     uint32_t address = *registers[op0] - (m << 2);
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        core->cp15.write<uint32_t>(id, address, *registers[i]);
+        core.cp15.write<uint32_t>(id, address, *registers[i]);
         address += 4;
     }
     *registers[op0] = address - (m << 2);
@@ -710,7 +710,7 @@ int ArmInterp::ldmibW(uint32_t opcode) { // LDMIB Rn!, <Rlist>
     uint32_t address = (*registers[op0] += (m << 2)) - (m << 2);
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        *registers[i] = core->cp15.read<uint32_t>(id, address += 4);
+        *registers[i] = core.cp15.read<uint32_t>(id, address += 4);
     }
 
     // Load the writeback value if it's not last or is the only listed register
@@ -731,7 +731,7 @@ int ArmInterp::stmibW(uint32_t opcode) { // STMIB Rn!, <Rlist>
     uint32_t address = *registers[op0];
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        core->cp15.write<uint32_t>(id, address += 4, *registers[i]);
+        core.cp15.write<uint32_t>(id, address += 4, *registers[i]);
     }
     *registers[op0] = address;
     return m + (m < 2);
@@ -744,7 +744,7 @@ int ArmInterp::ldmdaU(uint32_t opcode) { // LDMDA Rn, <Rlist>^
     uint32_t **regs = &registers[(~opcode & BIT(15)) >> 11];
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        *regs[i] = core->cp15.read<uint32_t>(id, op0 += 4);
+        *regs[i] = core.cp15.read<uint32_t>(id, op0 += 4);
     }
 
     // Handle pipelining and mode/THUMB switching
@@ -761,7 +761,7 @@ int ArmInterp::stmdaU(uint32_t opcode) { // STMDA Rn, <Rlist>^
     uint32_t op0 = *registers[(opcode >> 16) & 0xF] - (m << 2);
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        core->cp15.write<uint32_t>(id, op0 += 4, registersUsr[i]);
+        core.cp15.write<uint32_t>(id, op0 += 4, registersUsr[i]);
     }
     return m + (m < 2);
 }
@@ -773,7 +773,7 @@ int ArmInterp::ldmiaU(uint32_t opcode) { // LDMIA Rn, <Rlist>^
     uint32_t **regs = &registers[(~opcode & BIT(15)) >> 11];
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        *regs[i] = core->cp15.read<uint32_t>(id, op0);
+        *regs[i] = core.cp15.read<uint32_t>(id, op0);
         op0 += 4;
     }
 
@@ -791,7 +791,7 @@ int ArmInterp::stmiaU(uint32_t opcode) { // STMIA Rn, <Rlist>^
     uint32_t op0 = *registers[(opcode >> 16) & 0xF];
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        core->cp15.write<uint32_t>(id, op0, registersUsr[i]);
+        core.cp15.write<uint32_t>(id, op0, registersUsr[i]);
         op0 += 4;
     }
     return m + (m < 2);
@@ -804,7 +804,7 @@ int ArmInterp::ldmdbU(uint32_t opcode) { // LDMDB Rn, <Rlist>^
     uint32_t **regs = &registers[(~opcode & BIT(15)) >> 11];
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        *regs[i] = core->cp15.read<uint32_t>(id, op0);
+        *regs[i] = core.cp15.read<uint32_t>(id, op0);
         op0 += 4;
     }
 
@@ -822,7 +822,7 @@ int ArmInterp::stmdbU(uint32_t opcode) { // STMDB Rn, <Rlist>^
     uint32_t op0 = *registers[(opcode >> 16) & 0xF] - (m << 2);
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        core->cp15.write<uint32_t>(id, op0, registersUsr[i]);
+        core.cp15.write<uint32_t>(id, op0, registersUsr[i]);
         op0 += 4;
     }
     return m + (m < 2);
@@ -835,7 +835,7 @@ int ArmInterp::ldmibU(uint32_t opcode) { // LDMIB Rn, <Rlist>^
     uint32_t **regs = &registers[(~opcode & BIT(15)) >> 11];
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        *regs[i] = core->cp15.read<uint32_t>(id, op0 += 4);
+        *regs[i] = core.cp15.read<uint32_t>(id, op0 += 4);
     }
 
     // Handle pipelining and mode/THUMB switching
@@ -852,7 +852,7 @@ int ArmInterp::stmibU(uint32_t opcode) { // STMIB Rn, <Rlist>^
     uint32_t op0 = *registers[(opcode >> 16) & 0xF];
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        core->cp15.write<uint32_t>(id, op0 += 4, registersUsr[i]);
+        core.cp15.write<uint32_t>(id, op0 += 4, registersUsr[i]);
     }
     return m + (m < 2);
 }
@@ -865,7 +865,7 @@ int ArmInterp::ldmdaUW(uint32_t opcode) { // LDMDA Rn!, <Rlist>^
     uint32_t **regs = &registers[(~opcode & BIT(15)) >> 11];
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        *regs[i] = core->cp15.read<uint32_t>(id, address += 4);
+        *regs[i] = core.cp15.read<uint32_t>(id, address += 4);
     }
 
     // Load the writeback value if it's not last or is the only listed register
@@ -887,7 +887,7 @@ int ArmInterp::stmdaUW(uint32_t opcode) { // STMDA Rn!, <Rlist>^
     uint32_t address = *registers[op0] - (m << 2);
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        core->cp15.write<uint32_t>(id, address += 4, registersUsr[i]);
+        core.cp15.write<uint32_t>(id, address += 4, registersUsr[i]);
     }
     *registers[op0] = address - (m << 2);
     return m + (m < 2);
@@ -901,7 +901,7 @@ int ArmInterp::ldmiaUW(uint32_t opcode) { // LDMIA Rn!, <Rlist>^
     uint32_t **regs = &registers[(~opcode & BIT(15)) >> 11];
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        *regs[i] = core->cp15.read<uint32_t>(id, address);
+        *regs[i] = core.cp15.read<uint32_t>(id, address);
         address += 4;
     }
 
@@ -924,7 +924,7 @@ int ArmInterp::stmiaUW(uint32_t opcode) { // STMIA Rn!, <Rlist>^
     uint32_t address = *registers[op0];
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        core->cp15.write<uint32_t>(id, address, registersUsr[i]);
+        core.cp15.write<uint32_t>(id, address, registersUsr[i]);
         address += 4;
     }
     *registers[op0] = address;
@@ -939,7 +939,7 @@ int ArmInterp::ldmdbUW(uint32_t opcode) { // LDMDB Rn!, <Rlist>^
     uint32_t **regs = &registers[(~opcode & BIT(15)) >> 11];
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        *regs[i] = core->cp15.read<uint32_t>(id, address);
+        *regs[i] = core.cp15.read<uint32_t>(id, address);
         address += 4;
     }
 
@@ -962,7 +962,7 @@ int ArmInterp::stmdbUW(uint32_t opcode) { // STMDB Rn!, <Rlist>^
     uint32_t address = *registers[op0] - (m << 2);
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        core->cp15.write<uint32_t>(id, address, registersUsr[i]);
+        core.cp15.write<uint32_t>(id, address, registersUsr[i]);
         address += 4;
     }
     *registers[op0] = address - (m << 2);
@@ -977,7 +977,7 @@ int ArmInterp::ldmibUW(uint32_t opcode) { // LDMIB Rn!, <Rlist>^
     uint32_t **regs = &registers[(~opcode & BIT(15)) >> 11];
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        *regs[i] = core->cp15.read<uint32_t>(id, address += 4);
+        *regs[i] = core.cp15.read<uint32_t>(id, address += 4);
     }
 
     // Load the writeback value if it's not last or is the only listed register
@@ -999,7 +999,7 @@ int ArmInterp::stmibUW(uint32_t opcode) { // STMIB Rn!, <Rlist>^
     uint32_t address = *registers[op0];
     for (int i = 0; i < 16; i++) {
         if (~opcode & BIT(i)) continue;
-        core->cp15.write<uint32_t>(id, address += 4, registersUsr[i]);
+        core.cp15.write<uint32_t>(id, address += 4, registersUsr[i]);
     }
     *registers[op0] = address;
     return m + (m < 2);
@@ -1106,16 +1106,16 @@ int ArmInterp::mrc(uint32_t opcode) { // MRC Pn,<cpopc>,Rd,Cn,Cm,<cp>
     switch (pn) {
     case 10: // VFP11 (single)
         if (id == ARM9) break; // ARM11-exclusive
-        core->vfp11s[id].readSingleS(cpopc, rd, cn, cm, cp);
+        core.vfp11s[id].readSingleS(cpopc, rd, cn, cm, cp);
         return 1;
 
     case 11: // VFP11 (double)
         if (id == ARM9) break; // ARM11-exclusive
-        core->vfp11s[id].readSingleD(cpopc, rd, cn, cm, cp);
+        core.vfp11s[id].readSingleD(cpopc, rd, cn, cm, cp);
         return 1;
 
     case 15: // CP15
-        *rd = core->cp15.readReg(id, cn, cm, cp);
+        *rd = core.cp15.readReg(id, cn, cm, cp);
         return 1;
     }
 
@@ -1140,16 +1140,16 @@ int ArmInterp::mcr(uint32_t opcode) { // MCR Pn,<cpopc>,Rd,Cn,Cm,<cp>
     switch (pn) {
     case 10: // VFP11 (single)
         if (id == ARM9) break; // ARM11-exclusive
-        core->vfp11s[id].writeSingleS(cpopc, rd, cn, cm, cp);
+        core.vfp11s[id].writeSingleS(cpopc, rd, cn, cm, cp);
         return 1;
 
     case 11: // VFP11 (double)
         if (id == ARM9) break; // ARM11-exclusive
-        core->vfp11s[id].writeSingleD(cpopc, rd, cn, cm, cp);
+        core.vfp11s[id].writeSingleD(cpopc, rd, cn, cm, cp);
         return 1;
 
     case 15: // CP15
-        core->cp15.writeReg(id, cn, cm, cp, rd);
+        core.cp15.writeReg(id, cn, cm, cp, rd);
         return 1;
     }
 
@@ -1173,12 +1173,12 @@ int ArmInterp::mrrc(uint32_t opcode) { // MRRC Pn,<cpopc>,Rd,Rn,Cm
     switch (pn) {
     case 10: // VFP11 (single)
         if (id == ARM9) break; // ARM11-exclusive
-        core->vfp11s[id].readDoubleS(cpopc, rd, rn, cm);
+        core.vfp11s[id].readDoubleS(cpopc, rd, rn, cm);
         return 1;
 
     case 11: // VFP11 (double)
         if (id == ARM9) break; // ARM11-exclusive
-        core->vfp11s[id].readDoubleD(cpopc, rd, rn, cm);
+        core.vfp11s[id].readDoubleD(cpopc, rd, rn, cm);
         return 1;
     }
 
@@ -1202,12 +1202,12 @@ int ArmInterp::mcrr(uint32_t opcode) { // MCRR Pn,<cpopc>,Rd,Rn,Cm
     switch (pn) {
     case 10: // VFP11 (single)
         if (id == ARM9) break; // ARM11-exclusive
-        core->vfp11s[id].writeDoubleS(cpopc, rd, rn, cm);
+        core.vfp11s[id].writeDoubleS(cpopc, rd, rn, cm);
         return 1;
 
     case 11: // VFP11 (double)
         if (id == ARM9) break; // ARM11-exclusive
-        core->vfp11s[id].writeDoubleD(cpopc, rd, rn, cm);
+        core.vfp11s[id].writeDoubleD(cpopc, rd, rn, cm);
         return 1;
     }
 
@@ -1231,12 +1231,12 @@ int ArmInterp::ldc(uint32_t opcode) { // LDC Pn,Cd,<Address>
     switch (pn) {
     case 10: // VFP11 (single)
         if (id == ARM9) break; // ARM11-exclusive
-        core->vfp11s[id].loadMemoryS(cpopc, cd, rn, ofs);
+        core.vfp11s[id].loadMemoryS(cpopc, cd, rn, ofs);
         return 1;
 
     case 11: // VFP11 (double)
         if (id == ARM9) break; // ARM11-exclusive
-        core->vfp11s[id].loadMemoryD(cpopc, cd, rn, ofs);
+        core.vfp11s[id].loadMemoryD(cpopc, cd, rn, ofs);
         return 1;
     }
 
@@ -1260,12 +1260,12 @@ int ArmInterp::stc(uint32_t opcode) { // STC Pn,Cd,<Address>
     switch (pn) {
     case 10: // VFP11 (single)
         if (id == ARM9) break; // ARM11-exclusive
-        core->vfp11s[id].storeMemoryS(cpopc, cd, rn, ofs);
+        core.vfp11s[id].storeMemoryS(cpopc, cd, rn, ofs);
         return 1;
 
     case 11: // VFP11 (double)
         if (id == ARM9) break; // ARM11-exclusive
-        core->vfp11s[id].storeMemoryD(cpopc, cd, rn, ofs);
+        core.vfp11s[id].storeMemoryD(cpopc, cd, rn, ofs);
         return 1;
     }
 
@@ -1290,12 +1290,12 @@ int ArmInterp::cdp(uint32_t opcode) { // CDP Pn,<cpopc>,Cd,Cn,Cm,<cp>
     switch (pn) {
     case 10: // VFP11 (single)
         if (id == ARM9) break; // ARM11-exclusive
-        core->vfp11s[id].dataOperS(cpopc, cd, cn, cm, cp);
+        core.vfp11s[id].dataOperS(cpopc, cd, cn, cm, cp);
         return 1;
 
     case 11: // VFP11 (double)
         if (id == ARM9) break; // ARM11-exclusive
-        core->vfp11s[id].dataOperD(cpopc, cd, cn, cm, cp);
+        core.vfp11s[id].dataOperD(cpopc, cd, cn, cm, cp);
         return 1;
     }
 
@@ -1312,8 +1312,8 @@ int ArmInterp::swpb(uint32_t opcode) { // SWPB Rd,Rm,[Rn]
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[opcode & 0xF];
     uint32_t op2 = *registers[(opcode >> 16) & 0xF];
-    *op0 = core->cp15.read<uint8_t>(id, op2);
-    core->cp15.write<uint8_t>(id, op2, op1);
+    *op0 = core.cp15.read<uint8_t>(id, op2);
+    core.cp15.write<uint8_t>(id, op2, op1);
     return 2;
 }
 
@@ -1322,8 +1322,8 @@ int ArmInterp::swp(uint32_t opcode) { // SWP Rd,Rm,[Rn]
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[opcode & 0xF];
     uint32_t op2 = *registers[(opcode >> 16) & 0xF];
-    *op0 = core->cp15.read<uint32_t>(id, op2);
-    core->cp15.write<uint32_t>(id, op2, op1);
+    *op0 = core.cp15.read<uint32_t>(id, op2);
+    core.cp15.write<uint32_t>(id, op2, op1);
 
     // Rotate misaligned reads on ARM9
     if (id == ARM9 && (op2 & 0x3)) {
@@ -1338,7 +1338,7 @@ int ArmInterp::ldrexb(uint32_t opcode) { // LDREXB Rd,[Rn]
     if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
-    excValue = *op0 = core->cp15.read<uint8_t>(id, excAddress = op1);
+    excValue = *op0 = core.cp15.read<uint8_t>(id, excAddress = op1);
     exclusive = true;
 
     // Handle pipelining and THUMB switching
@@ -1354,13 +1354,13 @@ int ArmInterp::strexb(uint32_t opcode) { // STREXB Rd,Rm,[Rn]
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[opcode & 0xF];
     uint32_t op2 = *registers[(opcode >> 16) & 0xF];
-    if (*op0 = !exclusive || excAddress != op2 || excValue != core->cp15.read<uint8_t>(id, op2)) return 1;
-    core->cp15.write<uint8_t>(id, op2, op1);
+    if (*op0 = !exclusive || excAddress != op2 || excValue != core.cp15.read<uint8_t>(id, op2)) return 1;
+    core.cp15.write<uint8_t>(id, op2, op1);
 
     // Update exclusive states on all cores
     for (int i = 0; i < MAX_CPUS - 1; i++)
-        if (core->arms[i].exclusive && core->arms[i].excAddress == op2)
-            core->arms[i].exclusive = false;
+        if (core.arms[i].exclusive && core.arms[i].excAddress == op2)
+            core.arms[i].exclusive = false;
     return 1;
 }
 
@@ -1369,7 +1369,7 @@ int ArmInterp::ldrexh(uint32_t opcode) { // LDREXH Rd,[Rn]
     if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
-    excValue = *op0 = core->cp15.read<uint16_t>(id, excAddress = op1);
+    excValue = *op0 = core.cp15.read<uint16_t>(id, excAddress = op1);
     exclusive = true;
 
     // Handle pipelining
@@ -1384,13 +1384,13 @@ int ArmInterp::strexh(uint32_t opcode) { // STREXH Rd,Rm,[Rn]
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[opcode & 0xF];
     uint32_t op2 = *registers[(opcode >> 16) & 0xF];
-    if (*op0 = !exclusive || excAddress != op2 || excValue != core->cp15.read<uint16_t>(id, op2)) return 1;
-    core->cp15.write<uint16_t>(id, op2, op1);
+    if (*op0 = !exclusive || excAddress != op2 || excValue != core.cp15.read<uint16_t>(id, op2)) return 1;
+    core.cp15.write<uint16_t>(id, op2, op1);
 
     // Update exclusive states on all cores
     for (int i = 0; i < MAX_CPUS - 1; i++)
-        if (core->arms[i].exclusive && core->arms[i].excAddress == op2)
-            core->arms[i].exclusive = false;
+        if (core.arms[i].exclusive && core.arms[i].excAddress == op2)
+            core.arms[i].exclusive = false;
     return 1;
 }
 
@@ -1399,7 +1399,7 @@ int ArmInterp::ldrex(uint32_t opcode) { // LDREX Rd,[Rn]
     if (id == ARM9) return unkArm(opcode); // ARM11-exclusive
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
-    excValue = *op0 = core->cp15.read<uint32_t>(id, excAddress = op1);
+    excValue = *op0 = core.cp15.read<uint32_t>(id, excAddress = op1);
     exclusive = true;
 
     // Handle pipelining and THUMB switching
@@ -1415,13 +1415,13 @@ int ArmInterp::strex(uint32_t opcode) { // STREX Rd,Rm,[Rn]
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     uint32_t op1 = *registers[opcode & 0xF];
     uint32_t op2 = *registers[(opcode >> 16) & 0xF];
-    if (*op0 = !exclusive || excAddress != op2 || excValue != core->cp15.read<uint32_t>(id, op2)) return 1;
-    core->cp15.write<uint32_t>(id, op2, op1);
+    if (*op0 = !exclusive || excAddress != op2 || excValue != core.cp15.read<uint32_t>(id, op2)) return 1;
+    core.cp15.write<uint32_t>(id, op2, op1);
 
     // Update exclusive states on all cores
     for (int i = 0; i < MAX_CPUS - 1; i++)
-        if (core->arms[i].exclusive && core->arms[i].excAddress == op2)
-            core->arms[i].exclusive = false;
+        if (core.arms[i].exclusive && core.arms[i].excAddress == op2)
+            core.arms[i].exclusive = false;
     return 1;
 }
 
@@ -1431,8 +1431,8 @@ int ArmInterp::ldrexd(uint32_t opcode) { // LDREXD Rd,[Rn]
     uint32_t *op0 = registers[(opcode >> 12) & 0xF];
     if (op0 == registers[15]) return 1;
     uint32_t op1 = *registers[(opcode >> 16) & 0xF];
-    excValue = op0[0] = core->cp15.read<uint32_t>(id, excAddress = op1);
-    excValue |= uint64_t(op0[1] = core->cp15.read<uint32_t>(id, op1 + 4)) << 32;
+    excValue = op0[0] = core.cp15.read<uint32_t>(id, excAddress = op1);
+    excValue |= uint64_t(op0[1] = core.cp15.read<uint32_t>(id, op1 + 4)) << 32;
     exclusive = true;
     return 2;
 }
@@ -1444,15 +1444,15 @@ int ArmInterp::strexd(uint32_t opcode) { // STREXD Rd,Rm,[Rn]
     uint32_t *op1 = registers[opcode & 0xF];
     if (op1 == registers[15]) return 1;
     uint32_t op2 = *registers[(opcode >> 16) & 0xF];
-    if (*op0 = !exclusive || excAddress != op2 || excValue != (core->cp15.read<uint32_t>(id, op2)
-        | (uint64_t(core->cp15.read<uint32_t>(id, op2 + 4)) << 32))) return 1;
-    core->cp15.write<uint32_t>(id, op2, op1[0]);
-    core->cp15.write<uint32_t>(id, op2 + 4, op1[1]);
+    if (*op0 = !exclusive || excAddress != op2 || excValue != (core.cp15.read<uint32_t>(id, op2)
+        | (uint64_t(core.cp15.read<uint32_t>(id, op2 + 4)) << 32))) return 1;
+    core.cp15.write<uint32_t>(id, op2, op1[0]);
+    core.cp15.write<uint32_t>(id, op2 + 4, op1[1]);
 
     // Update exclusive states on all cores
     for (int i = 0; i < MAX_CPUS - 1; i++)
-        if (core->arms[i].exclusive && core->arms[i].excAddress == op2)
-            core->arms[i].exclusive = false;
+        if (core.arms[i].exclusive && core.arms[i].excAddress == op2)
+            core.arms[i].exclusive = false;
     return 2;
 }
 
@@ -1467,7 +1467,7 @@ int ArmInterp::ldrsbRegT(uint16_t opcode) { // LDRSB Rd,[Rb,Ro]
     uint32_t *op0 = registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
     uint32_t op2 = *registers[(opcode >> 6) & 0x7];
-    *op0 = (int8_t)core->cp15.read<uint8_t>(id, op1 + op2);
+    *op0 = (int8_t)core.cp15.read<uint8_t>(id, op1 + op2);
     return 1;
 }
 
@@ -1476,7 +1476,7 @@ int ArmInterp::ldrshRegT(uint16_t opcode) { // LDRSH Rd,[Rb,Ro]
     uint32_t *op0 = registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
     uint32_t op2 = *registers[(opcode >> 6) & 0x7];
-    *op0 = (int16_t)core->cp15.read<uint16_t>(id, op1 += op2);
+    *op0 = (int16_t)core.cp15.read<uint16_t>(id, op1 += op2);
     return 1;
 }
 
@@ -1485,7 +1485,7 @@ int ArmInterp::ldrbRegT(uint16_t opcode) { // LDRB Rd,[Rb,Ro]
     uint32_t *op0 = registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
     uint32_t op2 = *registers[(opcode >> 6) & 0x7];
-    *op0 = core->cp15.read<uint8_t>(id, op1 + op2);
+    *op0 = core.cp15.read<uint8_t>(id, op1 + op2);
     return 1;
 }
 
@@ -1494,7 +1494,7 @@ int ArmInterp::strbRegT(uint16_t opcode) { // STRB Rd,[Rb,Ro]
     uint32_t op0 = *registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
     uint32_t op2 = *registers[(opcode >> 6) & 0x7];
-    core->cp15.write<uint8_t>(id, op1 + op2, op0);
+    core.cp15.write<uint8_t>(id, op1 + op2, op0);
     return 1;
 }
 
@@ -1503,7 +1503,7 @@ int ArmInterp::ldrhRegT(uint16_t opcode) { // LDRH Rd,[Rb,Ro]
     uint32_t *op0 = registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
     uint32_t op2 = *registers[(opcode >> 6) & 0x7];
-    *op0 = core->cp15.read<uint16_t>(id, op1 += op2);
+    *op0 = core.cp15.read<uint16_t>(id, op1 += op2);
     return 1;
 }
 
@@ -1512,7 +1512,7 @@ int ArmInterp::strhRegT(uint16_t opcode) { // STRH Rd,[Rb,Ro]
     uint32_t op0 = *registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
     uint32_t op2 = *registers[(opcode >> 6) & 0x7];
-    core->cp15.write<uint16_t>(id, op1 + op2, op0);
+    core.cp15.write<uint16_t>(id, op1 + op2, op0);
     return 1;
 }
 
@@ -1521,7 +1521,7 @@ int ArmInterp::ldrRegT(uint16_t opcode) { // LDR Rd,[Rb,Ro]
     uint32_t *op0 = registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
     uint32_t op2 = *registers[(opcode >> 6) & 0x7];
-    *op0 = core->cp15.read<uint32_t>(id, op1 += op2);
+    *op0 = core.cp15.read<uint32_t>(id, op1 += op2);
 
     // Rotate misaligned reads on ARM9
     if (id == ARM9 && (op1 & 0x3)) {
@@ -1536,7 +1536,7 @@ int ArmInterp::strRegT(uint16_t opcode) { // STR Rd,[Rb,Ro]
     uint32_t op0 = *registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
     uint32_t op2 = *registers[(opcode >> 6) & 0x7];
-    core->cp15.write<uint32_t>(id, op1 + op2, op0);
+    core.cp15.write<uint32_t>(id, op1 + op2, op0);
     return 1;
 }
 
@@ -1545,7 +1545,7 @@ int ArmInterp::ldrbImm5T(uint16_t opcode) { // LDRB Rd,[Rb,#i]
     uint32_t *op0 = registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
     uint32_t op2 = (opcode & 0x07C0) >> 6;
-    *op0 = core->cp15.read<uint8_t>(id, op1 + op2);
+    *op0 = core.cp15.read<uint8_t>(id, op1 + op2);
     return 1;
 }
 
@@ -1554,7 +1554,7 @@ int ArmInterp::strbImm5T(uint16_t opcode) { // STRB Rd,[Rb,#i]
     uint32_t op0 = *registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
     uint32_t op2 = (opcode & 0x07C0) >> 6;
-    core->cp15.write<uint8_t>(id, op1 + op2, op0);
+    core.cp15.write<uint8_t>(id, op1 + op2, op0);
     return 1;
 }
 
@@ -1563,7 +1563,7 @@ int ArmInterp::ldrhImm5T(uint16_t opcode) { // LDRH Rd,[Rb,#i]
     uint32_t *op0 = registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
     uint32_t op2 = (opcode >> 5) & 0x3E;
-    *op0 = core->cp15.read<uint16_t>(id, op1 += op2);
+    *op0 = core.cp15.read<uint16_t>(id, op1 += op2);
     return 1;
 }
 
@@ -1572,7 +1572,7 @@ int ArmInterp::strhImm5T(uint16_t opcode) { // STRH Rd,[Rb,#i]
     uint32_t op0 = *registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
     uint32_t op2 = (opcode >> 5) & 0x3E;
-    core->cp15.write<uint16_t>(id, op1 + op2, op0);
+    core.cp15.write<uint16_t>(id, op1 + op2, op0);
     return 1;
 }
 
@@ -1581,7 +1581,7 @@ int ArmInterp::ldrImm5T(uint16_t opcode) { // LDR Rd,[Rb,#i]
     uint32_t *op0 = registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
     uint32_t op2 = (opcode >> 4) & 0x7C;
-    *op0 = core->cp15.read<uint32_t>(id, op1 += op2);
+    *op0 = core.cp15.read<uint32_t>(id, op1 += op2);
 
     // Rotate misaligned reads on ARM9
     if (id == ARM9 && (op1 & 0x3)) {
@@ -1596,7 +1596,7 @@ int ArmInterp::strImm5T(uint16_t opcode) { // STR Rd,[Rb,#i]
     uint32_t op0 = *registers[opcode & 0x7];
     uint32_t op1 = *registers[(opcode >> 3) & 0x7];
     uint32_t op2 = (opcode >> 4) & 0x7C;
-    core->cp15.write<uint32_t>(id, op1 + op2, op0);
+    core.cp15.write<uint32_t>(id, op1 + op2, op0);
     return 1;
 }
 
@@ -1605,7 +1605,7 @@ int ArmInterp::ldrPcT(uint16_t opcode) { // LDR Rd,[PC,#i]
     uint32_t *op0 = registers[(opcode >> 8) & 0x7];
     uint32_t op1 = *registers[15] & ~0x3;
     uint32_t op2 = (opcode & 0xFF) << 2;
-    *op0 = core->cp15.read<uint32_t>(id, op1 += op2);
+    *op0 = core.cp15.read<uint32_t>(id, op1 += op2);
 
     // Rotate misaligned reads on ARM9
     if (id == ARM9 && (op1 & 0x3)) {
@@ -1620,7 +1620,7 @@ int ArmInterp::ldrSpT(uint16_t opcode) { // LDR Rd,[SP,#i]
     uint32_t *op0 = registers[(opcode >> 8) & 0x7];
     uint32_t op1 = *registers[13];
     uint32_t op2 = (opcode & 0xFF) << 2;
-    *op0 = core->cp15.read<uint32_t>(id, op1 += op2);
+    *op0 = core.cp15.read<uint32_t>(id, op1 += op2);
 
     // Rotate misaligned reads on ARM9
     if (id == ARM9 && (op1 & 0x3)) {
@@ -1635,7 +1635,7 @@ int ArmInterp::strSpT(uint16_t opcode) { // STR Rd,[SP,#i]
     uint32_t op0 = *registers[(opcode >> 8) & 0x7];
     uint32_t op1 = *registers[13];
     uint32_t op2 = (opcode & 0xFF) << 2;
-    core->cp15.write<uint32_t>(id, op1 + op2, op0);
+    core.cp15.write<uint32_t>(id, op1 + op2, op0);
     return 1;
 }
 
@@ -1646,7 +1646,7 @@ int ArmInterp::ldmiaT(uint16_t opcode) { // LDMIA Rb!,<Rlist>
     uint32_t address = (*op0 += (m << 2)) - (m << 2);
     for (int i = 0; i < 8; i++) {
         if (~opcode & BIT(i)) continue;
-        *registers[i] = core->cp15.read<uint32_t>(id, address);
+        *registers[i] = core.cp15.read<uint32_t>(id, address);
         address += 4;
     }
     return m + (m < 2);
@@ -1659,7 +1659,7 @@ int ArmInterp::stmiaT(uint16_t opcode) { // STMIA Rb!,<Rlist>
     uint32_t address = *registers[op0];
     for (int i = 0; i < 8; i++) {
         if (~opcode & BIT(i)) continue;
-        core->cp15.write<uint32_t>(id, address, *registers[i]);
+        core.cp15.write<uint32_t>(id, address, *registers[i]);
         address += 4;
     }
     *registers[op0] = address;
@@ -1671,7 +1671,7 @@ int ArmInterp::popT(uint16_t opcode) { // POP <Rlist>
     uint8_t m = bitCount[opcode & 0xFF];
     for (int i = 0; i < 8; i++) {
         if (~opcode & BIT(i)) continue;
-        *registers[i] = core->cp15.read<uint32_t>(id, *registers[13]);
+        *registers[i] = core.cp15.read<uint32_t>(id, *registers[13]);
         *registers[13] += 4;
     }
     return m + (m < 2);
@@ -1683,7 +1683,7 @@ int ArmInterp::pushT(uint16_t opcode) { // PUSH <Rlist>
     uint32_t address = (*registers[13] -= (m << 2));
     for (int i = 0; i < 8; i++) {
         if (~opcode & BIT(i)) continue;
-        core->cp15.write<uint32_t>(id, address, *registers[i]);
+        core.cp15.write<uint32_t>(id, address, *registers[i]);
         address += 4;
     }
     return m + (m < 2);
@@ -1694,12 +1694,12 @@ int ArmInterp::popPcT(uint16_t opcode) { // POP <Rlist>,PC
     uint8_t m = bitCount[opcode & 0xFF] + 1;
     for (int i = 0; i < 8; i++) {
         if (~opcode & BIT(i)) continue;
-        *registers[i] = core->cp15.read<uint32_t>(id, *registers[13]);
+        *registers[i] = core.cp15.read<uint32_t>(id, *registers[13]);
         *registers[13] += 4;
     }
 
     // Load the program counter and handle pipelining
-    *registers[15] = core->cp15.read<uint32_t>(id, *registers[13]);
+    *registers[15] = core.cp15.read<uint32_t>(id, *registers[13]);
     *registers[13] += 4;
     cpsr &= ~((~(*registers[15]) & 0x1) << 5);
     flushPipeline();
@@ -1712,11 +1712,11 @@ int ArmInterp::pushLrT(uint16_t opcode) { // PUSH <Rlist>,LR
     uint32_t address = (*registers[13] -= (m << 2));
     for (int i = 0; i < 8; i++) {
         if (~opcode & BIT(i)) continue;
-        core->cp15.write<uint32_t>(id, address, *registers[i]);
+        core.cp15.write<uint32_t>(id, address, *registers[i]);
         address += 4;
     }
 
     // Store the link register
-    core->cp15.write<uint32_t>(id, address, *registers[14]);
+    core.cp15.write<uint32_t>(id, address, *registers[14]);
     return m + (m < 2);
 }

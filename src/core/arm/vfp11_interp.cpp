@@ -265,8 +265,8 @@ void Vfp11Interp::dataOperD(uint8_t cpopc, uint8_t cd, uint8_t cn, uint8_t cm, u
 bool Vfp11Interp::checkEnable() {
     // Check if the VFP is enabled and trigger an undefined exception if not
     if (fpexc & BIT(30)) return true;
-    *core->arms[id].registers[15] -= 4;
-    core->arms[id].exception(0x04);
+    *core.arms[id].registers[15] -= 4;
+    core.arms[id].exception(0x04);
     return false;
 }
 
@@ -286,8 +286,8 @@ void Vfp11Interp::fmrx(uint32_t *rd, uint8_t sys) { // FMRX Rd,sys
     case 0x02: // FPSCR
         // Read from FPSCR if enabled, or move VFP flags to ARM for FMSTAT
         if (!checkEnable()) return;
-        if (rd == core->arms[id].registers[15]) // FMSTAT
-            core->arms[id].cpsr = (core->arms[id].cpsr & ~0xF0000000) | (fpscr & 0xF0000000);
+        if (rd == core.arms[id].registers[15]) // FMSTAT
+            core.arms[id].cpsr = (core.arms[id].cpsr & ~0xF0000000) | (fpscr & 0xF0000000);
         else
             *rd = fpscr;
         return;
@@ -330,41 +330,41 @@ void Vfp11Interp::fmxr(uint8_t sys, uint32_t rd) { // FMXR sys,Rd
 void Vfp11Interp::fldsP(uint8_t fd, uint32_t rn, uint8_t ofs) { // FLDS Fd,[Rn,+ofs]
     // Load a single register from memory with positive offset if enabled
     if (!checkEnable()) return;
-    regs.u32[fd] = core->cp15.read<uint32_t>(id, rn + (ofs << 2));
+    regs.u32[fd] = core.cp15.read<uint32_t>(id, rn + (ofs << 2));
 }
 
 void Vfp11Interp::fldsM(uint8_t fd, uint32_t rn, uint8_t ofs) { // FLDS Fd,[Rn,-ofs]
     // Load a single register from memory with negative offset if enabled
     if (!checkEnable()) return;
-    regs.u32[fd] = core->cp15.read<uint32_t>(id, rn - (ofs << 2));
+    regs.u32[fd] = core.cp15.read<uint32_t>(id, rn - (ofs << 2));
 }
 
 void Vfp11Interp::flddP(uint8_t fd, uint32_t rn, uint8_t ofs) { // FLDD Fd,[Rn,+ofs]
     // Load a double register from memory with positive offset if enabled
     if (!checkEnable()) return;
-    regs.u32[fd & ~0x1] = core->cp15.read<uint32_t>(id, rn + (ofs << 2) + 0);
-    regs.u32[fd | 0x1] = core->cp15.read<uint32_t>(id, rn + (ofs << 2) + 4);
+    regs.u32[fd & ~0x1] = core.cp15.read<uint32_t>(id, rn + (ofs << 2) + 0);
+    regs.u32[fd | 0x1] = core.cp15.read<uint32_t>(id, rn + (ofs << 2) + 4);
 }
 
 void Vfp11Interp::flddM(uint8_t fd, uint32_t rn, uint8_t ofs) { // FLDD Fd,[Rn,-ofs]
     // Load a double register from memory with negative offset if enabled
     if (!checkEnable()) return;
-    regs.u32[fd & ~0x1] = core->cp15.read<uint32_t>(id, rn - (ofs << 2) + 0);
-    regs.u32[fd | 0x1] = core->cp15.read<uint32_t>(id, rn - (ofs << 2) + 4);
+    regs.u32[fd & ~0x1] = core.cp15.read<uint32_t>(id, rn - (ofs << 2) + 0);
+    regs.u32[fd | 0x1] = core.cp15.read<uint32_t>(id, rn - (ofs << 2) + 4);
 }
 
 void Vfp11Interp::fldmia(uint8_t fd, uint32_t rn, uint8_t ofs) { // FLDMIA Rn,<Flist>
     // Load multiple VFP registers from memory with post-increment if enabled
     if (!checkEnable()) return;
     for (int i = 0; i < ofs; i++)
-        regs.u32[(fd + i) & 0x1F] = core->cp15.read<uint32_t>(id, rn + (i << 2));
+        regs.u32[(fd + i) & 0x1F] = core.cp15.read<uint32_t>(id, rn + (i << 2));
 }
 
 void Vfp11Interp::fldmiaW(uint8_t fd, uint32_t *rn, uint8_t ofs) { // FLDMIA Rn!,<Flist>
     // Load multiple VFP registers from memory with post-increment and writeback if enabled
     if (!checkEnable()) return;
     for (int i = 0; i < ofs; i++)
-        regs.u32[(fd + i) & 0x1F] = core->cp15.read<uint32_t>(id, *rn + (i << 2));
+        regs.u32[(fd + i) & 0x1F] = core.cp15.read<uint32_t>(id, *rn + (i << 2));
     *rn += (ofs << 2);
 }
 
@@ -373,47 +373,47 @@ void Vfp11Interp::fldmdbW(uint8_t fd, uint32_t *rn, uint8_t ofs) { // FLDMDB Rn!
     if (!checkEnable()) return;
     *rn -= (ofs << 2);
     for (int i = 0; i < ofs; i++)
-        regs.u32[(fd + i) & 0x1F] = core->cp15.read<uint32_t>(id, *rn + (i << 2));
+        regs.u32[(fd + i) & 0x1F] = core.cp15.read<uint32_t>(id, *rn + (i << 2));
 }
 
 void Vfp11Interp::fstsP(uint8_t fd, uint32_t rn, uint8_t ofs) { // FSTS Fd,[Rn,+ofs]
     // Store a single register to memory with positive offset if enabled
     if (!checkEnable()) return;
-    core->cp15.write<uint32_t>(id, rn + (ofs << 2), regs.u32[fd]);
+    core.cp15.write<uint32_t>(id, rn + (ofs << 2), regs.u32[fd]);
 }
 
 void Vfp11Interp::fstsM(uint8_t fd, uint32_t rn, uint8_t ofs) { // FSTS Fd,[Rn,-ofs]
     // Store a single register to memory with negative offset if enabled
     if (!checkEnable()) return;
-    core->cp15.write<uint32_t>(id, rn - (ofs << 2), regs.u32[fd]);
+    core.cp15.write<uint32_t>(id, rn - (ofs << 2), regs.u32[fd]);
 }
 
 void Vfp11Interp::fstdP(uint8_t fd, uint32_t rn, uint8_t ofs) { // FSTD Fd,[Rn,+ofs]
     // Store a double register to memory with positive offset if enabled
     if (!checkEnable()) return;
-    core->cp15.write<uint32_t>(id, rn + (ofs << 2) + 0, regs.u32[fd & ~0x1]);
-    core->cp15.write<uint32_t>(id, rn + (ofs << 2) + 4, regs.u32[fd | 0x1]);
+    core.cp15.write<uint32_t>(id, rn + (ofs << 2) + 0, regs.u32[fd & ~0x1]);
+    core.cp15.write<uint32_t>(id, rn + (ofs << 2) + 4, regs.u32[fd | 0x1]);
 }
 
 void Vfp11Interp::fstdM(uint8_t fd, uint32_t rn, uint8_t ofs) { // FSTD Fd,[Rn,-ofs]
     // Store a double register to memory with negative offset if enabled
     if (!checkEnable()) return;
-    core->cp15.write<uint32_t>(id, rn - (ofs << 2) + 0, regs.u32[fd & ~0x1]);
-    core->cp15.write<uint32_t>(id, rn - (ofs << 2) + 4, regs.u32[fd | 0x1]);
+    core.cp15.write<uint32_t>(id, rn - (ofs << 2) + 0, regs.u32[fd & ~0x1]);
+    core.cp15.write<uint32_t>(id, rn - (ofs << 2) + 4, regs.u32[fd | 0x1]);
 }
 
 void Vfp11Interp::fstmia(uint8_t fd, uint32_t rn, uint8_t ofs) { // FSTMIA Rn,<Flist>
     // Store multiple VFP registers to memory with post-increment if enabled
     if (!checkEnable()) return;
     for (int i = 0; i < ofs; i++)
-        core->cp15.write<uint32_t>(id, rn + (i << 2), regs.u32[(fd + i) & 0x1F]);
+        core.cp15.write<uint32_t>(id, rn + (i << 2), regs.u32[(fd + i) & 0x1F]);
 }
 
 void Vfp11Interp::fstmiaW(uint8_t fd, uint32_t *rn, uint8_t ofs) { // FSTMIA Rn!,<Flist>
     // Store multiple VFP registers to memory with post-increment and writeback if enabled
     if (!checkEnable()) return;
     for (int i = 0; i < ofs; i++)
-        core->cp15.write<uint32_t>(id, *rn + (i << 2), regs.u32[(fd + i) & 0x1F]);
+        core.cp15.write<uint32_t>(id, *rn + (i << 2), regs.u32[(fd + i) & 0x1F]);
     *rn += (ofs << 2);
 }
 
@@ -422,7 +422,7 @@ void Vfp11Interp::fstmdbW(uint8_t fd, uint32_t *rn, uint8_t ofs) { // FSTMDB Rn!
     if (!checkEnable()) return;
     *rn -= (ofs << 2);
     for (int i = 0; i < ofs; i++)
-        core->cp15.write<uint32_t>(id, *rn + (i << 2), regs.u32[(fd + i) & 0x1F]);
+        core.cp15.write<uint32_t>(id, *rn + (i << 2), regs.u32[(fd + i) & 0x1F]);
 }
 
 // Perform a single data operation in scalar, mixed, or vector mode if enabled

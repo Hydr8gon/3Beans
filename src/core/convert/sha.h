@@ -28,7 +28,7 @@ class Sha {
 public:
     uint32_t iconFlags = -1;
 
-    Sha(Core *core, bool arm9): core(core), arm9(arm9) {}
+    Sha(Core &core, bool arm9): core(core), arm9(arm9) {}
     void update();
 
     uint32_t readCnt() { return shaCnt; }
@@ -42,7 +42,7 @@ public:
     void writeFifo(uint32_t mask, uint32_t value);
 
 private:
-    Core *core;
+    Core &core;
     bool arm9;
     bool scheduled = false;
 

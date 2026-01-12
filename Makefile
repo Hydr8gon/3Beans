@@ -9,6 +9,7 @@ INCS := $(shell wx-config --cxxflags) $(shell pkg-config --cflags portaudio-2.0 
 APPNAME := 3Beans
 PKGNAME := com.hydra.threebeans
 DESTDIR ?= /usr
+CXX ?= g++
 
 ifeq ($(OS),Windows_NT)
   ARGS += -static -DWINDOWS
@@ -64,10 +65,10 @@ endif
 endif
 
 $(NAME): $(OFILES)
-	g++ -o $@ $(ARGS) $^ $(LIBS)
+	$(CXX) -o $@ $(ARGS) $^ $(LIBS)
 
 $(BUILD)/%.o: %.cpp $(HFILES) $(BUILD)
-	g++ -c -o $@ $(ARGS) $(INCS) $<
+	$(CXX) -c -o $@ $(ARGS) $(INCS) $<
 
 $(BUILD):
 	for dir in $(SRCS); do mkdir -p $(BUILD)/$$dir; done

@@ -28,7 +28,7 @@ class Core;
 
 class Pdc {
 public:
-    Pdc(Core *core): core(core) {}
+    Pdc(Core &core): core(core) {}
     uint32_t *getFrame();
     void drawFrame();
 
@@ -47,7 +47,7 @@ public:
     void writeFramebufStep(int i, uint32_t mask, uint32_t value);
 
 private:
-    Core *core;
+    Core &core;
 
     std::queue<uint32_t*> buffers;
     std::atomic<bool> ready{false};

@@ -26,7 +26,7 @@ class Core;
 
 class Pxi {
 public:
-    Pxi(Core *core): core(core) {}
+    Pxi(Core &core): core(core) {}
 
     uint32_t readSync(bool arm9) { return pxiSync[arm9]; }
     uint16_t readCnt(bool arm9) { return pxiCnt[arm9]; }
@@ -37,7 +37,7 @@ public:
     void writeSend(bool arm9, uint32_t mask, uint32_t value);
 
 private:
-    Core *core;
+    Core &core;
     std::queue<uint32_t> fifos[2];
 
     uint32_t pxiSync[2] = {};

@@ -22,7 +22,7 @@
 void I2c::mcuInterrupt(uint32_t mask) {
     // Set MCU interrupt flags and trigger if a set flag is enabled
     if ((mcuIrqFlags |= mask) & ~mcuIrqMask)
-        core->interrupts.sendInterrupt(ARM11, 0x71);
+        core.interrupts.sendInterrupt(ARM11, 0x71);
 }
 
 void I2c::writeBusData(int i, uint8_t value) {
@@ -39,7 +39,7 @@ void I2c::writeBusCnt(int i, uint8_t value) {
     // Trigger an interrupt for the current bus if enabled
     if (value & BIT(6)) {
         uint8_t types[] = { 0x54, 0x55, 0x5C };
-        core->interrupts.sendInterrupt(ARM11, types[i]);
+        core.interrupts.sendInterrupt(ARM11, types[i]);
     }
 
     // Handle I2C reads if the direction is set to read

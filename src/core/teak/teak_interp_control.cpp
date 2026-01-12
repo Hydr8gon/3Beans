@@ -61,10 +61,10 @@ BKREP_FUNC(bkrepR6, regR[6], (opcode << 16)) // BKREP R6, Address18
 #define BKREPRST_FUNC(name, op0) int TeakInterp::name(uint16_t opcode) { \
     uint16_t &reg = op0; \
     uint8_t count = (regStt[2] >> 12) & 0x7; \
-    uint16_t ext = core->dsp.readData(reg++); \
-    bkEnd[count] = ((ext << 8) & 0x10000) | core->dsp.readData(reg++); \
-    bkStart[count] = ((ext << 16) & 0x10000) | core->dsp.readData(reg++); \
-    regLc = core->dsp.readData(reg++); \
+    uint16_t ext = core.dsp.readData(reg++); \
+    bkEnd[count] = ((ext << 8) & 0x10000) | core.dsp.readData(reg++); \
+    bkStart[count] = ((ext << 16) & 0x10000) | core.dsp.readData(reg++); \
+    regLc = core.dsp.readData(reg++); \
     if ((ext & BIT(15)) && count < 4) { \
         regStt[2] = (regStt[2] | BIT(15)) + BIT(12); \
         regIcr = (regIcr | BIT(4)) + BIT(5); \
@@ -79,11 +79,11 @@ BKREPRST_FUNC(bkreprstMsp, regSp) // BKREPRST MemSp
 #define BKREPSTO_FUNC(name, op0) int TeakInterp::name(uint16_t opcode) { \
     uint16_t &reg = op0; \
     uint8_t count = std::max(0, int((regStt[2] >> 12) & 0x7) - 1); \
-    core->dsp.writeData(--reg, regLc); \
-    core->dsp.writeData(--reg, bkStart[count]); \
-    core->dsp.writeData(--reg, bkEnd[count]); \
+    core.dsp.writeData(--reg, regLc); \
+    core.dsp.writeData(--reg, bkStart[count]); \
+    core.dsp.writeData(--reg, bkEnd[count]); \
     uint16_t ext = (regStt[2] & BIT(15)) | ((bkEnd[count] >> 8) & 0x300) | ((bkStart[count] >> 16) & 0x3); \
-    core->dsp.writeData(--reg, ext); \
+    core.dsp.writeData(--reg, ext); \
     bkrepPop(count); \
     return 1; \
 }
@@ -109,7 +109,7 @@ int TeakInterp::br(uint16_t opcode) { // BR Address18, Cond
 int TeakInterp::brr(uint16_t opcode) { // BRR RelAddr7, Cond
     // Catch idle loops and halt instead of executing them
     if (opcode == 0x57F0)
-        core->schedule(TEAK_STOP_CYCLES, 0);
+        core.schedule(TEAK_STOP_CYCLES, 0);
 
     // Branch to a relative 7-bit signed offset if the condition is met
     if (checkCond(opcode))
@@ -121,8 +121,8 @@ int TeakInterp::call(uint16_t opcode) { // CALL Address18, Cond
     // Branch to an 18-bit address and push PC to the stack if the condition is met
     uint16_t param = readParam();
     if (checkCond(opcode)) {
-        core->dsp.writeData(--regSp, regPc >> ((regMod[3] & BIT(14)) ? 16 : 0));
-        core->dsp.writeData(--regSp, regPc >> ((regMod[3] & BIT(14)) ? 0 : 16));
+        core.dsp.writeData(--regSp, regPc >> ((regMod[3] & BIT(14)) ? 16 : 0));
+        core.dsp.writeData(--regSp, regPc >> ((regMod[3] & BIT(14)) ? 0 : 16));
         regPc = ((opcode << 12) & 0x10000) | param;
     }
     return 2;
@@ -130,8 +130,8 @@ int TeakInterp::call(uint16_t opcode) { // CALL Address18, Cond
 
 // Branch to an A accumulator address and push PC to the stack
 #define CALLA_FUNC(name, op0) int TeakInterp::name(uint16_t opcode) { \
-    core->dsp.writeData(--regSp, regPc >> ((regMod[3] & BIT(14)) ? 16 : 0)); \
-    core->dsp.writeData(--regSp, regPc >> ((regMod[3] & BIT(14)) ? 0 : 16)); \
+    core.dsp.writeData(--regSp, regPc >> ((regMod[3] & BIT(14)) ? 16 : 0)); \
+    core.dsp.writeData(--regSp, regPc >> ((regMod[3] & BIT(14)) ? 0 : 16)); \
     regPc = (op0) & 0x1FFFF; \
     return 1; \
 }
@@ -142,8 +142,8 @@ CALLA_FUNC(callaAl, ((regStt[2] << 10) & 0x10000) | regA[(opcode >> 8) & 0x1].l)
 int TeakInterp::callr(uint16_t opcode) { // CALLR RelAddr7, Cond
     // Branch to a relative 7-bit signed offset and push PC to the stack if the condition is met
     if (checkCond(opcode)) {
-        core->dsp.writeData(--regSp, regPc >> ((regMod[3] & BIT(14)) ? 16 : 0));
-        core->dsp.writeData(--regSp, regPc >> ((regMod[3] & BIT(14)) ? 0 : 16));
+        core.dsp.writeData(--regSp, regPc >> ((regMod[3] & BIT(14)) ? 16 : 0));
+        core.dsp.writeData(--regSp, regPc >> ((regMod[3] & BIT(14)) ? 0 : 16));
         regPc += int8_t(opcode >> 3) >> 1;
     }
     return 1;
@@ -251,15 +251,15 @@ int TeakInterp::eint(uint16_t opcode) { // EINT
     // Set the interrupt enable bit
     regSt[0] |= BIT(1);
     regMod[3] |= BIT(7);
-    core->dsp.updateIcuState();
+    core.dsp.updateIcuState();
     return 1;
 }
 
 int TeakInterp::movpdw(uint16_t opcode) { // MOVPDW ProgMemAx, PC
     // Branch to an address from program memory addressed by an A accumulator
     uint32_t address = 0x1FF00000 + ((regA[(opcode >> 8) & 0x1].v & 0x1FFFF) << 1);
-    uint16_t h = core->memory.read<uint16_t>(ARM11, address + 0);
-    uint16_t l = core->memory.read<uint16_t>(ARM11, address + 2);
+    uint16_t h = core.memory.read<uint16_t>(ARM11, address + 0);
+    uint16_t l = core.memory.read<uint16_t>(ARM11, address + 2);
     regPc = ((h << 16) | l) & 0x1FFFF;
     return 1;
 }
@@ -283,8 +283,8 @@ REP_FUNC(repR6, regR[6]) // REP R6
 int TeakInterp::ret(uint16_t opcode) { // RET, Cond
     // Pop PC from the stack if the condition is met
     if (checkCond(opcode)) {
-        uint16_t h = core->dsp.readData(regSp++);
-        uint16_t l = core->dsp.readData(regSp++);
+        uint16_t h = core.dsp.readData(regSp++);
+        uint16_t l = core.dsp.readData(regSp++);
         regPc = ((regMod[3] & BIT(14)) ? ((l << 16) | h) : ((h << 16) | l)) & 0x1FFFF;
     }
     return 1;
@@ -294,23 +294,23 @@ int TeakInterp::reti(uint16_t opcode) { // RETI, Cond
     // Return from an interrupt if the condition is met
     if (checkCond(opcode)) {
         // Pop PC from the stack
-        uint16_t h = core->dsp.readData(regSp++);
-        uint16_t l = core->dsp.readData(regSp++);
+        uint16_t h = core.dsp.readData(regSp++);
+        uint16_t l = core.dsp.readData(regSp++);
         regPc = ((regMod[3] & BIT(14)) ? ((l << 16) | h) : ((h << 16) | l)) & 0x1FFFF;
 
         // Set the IE bit and optionally restore context
         if (opcode & BIT(4)) cntxR(0);
         regSt[0] |= BIT(1);
         regMod[3] |= BIT(7);
-        core->dsp.updateIcuState();
+        core.dsp.updateIcuState();
     }
     return 1;
 }
 
 int TeakInterp::rets(uint16_t opcode) { // RETS, Imm8u
     // Pop PC from the stack and add an 8-bit immediate to SP
-    uint16_t h = core->dsp.readData(regSp++);
-    uint16_t l = core->dsp.readData(regSp++);
+    uint16_t h = core.dsp.readData(regSp++);
+    uint16_t l = core.dsp.readData(regSp++);
     regPc = ((regMod[3] & BIT(14)) ? ((l << 16) | h) : ((h << 16) | l)) & 0x1FFFF;
     regSp += (opcode & 0xFF);
     return 1;

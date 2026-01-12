@@ -26,7 +26,7 @@ class Core;
 
 class Vfp11Interp {
 public:
-    Vfp11Interp(Core *core, CpuId id): core(core), id(id) {}
+    Vfp11Interp(Core &core, CpuId id): core(core), id(id) {}
 
     void readSingleS(uint8_t cpopc, uint32_t *rd, uint8_t cn, uint8_t cm, uint8_t cp);
     void readSingleD(uint8_t cpopc, uint32_t *rd, uint8_t cn, uint8_t cm, uint8_t cp);
@@ -47,7 +47,7 @@ public:
     void dataOperD(uint8_t cpopc, uint8_t cd, uint8_t cn, uint8_t cm, uint8_t cp);
 
 private:
-    Core *core;
+    Core &core;
     CpuId id;
 
     union {

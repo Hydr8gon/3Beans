@@ -58,7 +58,7 @@ public:
     MemMap memMap11[0x100000] = {};
     MemMap memMap9[0x100000] = {};
 
-    Memory(Core *core): core(core) {}
+    Memory(Core &core): core(core) {}
     ~Memory();
 
     bool init();
@@ -72,7 +72,7 @@ public:
     template <typename T> void writeFallback(CpuId id, uint32_t address, T value);
 
 private:
-    Core *core;
+    Core &core;
 
     uint8_t arm9Ram[0x180000] = {}; // 1.5MB ARM9 internal RAM
     uint8_t vram[0x600000] = {}; // 6MB VRAM

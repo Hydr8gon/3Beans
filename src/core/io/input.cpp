@@ -64,7 +64,7 @@ void Input::updateHome() {
     // Trigger MCU interrupts for home button presses and releases
     for (int i = 0; i < 2; i++) {
         if (~homeState & BIT(i)) continue;
-        core->i2c.mcuInterrupt(BIT(2 + i));
+        core.i2c.mcuInterrupt(BIT(2 + i));
         homeState &= ~BIT(i);
     }
 }
@@ -75,7 +75,7 @@ uint8_t Input::spiTransfer(uint8_t value) {
         spiFifoCnt &= ~BIT(15);
         if (spiFifoIntMask & BIT(0)) {
             spiFifoIntStat |= BIT(0);
-            core->interrupts.sendInterrupt(ARM11, 0x57);
+            core.interrupts.sendInterrupt(ARM11, 0x57);
         }
     }
 

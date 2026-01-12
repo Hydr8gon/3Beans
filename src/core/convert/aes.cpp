@@ -20,7 +20,7 @@
 #include <cstring>
 #include "../core.h"
 
-Aes::Aes(Core *core): core(core) {
+Aes::Aes(Core &core): core(core) {
     // Generate temporary pow and log tables
     uint8_t pow[0x100], log[0x100];
     for (int i = 0, x = 1; i < 0x100; i++) {
@@ -182,7 +182,7 @@ void Aes::initFifo() {
 void Aes::triggerFifo() {
     // Schedule a FIFO update if one hasn't been already
     if (scheduled) return;
-    core->schedule(AES_UPDATE, 1);
+    core.schedule(AES_UPDATE, 1);
     scheduled = true;
 }
 
@@ -268,7 +268,7 @@ void Aes::update() {
             if (iconOffset > 0 && (iconOffset -= 16) < 0) {
                 LOG_INFO("Overriding icon flags to force auto-boot: 0x%X to 0x%X\n",
                     BSWAP32(dst[1]), BSWAP32(dst[1] | BIT(25)));
-                core->shas[1].iconFlags = dst[1];
+                core.shas[1].iconFlags = dst[1];
                 dst[1] |= BIT(25);
                 hackCount--;
             }
@@ -282,7 +282,7 @@ void Aes::update() {
         if (--curBlock > 0) continue;
         aesCnt &= ~BIT(31);
         if (aesCnt & BIT(30))
-            core->interrupts.sendInterrupt(ARM9, 15);
+            core.interrupts.sendInterrupt(ARM9, 15);
         LOG_INFO("AES FIFO finished processing\n");
 
         // Calculate a CCM MAC for applicable modes
@@ -321,8 +321,8 @@ void Aes::update() {
 
     // Update FIFO sizes and NDMA request conditions
     aesCnt = (aesCnt & ~0x3FF) | (std::min<uint8_t>(16, readFifo.size()) << 5) | writeFifo.size();
-    (writeFifo.size() <= ((aesCnt >> 10) & 0xC)) ? core->ndma.setDrq(0x8) : core->ndma.clearDrq(0x8); // AES in
-    (readFifo.size() >= ((aesCnt >> 12) & 0xC) + 4) ? core->ndma.setDrq(0x9) : core->ndma.clearDrq(0x9); // AES out
+    (writeFifo.size() <= ((aesCnt >> 10) & 0xC)) ? core.ndma.setDrq(0x8) : core.ndma.clearDrq(0x8); // AES in
+    (readFifo.size() >= ((aesCnt >> 12) & 0xC) + 4) ? core.ndma.setDrq(0x9) : core.ndma.clearDrq(0x9); // AES out
     scheduled = false;
 }
 

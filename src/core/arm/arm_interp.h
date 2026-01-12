@@ -30,12 +30,12 @@ public:
     uint32_t cpsr = 0;
     uint32_t *registers[32] = {};
 
-    ArmInterp(Core *core, CpuId id);
+    ArmInterp(Core &core, CpuId id);
     void init();
 
     void resetCycles();
     static void stopCycles(Core *core);
-    template <bool extra> static void runFrame(Core *core);
+    template <bool extra> static void runFrame(Core &core);
 
     void halt(uint8_t mask);
     void unhalt(uint8_t mask);
@@ -43,7 +43,7 @@ public:
     void invalidatePc() { pcData = nullptr; }
 
 private:
-    Core *core;
+    Core &core;
     CpuId id;
 
     uint32_t registersUsr[16] = {};

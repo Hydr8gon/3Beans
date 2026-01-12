@@ -51,11 +51,11 @@ ADD40_FUNC(addRega, readRegP0(opcode & 0x1F), regA, writeAx40S, 8) // ADD Regist
 
 ADD16_FUNC(addI16a, readParam(), 8, 2) // ADD Imm16, Ax
 ADD16_FUNC(addI8a, (opcode & 0xFF), 8, 1) // ADD Imm8u, Ax
-ADD16_FUNC(addMi16a, core->dsp.readData(readParam()), 8, 2) // ADD MemImm16, Ax
-ADD16_FUNC(addMi8a, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 8, 1) // ADD MemImm8, Ax
-ADD16_FUNC(addM7i16a, core->dsp.readData(regR[7] + readParam()), 8, 2) // ADD MemR7Imm16, Ax
-ADD16_FUNC(addM7i7a, core->dsp.readData(regR[7] + (int8_t(opcode << 1) >> 1)), 8, 1) // ADD MemR7Imm7s, Ax
-ADD16_FUNC(addMrna, core->dsp.readData(getRnStepZids(opcode)), 8, 1) // ADD MemRnStepZids, Ax
+ADD16_FUNC(addMi16a, core.dsp.readData(readParam()), 8, 2) // ADD MemImm16, Ax
+ADD16_FUNC(addMi8a, core.dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 8, 1) // ADD MemImm8, Ax
+ADD16_FUNC(addM7i16a, core.dsp.readData(regR[7] + readParam()), 8, 2) // ADD MemR7Imm16, Ax
+ADD16_FUNC(addM7i7a, core.dsp.readData(regR[7] + (int8_t(opcode << 1) >> 1)), 8, 1) // ADD MemR7Imm7s, Ax
+ADD16_FUNC(addMrna, core.dsp.readData(getRnStepZids(opcode)), 8, 1) // ADD MemRnStepZids, Ax
 ADD16_FUNC(addR6a, regR[6], 4, 1) // ADD R6, Ax
 
 // Add a value to the high part of an A accumulator and set flags
@@ -70,8 +70,8 @@ ADD16_FUNC(addR6a, regR[6], 4, 1) // ADD R6, Ax
     return 1; \
 }
 
-ADDH_FUNC(addhMi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 8) // ADDH MemImm8, Ax
-ADDH_FUNC(addhMrn, core->dsp.readData(getRnStepZids(opcode)), 8) // ADDH MemRnStepZids, Ax
+ADDH_FUNC(addhMi8, core.dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 8) // ADDH MemImm8, Ax
+ADDH_FUNC(addhMrn, core.dsp.readData(getRnStepZids(opcode)), 8) // ADDH MemRnStepZids, Ax
 ADDH_FUNC(addhReg, *readReg[opcode & 0x1F], 8) // ADDH Register, Ax
 ADDH_FUNC(addhR6, regR[6], 0) // ADDH R6, Ax
 
@@ -87,21 +87,21 @@ ADDH_FUNC(addhR6, regR[6], 0) // ADDH R6, Ax
     return 1; \
 }
 
-ADDL_FUNC(addlMi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 8) // ADDL MemImm8, Ax
-ADDL_FUNC(addlMrn, core->dsp.readData(getRnStepZids(opcode)), 8) // ADDL MemRnStepZids, Ax
+ADDL_FUNC(addlMi8, core.dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 8) // ADDL MemImm8, Ax
+ADDL_FUNC(addlMrn, core.dsp.readData(getRnStepZids(opcode)), 8) // ADDL MemRnStepZids, Ax
 ADDL_FUNC(addlReg, *readReg[opcode & 0x1F], 8) // ADDL Register, Ax
 ADDL_FUNC(addlR6, regR[6], 0) // ADDL R6, Ax
 
 // Add a 16-bit immediate to a memory value and set flags
 #define ADDVM_FUNC(name, op1a) int TeakInterp::name(uint16_t opcode) { \
     uint16_t addr = op1a; \
-    uint16_t val = core->dsp.readData(addr); \
+    uint16_t val = core.dsp.readData(addr); \
     uint32_t res = int16_t(val) + int16_t(readParam()); \
     bool z = !(res & 0xFFFF); \
     bool m = (res & BIT(31)); \
     bool c = (val > uint16_t(res)); \
     writeStt0((regStt[0] & ~0xC8) | (z << 7) | (m << 6) | (c << 3)); \
-    core->dsp.writeData(addr, res); \
+    core.dsp.writeData(addr, res); \
     return 2; \
 }
 
@@ -158,11 +158,11 @@ int TeakInterp::andAbab(uint16_t opcode) {
 }
 
 AND_FUNC(andI16, readParam(), 8, 2) // AND Imm16, Ax
-AND_FUNC(andMi16, core->dsp.readData(readParam()), 8, 2) // AND MemImm16, Ax
-AND_FUNC(andMi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 8, 1) // AND MemImm8, Ax
-AND_FUNC(andM7i16, core->dsp.readData(regR[7] + readParam()), 8, 2) // AND MemR7Imm16, Ax
-AND_FUNC(andM7i7, core->dsp.readData(regR[7] + (int8_t(opcode << 1) >> 1)), 8, 1) // AND MemR7Imm7s, Ax
-AND_FUNC(andMrn, core->dsp.readData(getRnStepZids(opcode)), 8, 1) // AND MemRnStepZids, Ax
+AND_FUNC(andMi16, core.dsp.readData(readParam()), 8, 2) // AND MemImm16, Ax
+AND_FUNC(andMi8, core.dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 8, 1) // AND MemImm8, Ax
+AND_FUNC(andM7i16, core.dsp.readData(regR[7] + readParam()), 8, 2) // AND MemR7Imm16, Ax
+AND_FUNC(andM7i7, core.dsp.readData(regR[7] + (int8_t(opcode << 1) >> 1)), 8, 1) // AND MemR7Imm7s, Ax
+AND_FUNC(andMrn, core.dsp.readData(getRnStepZids(opcode)), 8, 1) // AND MemRnStepZids, Ax
 AND_FUNC(andReg, readRegP0(opcode & 0x1F, false), 8, 1) // AND RegisterP0, Ax
 AND_FUNC(andR6, regR[6], 4, 1) // AND R6, Ax
 
@@ -177,11 +177,11 @@ int TeakInterp::andI8(uint16_t opcode) { // AND Imm8u, Ax
 // Change bits in a memory value using a 16-bit immediate mask and set flags
 #define CHNGM_FUNC(name, op1a) int TeakInterp::name(uint16_t opcode) { \
     uint16_t addr = op1a; \
-    uint16_t res = core->dsp.readData(addr) ^ readParam(); \
+    uint16_t res = core.dsp.readData(addr) ^ readParam(); \
     bool z = (res == 0); \
     bool m = (res & BIT(15)); \
     writeStt0((regStt[0] & ~0xC0) | (z << 7) | (m << 6)); \
-    core->dsp.writeData(addr, res); \
+    core.dsp.writeData(addr, res); \
     return 2; \
 }
 
@@ -272,11 +272,11 @@ CMP40_FUNC(cmpRega, readRegP0(opcode & 0x1F), regA[(opcode >> 8) & 0x1].v) // CM
 
 CMP16_FUNC(cmpI16a, readParam(), 8, 2) // CMP Imm16, Ax
 CMP16_FUNC(cmpI8a, (opcode & 0xFF), 8, 1) // CMP Imm8u, Ax
-CMP16_FUNC(cmpMi16a, core->dsp.readData(readParam()), 8, 2) // CMP MemImm16, Ax
-CMP16_FUNC(cmpMi8a, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 8, 1) // CMP MemImm8, Ax
-CMP16_FUNC(cmpM7i16a, core->dsp.readData(regR[7] + readParam()), 8, 2) // CMP MemR7Imm16, Ax
-CMP16_FUNC(cmpM7i7a, core->dsp.readData(regR[7] + (int8_t(opcode << 1) >> 1)), 8, 1) // CMP MemR7Imm7s, Ax
-CMP16_FUNC(cmpMrna, core->dsp.readData(getRnStepZids(opcode)), 8, 1) // CMP MemRnStepZids, Ax
+CMP16_FUNC(cmpMi16a, core.dsp.readData(readParam()), 8, 2) // CMP MemImm16, Ax
+CMP16_FUNC(cmpMi8a, core.dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 8, 1) // CMP MemImm8, Ax
+CMP16_FUNC(cmpM7i16a, core.dsp.readData(regR[7] + readParam()), 8, 2) // CMP MemR7Imm16, Ax
+CMP16_FUNC(cmpM7i7a, core.dsp.readData(regR[7] + (int8_t(opcode << 1) >> 1)), 8, 1) // CMP MemR7Imm7s, Ax
+CMP16_FUNC(cmpMrna, core.dsp.readData(getRnStepZids(opcode)), 8, 1) // CMP MemRnStepZids, Ax
 CMP16_FUNC(cmpR6a, regR[6], 4, 1) // CMP R6, Ax
 
 // Compare an unsigned value with an A accumulator and set flags
@@ -290,8 +290,8 @@ CMP16_FUNC(cmpR6a, regR[6], 4, 1) // CMP R6, Ax
     return 1; \
 }
 
-CMPU_FUNC(cmpuMi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 8) // CMPU MemImm8, Ax
-CMPU_FUNC(cmpuMrn, core->dsp.readData(getRnStepZids(opcode)), 8) // CMPU MemRnStepZids, Ax
+CMPU_FUNC(cmpuMi8, core.dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 8) // CMPU MemImm8, Ax
+CMPU_FUNC(cmpuMrn, core.dsp.readData(getRnStepZids(opcode)), 8) // CMPU MemRnStepZids, Ax
 CMPU_FUNC(cmpuReg, *readReg[opcode & 0x1F], 8) // CMPU Register, Ax
 CMPU_FUNC(cmpuR6, regR[6], 3) // CMPU R6, Ax
 
@@ -306,8 +306,8 @@ CMPU_FUNC(cmpuR6, regR[6], 3) // CMPU R6, Ax
     return 2; \
 }
 
-CMPV_FUNC(cmpvMi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF))) // CMPV Imm16, MemImm8
-CMPV_FUNC(cmpvMrn, core->dsp.readData(getRnStepZids(opcode))) // CMPV Imm16, MemRnStepZids
+CMPV_FUNC(cmpvMi8, core.dsp.readData((regMod[1] << 8) | (opcode & 0xFF))) // CMPV Imm16, MemImm8
+CMPV_FUNC(cmpvMrn, core.dsp.readData(getRnStepZids(opcode))) // CMPV Imm16, MemRnStepZids
 CMPV_FUNC(cmpvReg, *readReg[opcode & 0x1F]) // CMPV Imm16, Register
 CMPV_FUNC(cmpvR6, regR[6]) // CMPV Imm16, R6
 
@@ -344,7 +344,7 @@ int TeakInterp::dec(uint16_t opcode) { // DEC Ax, Cond
 }
 
 EXP_FUNC(expB, regB[opcode & 0x1].v) // EXP Bx
-EXP_FUNC(expMrn, int32_t(core->dsp.readData(getRnStepZids(opcode)) << 16)) // EXP MemRnStepZids
+EXP_FUNC(expMrn, int32_t(core.dsp.readData(getRnStepZids(opcode)) << 16)) // EXP MemRnStepZids
 EXP_FUNC(expReg, readRegExp(opcode & 0x1F)) // EXP RegisterP0
 EXP_FUNC(expR6, int32_t(regR[6] << 16)) // EXP R6
 
@@ -358,7 +358,7 @@ EXP_FUNC(expR6, int32_t(regR[6] << 16)) // EXP R6
 }
 
 EXPA_FUNC(expBa, regB[opcode & 0x1].v, 8) // EXP Bx, Ax
-EXPA_FUNC(expMrna, int32_t(core->dsp.readData(getRnStepZids(opcode)) << 16), 8) // EXP MemRnStepZids, Ax
+EXPA_FUNC(expMrna, int32_t(core.dsp.readData(getRnStepZids(opcode)) << 16), 8) // EXP MemRnStepZids, Ax
 EXPA_FUNC(expRega, readRegExp(opcode & 0x1F), 8) // EXP RegisterP0, Ax
 EXPA_FUNC(expR6a, int32_t(regR[6] << 16), 4) // EXP R6, Ax
 
@@ -396,16 +396,16 @@ LIM_FUNC(limA1a0, 1, 0) // LIM A1, A0
     bool v = (~(val2 ^ val1) & (res ^ val2)) >> 39; \
     bool c = (uint64_t(val1) > uint64_t(res)); \
     regX[0] = op1; \
-    regY[0] = core->dsp.readData(getRnStepZids(op0a)); \
+    regY[0] = core.dsp.readData(getRnStepZids(op0a)); \
     writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
     (this->*writeAx40S[(opcode >> 11) & 0x1])(res); \
     multiplyXY<xu##int16_t, yu##int16_t>(0); \
     return cyc; \
 }
 
-MAA_FUNC(maaMrmr, ,, ((opcode >> 2) & 0x19) + 4, core->dsp.readData(getRnStepZids(opcode & 0x1B)), 1) // MAA MR, MR, Ax
+MAA_FUNC(maaMrmr, ,, ((opcode >> 2) & 0x19) + 4, core.dsp.readData(getRnStepZids(opcode & 0x1B)), 1) // MAA MR, MR, Ax
 MAA_FUNC(maaMrni16, ,, (opcode & 0x1F), readParam(), 2) // MAA MemRnStepZids, Imm16, Ax
-MAA_FUNC(maasuMrmr, u,, ((opcode >> 2) & 0x19) + 4, core->dsp.readData(getRnStepZids(opcode & 0x1B)), 1) // MAASU M,M,Ax
+MAA_FUNC(maasuMrmr, u,, ((opcode >> 2) & 0x19) + 4, core.dsp.readData(getRnStepZids(opcode & 0x1B)), 1) // MAASU M,M,Ax
 MAA_FUNC(maasuMrni16, u,, (opcode & 0x1F), readParam(), 2) // MAASU MemRnStepZids, Imm16, Ax
 
 // Add aligned P0 to an A accumulator, set flags, load X0, and multiply it with Y0
@@ -422,11 +422,11 @@ MAA_FUNC(maasuMrni16, u,, (opcode & 0x1F), readParam(), 2) // MAASU MemRnStepZid
     return 1; \
 }
 
-MAAY_FUNC(maaY0mi8, ,, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 11) // MAA Y0, MemImm8, Ax
-MAAY_FUNC(maaY0mrn, ,, core->dsp.readData(getRnStepZids(opcode)), 11) // MAA Y0, MemRnStepZids, Ax
+MAAY_FUNC(maaY0mi8, ,, core.dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 11) // MAA Y0, MemImm8, Ax
+MAAY_FUNC(maaY0mrn, ,, core.dsp.readData(getRnStepZids(opcode)), 11) // MAA Y0, MemRnStepZids, Ax
 MAAY_FUNC(maaY0reg, ,, *readReg[opcode & 0x1F], 11) // MAA Y0, Register, Ax
 MAAY_FUNC(maaY0r6, ,, regR[6], 0) // MAA Y0, R6, Ax
-MAAY_FUNC(maasuY0mrn, u,, core->dsp.readData(getRnStepZids(opcode)), 11) // MAASU Y0, MemRnStepZids, Ax
+MAAY_FUNC(maasuY0mrn, u,, core.dsp.readData(getRnStepZids(opcode)), 11) // MAASU Y0, MemRnStepZids, Ax
 MAAY_FUNC(maasuY0reg, u,, *readReg[opcode & 0x1F], 11) // MAASU Y0, Register, Ax
 MAAY_FUNC(maasuY0r6, u,, regR[6], 0) // MAASU Y0, R6, Ax
 
@@ -438,20 +438,20 @@ MAAY_FUNC(maasuY0r6, u,, regR[6], 0) // MAASU Y0, R6, Ax
     bool v = (~(val2 ^ val1) & (res ^ val2)) >> 39; \
     bool c = (uint64_t(val1) > uint64_t(res)); \
     regX[0] = op1; \
-    regY[0] = core->dsp.readData(getRnStepZids(op0a)); \
+    regY[0] = core.dsp.readData(getRnStepZids(op0a)); \
     writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
     (this->*writeAx40S[(opcode >> 11) & 0x1])(res); \
     multiplyXY<xu##int16_t, yu##int16_t>(0); \
     return cyc; \
 }
 
-MAC_FUNC(macMrmr, ,, ((opcode >> 2) & 0x19) + 4, core->dsp.readData(getRnStepZids(opcode & 0x1B)), 1) // MAC MR, MR, Ax
+MAC_FUNC(macMrmr, ,, ((opcode >> 2) & 0x19) + 4, core.dsp.readData(getRnStepZids(opcode & 0x1B)), 1) // MAC MR, MR, Ax
 MAC_FUNC(macMrni16, ,, (opcode & 0x1F), readParam(), 2) // MAC MemRnStepZids, Imm16, Ax
-MAC_FUNC(macsuMrmr, u,, ((opcode >> 2) & 0x19) + 4, core->dsp.readData(getRnStepZids(opcode & 0x1B)), 1) // MACSU M,M,Ax
+MAC_FUNC(macsuMrmr, u,, ((opcode >> 2) & 0x19) + 4, core.dsp.readData(getRnStepZids(opcode & 0x1B)), 1) // MACSU M,M,Ax
 MAC_FUNC(macsuMrni16, u,, (opcode & 0x1F), readParam(), 2) // MACSU MemRnStepZids, Imm16, Ax
-MAC_FUNC(macusMrmr, ,u, ((opcode >> 2) & 0x19) + 4, core->dsp.readData(getRnStepZids(opcode & 0x1B)), 1) // MACUS M,M,Ax
+MAC_FUNC(macusMrmr, ,u, ((opcode >> 2) & 0x19) + 4, core.dsp.readData(getRnStepZids(opcode & 0x1B)), 1) // MACUS M,M,Ax
 MAC_FUNC(macusMrni16, ,u, (opcode & 0x1F), readParam(), 2) // MACUS MemRnStepZids, Imm16, Ax
-MAC_FUNC(macuuMrmr, u,u, ((opcode >> 2) & 0x19) + 4, core->dsp.readData(getRnStepZids(opcode & 0x1B)), 1) // MACUU M,M,A
+MAC_FUNC(macuuMrmr, u,u, ((opcode >> 2) & 0x19) + 4, core.dsp.readData(getRnStepZids(opcode & 0x1B)), 1) // MACUU M,M,A
 MAC_FUNC(macuuMrni16, u,u, (opcode & 0x1F), readParam(), 2) // MACUU MemRnStepZids, Imm16, Ax
 
 // Add shifted P0 to an A accumulator, set flags, load X0, and multiply it with Y0
@@ -468,18 +468,18 @@ MAC_FUNC(macuuMrni16, u,u, (opcode & 0x1F), readParam(), 2) // MACUU MemRnStepZi
     return 1; \
 }
 
-MACY_FUNC(macY0mi8, ,, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 11) // MAC Y0, MemImm8, Ax
-MACY_FUNC(macY0mrn, ,, core->dsp.readData(getRnStepZids(opcode)), 11) // MAC Y0, MemRnStepZids, Ax
+MACY_FUNC(macY0mi8, ,, core.dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 11) // MAC Y0, MemImm8, Ax
+MACY_FUNC(macY0mrn, ,, core.dsp.readData(getRnStepZids(opcode)), 11) // MAC Y0, MemRnStepZids, Ax
 MACY_FUNC(macY0reg, ,, *readReg[opcode & 0x1F], 11) // MAC Y0, Register, Ax
 MACY_FUNC(macY0r6, ,, regR[6], 0) // MAC Y0, R6, Ax
-MACY_FUNC(macsuY0mi8, u,, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 11) // MACSU Y0, MemImm8, Ax
-MACY_FUNC(macsuY0mrn, u,, core->dsp.readData(getRnStepZids(opcode)), 11) // MACSU Y0, MemRnStepZids, Ax
+MACY_FUNC(macsuY0mi8, u,, core.dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 11) // MACSU Y0, MemImm8, Ax
+MACY_FUNC(macsuY0mrn, u,, core.dsp.readData(getRnStepZids(opcode)), 11) // MACSU Y0, MemRnStepZids, Ax
 MACY_FUNC(macsuY0reg, u,, *readReg[opcode & 0x1F], 11) // MACSU Y0, Register, Ax
 MACY_FUNC(macsuY0r6, u,, regR[6], 0) // MACSU Y0, R6, Ax
-MACY_FUNC(macusY0mrn, ,u, core->dsp.readData(getRnStepZids(opcode)), 11) // MACUS Y0, MemRnStepZids, Ax
+MACY_FUNC(macusY0mrn, ,u, core.dsp.readData(getRnStepZids(opcode)), 11) // MACUS Y0, MemRnStepZids, Ax
 MACY_FUNC(macusY0reg, ,u, *readReg[opcode & 0x1F], 11) // MACUS Y0, Register, Ax
 MACY_FUNC(macusY0r6, ,u, regR[6], 0) // MACUS Y0, R6, Ax
-MACY_FUNC(macuuY0mrn, u,u, core->dsp.readData(getRnStepZids(opcode)), 11) // MACUU Y0, MemRnStepZids, Ax
+MACY_FUNC(macuuY0mrn, u,u, core.dsp.readData(getRnStepZids(opcode)), 11) // MACUU Y0, MemRnStepZids, Ax
 MACY_FUNC(macuuY0reg, u,u, *readReg[opcode & 0x1F], 11) // MACUU Y0, Register, Ax
 MACY_FUNC(macuuY0r6, u,u, regR[6], 0) // MACUU Y0, R6, Ax
 
@@ -511,10 +511,10 @@ MINMAX_FUNC(minLt, <) // MIN Ax, R0StepZids, LT
     int64_t res = ((val1 + val2) << 24) >> 24; \
     bool v = (~(val2 ^ val1) & (res ^ val2)) >> 39; \
     bool c = (uint64_t(val1) > uint64_t(res)); \
-    regX[1] = core->dsp.readData(offsReg(arpRi[(opcode >> ops) & opm], arpCi[(opcode >> op1s) & opm])); \
-    regY[1] = core->dsp.readData(offsReg(arpRj[(opcode >> ops) & opm], arpCj[(opcode >> op0s) & opm])); \
-    regX[0] = core->dsp.readData(stepReg(arpRi[(opcode >> ops) & opm], arpPi[(opcode >> op1s) & opm])); \
-    regY[0] = core->dsp.readData(stepReg(arpRj[(opcode >> ops) & opm], arpPj[(opcode >> op0s) & opm])); \
+    regX[1] = core.dsp.readData(offsReg(arpRi[(opcode >> ops) & opm], arpCi[(opcode >> op1s) & opm])); \
+    regY[1] = core.dsp.readData(offsReg(arpRj[(opcode >> ops) & opm], arpCj[(opcode >> op0s) & opm])); \
+    regX[0] = core.dsp.readData(stepReg(arpRi[(opcode >> ops) & opm], arpPi[(opcode >> op1s) & opm])); \
+    regY[0] = core.dsp.readData(stepReg(arpRj[(opcode >> ops) & opm], arpPj[(opcode >> op0s) & opm])); \
     writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
     (this->*writeAb40S[(opcode >> op2s) & 0x3])(res); \
     multiplyXY<x1u##int16_t, y1u##int16_t>(1); \
@@ -544,8 +544,8 @@ MMA_FUNC(msumusa3aa, *readAb[(opcode >> 6) & 0x3], 16, 16, u,,,u, 5, 1, 4, 3, 6)
     bool v = (~(val2 ^ val1) & (res ^ val2)) >> 39; \
     bool c = (uint64_t(val1) > uint64_t(res)); \
     uint8_t rar = ((opcode >> ars0) & 0x4) | ((opcode >> ars1) & 0x1); \
-    regX[1] = core->dsp.readData(getRarOffsAr(rar)); \
-    regX[0] = core->dsp.readData(getRarStepAr(rar)); \
+    regX[1] = core.dsp.readData(getRarOffsAr(rar)); \
+    regX[0] = core.dsp.readData(getRarStepAr(rar)); \
     writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
     (this->*writeAx40S[(opcode >> op1s) & 0x1])(res); \
     multiplyXY<x1u##int16_t, y1u##int16_t>(1); \
@@ -616,7 +616,7 @@ int TeakInterp::modrMrdmrd(uint16_t opcode) { // MODR MemRiStepArp, DMOD, MemRjS
 
 // Move a memory value shifted by the shift register into an accumulator
 #define MOVSM_FUNC(name, op0a, op1s) int TeakInterp::name(uint16_t opcode) { \
-    (this->*writeAb40[(opcode >> op1s) & 0x3])(shift(int16_t(core->dsp.readData(op0a)), regSv)); \
+    (this->*writeAb40[(opcode >> op1s) & 0x3])(shift(int16_t(core.dsp.readData(op0a)), regSv)); \
     return 1; \
 }
 
@@ -639,8 +639,8 @@ MOVSR_FUNC(movsR6a, regR[6], writeAx40[opcode & 0x1]) // MOVS R6, Ax
     return 1; \
 }
 
-MPY_FUNC(mpyY0mi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF))) // MPY Y0, MemImm8
-MPY_FUNC(mpyY0mrn, core->dsp.readData(getRnStepZids(opcode))) // MPY Y0, MemRnStepZids
+MPY_FUNC(mpyY0mi8, core.dsp.readData((regMod[1] << 8) | (opcode & 0xFF))) // MPY Y0, MemImm8
+MPY_FUNC(mpyY0mrn, core.dsp.readData(getRnStepZids(opcode))) // MPY Y0, MemRnStepZids
 MPY_FUNC(mpyY0reg, *readReg[opcode & 0x1F]) // MPY Y0, Register
 MPY_FUNC(mpyY0r6, regR[6]) // MPY Y0, R6
 MPY_FUNC(mpyi, int8_t(opcode)) // MPYI Y0, Imm8s
@@ -652,14 +652,14 @@ MPY_FUNC(mpyi, int8_t(opcode)) // MPYI Y0, Imm8s
     return 1; \
 }
 
-MPYSU_FUNC(mpysuY0mrn, core->dsp.readData(getRnStepZids(opcode))) // MPYSU Y0, MemRnStepZids
+MPYSU_FUNC(mpysuY0mrn, core.dsp.readData(getRnStepZids(opcode))) // MPYSU Y0, MemRnStepZids
 MPYSU_FUNC(mpysuY0reg, *readReg[opcode & 0x1F]) // MPYSU Y0, Register
 MPYSU_FUNC(mpysuY0r6, regR[6]) // MPYSU Y0, R6
 
 int TeakInterp::mpysuMrmr(uint16_t opcode) { // MPYSU MemR45StepZids, MemR0123StepZids
     // Load memory values into X0/Y0 and multiply them, treating X as unsigned
-    regX[0] = core->dsp.readData(getRnStepZids(opcode & 0x1B));
-    regY[0] = core->dsp.readData(getRnStepZids(((opcode >> 2) & 0x19) + 4));
+    regX[0] = core.dsp.readData(getRnStepZids(opcode & 0x1B));
+    regY[0] = core.dsp.readData(getRnStepZids(((opcode >> 2) & 0x19) + 4));
     multiplyXY<uint16_t, int16_t>(0);
     return 1;
 }
@@ -672,14 +672,14 @@ int TeakInterp::mpysuMrmr(uint16_t opcode) { // MPYSU MemR45StepZids, MemR0123St
     bool v = ((val2 ^ val1) & ~(res ^ val2)) >> 39; \
     bool c = (uint64_t(val1) < uint64_t(res)); \
     regX[0] = op1; \
-    regY[0] = core->dsp.readData(getRnStepZids(op0a)); \
+    regY[0] = core.dsp.readData(getRnStepZids(op0a)); \
     writeStt0((regStt[0] & ~0xFC) | calcZmne(res) | (v << 4) | (c << 3) | (v << 1)); \
     (this->*writeAx40S[(opcode >> 8) & 0x1])(res); \
     multiplyXY<int16_t, int16_t>(0); \
     return cyc; \
 }
 
-MSU_FUNC(msuMrmr, ((opcode >> 2) & 0x19) + 4, core->dsp.readData(getRnStepZids(opcode & 0x1B)), 1) // MSU MR45, MR03, Ax
+MSU_FUNC(msuMrmr, ((opcode >> 2) & 0x19) + 4, core.dsp.readData(getRnStepZids(opcode & 0x1B)), 1) // MSU MR45, MR03, Ax
 MSU_FUNC(msuMrni16, (opcode & 0x1F), readParam(), 2) // MSU MemRnStepZids, Imm16, Ax
 
 // Subtract the previous product from an A accumulator, set flags, load X0, and multiply it with Y0
@@ -696,8 +696,8 @@ MSU_FUNC(msuMrni16, (opcode & 0x1F), readParam(), 2) // MSU MemRnStepZids, Imm16
     return 1; \
 }
 
-MSUY_FUNC(msuY0mi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 8) // MSU Y0, MemImm8, Ax
-MSUY_FUNC(msuY0mrn, core->dsp.readData(getRnStepZids(opcode)), 8) // MSU Y0, MemRnStepZids, Ax
+MSUY_FUNC(msuY0mi8, core.dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 8) // MSU Y0, MemImm8, Ax
+MSUY_FUNC(msuY0mrn, core.dsp.readData(getRnStepZids(opcode)), 8) // MSU Y0, MemRnStepZids, Ax
 MSUY_FUNC(msuY0reg, *readReg[opcode & 0x1F], 8) // MSU Y0, Register, Ax
 MSUY_FUNC(msuY0r6, regR[6], 0) // MSU Y0, R6, Ax
 
@@ -738,11 +738,11 @@ OR_FUNC(orAb, regA[(opcode >> 8) & 0x1].v, regB, 1, 0, 1) // OR Ax, Bx, Ax
 OR_FUNC(orBb, regB[(opcode >> 10) & 0x1].v, regB, 1, 0, 1) // OR Bx, Bx, Ax
 OR_FUNC(orI16, readParam(), regA, 8, 8, 2) // OR Imm16, Ax
 OR_FUNC(orI8, (opcode & 0xFF), regA, 8, 8, 1) // OR Imm8u, Ax
-OR_FUNC(orMi16, core->dsp.readData(readParam()), regA, 8, 8, 2) // OR MemImm16, Ax
-OR_FUNC(orMi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), regA, 8, 8, 1) // OR MemImm8, Ax
-OR_FUNC(orM7i16, core->dsp.readData(regR[7] + readParam()), regA, 8, 8, 2) // OR MemR7Imm16, Ax
-OR_FUNC(orM7i7, core->dsp.readData(regR[7] + (int8_t(opcode << 1) >> 1)), regA, 8, 8, 1) // OR MemR7Imm7s, Ax
-OR_FUNC(orMrn, core->dsp.readData(getRnStepZids(opcode)), regA, 8, 8, 1) // OR MemRnStepZids, Ax
+OR_FUNC(orMi16, core.dsp.readData(readParam()), regA, 8, 8, 2) // OR MemImm16, Ax
+OR_FUNC(orMi8, core.dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), regA, 8, 8, 1) // OR MemImm8, Ax
+OR_FUNC(orM7i16, core.dsp.readData(regR[7] + readParam()), regA, 8, 8, 2) // OR MemR7Imm16, Ax
+OR_FUNC(orM7i7, core.dsp.readData(regR[7] + (int8_t(opcode << 1) >> 1)), regA, 8, 8, 1) // OR MemR7Imm7s, Ax
+OR_FUNC(orMrn, core.dsp.readData(getRnStepZids(opcode)), regA, 8, 8, 1) // OR MemRnStepZids, Ax
 OR_FUNC(orReg, readRegP0(opcode & 0x1F, false), regA, 8, 8, 1) // OR RegisterP0, Ax
 OR_FUNC(orR6, regR[6], regA, 4, 4, 1) // OR R6, Ax
 
@@ -762,11 +762,11 @@ int TeakInterp::rnd(uint16_t opcode) { // RND Ax, Cond
 // Clear bits in a memory value using a 16-bit immediate and set flags
 #define RSTM_FUNC(name, op1a) int TeakInterp::name(uint16_t opcode) { \
     uint16_t addr = op1a; \
-    uint16_t res = core->dsp.readData(addr) & ~readParam(); \
+    uint16_t res = core.dsp.readData(addr) & ~readParam(); \
     bool z = (res == 0); \
     bool m = (res & BIT(15)); \
     writeStt0((regStt[0] & ~0xC0) | (z << 7) | (m << 6)); \
-    core->dsp.writeData(addr, res); \
+    core.dsp.writeData(addr, res); \
     return 2; \
 }
 
@@ -790,11 +790,11 @@ RSTR_FUNC(rstSm, *readSttMod[opcode & 0x7], (this->*writeSttMod[opcode & 0x7])) 
 // Set bits in a memory value using a 16-bit immediate and set flags
 #define SETM_FUNC(name, op1a) int TeakInterp::name(uint16_t opcode) { \
     uint16_t addr = op1a; \
-    uint16_t res = core->dsp.readData(addr) | readParam(); \
+    uint16_t res = core.dsp.readData(addr) | readParam(); \
     bool z = (res == 0); \
     bool m = (res & BIT(15)); \
     writeStt0((regStt[0] & ~0xC0) | (z << 7) | (m << 6)); \
-    core->dsp.writeData(addr, res); \
+    core.dsp.writeData(addr, res); \
     return 2; \
 }
 
@@ -854,8 +854,8 @@ SHLR_FUNC(shr4B, regB, writeBx40, -4) // SHR4 Bx, Cond
     return 1; \
 }
 
-SQR_FUNC(sqrMi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF))) // SQR MemImm8
-SQR_FUNC(sqrMrn, core->dsp.readData(getRnStepZids(opcode))) // SQR MemRnStepZids
+SQR_FUNC(sqrMi8, core.dsp.readData((regMod[1] << 8) | (opcode & 0xFF))) // SQR MemImm8
+SQR_FUNC(sqrMrn, core.dsp.readData(getRnStepZids(opcode))) // SQR MemRnStepZids
 SQR_FUNC(sqrReg, *readReg[opcode & 0x1F]) // SQR Register
 SQR_FUNC(sqrR6, regR[6]) // SQR R6
 
@@ -889,11 +889,11 @@ SUB40_FUNC(subRega, readRegP0(opcode & 0x1F), regA, writeAx40S, 8) // SUB Regist
 
 SUB16_FUNC(subI16a, readParam(), 8, 2) // SUB Imm16, Ax
 SUB16_FUNC(subI8a, (opcode & 0xFF), 8, 1) // SUB Imm8u, Ax
-SUB16_FUNC(subMi16a, core->dsp.readData(readParam()), 8, 2) // SUB MemImm16, Ax
-SUB16_FUNC(subMi8a, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 8, 1) // SUB MemImm8, Ax
-SUB16_FUNC(subM7i16a, core->dsp.readData(regR[7] + readParam()), 8, 2) // SUB MemR7Imm16, Ax
-SUB16_FUNC(subM7i7a, core->dsp.readData(regR[7] + (int8_t(opcode << 1) >> 1)), 8, 1) // SUB MemR7Imm7s, Ax
-SUB16_FUNC(subMrna, core->dsp.readData(getRnStepZids(opcode)), 8, 1) // SUB MemRnStepZids, Ax
+SUB16_FUNC(subMi16a, core.dsp.readData(readParam()), 8, 2) // SUB MemImm16, Ax
+SUB16_FUNC(subMi8a, core.dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 8, 1) // SUB MemImm8, Ax
+SUB16_FUNC(subM7i16a, core.dsp.readData(regR[7] + readParam()), 8, 2) // SUB MemR7Imm16, Ax
+SUB16_FUNC(subM7i7a, core.dsp.readData(regR[7] + (int8_t(opcode << 1) >> 1)), 8, 1) // SUB MemR7Imm7s, Ax
+SUB16_FUNC(subMrna, core.dsp.readData(getRnStepZids(opcode)), 8, 1) // SUB MemRnStepZids, Ax
 SUB16_FUNC(subR6a, regR[6], 4, 1) // SUB R6, Ax
 
 // Subtract a value from the high part of an A accumulator and set flags
@@ -908,8 +908,8 @@ SUB16_FUNC(subR6a, regR[6], 4, 1) // SUB R6, Ax
     return 1; \
 }
 
-SUBH_FUNC(subhMi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF))) // SUBH MemImm8, Ax
-SUBH_FUNC(subhMrn, core->dsp.readData(getRnStepZids(opcode))) // SUBH MemRnStepZids, Ax
+SUBH_FUNC(subhMi8, core.dsp.readData((regMod[1] << 8) | (opcode & 0xFF))) // SUBH MemImm8, Ax
+SUBH_FUNC(subhMrn, core.dsp.readData(getRnStepZids(opcode))) // SUBH MemRnStepZids, Ax
 SUBH_FUNC(subhReg, *readReg[opcode & 0x1F]) // SUBH Register, Ax
 SUBH_FUNC(subhR6, regR[6]) // SUBH R6, Ax
 
@@ -925,8 +925,8 @@ SUBH_FUNC(subhR6, regR[6]) // SUBH R6, Ax
     return 1; \
 }
 
-SUBL_FUNC(sublMi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF))) // SUBL MemImm8, Ax
-SUBL_FUNC(sublMrn, core->dsp.readData(getRnStepZids(opcode))) // SUBL MemRnStepZids, Ax
+SUBL_FUNC(sublMi8, core.dsp.readData((regMod[1] << 8) | (opcode & 0xFF))) // SUBL MemImm8, Ax
+SUBL_FUNC(sublMrn, core.dsp.readData(getRnStepZids(opcode))) // SUBL MemRnStepZids, Ax
 SUBL_FUNC(sublReg, *readReg[opcode & 0x1F]) // SUBL Register, Ax
 SUBL_FUNC(sublR6, regR[6]) // SUBL R6, Ax
 
@@ -937,8 +937,8 @@ SUBL_FUNC(sublR6, regR[6]) // SUBL R6, Ax
     return cyc; \
 }
 
-TSTB_FUNC(tstbMi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), opcode >> 8, 1) // TSTB MemImm8, Imm4
-TSTB_FUNC(tstbMrn, core->dsp.readData(getRnStepZids(opcode)), opcode >> 8, 1) // TSTB MemRnStepZids, Imm4
+TSTB_FUNC(tstbMi8, core.dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), opcode >> 8, 1) // TSTB MemImm8, Imm4
+TSTB_FUNC(tstbMrn, core.dsp.readData(getRnStepZids(opcode)), opcode >> 8, 1) // TSTB MemRnStepZids, Imm4
 TSTB_FUNC(tstbReg, *readReg[opcode & 0x1F], opcode >> 8, 1) // TSTB Register, Imm4
 TSTB_FUNC(tstbR6, regR[6], opcode >> 8, 1) // TSTB R6, Imm4
 TSTB_FUNC(tstbSm, *readSttMod[opcode & 0x7], readParam(), 2) // TSTB SttMod, Imm4
@@ -950,7 +950,7 @@ TSTB_FUNC(tstbSm, *readSttMod[opcode & 0x7], readParam(), 2) // TSTB SttMod, Imm
     return 1; \
 }
 
-TST0A_FUNC(tst0Almi8, 8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF))) // TST0 Axl, MemImm8
+TST0A_FUNC(tst0Almi8, 8, core.dsp.readData((regMod[1] << 8) | (opcode & 0xFF))) // TST0 Axl, MemImm8
 TST0A_FUNC(tst0Almrn, 8, getRnStepZids(opcode)) // TST0 Axl, MemRnStepZids
 TST0A_FUNC(tst0Alreg, 8, *readReg[opcode & 0x1F]) // TST0 Axl, Register
 TST0A_FUNC(tst0Alr6, 4, regR[6]) // TST0 Axl, R6
@@ -962,7 +962,7 @@ TST0A_FUNC(tst0Alr6, 4, regR[6]) // TST0 Axl, R6
     return 2; \
 }
 
-TST0I_FUNC(tst0I16mi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF))) // TST0 Imm16, MemImm8
+TST0I_FUNC(tst0I16mi8, core.dsp.readData((regMod[1] << 8) | (opcode & 0xFF))) // TST0 Imm16, MemImm8
 TST0I_FUNC(tst0I16mrn, getRnStepZids(opcode)) // TST0 Imm16, MemRnStepZids
 TST0I_FUNC(tst0I16reg, *readReg[opcode & 0x1F]) // TST0 Imm16, Register
 TST0I_FUNC(tst0I16r6, regR[6]) // TST0 Imm16, R6
@@ -975,7 +975,7 @@ TST0I_FUNC(tst0I16sm, *readSttMod[opcode & 0x7]) // TST0 Imm16, SttMod
     return 1; \
 }
 
-TST1A_FUNC(tst1Almi8, 8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF))) // TST1 Axl, MemImm8
+TST1A_FUNC(tst1Almi8, 8, core.dsp.readData((regMod[1] << 8) | (opcode & 0xFF))) // TST1 Axl, MemImm8
 TST1A_FUNC(tst1Almrn, 8, getRnStepZids(opcode)) // TST1 Axl, MemRnStepZids
 TST1A_FUNC(tst1Alreg, 8, *readReg[opcode & 0x1F]) // TST1 Axl, Register
 TST1A_FUNC(tst1Alr6, 4, regR[6]) // TST1 Axl, R6
@@ -987,7 +987,7 @@ TST1A_FUNC(tst1Alr6, 4, regR[6]) // TST1 Axl, R6
     return 2; \
 }
 
-TST1I_FUNC(tst1I16mi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF))) // TST1 Imm16, MemImm8
+TST1I_FUNC(tst1I16mi8, core.dsp.readData((regMod[1] << 8) | (opcode & 0xFF))) // TST1 Imm16, MemImm8
 TST1I_FUNC(tst1I16mrn, getRnStepZids(opcode)) // TST1 Imm16, MemRnStepZids
 TST1I_FUNC(tst1I16reg, *readReg[opcode & 0x1F]) // TST1 Imm16, Register
 TST1I_FUNC(tst1I16r6, regR[6]) // TST1 Imm16, R6
@@ -1003,10 +1003,10 @@ TST1I_FUNC(tst1I16sm, *readSttMod[opcode & 0x7]) // TST1 Imm16, SttMod
 
 XOR_FUNC(xorI16, readParam(), 8, 2) // XOR Imm16, Ax
 XOR_FUNC(xorI8, (opcode & 0xFF), 8, 1) // XOR Imm8u, Ax
-XOR_FUNC(xorMi16, core->dsp.readData(readParam()), 8, 2) // XOR MemImm16, Ax
-XOR_FUNC(xorMi8, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 8, 1) // XOR MemImm8, Ax
-XOR_FUNC(xorM7i16, core->dsp.readData(regR[7] + readParam()), 8, 2) // XOR MemR7Imm16, Ax
-XOR_FUNC(xorM7i7, core->dsp.readData(regR[7] + (int8_t(opcode << 1) >> 1)), 8, 1) // XOR MemR7Imm7s, Ax
-XOR_FUNC(xorMrn, core->dsp.readData(getRnStepZids(opcode)), 8, 1) // XOR MemRnStepZids, Ax
+XOR_FUNC(xorMi16, core.dsp.readData(readParam()), 8, 2) // XOR MemImm16, Ax
+XOR_FUNC(xorMi8, core.dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), 8, 1) // XOR MemImm8, Ax
+XOR_FUNC(xorM7i16, core.dsp.readData(regR[7] + readParam()), 8, 2) // XOR MemR7Imm16, Ax
+XOR_FUNC(xorM7i7, core.dsp.readData(regR[7] + (int8_t(opcode << 1) >> 1)), 8, 1) // XOR MemR7Imm7s, Ax
+XOR_FUNC(xorMrn, core.dsp.readData(getRnStepZids(opcode)), 8, 1) // XOR MemRnStepZids, Ax
 XOR_FUNC(xorReg, readRegP0(opcode & 0x1F, false), 8, 1) // XOR RegisterP0, Ax
 XOR_FUNC(xorR6, regR[6], 4, 1) // XOR R6, Ax

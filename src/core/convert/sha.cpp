@@ -140,7 +140,7 @@ void Sha::pushFifo() {
 void Sha::triggerFifo() {
     // Schedule a FIFO update if one hasn't been already
     if (scheduled) return;
-    core->schedule(Task(SHA0_UPDATE + arm9), 1);
+    core.schedule(Task(SHA0_UPDATE + arm9), 1);
     scheduled = true;
 }
 
@@ -194,24 +194,24 @@ void Sha::update() {
     if (arm9) {
         // Set or clear the SHA in DRQs
         if (inFifo.empty() && outFifo.empty()) {
-            core->ndma.setDrq(0xA);
+            core.ndma.setDrq(0xA);
             if (shaCnt & BIT(2))
-                core->cdmas[XDMA].setDrq(0x6);
+                core.cdmas[XDMA].setDrq(0x6);
         }
         else {
-            core->ndma.clearDrq(0xA);
-            core->cdmas[XDMA].clearDrq(0x6);
+            core.ndma.clearDrq(0xA);
+            core.cdmas[XDMA].clearDrq(0x6);
         }
 
         // Set or clear the SHA out DRQs
         if (outFifo.size() >= 16) {
-            core->ndma.setDrq(0xB);
+            core.ndma.setDrq(0xB);
             if (shaCnt & BIT(10))
-                core->cdmas[XDMA].setDrq(0x7);
+                core.cdmas[XDMA].setDrq(0x7);
         }
         else {
-            core->ndma.clearDrq(0xB);
-            core->cdmas[XDMA].clearDrq(0x7);
+            core.ndma.clearDrq(0xB);
+            core.cdmas[XDMA].clearDrq(0x7);
         }
     }
 

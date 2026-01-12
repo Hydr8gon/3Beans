@@ -27,7 +27,7 @@ class Core;
 
 class Wifi {
 public:
-    Wifi(Core *core): core(core) {}
+    Wifi(Core &core): core(core) {}
 
     void readBlock();
     void writeBlock();
@@ -61,7 +61,7 @@ public:
     void writeData32Fifo(uint32_t mask, uint32_t value);
 
 private:
-    Core *core;
+    Core &core;
 
     static const uint8_t func0Reg0[0x17];
     static const uint8_t func0Reg1[0x12];

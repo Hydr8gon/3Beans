@@ -45,7 +45,7 @@ bool SdMmc::init(SdMmc &other) {
     fread(mmcCid, sizeof(uint32_t), 4, nand);
     memcpy(other.mmcCid, mmcCid, sizeof(mmcCid));
     fseek(nand, 0xE00, SEEK_SET);
-    core->memory.loadOtp(nand);
+    core.memory.loadOtp(nand);
 
     // Determine if this is a new 3DS NAND by checking for data in sector 0x96
     uint32_t sect96[8];
@@ -62,24 +62,24 @@ void SdMmc::sendInterrupt(int bit) {
 
     // Send an interrupt to the ARM9 if the new bit is unmasked
     if (~sdIrqMask & BIT(bit))
-        core->interrupts.sendInterrupt(ARM9, 16 + (id << 1));
+        core.interrupts.sendInterrupt(ARM9, 16 + (id << 1));
 }
 
 void SdMmc::startWrite() {
     // Change to write state and trigger an initial DRQ
     cardStatus = (cardStatus & ~0x1E00) | (0x6 << 9);
-    core->ndma.setDrq(0x6 + id);
+    core.ndma.setDrq(0x6 + id);
 
     // Write a block right away if the FIFO is full, or trigger a FIFO empty interrupt
     if (sdDataCtl & BIT(1)) { // 32-bit
         if ((dataFifo32.size() << 2) >= sdData32Blklen)
-            core->schedule(Task(SDMMC0_WRITE_BLOCK + id), 1);
+            core.schedule(Task(SDMMC0_WRITE_BLOCK + id), 1);
         else if (dataFifo32.empty() && (sdData32Irq & BIT(12)))
-            core->interrupts.sendInterrupt(ARM9, 16 + (id << 1));
+            core.interrupts.sendInterrupt(ARM9, 16 + (id << 1));
     }
     else { // 16-bit
         if ((dataFifo16.size() << 1) >= sdData16Blklen)
-            core->schedule(Task(SDMMC0_WRITE_BLOCK + id), 1);
+            core.schedule(Task(SDMMC0_WRITE_BLOCK + id), 1);
         else if (dataFifo16.empty())
             sendInterrupt(25);
     }
@@ -98,7 +98,7 @@ uint32_t SdMmc::popFifo() {
         // Trigger a 32-bit FIFO empty interrupt if enabled and finish a block
         sdData32Irq &= ~BIT(9); // Empty
         if (sdData32Irq & BIT(12))
-            core->interrupts.sendInterrupt(ARM9, 16 + (id << 1));
+            core.interrupts.sendInterrupt(ARM9, 16 + (id << 1));
         curBlock--;
         return value;
     }
@@ -132,7 +132,7 @@ void SdMmc::pushFifo(uint32_t value) {
         // Trigger a 32-bit FIFO full interrupt if enabled and finish a block
         sdData32Irq |= BIT(8);
         if (sdData32Irq & BIT(11))
-            core->interrupts.sendInterrupt(ARM9, 16 + (id << 1));
+            core.interrupts.sendInterrupt(ARM9, 16 + (id << 1));
         curBlock--;
         return;
     }
@@ -180,7 +180,7 @@ void SdMmc::readBlock() {
     // Change to read or idle state based on blocks left and trigger a DRQ
     cardStatus = (cardStatus & ~0x1E00) | ((curBlock ? 0x5 : 0x4) << 9);
     curAddress += hc ? 1 : (len << 2);
-    core->ndma.setDrq(0x6 + id);
+    core.ndma.setDrq(0x6 + id);
 }
 
 void SdMmc::writeBlock() {
@@ -204,7 +204,7 @@ void SdMmc::writeBlock() {
     cardStatus = (cardStatus & ~0x1E00) | ((curBlock ? 0x6 : 0x4) << 9);
     curAddress += hc ? 1 : (len << 2);
     if (!curBlock) return sendInterrupt(2);
-    core->ndma.setDrq(0x6 + id);
+    core.ndma.setDrq(0x6 + id);
 }
 
 void SdMmc::runCommand() {
@@ -290,7 +290,7 @@ void SdMmc::getStatus() {
 void SdMmc::setBlocklen() {
     // Set the word length for multi-block reads and writes
     blockLen = std::min(0x200U, sdCmdParam + 3) >> 2;
-    core->sdMmcs[!id].blockLen = blockLen;
+    core.sdMmcs[!id].blockLen = blockLen;
     pushResponse(cardStatus);
 }
 
@@ -299,7 +299,7 @@ void SdMmc::readSingleBlock() {
     curAddress = sdCmdParam;
     curBlock = 1;
     pushResponse(cardStatus);
-    core->schedule(Task(SDMMC0_READ_BLOCK + id), 1);
+    core.schedule(Task(SDMMC0_READ_BLOCK + id), 1);
 }
 
 void SdMmc::readMultiBlock() {
@@ -307,7 +307,7 @@ void SdMmc::readMultiBlock() {
     curAddress = sdCmdParam;
     curBlock = sdData16Blkcnt;
     pushResponse(cardStatus);
-    core->schedule(Task(SDMMC0_READ_BLOCK + id), 1);
+    core.schedule(Task(SDMMC0_READ_BLOCK + id), 1);
 }
 
 void SdMmc::writeSingleBlock() {
@@ -363,8 +363,8 @@ uint16_t SdMmc::readData16Fifo() {
 
     // Trigger a 16-bit FIFO empty interrupt and read another block or finish with a data end interrupt
     sendInterrupt(25);
-    core->ndma.clearDrq(0x6 + id);
-    (cardStatus & 0x1E00) == (0x5 << 9) ? core->schedule(Task(SDMMC0_READ_BLOCK + id), 1) : sendInterrupt(2);
+    core.ndma.clearDrq(0x6 + id);
+    (cardStatus & 0x1E00) == (0x5 << 9) ? core.schedule(Task(SDMMC0_READ_BLOCK + id), 1) : sendInterrupt(2);
     return sdData16Fifo;
 }
 
@@ -379,11 +379,11 @@ uint32_t SdMmc::readData32Fifo() {
     // Trigger a 32-bit FIFO empty interrupt if enabled
     sdData32Irq &= ~BIT(9);
     if (sdData32Irq & BIT(12))
-        core->interrupts.sendInterrupt(ARM9, 16 + (id << 1));
-    core->ndma.clearDrq(0x6 + id);
+        core.interrupts.sendInterrupt(ARM9, 16 + (id << 1));
+    core.ndma.clearDrq(0x6 + id);
 
     // Read another block or finish with a data end interrupt
-    (cardStatus & 0x1E00) == (0x5 << 9) ? core->schedule(Task(SDMMC0_READ_BLOCK + id), 1) : sendInterrupt(2);
+    (cardStatus & 0x1E00) == (0x5 << 9) ? core.schedule(Task(SDMMC0_READ_BLOCK + id), 1) : sendInterrupt(2);
     return sdData32Fifo;
 }
 
@@ -434,7 +434,7 @@ void SdMmc::writeIrqMask(uint32_t mask, uint32_t value) {
 
     // Trigger an ARM9 interrupt if a requested bit was newly unmasked
     if (sdIrqStatus & old & ~sdIrqMask)
-        core->interrupts.sendInterrupt(ARM9, 16 + (id << 1));
+        core.interrupts.sendInterrupt(ARM9, 16 + (id << 1));
 }
 
 void SdMmc::writeData16Blklen(uint16_t mask, uint16_t value) {
@@ -448,13 +448,13 @@ void SdMmc::writeData16Fifo(uint16_t mask, uint16_t value) {
     uint32_t size = (dataFifo16.size() << 1);
     if (size >= 0x200) return;
     dataFifo16.push(value & mask);
-    core->ndma.clearDrq(0x6 + id);
+    core.ndma.clearDrq(0x6 + id);
     if (size + 2 < sdData16Blklen) return;
 
     // Trigger a 16-bit FIFO full interrupt and write a block if in write mode
     sendInterrupt(24);
     if ((cardStatus & 0x1E00) == (0x6 << 9))
-        core->schedule(Task(SDMMC0_WRITE_BLOCK + id), 1);
+        core.schedule(Task(SDMMC0_WRITE_BLOCK + id), 1);
 }
 
 void SdMmc::writeDataCtl(uint16_t mask, uint16_t value) {
@@ -487,15 +487,15 @@ void SdMmc::writeData32Fifo(uint32_t mask, uint32_t value) {
     if (size >= 0x200) return;
     dataFifo32.push(value & mask);
     sdData32Irq |= BIT(9); // Not empty
-    core->ndma.clearDrq(0x6 + id);
+    core.ndma.clearDrq(0x6 + id);
     if (size + 4 < sdData32Blklen) return;
 
     // Trigger a 32-bit FIFO full interrupt if enabled
     sdData32Irq |= BIT(8);
     if (sdData32Irq & BIT(11))
-        core->interrupts.sendInterrupt(ARM9, 16 + (id << 1));
+        core.interrupts.sendInterrupt(ARM9, 16 + (id << 1));
 
     // Write a block if in write mode
     if ((cardStatus & 0x1E00) == (0x6 << 9))
-        core->schedule(Task(SDMMC0_WRITE_BLOCK + id), 1);
+        core.schedule(Task(SDMMC0_WRITE_BLOCK + id), 1);
 }

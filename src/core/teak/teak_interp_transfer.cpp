@@ -23,8 +23,8 @@
 #define EXCH_FUNC(name, i, j, ops, op0s, op1s, op2s) int TeakInterp::name(uint16_t opcode) { \
     bool l = (regStt[0] & BIT(0)); \
     uint16_t value = (this->*readAxS[(opcode >> op0s) & 0x1])() >> 16; \
-    core->dsp.writeData(stepReg(arpR##i[(opcode >> ops) & 0x3], arpP##i[(opcode >> op1s) & 0x3]), value); \
-    value = core->dsp.readData(stepReg(arpR##j[(opcode >> ops) & 0x3], arpP##j[(opcode >> op2s) & 0x3])); \
+    core.dsp.writeData(stepReg(arpR##i[(opcode >> ops) & 0x3], arpP##i[(opcode >> op1s) & 0x3]), value); \
+    value = core.dsp.readData(stepReg(arpR##j[(opcode >> ops) & 0x3], arpP##j[(opcode >> op2s) & 0x3])); \
     (this->*writeAx40[(opcode >> op0s) & 0x1])(int32_t(value << 16)); \
     if (regStt[0] & !l) writeStt0(regStt[0] & ~BIT(0)); \
     return 1; \
@@ -93,8 +93,8 @@ MOV_FUNC(movI16stp, readParam(), regStep0[(opcode >> 3) & 0x1]=, 2) // MOV Imm16
 MOV_FUNC(movI8al, (opcode & 0xFF), (this->*writeAxlM[(opcode >> 12) & 0x1]), 1) // MOV Imm8u, Axl
 MOV_FUNC(movI8ry, int8_t(opcode), (this->*writeRegM[(opcode >> 10) & 0x7]), 1) // MOV Imm8s, R0123457y0
 MOV_FUNC(movI8sv, int8_t(opcode), regSv=, 1) // MOV Imm8s, SV
-MOV_FUNC(movMi8sv, core->dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), regSv=, 1) // MOV MemImm8, SV
-MOV_FUNC(movMrnr6, core->dsp.readData(getRnStepZids(opcode)), regR[6]=, 1) // MOV MemRnStepZids, R6
+MOV_FUNC(movMi8sv, core.dsp.readData((regMod[1] << 8) | (opcode & 0xFF)), regSv=, 1) // MOV MemImm8, SV
+MOV_FUNC(movMrnr6, core.dsp.readData(getRnStepZids(opcode)), regR[6]=, 1) // MOV MemRnStepZids, R6
 MOV_FUNC(movMxpreg, regMixp, (this->*writeRegM[opcode & 0x1F]), 1) // MOV MIXP, Register
 MOV_FUNC(movP0a, shiftP[0].v, (this->*writeAx40M[(opcode >> 5) & 0x1]), 1) // MOV P0, Ax
 MOV_FUNC(movP1ab, shiftP[1].v, (this->*writeAb40M[opcode & 0x3]), 1) // MOV P1, Ab
@@ -108,7 +108,7 @@ MOV_FUNC(movStpa0h, regStep0[(opcode >> 8) & 0x1], writeAhM<0>, 1) // MOV Step0,
 
 // Move a value directly to memory
 #define MOVM_FUNC(name, op0, op1a) int TeakInterp::name(uint16_t opcode) { \
-    core->dsp.writeData(op1a, op0); \
+    core.dsp.writeData(op1a, op0); \
     return 1; \
 }
 
@@ -126,7 +126,7 @@ MOVHH_FUNC(movAblsm, readAbS[(opcode >> 3) & 0x3], writeSttMod[opcode & 0x7]) //
 
 // Move a value from data memory to a write handler
 #define MOVMH_FUNC(name, op0a, op1, cyc) int TeakInterp::name(uint16_t opcode) { \
-    (this->*op1)(core->dsp.readData(op0a)); \
+    (this->*op1)(core.dsp.readData(op0a)); \
     return cyc; \
 }
 
@@ -141,7 +141,7 @@ MOVMH_FUNC(movMrnreg, getRnStepZids(opcode), writeRegM[(opcode >> 5) & 0x1F], 1)
 
 // Move a value from a read handler to data memory
 #define MOVHM_FUNC(name, op0, op1a, cyc) int TeakInterp::name(uint16_t opcode) { \
-    core->dsp.writeData(op1a, (this->*op0)()); \
+    core.dsp.writeData(op1a, (this->*op0)()); \
     return cyc; \
 }
 
@@ -156,8 +156,8 @@ MOVHM_FUNC(movRymi8, readRegS[(opcode >> 9) & 0x7], (regMod[1] << 8) | (opcode &
 #define MOVAM_FUNC(name, op0, ars0, ars1) int TeakInterp::name(uint16_t opcode) { \
     int64_t value = op0; \
     uint8_t rar = ((opcode >> ars0) & 0xC) | ((opcode >> ars1) & 0x3); \
-    core->dsp.writeData(getRarOffsAr(rar), value >> 0); \
-    core->dsp.writeData(getRarStepAr(rar), value >> 16); \
+    core.dsp.writeData(getRarOffsAr(rar), value >> 0); \
+    core.dsp.writeData(getRarStepAr(rar), value >> 16); \
     return 1; \
 }
 
@@ -168,8 +168,8 @@ MOVAM_FUNC(movaAbrar, (this->*readAbS[(opcode >> 4) & 0x3])(), 0, 0) // MOVA Ab,
 // Move data memory to the high and low parts of an accumulator
 #define MOVMA_FUNC(name, ars0, ars1, op1) int TeakInterp::name(uint16_t opcode) { \
     uint8_t rar = ((opcode >> ars0) & 0xC) | ((opcode >> ars1) & 0x3); \
-    uint16_t l = core->dsp.readData(getRarOffsAr(rar)); \
-    uint16_t h = core->dsp.readData(getRarStepAr(rar)); \
+    uint16_t l = core.dsp.readData(getRarOffsAr(rar)); \
+    uint16_t h = core.dsp.readData(getRarStepAr(rar)); \
     (this->*op1)(int32_t(h << 16) | l); \
     return 1; \
 }
@@ -180,21 +180,21 @@ MOVMA_FUNC(movaRarab, 0, 0, writeAb40M[(opcode >> 4) & 0x3]) // MOVA MemRarOffsS
 int TeakInterp::movpPmareg(uint16_t opcode) { // MOVP ProgMemAx, Register
     // Move program memory addressed by an A accumulator to a register
     uint32_t address = 0x1FF00000 + ((regA[(opcode >> 5) & 0x1].v & 0x1FFFF) << 1);
-    (this->*writeRegM[opcode & 0x1F])(core->memory.read<uint16_t>(ARM11, address));
+    (this->*writeRegM[opcode & 0x1F])(core.memory.read<uint16_t>(ARM11, address));
     return 1;
 }
 
 int TeakInterp::mov2Abhabh(uint16_t opcode) { // MOV2 Abh, Abh, MemRar1StepAr1
     // Move the high parts of two accumulators to data memory
     uint8_t rar = ((opcode << 1) & 0x4) | (opcode & 0x1);
-    core->dsp.writeData(getRarOffsAr(rar), (this->*readAbS[(opcode >> 2) & 0x3])() >> 16);
-    core->dsp.writeData(getRarStepAr(rar), (this->*readAbS[(opcode >> 4) & 0x3])() >> 16);
+    core.dsp.writeData(getRarOffsAr(rar), (this->*readAbS[(opcode >> 2) & 0x3])() >> 16);
+    core.dsp.writeData(getRarStepAr(rar), (this->*readAbS[(opcode >> 4) & 0x3])() >> 16);
     return 1;
 }
 
 // Pop a value from the stack
 #define POP_FUNC(name, op0) int TeakInterp::name(uint16_t opcode) { \
-    op0(core->dsp.readData(regSp++)); \
+    op0(core.dsp.readData(regSp++)); \
     return 1; \
 }
 
@@ -208,15 +208,15 @@ POP_FUNC(popY1, regY[1]=) // POP Y1
 
 int TeakInterp::popAbe(uint16_t opcode) { // POP Abe
     // Pop an accumulator's extension bits from the stack
-    int64_t value = (int64_t(core->dsp.readData(regSp++)) << 32) | (*readAb[opcode & 0x3] & 0xFFFFFFFF);
+    int64_t value = (int64_t(core.dsp.readData(regSp++)) << 32) | (*readAb[opcode & 0x3] & 0xFFFFFFFF);
     (this->*writeAb40M[opcode & 0x3])(value);
     return 1;
 }
 
 // Pop the high and low parts of an accumulator from the stack
 #define POPA_FUNC(name, op0) int TeakInterp::name(uint16_t opcode) { \
-    uint16_t h = core->dsp.readData(regSp++); \
-    uint16_t l = core->dsp.readData(regSp++); \
+    uint16_t h = core.dsp.readData(regSp++); \
+    uint16_t l = core.dsp.readData(regSp++); \
     (this->*op0)(int32_t(h << 16) | l); \
     return 1; \
 }
@@ -226,7 +226,7 @@ POPA_FUNC(popaAb, writeAb40M[opcode & 0x3]) // POPA Ab
 
 // Push a value to the stack
 #define PUSH_FUNC(name, op0, cyc) int TeakInterp::name(uint16_t opcode) { \
-    core->dsp.writeData(--regSp, op0); \
+    core.dsp.writeData(--regSp, op0); \
     return cyc; \
 }
 
@@ -242,8 +242,8 @@ PUSH_FUNC(pushY1, regY[1], 1) // PUSH Y1
 // Push the high and low parts of an accumulator to the stack
 #define PUSHA_FUNC(name, op0) int TeakInterp::name(uint16_t opcode) { \
     int64_t value = op0; \
-    core->dsp.writeData(--regSp, value >> 0); \
-    core->dsp.writeData(--regSp, value >> 16); \
+    core.dsp.writeData(--regSp, value >> 0); \
+    core.dsp.writeData(--regSp, value >> 16); \
     return 1; \
 }
 

@@ -32,7 +32,7 @@ const int16_t GpuRender::etc1Tables[][4] {
     { 47, 183, -47, -183 }
 };
 
-Gpu::Gpu(Core *core, std::function<void()> *contextFunc): core(core), contextFunc(contextFunc) {
+Gpu::Gpu(Core &core, std::function<void()> *contextFunc): core(core), contextFunc(contextFunc) {
     // Initialize the renderer
     createRender();
 }
@@ -229,7 +229,7 @@ bool Gpu::checkInterrupt(int i) {
     if ((gpuIrqMask & BITL(i)) || ((gpuIrqCmp[i >> 2] ^ gpuIrqReq[i >> 2]) & (0xFF << ((i & 0x3) * 8))))
         return false;
     gpuIrqStat |= BITL(i);
-    core->interrupts.sendInterrupt(ARM11, 0x2D);
+    core.interrupts.sendInterrupt(ARM11, 0x2D);
     return true;
 }
 
@@ -265,15 +265,15 @@ void Gpu::startFill(GpuFillRegs &regs) {
     switch ((regs.cnt >> 8) & 0x3) {
     case 0: // 16-bit
         for (uint32_t addr = start; addr < end; addr += 2)
-            core->memory.write<uint16_t>(ARM11, addr, regs.data);
+            core.memory.write<uint16_t>(ARM11, addr, regs.data);
         return;
     case 1: case 3: // 24-bit
         for (uint32_t addr = start, val = (regs.data & 0xFFFFFF) | (regs.data << 24); addr < end; addr += 2)
-            core->memory.write<uint16_t>(ARM11, addr, val >> (((addr - start) * 8) % 24));
+            core.memory.write<uint16_t>(ARM11, addr, val >> (((addr - start) * 8) % 24));
         return;
     case 2: // 32-bit
         for (uint32_t addr = start; addr < end; addr += 4)
-            core->memory.write<uint32_t>(ARM11, addr, regs.data);
+            core.memory.write<uint32_t>(ARM11, addr, regs.data);
         return;
     }
 }
@@ -295,7 +295,7 @@ void Gpu::startCopy(GpuCopyRegs &regs) {
 
         // Perform a texture copy, applying address gaps when widths are reached
         for (uint32_t i = 0; i < regs.texSize; i += 4) {
-            core->memory.write<uint32_t>(ARM11, dstAddr + i, core->memory.read<uint32_t>(ARM11, srcAddr + i));
+            core.memory.write<uint32_t>(ARM11, dstAddr + i, core.memory.read<uint32_t>(ARM11, srcAddr + i));
             if (srcWidth && !((i + 4) % srcWidth)) srcAddr += srcGap;
             if (dstWidth && !((i + 4) % dstWidth)) dstAddr += dstGap;
         }
@@ -337,7 +337,7 @@ void Gpu::startCopy(GpuCopyRegs &regs) {
                 switch (scaleType) {
                 default: // No downscale
                     ofs = srcAddr + getDispSrcOfs(x, y0, srcWidth) * 4;
-                    c0 = core->memory.read<uint32_t>(ARM11, ofs);
+                    c0 = core.memory.read<uint32_t>(ARM11, ofs);
                     r = ((c0 >> 24) & 0xFF);
                     g = ((c0 >> 16) & 0xFF);
                     b = ((c0 >> 8) & 0xFF);
@@ -345,8 +345,8 @@ void Gpu::startCopy(GpuCopyRegs &regs) {
                     break;
                 case 0x1: // 2x1 downscale
                     ofs = srcAddr + getDispSrcOfs(x << 1, y0, srcWidth) * 4;
-                    c0 = core->memory.read<uint32_t>(ARM11, ofs + 0x0);
-                    c1 = core->memory.read<uint32_t>(ARM11, ofs + 0x4);
+                    c0 = core.memory.read<uint32_t>(ARM11, ofs + 0x0);
+                    c1 = core.memory.read<uint32_t>(ARM11, ofs + 0x4);
                     r = (((c0 >> 24) & 0xFF) + ((c1 >> 24) & 0xFF)) / 2;
                     g = (((c0 >> 16) & 0xFF) + ((c1 >> 16) & 0xFF)) / 2;
                     b = (((c0 >> 8) & 0xFF) + ((c1 >> 8) & 0xFF)) / 2;
@@ -354,10 +354,10 @@ void Gpu::startCopy(GpuCopyRegs &regs) {
                     break;
                 case 0x2: // 2x2 downscale
                     ofs = srcAddr + getDispSrcOfs(x << 1, y0 << 1, srcWidth) * 4;
-                    c0 = core->memory.read<uint32_t>(ARM11, ofs + 0x0);
-                    c1 = core->memory.read<uint32_t>(ARM11, ofs + 0x4);
-                    c2 = core->memory.read<uint32_t>(ARM11, ofs + 0x8);
-                    c3 = core->memory.read<uint32_t>(ARM11, ofs + 0xC);
+                    c0 = core.memory.read<uint32_t>(ARM11, ofs + 0x0);
+                    c1 = core.memory.read<uint32_t>(ARM11, ofs + 0x4);
+                    c2 = core.memory.read<uint32_t>(ARM11, ofs + 0x8);
+                    c3 = core.memory.read<uint32_t>(ARM11, ofs + 0xC);
                     r = (((c0 >> 24) & 0xFF) + ((c1 >> 24) & 0xFF) + ((c2 >> 24) & 0xFF) + ((c3 >> 24) & 0xFF)) / 4;
                     g = (((c0 >> 16) & 0xFF) + ((c1 >> 16) & 0xFF) + ((c2 >> 16) & 0xFF) + ((c3 >> 16) & 0xFF)) / 4;
                     b = (((c0 >> 8) & 0xFF) + ((c1 >> 8) & 0xFF) + ((c2 >> 8) & 0xFF) + ((c3 >> 8) & 0xFF)) / 4;
@@ -369,28 +369,28 @@ void Gpu::startCopy(GpuCopyRegs &regs) {
                 case 0x0: // RGBA8
                     ofs = dstAddr + getDispDstOfs(x, y1, dstWidth) * 4;
                     c0 = (r << 24) | (g << 16) | (b << 8) | a;
-                    core->memory.write<uint32_t>(ARM11, ofs, c0);
+                    core.memory.write<uint32_t>(ARM11, ofs, c0);
                     continue;
                 case 0x1: // RGB8
                     ofs = dstAddr + getDispDstOfs(x, y1, dstWidth) * 3;
-                    core->memory.write<uint8_t>(ARM11, ofs + 2, r);
-                    core->memory.write<uint8_t>(ARM11, ofs + 1, g);
-                    core->memory.write<uint8_t>(ARM11, ofs + 0, b);
+                    core.memory.write<uint8_t>(ARM11, ofs + 2, r);
+                    core.memory.write<uint8_t>(ARM11, ofs + 1, g);
+                    core.memory.write<uint8_t>(ARM11, ofs + 0, b);
                     continue;
                 case 0x2: // RGB565
                     ofs = dstAddr + getDispDstOfs(x, y1, dstWidth) * 2;
                     c0 = ((r * 31 / 255) << 11) | ((g * 63 / 255) << 5) | (b * 31 / 255);
-                    core->memory.write<uint16_t>(ARM11, ofs, c0);
+                    core.memory.write<uint16_t>(ARM11, ofs, c0);
                     continue;
                 case 0x3: // RGB5A1
                     ofs = dstAddr + getDispDstOfs(x, y1, dstWidth) * 2;
                     c0 = ((r * 31 / 255) << 11) | ((g * 31 / 255) << 6) | ((b * 31 / 255) << 1) | bool(a);
-                    core->memory.write<uint16_t>(ARM11, ofs, c0);
+                    core.memory.write<uint16_t>(ARM11, ofs, c0);
                     continue;
                 default: // RGBA4
                     ofs = dstAddr + getDispDstOfs(x, y1, dstWidth) * 2;
                     c0 = ((r * 15 / 255) << 12) | ((g * 15 / 255) << 8) | ((b * 15 / 255) << 4) | (a * 15 / 255);
-                    core->memory.write<uint16_t>(ARM11, ofs, c0);
+                    core.memory.write<uint16_t>(ARM11, ofs, c0);
                     continue;
                 }
             }
@@ -408,31 +408,31 @@ void Gpu::startCopy(GpuCopyRegs &regs) {
                 switch (scaleType) {
                 default: // No downscale
                     ofs = srcAddr + getDispSrcOfs(x, y0, srcWidth) * 3;
-                    r = core->memory.read<uint8_t>(ARM11, ofs + 2);
-                    g = core->memory.read<uint8_t>(ARM11, ofs + 1);
-                    b = core->memory.read<uint8_t>(ARM11, ofs + 0);
+                    r = core.memory.read<uint8_t>(ARM11, ofs + 2);
+                    g = core.memory.read<uint8_t>(ARM11, ofs + 1);
+                    b = core.memory.read<uint8_t>(ARM11, ofs + 0);
                     break;
                 case 0x1: // 2x1 downscale
                     ofs = srcAddr + getDispSrcOfs(x << 1, y0, srcWidth) * 3;
-                    r = (core->memory.read<uint8_t>(ARM11, ofs + 2) + core->memory.read<uint8_t>(ARM11, ofs + 5)) / 2;
-                    g = (core->memory.read<uint8_t>(ARM11, ofs + 1) + core->memory.read<uint8_t>(ARM11, ofs + 4)) / 2;
-                    b = (core->memory.read<uint8_t>(ARM11, ofs + 0) + core->memory.read<uint8_t>(ARM11, ofs + 3)) / 2;
+                    r = (core.memory.read<uint8_t>(ARM11, ofs + 2) + core.memory.read<uint8_t>(ARM11, ofs + 5)) / 2;
+                    g = (core.memory.read<uint8_t>(ARM11, ofs + 1) + core.memory.read<uint8_t>(ARM11, ofs + 4)) / 2;
+                    b = (core.memory.read<uint8_t>(ARM11, ofs + 0) + core.memory.read<uint8_t>(ARM11, ofs + 3)) / 2;
                     break;
                 case 0x2: // 2x2 downscale
                     ofs = srcAddr + getDispSrcOfs(x << 1, y0 << 1, srcWidth) * 3;
-                    r = (core->memory.read<uint8_t>(ARM11, ofs + 2) + core->memory.read<uint8_t>(ARM11, ofs + 5) +
-                        core->memory.read<uint8_t>(ARM11, ofs + 8) + core->memory.read<uint8_t>(ARM11, ofs + 11)) / 4;
-                    g = (core->memory.read<uint8_t>(ARM11, ofs + 1) + core->memory.read<uint8_t>(ARM11, ofs + 4) +
-                        core->memory.read<uint8_t>(ARM11, ofs + 7) + core->memory.read<uint8_t>(ARM11, ofs + 10)) / 4;
-                    b = (core->memory.read<uint8_t>(ARM11, ofs + 0) + core->memory.read<uint8_t>(ARM11, ofs + 3) +
-                        core->memory.read<uint8_t>(ARM11, ofs + 6) + core->memory.read<uint8_t>(ARM11, ofs + 9)) / 4;
+                    r = (core.memory.read<uint8_t>(ARM11, ofs + 2) + core.memory.read<uint8_t>(ARM11, ofs + 5) +
+                        core.memory.read<uint8_t>(ARM11, ofs + 8) + core.memory.read<uint8_t>(ARM11, ofs + 11)) / 4;
+                    g = (core.memory.read<uint8_t>(ARM11, ofs + 1) + core.memory.read<uint8_t>(ARM11, ofs + 4) +
+                        core.memory.read<uint8_t>(ARM11, ofs + 7) + core.memory.read<uint8_t>(ARM11, ofs + 10)) / 4;
+                    b = (core.memory.read<uint8_t>(ARM11, ofs + 0) + core.memory.read<uint8_t>(ARM11, ofs + 3) +
+                        core.memory.read<uint8_t>(ARM11, ofs + 6) + core.memory.read<uint8_t>(ARM11, ofs + 9)) / 4;
                     break;
                 }
 
                 ofs = dstAddr + getDispDstOfs(x, y1, dstWidth) * 3;
-                core->memory.write<uint8_t>(ARM11, ofs + 2, r);
-                core->memory.write<uint8_t>(ARM11, ofs + 1, g);
-                core->memory.write<uint8_t>(ARM11, ofs + 0, b);
+                core.memory.write<uint8_t>(ARM11, ofs + 2, r);
+                core.memory.write<uint8_t>(ARM11, ofs + 1, g);
+                core.memory.write<uint8_t>(ARM11, ofs + 0, b);
             }
         }
         return;
@@ -443,25 +443,25 @@ void Gpu::startCopy(GpuCopyRegs &regs) {
                 switch (scaleType) {
                 default: // No downscale
                     ofs = srcAddr + getDispSrcOfs(x, y0, srcWidth) * 2;
-                    c0 = core->memory.read<uint16_t>(ARM11, ofs);
+                    c0 = core.memory.read<uint16_t>(ARM11, ofs);
                     r = ((c0 >> 11) & 0x1F);
                     g = ((c0 >> 5) & 0x3F);
                     b = ((c0 >> 0) & 0x1F);
                     break;
                 case 0x1: // 2x1 downscale
                     ofs = srcAddr + getDispSrcOfs(x << 1, y0, srcWidth) * 2;
-                    c0 = core->memory.read<uint16_t>(ARM11, ofs + 0x0);
-                    c1 = core->memory.read<uint16_t>(ARM11, ofs + 0x2);
+                    c0 = core.memory.read<uint16_t>(ARM11, ofs + 0x0);
+                    c1 = core.memory.read<uint16_t>(ARM11, ofs + 0x2);
                     r = (((c0 >> 11) & 0x1F) + ((c1 >> 11) & 0x1F)) / 2;
                     g = (((c0 >> 5) & 0x3F) + ((c1 >> 5) & 0x3F)) / 2;
                     b = (((c0 >> 0) & 0x1F) + ((c1 >> 0) & 0x1F)) / 2;
                     break;
                 case 0x2: // 2x2 downscale
                     ofs = srcAddr + getDispSrcOfs(x << 1, y0 << 1, srcWidth) * 2;
-                    c0 = core->memory.read<uint32_t>(ARM11, ofs + 0x0);
-                    c1 = core->memory.read<uint32_t>(ARM11, ofs + 0x2);
-                    c2 = core->memory.read<uint32_t>(ARM11, ofs + 0x4);
-                    c3 = core->memory.read<uint32_t>(ARM11, ofs + 0x6);
+                    c0 = core.memory.read<uint32_t>(ARM11, ofs + 0x0);
+                    c1 = core.memory.read<uint32_t>(ARM11, ofs + 0x2);
+                    c2 = core.memory.read<uint32_t>(ARM11, ofs + 0x4);
+                    c3 = core.memory.read<uint32_t>(ARM11, ofs + 0x6);
                     r = (((c0 >> 11) & 0x1F) + ((c1 >> 11) & 0x1F) + ((c2 >> 11) & 0x1F) + ((c3 >> 11) & 0x1F)) / 4;
                     g = (((c0 >> 5) & 0x3F) + ((c1 >> 5) & 0x3F) + ((c2 >> 5) & 0x3F) + ((c3 >> 5) & 0x3F)) / 4;
                     b = (((c0 >> 0) & 0x1F) + ((c1 >> 0) & 0x1F) + ((c2 >> 0) & 0x1F) + ((c3 >> 0) & 0x1F)) / 4;
@@ -476,17 +476,17 @@ void Gpu::startCopy(GpuCopyRegs &regs) {
                 case 0x2: // RGB565
                     ofs = dstAddr + getDispDstOfs(x, y1, dstWidth) * 2;
                     c0 = (r << 11) | (g << 5) | b;
-                    core->memory.write<uint16_t>(ARM11, ofs, c0);
+                    core.memory.write<uint16_t>(ARM11, ofs, c0);
                     continue;
                 case 0x3: // RGB5A1
                     ofs = dstAddr + getDispDstOfs(x, y1, dstWidth) * 2;
                     c0 = (r << 11) | ((g * 31 / 63) << 6) | (b << 1) | 0x1;
-                    core->memory.write<uint16_t>(ARM11, ofs, c0);
+                    core.memory.write<uint16_t>(ARM11, ofs, c0);
                     continue;
                 default: // RGBA4
                     ofs = dstAddr + getDispDstOfs(x, y1, dstWidth) * 2;
                     c0 = ((r * 15 / 31) << 12) | ((g * 15 / 63) << 8) | ((b * 15 / 31) << 4) | 0xF;
-                    core->memory.write<uint16_t>(ARM11, ofs, c0);
+                    core.memory.write<uint16_t>(ARM11, ofs, c0);
                     continue;
                 }
             }
@@ -499,7 +499,7 @@ void Gpu::startCopy(GpuCopyRegs &regs) {
                 switch (scaleType) {
                 default: // No downscale
                     ofs = srcAddr + getDispSrcOfs(x, y0, srcWidth) * 2;
-                    c0 = core->memory.read<uint16_t>(ARM11, ofs);
+                    c0 = core.memory.read<uint16_t>(ARM11, ofs);
                     r = ((c0 >> 11) & 0x1F);
                     g = ((c0 >> 6) & 0x1F);
                     b = ((c0 >> 1) & 0x1F);
@@ -507,8 +507,8 @@ void Gpu::startCopy(GpuCopyRegs &regs) {
                     break;
                 case 0x1: // 2x1 downscale
                     ofs = srcAddr + getDispSrcOfs(x << 1, y0, srcWidth) * 2;
-                    c0 = core->memory.read<uint16_t>(ARM11, ofs + 0x0);
-                    c1 = core->memory.read<uint16_t>(ARM11, ofs + 0x2);
+                    c0 = core.memory.read<uint16_t>(ARM11, ofs + 0x0);
+                    c1 = core.memory.read<uint16_t>(ARM11, ofs + 0x2);
                     r = (((c0 >> 11) & 0x1F) + ((c1 >> 11) & 0x1F)) / 2;
                     g = (((c0 >> 6) & 0x1F) + ((c1 >> 6) & 0x1F)) / 2;
                     b = (((c0 >> 1) & 0x1F) + ((c1 >> 1) & 0x1F)) / 2;
@@ -516,10 +516,10 @@ void Gpu::startCopy(GpuCopyRegs &regs) {
                     break;
                 case 0x2: // 2x2 downscale
                     ofs = srcAddr + getDispSrcOfs(x << 1, y0 << 1, srcWidth) * 2;
-                    c0 = core->memory.read<uint32_t>(ARM11, ofs + 0x0);
-                    c1 = core->memory.read<uint32_t>(ARM11, ofs + 0x2);
-                    c2 = core->memory.read<uint32_t>(ARM11, ofs + 0x4);
-                    c3 = core->memory.read<uint32_t>(ARM11, ofs + 0x6);
+                    c0 = core.memory.read<uint32_t>(ARM11, ofs + 0x0);
+                    c1 = core.memory.read<uint32_t>(ARM11, ofs + 0x2);
+                    c2 = core.memory.read<uint32_t>(ARM11, ofs + 0x4);
+                    c3 = core.memory.read<uint32_t>(ARM11, ofs + 0x6);
                     r = (((c0 >> 11) & 0x1F) + ((c1 >> 11) & 0x1F) + ((c2 >> 11) & 0x1F) + ((c3 >> 11) & 0x1F)) / 4;
                     g = (((c0 >> 6) & 0x1F) + ((c1 >> 6) & 0x1F) + ((c2 >> 6) & 0x1F) + ((c3 >> 6) & 0x1F)) / 4;
                     b = (((c0 >> 1) & 0x1F) + ((c1 >> 1) & 0x1F) + ((c2 >> 1) & 0x1F) + ((c3 >> 1) & 0x1F)) / 4;
@@ -535,17 +535,17 @@ void Gpu::startCopy(GpuCopyRegs &regs) {
                 case 0x2: // RGB565
                     ofs = dstAddr + getDispDstOfs(x, y1, dstWidth) * 2;
                     c0 = (r << 11) | ((g * 63 / 31) << 5) | b;
-                    core->memory.write<uint16_t>(ARM11, ofs, c0);
+                    core.memory.write<uint16_t>(ARM11, ofs, c0);
                     continue;
                 case 0x3: // RGB5A1
                     ofs = dstAddr + getDispDstOfs(x, y1, dstWidth) * 2;
                     c0 = (r << 11) | (g << 6) | (b << 1) | bool(a);
-                    core->memory.write<uint16_t>(ARM11, ofs, c0);
+                    core.memory.write<uint16_t>(ARM11, ofs, c0);
                     continue;
                 default: // RGBA4
                     ofs = dstAddr + getDispDstOfs(x, y1, dstWidth) * 2;
                     c0 = ((r * 15 / 31) << 12) | ((g * 15 / 31) << 8) | ((b * 15 / 31) << 4) | (a * 15 / 4);
-                    core->memory.write<uint16_t>(ARM11, ofs, c0);
+                    core.memory.write<uint16_t>(ARM11, ofs, c0);
                     continue;
                 }
             }
@@ -558,7 +558,7 @@ void Gpu::startCopy(GpuCopyRegs &regs) {
                 switch (scaleType) {
                 default: // No downscale
                     ofs = srcAddr + getDispSrcOfs(x, y0, srcWidth) * 2;
-                    c0 = core->memory.read<uint16_t>(ARM11, ofs);
+                    c0 = core.memory.read<uint16_t>(ARM11, ofs);
                     r = ((c0 >> 12) & 0xF);
                     g = ((c0 >> 8) & 0xF);
                     b = ((c0 >> 4) & 0xF);
@@ -566,8 +566,8 @@ void Gpu::startCopy(GpuCopyRegs &regs) {
                     break;
                 case 0x1: // 2x1 downscale
                     ofs = srcAddr + getDispSrcOfs(x << 1, y0, srcWidth) * 2;
-                    c0 = core->memory.read<uint16_t>(ARM11, ofs + 0x0);
-                    c1 = core->memory.read<uint16_t>(ARM11, ofs + 0x2);
+                    c0 = core.memory.read<uint16_t>(ARM11, ofs + 0x0);
+                    c1 = core.memory.read<uint16_t>(ARM11, ofs + 0x2);
                     r = (((c0 >> 12) & 0xF) + ((c1 >> 12) & 0xF)) / 2;
                     g = (((c0 >> 8) & 0xF) + ((c1 >> 8) & 0xF)) / 2;
                     b = (((c0 >> 4) & 0xF) + ((c1 >> 4) & 0xF)) / 2;
@@ -575,10 +575,10 @@ void Gpu::startCopy(GpuCopyRegs &regs) {
                     break;
                 case 0x2: // 2x2 downscale
                     ofs = srcAddr + getDispSrcOfs(x << 1, y0 << 1, srcWidth) * 2;
-                    c0 = core->memory.read<uint32_t>(ARM11, ofs + 0x0);
-                    c1 = core->memory.read<uint32_t>(ARM11, ofs + 0x2);
-                    c2 = core->memory.read<uint32_t>(ARM11, ofs + 0x4);
-                    c3 = core->memory.read<uint32_t>(ARM11, ofs + 0x6);
+                    c0 = core.memory.read<uint32_t>(ARM11, ofs + 0x0);
+                    c1 = core.memory.read<uint32_t>(ARM11, ofs + 0x2);
+                    c2 = core.memory.read<uint32_t>(ARM11, ofs + 0x4);
+                    c3 = core.memory.read<uint32_t>(ARM11, ofs + 0x6);
                     r = (((c0 >> 12) & 0xF) + ((c1 >> 12) & 0xF) + ((c2 >> 12) & 0xF) + ((c3 >> 12) & 0xF)) / 4;
                     g = (((c0 >> 8) & 0xF) + ((c1 >> 8) & 0xF) + ((c2 >> 8) & 0xF) + ((c3 >> 8) & 0xF)) / 4;
                     b = (((c0 >> 4) & 0xF) + ((c1 >> 4) & 0xF) + ((c2 >> 4) & 0xF) + ((c3 >> 4) & 0xF)) / 4;
@@ -594,17 +594,17 @@ void Gpu::startCopy(GpuCopyRegs &regs) {
                 case 0x2: // RGB565
                     ofs = dstAddr + getDispDstOfs(x, y1, dstWidth) * 2;
                     c0 = ((r * 31 / 15) << 11) | ((g * 63 / 15) << 5) | (b * 31 / 15);
-                    core->memory.write<uint16_t>(ARM11, ofs, c0);
+                    core.memory.write<uint16_t>(ARM11, ofs, c0);
                     continue;
                 case 0x3: // RGB5A1
                     ofs = dstAddr + getDispDstOfs(x, y1, dstWidth) * 2;
                     c0 = ((r * 31 / 15) << 11) | ((g * 31 / 15) << 6) | ((b * 31 / 15) << 1) | bool(a);
-                    core->memory.write<uint16_t>(ARM11, ofs, c0);
+                    core.memory.write<uint16_t>(ARM11, ofs, c0);
                     continue;
                 default: // RGBA4
                     ofs = dstAddr + getDispDstOfs(x, y1, dstWidth) * 2;
                     c0 = (r << 12) | (g << 8) | (b << 4) | a;
-                    core->memory.write<uint16_t>(ARM11, ofs, c0);
+                    core.memory.write<uint16_t>(ARM11, ofs, c0);
                     continue;
                 }
             }
@@ -616,13 +616,13 @@ void Gpu::startCopy(GpuCopyRegs &regs) {
 void Gpu::endFill(int i) {
     // Trigger a GPU fill end interrupt after some time
     gpuFill[i].cnt |= BIT(1);
-    core->interrupts.sendInterrupt(ARM11, 0x28 + i);
+    core.interrupts.sendInterrupt(ARM11, 0x28 + i);
 }
 
 void Gpu::endCopy() {
     // Trigger a GPU copy ehd interrupt after some time
     gpuCopy.cnt |= BIT(8);
-    core->interrupts.sendInterrupt(ARM11, 0x2C);
+    core.interrupts.sendInterrupt(ARM11, 0x2C);
 }
 
 void Gpu::writeCfg11GpuCnt(uint32_t mask, uint32_t value) {
@@ -659,7 +659,7 @@ void Gpu::writeFillCnt(int i, uint32_t mask, uint32_t value) {
 
     // Check if a fill should start and schedule the end signal based on size
     if (!(value & mask & BIT(0)) || !(cfg11GpuCnt & BIT(1))) return;
-    core->schedule(Task(GPU_END_FILL0 + i), gpuFill[i].dstEnd - gpuFill[i].dstAddr);
+    core.schedule(Task(GPU_END_FILL0 + i), gpuFill[i].dstEnd - gpuFill[i].dstAddr);
 
     // Start the fill now or forward it to the thread if running
     if (!thread) return startFill(gpuFill[i]);
@@ -706,7 +706,7 @@ void Gpu::writeCopyCnt(uint32_t mask, uint32_t value) {
 
     // Check if a copy should start and schedule the end signal based on type and size
     if (!(value & mask & BIT(0)) || !(cfg11GpuCnt & BIT(4))) return;
-    core->schedule(GPU_END_COPY, (gpuCopy.flags & BIT(3)) ? (gpuCopy.texSize / 4)
+    core.schedule(GPU_END_COPY, (gpuCopy.flags & BIT(3)) ? (gpuCopy.texSize / 4)
         : ((gpuCopy.dispDstSize & 0xFFFF) * (gpuCopy.dispDstSize >> 16)));
 
     // Start the copy now or forward it to the thread if running

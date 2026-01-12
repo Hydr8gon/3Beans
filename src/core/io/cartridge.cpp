@@ -22,10 +22,10 @@
 
 const uint16_t Cartridge::ctrClocks[] = { 64, 80, 96, 128, 160, 256, 256, 256 };
 
-Cartridge::Cartridge(Core *core, std::string &cartPath): core(core) {
+Cartridge::Cartridge(Core &core, std::string &cartPath): core(core) {
     // Open a cartridge file if a path was provided
     if (cartPath.empty() || !(cartFile = fopen(cartPath.c_str(), "rb"))) return;
-    if (Settings::cartAutoBoot) core->aes.autoBoot();
+    if (Settings::cartAutoBoot) core.aes.autoBoot();
     cfg9CardPower &= ~BIT(0); // Inserted
 
     // Determine a primary 3DS cartridge ID based on ROM size, from 128MB to 4GB
@@ -127,7 +127,7 @@ void Cartridge::updateSave() {
 void Cartridge::ntrWordReady() {
     // Indicate that a NTRCARD word is ready and trigger DRQs
     ntrRomcnt |= BIT(23);
-    core->ndma.setDrq(0xC);
+    core.ndma.setDrq(0xC);
 }
 
 void Cartridge::ctrWordReady() {
@@ -135,12 +135,12 @@ void Cartridge::ctrWordReady() {
     if ((ctrReadCount -= 4) == 0)
         ctrCnt &= ~BIT(31);
     else if (ctrFifo.size() < 7 && (ctrCnt & BIT(31)))
-        core->schedule(CTR_WORD_READY, ctrClocks[(ctrCnt >> 24) & 0x7]);
+        core.schedule(CTR_WORD_READY, ctrClocks[(ctrCnt >> 24) & 0x7]);
 
     // Set the ready bit and trigger DRQs every 8 words
     if ((ctrReadCount & 0x1F) == 0) {
         ctrCnt |= BIT(27);
-        core->ndma.setDrq(0x4);
+        core.ndma.setDrq(0x4);
     }
 
     // Push a value to the FIFO based on the current CTRCARD reply state
@@ -181,7 +181,7 @@ uint8_t Cartridge::spiTransfer(uint8_t value) {
         spiFifoCnt &= ~BIT(15);
         if (spiFifoIntMask & BIT(0)) {
             spiFifoIntStat |= BIT(0);
-            core->interrupts.sendInterrupt(ARM9, 23);
+            core.interrupts.sendInterrupt(ARM9, 23);
         }
     }
 
@@ -261,20 +261,20 @@ uint32_t Cartridge::readNtrData() {
     // Wait until a word is ready and then clear the ready bit
     if (~ntrRomcnt & BIT(23)) return 0xFFFFFFFF;
     ntrRomcnt &= ~BIT(23);
-    core->ndma.clearDrq(0xC);
+    core.ndma.clearDrq(0xC);
 
     // Decrement the read counter and check if finished
     if ((ntrCount -= 4) == 0) {
         // End the transfer and trigger interrupts if enabled
         ntrRomcnt &= ~BIT(31); // Not busy
         if (ntrMcnt & BIT(14)) {
-            core->interrupts.sendInterrupt(ARM9, 27);
-            core->interrupts.sendInterrupt(ARM11, 0x44);
+            core.interrupts.sendInterrupt(ARM9, 27);
+            core.interrupts.sendInterrupt(ARM11, 0x44);
         }
     }
     else {
         // Schedule the next word at either 4.2MHz or 6.7MHz
-        core->schedule(NTR_WORD_READY, (ntrRomcnt & BIT(27)) ? 256 : 160);
+        core.schedule(NTR_WORD_READY, (ntrRomcnt & BIT(27)) ? 256 : 160);
     }
 
     // Return a value based on the current NTRCARD reply state
@@ -296,9 +296,9 @@ uint32_t Cartridge::readNtrData() {
 uint32_t Cartridge::readCtrFifo() {
     // Schedule the next word if full but running, or trigger an end interrupt if done
     if (ctrFifo.size() == 8 && ctrReadCount > 0 && (ctrCnt & BIT(31)))
-        core->schedule(CTR_WORD_READY, ctrClocks[(ctrCnt >> 24) & 0x7]);
+        core.schedule(CTR_WORD_READY, ctrClocks[(ctrCnt >> 24) & 0x7]);
     else if (ctrFifo.size() == 1 && ctrReadCount == 0 && (ctrCnt & BIT(30)))
-        core->interrupts.sendInterrupt(ARM9, 23);
+        core.interrupts.sendInterrupt(ARM9, 23);
 
     // Pop a word from the CTRCARD FIFO and clear the ready bit if empty
     if (ctrFifo.empty()) return 0xFFFFFFFF;
@@ -306,7 +306,7 @@ uint32_t Cartridge::readCtrFifo() {
     ctrFifo.pop();
     if (!ctrFifo.empty()) return value;
     ctrCnt &= ~BIT(27);
-    core->ndma.clearDrq(0x4);
+    core.ndma.clearDrq(0x4);
     return value;
 }
 
@@ -387,13 +387,13 @@ void Cartridge::writeNtrRomcnt(uint32_t mask, uint32_t value) {
     if (ntrCount == 0) {
         ntrRomcnt &= ~0x80800000; // Busy, word ready
         if (~ntrMcnt & BIT(14)) return;
-        core->interrupts.sendInterrupt(ARM9, 27);
-        core->interrupts.sendInterrupt(ARM11, 0x44);
+        core.interrupts.sendInterrupt(ARM9, 27);
+        core.interrupts.sendInterrupt(ARM11, 0x44);
         return;
     }
 
     // Schedule the first word at either 4.2MHz or 6.7MHz per byte
-    core->schedule(NTR_WORD_READY, (ntrRomcnt & BIT(27)) ? 256 : 160);
+    core.schedule(NTR_WORD_READY, (ntrRomcnt & BIT(27)) ? 256 : 160);
 }
 
 void Cartridge::writeNtrCmd(int i, uint32_t mask, uint32_t value) {
@@ -451,7 +451,7 @@ void Cartridge::writeCtrCnt(uint32_t mask, uint32_t value) {
             ctrWriteCount = blkSize * uint32_t(cmdL);
             LOG_INFO("Starting CTRCARD write to address 0x%X with size 0x%X\n", ctrAddress, ctrWriteCount);
             ctrCnt |= BIT(27); // Ready
-            core->ndma.setDrq(0x4);
+            core.ndma.setDrq(0x4);
 
             // Override the typical read response
             ctrCnt &= ~BIT(31); // Not busy
@@ -484,13 +484,13 @@ void Cartridge::writeCtrCnt(uint32_t mask, uint32_t value) {
     if (ctrReadCount == 0) {
         ctrCnt &= ~BIT(31); // Not busy
         if (ctrCnt & BIT(30))
-            core->interrupts.sendInterrupt(ARM9, 23);
+            core.interrupts.sendInterrupt(ARM9, 23);
         return;
     }
 
     // Schedule the first word between 4.2MHz to 16.7MHz per byte
     if (ctrFifo.size() < 8)
-        core->schedule(CTR_WORD_READY, ctrClocks[(ctrCnt >> 24) & 0x7]);
+        core.schedule(CTR_WORD_READY, ctrClocks[(ctrCnt >> 24) & 0x7]);
 }
 
 void Cartridge::writeCtrBlkcnt(uint32_t mask, uint32_t value) {
@@ -525,12 +525,12 @@ void Cartridge::writeCtrFifo(uint32_t mask, uint32_t value) {
     if ((ctrWriteCount -= 4) == 0) {
         // Trigger an interrupt once the last word is written
         if (ctrCnt & BIT(30))
-            core->interrupts.sendInterrupt(ARM9, 23);
+            core.interrupts.sendInterrupt(ARM9, 23);
     }
     else if ((ctrWriteCount & 0x1F) == 0) {
         // Set the ready bit and trigger DRQs every 8 words
         ctrCnt |= BIT(27);
-        core->ndma.setDrq(0x4);
+        core.ndma.setDrq(0x4);
     }
 }
 

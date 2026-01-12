@@ -25,7 +25,7 @@ class Core;
 
 class Timers {
 public:
-    Timers(Core *core): core(core) {}
+    Timers(Core &core): core(core) {}
 
     void resetCycles();
     void setMpScale(int scale);
@@ -47,7 +47,7 @@ public:
     void writeTmCntH(int i, uint16_t mask, uint16_t value);
 
 private:
-    Core *core;
+    Core &core;
     int mpScale = 1;
 
     uint64_t endCyclesMp[MAX_CPUS - 1][2] = {};

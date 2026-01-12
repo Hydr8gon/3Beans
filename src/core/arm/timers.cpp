@@ -23,9 +23,9 @@ void Timers::resetCycles() {
     // Adjust timer end cycles for a global cycle reset
     for (CpuId id = ARM11A; id < ARM9; id = CpuId(id + 1))
         for (int i = 0; i < 2; i++)
-            endCyclesMp[id][i] -= core->globalCycles;
+            endCyclesMp[id][i] -= core.globalCycles;
     for (int i = 0; i < 4; i++)
-        endCyclesTm[i] -= core->globalCycles;
+        endCyclesTm[i] -= core.globalCycles;
 }
 
 void Timers::setMpScale(int scale) {
@@ -45,13 +45,13 @@ void Timers::scheduleMp(CpuId id, int i) {
     // Schedule a timer underflow using its prescaler, with half the ARM11 frequency as a base
     if (~mpTmcnt[id][i] & BIT(0)) return;
     uint64_t cycles = (uint64_t(mpCounter[id][i]) + 1) * (((mpTmcnt[id][i]) >> 8) + 1) * 2 / mpScale;
-    core->schedule(Task(TMR11A_UNDERFLOW0 + id * 2 + i), cycles);
-    endCyclesMp[id][i] = core->globalCycles + cycles;
+    core.schedule(Task(TMR11A_UNDERFLOW0 + id * 2 + i), cycles);
+    endCyclesMp[id][i] = core.globalCycles + cycles;
 }
 
 void Timers::underflowMp(CpuId id, int i) {
     // Ensure underflow should still occur at the current timestamp
-    if (!(mpTmcnt[id][i] & BIT(0)) || endCyclesMp[id][i] != core->globalCycles)
+    if (!(mpTmcnt[id][i] & BIT(0)) || endCyclesMp[id][i] != core.globalCycles)
         return;
 
     // Reload the timer or stop at zero
@@ -66,25 +66,25 @@ void Timers::underflowMp(CpuId id, int i) {
 
     // Trigger an underflow interrupt if enabled
     if (~mpTmcnt[id][i] & BIT(2)) return;
-    core->interrupts.sendInterrupt(id, 0x1D + i);
+    core.interrupts.sendInterrupt(id, 0x1D + i);
     mpTmirq[id][i] |= BIT(0);
 }
 
 void Timers::overflowTm(int i) {
     // Ensure overflow should still occur at the current timestamp
-    if (!(tmCntH[i] & BIT(7)) || (!countUp[i] && endCyclesTm[i] != core->globalCycles))
+    if (!(tmCntH[i] & BIT(7)) || (!countUp[i] && endCyclesTm[i] != core.globalCycles))
         return;
 
     // Reload the timer and trigger an overflow interrupt if enabled
     timers[i] = tmCntL[i];
     if (tmCntH[i] & BIT(6))
-        core->interrupts.sendInterrupt(ARM9, i + 8);
+        core.interrupts.sendInterrupt(ARM9, i + 8);
 
     // Schedule the next timer overflow if not in count-up mode
     if (!countUp[i]) {
         uint64_t cycles = (0x10000 - timers[i]) << shifts[i];
-        core->schedule(Task(TMR9_OVERFLOW0 + i), cycles);
-        endCyclesTm[i] = core->globalCycles + cycles;
+        core.schedule(Task(TMR9_OVERFLOW0 + i), cycles);
+        endCyclesTm[i] = core.globalCycles + cycles;
     }
 
     // If the next timer is in count-up mode, increment it now
@@ -95,7 +95,7 @@ void Timers::overflowTm(int i) {
 uint32_t Timers::readMpCounter(CpuId id, int i) {
     // Read one of an ARM11 core's counters, updating it if it's running on the scheduler
     if (mpTmcnt[id][i] & BIT(0)) {
-        uint64_t value = std::max<int64_t>(0, endCyclesMp[id][i] - core->globalCycles);
+        uint64_t value = std::max<int64_t>(0, endCyclesMp[id][i] - core.globalCycles);
         mpCounter[id][i] = (value / (((mpTmcnt[id][i]) >> 8) + 1) * mpScale / 2);
     }
     return mpCounter[id][i];
@@ -104,13 +104,13 @@ uint32_t Timers::readMpCounter(CpuId id, int i) {
 uint16_t Timers::readTmCntL(int i) {
     // Read the current timer value, updating it if it's running on the scheduler
     if ((tmCntH[i] & BIT(7)) && !countUp[i])
-        timers[i] = std::min<uint64_t>(0xFFFF, 0x10000 - ((endCyclesTm[i] - core->globalCycles) >> shifts[i]));
+        timers[i] = std::min<uint64_t>(0xFFFF, 0x10000 - ((endCyclesTm[i] - core.globalCycles) >> shifts[i]));
     return timers[i];
 }
 
 void Timers::writeMpReload(CpuId id, int i, uint32_t mask, uint32_t value) {
     // Only allow access to extra core timers if the cores are enabled
-    if ((id == ARM11C || id == ARM11D) && !(core->interrupts.readCfg11MpBootcnt(id) & BIT(4)))
+    if ((id == ARM11C || id == ARM11D) && !(core.interrupts.readCfg11MpBootcnt(id) & BIT(4)))
         return;
 
     // Write to one of an ARM11 core's timer reloads and reload its counter
@@ -121,7 +121,7 @@ void Timers::writeMpReload(CpuId id, int i, uint32_t mask, uint32_t value) {
 
 void Timers::writeMpCounter(CpuId id, int i, uint32_t mask, uint32_t value) {
     // Only allow access to extra core timers if the cores are enabled
-    if ((id == ARM11C || id == ARM11D) && !(core->interrupts.readCfg11MpBootcnt(id) & BIT(4)))
+    if ((id == ARM11C || id == ARM11D) && !(core.interrupts.readCfg11MpBootcnt(id) & BIT(4)))
         return;
 
     // Write to one of an ARM11 core's timer counters and update its scheduling
@@ -131,7 +131,7 @@ void Timers::writeMpCounter(CpuId id, int i, uint32_t mask, uint32_t value) {
 
 void Timers::writeMpTmcnt(CpuId id, int i, uint32_t mask, uint32_t value) {
     // Only allow access to extra core timers if the cores are enabled
-    if ((id == ARM11C || id == ARM11D) && !(core->interrupts.readCfg11MpBootcnt(id) & BIT(4)))
+    if ((id == ARM11C || id == ARM11D) && !(core.interrupts.readCfg11MpBootcnt(id) & BIT(4)))
         return;
 
     // Ensure the timer value is updated
@@ -149,7 +149,7 @@ void Timers::writeMpTmcnt(CpuId id, int i, uint32_t mask, uint32_t value) {
 
 void Timers::writeMpTmirq(CpuId id, int i, uint32_t mask, uint32_t value) {
     // Only allow access to extra core timers if the cores are enabled
-    if ((id == ARM11C || id == ARM11D) && !(core->interrupts.readCfg11MpBootcnt(id) & BIT(4)))
+    if ((id == ARM11C || id == ARM11D) && !(core.interrupts.readCfg11MpBootcnt(id) & BIT(4)))
         return;
 
     // Acknowledge one of an ARM11 core's timer interrupt bits
@@ -188,7 +188,7 @@ void Timers::writeTmCntH(int i, uint16_t mask, uint16_t value) {
     // Schedule a timer overflow if the timer changed and isn't in count-up mode
     if (dirty && (tmCntH[i] & BIT(7)) && !countUp[i]) {
         uint64_t cycles = (0x10000 - timers[i]) << shifts[i];
-        core->schedule(Task(TMR9_OVERFLOW0 + i), cycles);
-        endCyclesTm[i] = core->globalCycles + cycles;
+        core.schedule(Task(TMR9_OVERFLOW0 + i), cycles);
+        endCyclesTm[i] = core.globalCycles + cycles;
     }
 }

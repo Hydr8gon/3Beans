@@ -39,7 +39,7 @@ class Cp15 {
 public:
     uint32_t exceptAddrs[MAX_CPUS] = {};
 
-    Cp15(Core *core): core(core) {}
+    Cp15(Core &core): core(core) {}
     uint8_t *getReadPtr(CpuId id, uint32_t address);
 
     void mmuInvalidate(CpuId id);
@@ -52,7 +52,7 @@ public:
     void writeReg(CpuId id, uint8_t cn, uint8_t cm, uint8_t cp, uint32_t value);
 
 private:
-    Core *core;
+    Core &core;
 
     MmuMap mmuMaps[MAX_CPUS - 1][0x100000] = {};
     TcmMap tcmMap[0x100000] = {};

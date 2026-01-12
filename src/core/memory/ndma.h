@@ -25,7 +25,7 @@ class Core;
 
 class Ndma {
 public:
-    Ndma(Core *core): core(core) {}
+    Ndma(Core &core): core(core) {}
 
     void setDrq(uint8_t type);
     void clearDrq(uint8_t type);
@@ -46,7 +46,7 @@ public:
     void writeCnt(int i, uint32_t mask, uint32_t value);
 
 private:
-    Core *core;
+    Core &core;
 
     uint32_t srcAddrs[8] = {};
     uint32_t dstAddrs[8] = {};

@@ -25,7 +25,7 @@ class Core;
 
 class Interrupts {
 public:
-    Interrupts(Core *core): core(core) {}
+    Interrupts(Core &core): core(core) {}
 
     void sendInterrupt(CpuId id, int type);
     void checkInterrupt(CpuId id) { sendInterrupt(id, -1); }
@@ -69,7 +69,7 @@ public:
     void writeIrqIf(uint32_t mask, uint32_t value);
 
 private:
-    Core *core;
+    Core &core;
 
     bool scheduled[MAX_CPUS] = {};
     uint8_t sources[MAX_CPUS - 1][0x10] = {};

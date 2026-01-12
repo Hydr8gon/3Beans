@@ -152,11 +152,11 @@ public:
     uint64_t globalCycles = 0;
 
     Core(std::string &cartPath, std::function<void()> *contextFunc = nullptr);
-    void runFrame() { (*runFunc)(this); }
+    void runFrame() { (*runFunc)(*this); }
     void schedule(Task task, uint64_t cycles);
 
 private:
-    void (*runFunc)(Core*) = &ArmInterp::runFrame<false>;
+    void (*runFunc)(Core&) = &ArmInterp::runFrame<false>;
     std::function<void()> tasks[MAX_TASKS];
     std::chrono::steady_clock::time_point lastFpsTime;
     int fpsCount = 0;
