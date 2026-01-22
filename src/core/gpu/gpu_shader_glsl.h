@@ -72,6 +72,9 @@ private:
     ShaderCache *current = nullptr;
     bool shaderDirty = false;
 
+    uint32_t *shdDesc = vshDesc;
+    uint16_t shdPc, shdStop;
+
     uint8_t outMap[0x18][2] = {};
     uint32_t vshCode[0x200] = {};
     uint32_t vshDesc[0x80] = {};
@@ -79,5 +82,32 @@ private:
     uint16_t vshEnd = 0;
 
     static uint32_t calcCrc32(uint8_t *data, uint32_t size);
+    static std::string getSrc(uint8_t src, uint32_t desc, uint8_t idx = 0);
+    static std::string setDst(uint8_t dst, uint32_t desc, std::string value, bool single = false);
+
+    void shdAdd(std::string &code, uint32_t opcode);
+    void shdDp3(std::string &code, uint32_t opcode);
+    void shdDp4(std::string &code, uint32_t opcode);
+    void shdDph(std::string &code, uint32_t opcode);
+    void shdEx2(std::string &code, uint32_t opcode);
+    void shdLg2(std::string &code, uint32_t opcode);
+    void shdMul(std::string &code, uint32_t opcode);
+    void shdSge(std::string &code, uint32_t opcode);
+    void shdSlt(std::string &code, uint32_t opcode);
+    void shdFlr(std::string &code, uint32_t opcode);
+    void shdMax(std::string &code, uint32_t opcode);
+    void shdMin(std::string &code, uint32_t opcode);
+    void shdRcp(std::string &code, uint32_t opcode);
+    void shdRsq(std::string &code, uint32_t opcode);
+    void shdMova(std::string &code, uint32_t opcode);
+    void shdMov(std::string &code, uint32_t opcode);
+    void shdDphi(std::string &code, uint32_t opcode);
+    void shdSgei(std::string &code, uint32_t opcode);
+    void shdSlti(std::string &code, uint32_t opcode);
+    void shdNop(std::string &code, uint32_t opcode);
+    void shdEnd(std::string &code, uint32_t opcode);
+    void shdCmp(std::string &code, uint32_t opcode);
+    void shdMadi(std::string &code, uint32_t opcode);
+    void shdMad(std::string &code, uint32_t opcode);
     void vshUnk(std::string &code, uint32_t opcode);
 };
