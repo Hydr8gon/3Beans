@@ -20,6 +20,7 @@
 #include "../core.h"
 #include "gpu_render_ogl.h"
 #include "gpu_render_soft.h"
+#include "gpu_shader_glsl.h"
 
 const int16_t GpuRender::etc1Tables[][4] {
     { 2, 8, -2, -8 },
@@ -45,18 +46,25 @@ Gpu::~Gpu() {
 
 void Gpu::createRender() {
     // Initialize a new renderer of the current type
-    switch (curRenderer = Settings::gpuRenderer) {
+    if (Settings::gpuRenderer == 1) (*contextFunc)();
+    switch (renderType = Settings::gpuRenderer) {
         default: gpuRender = new GpuRenderSoft(core); break;
-        case 1: (*contextFunc)(), gpuRender = new GpuRenderOgl(core), (*contextFunc)(); break;
+        case 1: gpuRender = new GpuRenderOgl(core); break;
     }
-    gpuShader = new GpuShaderInterp(*gpuRender, shdInput);
+
+    // Initialize a new shader of the current type
+    switch (shaderType = Settings::gpuShader) {
+        default: gpuShader = new GpuShaderInterp(*gpuRender, shdInput); break;
+        case 1: gpuShader = new GpuShaderGlsl(*(GpuRenderOgl*)gpuRender, shdInput); break;
+    }
+    if (renderType == 1) (*contextFunc)();
 }
 
 void Gpu::destroyRender() {
     // Clean up the initialized renderer
-    if (curRenderer == 1) (*contextFunc)();
+    if (renderType == 1) (*contextFunc)();
     delete gpuShader, delete gpuRender;
-    if (curRenderer == 1) (*contextFunc)();
+    if (renderType == 1) (*contextFunc)();
 }
 
 void Gpu::syncRender() {
@@ -67,18 +75,18 @@ void Gpu::syncRender() {
             delete thread;
             thread = nullptr;
         }
-        else if (curRenderer == 1) {
+        else if (renderType == 1) {
             (*contextFunc)();
         }
     }
 
     // Reset the renderer if it was changed
-    if (curRenderer == Settings::gpuRenderer) return;
+    if (renderType == Settings::gpuRenderer && shaderType == Settings::gpuShader) return;
     destroyRender();
     createRender();
 
     // Restore the renderer state
-    if (curRenderer == 1) (*contextFunc)();
+    if (renderType == 1) (*contextFunc)();
     writeFaceCulling(0xFFFFFFFF, gpuFaceCulling);
     writeViewScaleH(0xFFFFFFFF, gpuViewScaleH);
     writeViewStepH(0xFFFFFFFF, gpuViewStepH);
@@ -139,7 +147,7 @@ void Gpu::syncRender() {
     writeColbufLoc(0xFFFFFFFF, gpuColbufLoc);
     writeBufferDim(0xFFFFFFFF, gpuBufferDim);
     writePrimRestart(0xFFFFFFFF, gpuPrimRestart);
-    if (curRenderer == 1) (*contextFunc)();
+    if (renderType == 1) (*contextFunc)();
 
     // Restore the shader state
     writeGshConfig(0xFFFFFFFF, gpuGshConfig);
@@ -165,7 +173,7 @@ void Gpu::syncRender() {
 
 void Gpu::runThreaded() {
     // Set the OpenGL context on this thread if needed
-    if (curRenderer == 1)
+    if (renderType == 1)
         (*contextFunc)();
 
     // Process GPU thread tasks
@@ -173,7 +181,7 @@ void Gpu::runThreaded() {
         // Wait for more tasks or finish and release context if stopped
         while (tasks.empty()) {
             if (!running.load()) {
-                if (curRenderer == 1) (*contextFunc)();
+                if (renderType == 1) (*contextFunc)();
                 return;
             }
             std::this_thread::yield();

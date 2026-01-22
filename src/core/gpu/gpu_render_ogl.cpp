@@ -18,17 +18,25 @@
 */
 
 #include <algorithm>
+#include <cstring>
 
 #include "../core.h"
 #include "gpu_render_ogl.h"
 
-const char *GpuRenderOgl::vtxCode = R"(
+enum RenderLoc {
+    LOC_IN_POS = 0,
+    LOC_IN_COL = 1,
+    LOC_IN_CRDS = 2,
+    LOC_IN_CRDT = 3
+};
+
+const char *GpuRenderOgl::vtxCodeSoft = R"(
     #version 330
 
-    in vec4 inPosition;
-    in vec4 inColor;
-    in vec3 inCoordsS;
-    in vec3 inCoordsT;
+    layout(location = 0) in vec4 inPosition;
+    layout(location = 1) in vec4 inColor;
+    layout(location = 2) in vec3 inCoordsS;
+    layout(location = 3) in vec3 inCoordsT;
 
     out vec4 vtxColor;
     out vec3 vtxCoordsS;
@@ -150,76 +158,28 @@ const char *GpuRenderOgl::fragCode = R"(
 )";
 
 GpuRenderOgl::GpuRenderOgl(Core &core): core(core) {
-    // Compile the vertex and fragment shaders
-    GLint vtxShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vtxShader, 1, &vtxCode, nullptr);
-    glCompileShader(vtxShader);
-    GLint fragShader = glCreateShader(GL_FRAGMENT_SHADER);
+    // Compile the default shader program for software vertices
+    fragShader = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fragShader, 1, &fragCode, nullptr);
     glCompileShader(fragShader);
+    softProgram = makeProgram(vtxCodeSoft);
+    setProgram(softProgram);
 
-    // Create a program with the shaders
-    program = glCreateProgram();
-    glAttachShader(program, vtxShader);
-    glAttachShader(program, fragShader);
-    glLinkProgram(program);
-    glUseProgram(program);
-    glDeleteShader(vtxShader);
-    glDeleteShader(fragShader);
-
-    // Create vertex array and buffer objects
+    // Create array and buffer objects for the soft vertex shader
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
-    // Configure vertex input attributes
-    GLint loc = glGetAttribLocation(program, "inPosition");
-    glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, sizeof(SoftVertex), (void*)offsetof(SoftVertex, x));
-    glEnableVertexAttribArray(loc);
-    loc = glGetAttribLocation(program, "inColor");
-    glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, sizeof(SoftVertex), (void*)offsetof(SoftVertex, r));
-    glEnableVertexAttribArray(loc);
-    loc = glGetAttribLocation(program, "inCoordsS");
-    glVertexAttribPointer(loc, 3, GL_FLOAT, GL_FALSE, sizeof(SoftVertex), (void*)offsetof(SoftVertex, s0));
-    glEnableVertexAttribArray(loc);
-    loc = glGetAttribLocation(program, "inCoordsT");
-    glVertexAttribPointer(loc, 3, GL_FLOAT, GL_FALSE, sizeof(SoftVertex), (void*)offsetof(SoftVertex, t0));
-    glEnableVertexAttribArray(loc);
-
-    // Set single uniform locations and initial values
-    posScaleLoc = glGetUniformLocation(program, "posScale");
-    glUniform4f(posScaleLoc, 1.0f, 1.0f, -1.0f, 1.0f);
-    combBufColorLoc = glGetUniformLocation(program, "combBufColor");
-    glUniform4f(combBufColorLoc, 0.0f, 0.0f, 0.0f, 0.0f);
-    combBufMaskLoc = glGetUniformLocation(program, "combBufMask");
-    glUniform1i(combBufMaskLoc, 0);
-    alphaFuncLoc = glGetUniformLocation(program, "alphaFunc");
-    glUniform1i(alphaFuncLoc, 0);
-    alphaValueLoc = glGetUniformLocation(program, "alphaValue");
-    glUniform1f(alphaValueLoc, 0.0f);
-
-    // Set array uniform locations and initial values
-    for (int i = 0; i < 6; i++) {
-        std::string name = "combColors[" + std::to_string(i) + "]";
-        combColorLocs[i] = glGetUniformLocation(program, name.c_str());
-        glUniform4f(combColorLocs[i], 0.0f, 0.0f, 0.0f, 0.0f);
-        for (int j = 0; j < 6; j++) {
-            name = "combSrcs[" + std::to_string(i * 6 + j) + "]";
-            combSrcLocs[i][j] = glGetUniformLocation(program, name.c_str());
-            glUniform1i(combSrcLocs[i][j], 0);
-            name = "combOpers[" + std::to_string(i * 6 + j) + "]";
-            combOperLocs[i][j] = glGetUniformLocation(program, name.c_str());
-            glUniform1i(combOperLocs[i][j], 0);
-            if (j >= 2) continue;
-            name = "combModes[" + std::to_string(i * 2 + j) + "]";
-            combModeLocs[i][j] = glGetUniformLocation(program, name.c_str());
-            glUniform1i(combModeLocs[i][j], 0);
-        }
-        if (i >= 3) continue;
-        name = "texUnits[" + std::to_string(i) + "]";
-        glUniform1i(glGetUniformLocation(program, name.c_str()), i);
-    }
+    // Configure input attributes for the soft vertex shader
+    glVertexAttribPointer(LOC_IN_POS, 4, GL_FLOAT, GL_FALSE, sizeof(VertexInput), (void*)offsetof(SoftVertex, x));
+    glEnableVertexAttribArray(LOC_IN_POS);
+    glVertexAttribPointer(LOC_IN_COL, 4, GL_FLOAT, GL_FALSE, sizeof(VertexInput), (void*)offsetof(SoftVertex, r));
+    glEnableVertexAttribArray(LOC_IN_COL);
+    glVertexAttribPointer(LOC_IN_CRDS, 3, GL_FLOAT, GL_FALSE, sizeof(VertexInput), (void*)offsetof(SoftVertex, s0));
+    glEnableVertexAttribArray(LOC_IN_CRDS);
+    glVertexAttribPointer(LOC_IN_CRDT, 3, GL_FLOAT, GL_FALSE, sizeof(VertexInput), (void*)offsetof(SoftVertex, t0));
+    glEnableVertexAttribArray(LOC_IN_CRDT);
 
     // Set some state that only has to be done once
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -263,7 +223,63 @@ GpuRenderOgl::~GpuRenderOgl() {
     glDeleteFramebuffers(1, &colBuf);
     glDeleteBuffers(1, &vbo);
     glDeleteVertexArrays(1, &vao);
-    glDeleteProgram(program);
+    glDeleteProgram(softProgram);
+    glDeleteShader(fragShader);
+}
+
+GLuint GpuRenderOgl::makeProgram(const char *vtxCode) {
+    // Compile the provided vertex shader code
+    GLint vtxShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vtxShader, 1, &vtxCode, nullptr);
+    glCompileShader(vtxShader);
+
+    // Check for compilation errors and log them
+    GLint res, size;
+    glGetShaderiv(vtxShader, GL_COMPILE_STATUS, &res);
+    if (res == GL_FALSE) {
+        glGetShaderiv(vtxShader, GL_INFO_LOG_LENGTH, &size);
+        GLchar *log = new GLchar[size];
+        glGetShaderInfoLog(vtxShader, size, &size, log);
+        LOG_CRIT("Vertex shader GLSL compilation error: %s", log);
+        delete[] log;
+    }
+
+    // Link a program using the shared fragment shader
+    GLuint program = glCreateProgram();
+    glAttachShader(program, vtxShader);
+    glAttachShader(program, fragShader);
+    glLinkProgram(program);
+
+    // Clean up the shader and return the program
+    glDeleteShader(vtxShader);
+    return program;
+}
+
+void GpuRenderOgl::setProgram(GLuint program) {
+    // Update the program and its uniform locations
+    glUseProgram(program);
+    posScaleLoc = glGetUniformLocation(program, "posScale");
+    combSrcsLoc = glGetUniformLocation(program, "combSrcs");
+    combOpersLoc = glGetUniformLocation(program, "combOpers");
+    combModesLoc = glGetUniformLocation(program, "combModes");
+    combColorsLoc = glGetUniformLocation(program, "combColors");
+    combBufColorLoc = glGetUniformLocation(program, "combBufColor");
+    combBufMaskLoc = glGetUniformLocation(program, "combBufMask");
+    alphaFuncLoc = glGetUniformLocation(program, "alphaFunc");
+    alphaValueLoc = glGetUniformLocation(program, "alphaValue");
+    GLint texUnitsLoc = glGetUniformLocation(program, "texUnits");
+
+    // Restore uniform values for the new program
+    glUniform4f(posScaleLoc, 1.0f, flipY ? -1.0f : 1.0f, -1.0f, 1.0f);
+    glUniform1iv(combSrcsLoc, 6 * 6, combSrcs);
+    glUniform1iv(combOpersLoc, 6 * 6, combOpers);
+    glUniform1iv(combModesLoc, 6 * 2, combModes);
+    glUniform4fv(combColorsLoc, 6, combColors[0]);
+    glUniform4fv(combBufColorLoc, 1, combBufColor);
+    glUniform1i(combBufMaskLoc, combBufMask);
+    glUniform1i(alphaFuncLoc, alphaFunc);
+    glUniform1f(alphaValueLoc, alphaValue);
+    for (int i = 0; i < 3; i++) glUniform1i(texUnitsLoc + i, i);
 }
 
 uint32_t GpuRenderOgl::getSwizzle(int x, int y, int width) {
@@ -328,9 +344,18 @@ template <bool alpha> uint32_t GpuRenderOgl::etc1Texel(int i, int x, int y) {
     return (r << 24) | (g << 16) | (b << 8) | a;
 }
 
+void GpuRenderOgl::submitInput(float (*input)[4]) {
+    // Queue raw shader input to be drawn
+    VertexInput vi;
+    memcpy(vi.input, input, sizeof(vi.input));
+    vertices.push_back(vi);
+}
+
 void GpuRenderOgl::submitVertex(SoftVertex &vertex) {
-    // Queue a vertex to be drawn
-    vertices.push_back(vertex);
+    // Queue a software vertex to be drawn
+    VertexInput vi;
+    vi.vertex = vertex;
+    vertices.push_back(vi);
 }
 
 void GpuRenderOgl::flushVertices() {
@@ -338,7 +363,7 @@ void GpuRenderOgl::flushVertices() {
     if (vertices.empty()) return;
     if (readDirty) updateBuffers();
     if (texDirty) updateTextures();
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(SoftVertex), &vertices[0], GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(VertexInput), &vertices[0], GL_DYNAMIC_DRAW);
     glDrawArrays(primMode, 0, vertices.size());
     vertices = {};
     writeDirty = true;
@@ -739,37 +764,42 @@ void GpuRenderOgl::setTexWrapT(int i, TexWrap wrap) {
 void GpuRenderOgl::setCombSrc(int i, int j, CombSrc src) {
     // Update one of the texture combiner source uniforms
     flushVertices();
-    glUniform1i(combSrcLocs[i][j], src);
+    const int ofs = i * 6 + j;
+    glUniform1i(combSrcsLoc + ofs, combSrcs[ofs] = src);
 }
 
 void GpuRenderOgl::setCombOper(int i, int j, CombOper oper) {
     // Update one of the texture combiner operand uniforms
     flushVertices();
-    glUniform1i(combOperLocs[i][j], oper);
+    const int ofs = i * 6 + j;
+    glUniform1i(combOpersLoc + ofs, combOpers[ofs] = oper);
 }
 
 void GpuRenderOgl::setCombMode(int i, int j, CalcMode mode) {
     // Update one of the texture combiner mode uniforms
     flushVertices();
-    glUniform1i(combModeLocs[i][j], mode);
+    const int ofs = i * 2 + j;
+    glUniform1i(combModesLoc + ofs, combModes[ofs] = mode);
 }
 
 void GpuRenderOgl::setCombColor(int i, float r, float g, float b, float a) {
     // Update one of the texture combiner color uniforms
     flushVertices();
-    glUniform4f(combColorLocs[i], r, g, b, a);
+    combColors[i][0] = r, combColors[i][1] = g, combColors[i][2] = b, combColors[i][3] = a;
+    glUniform4fv(combColorsLoc + i, 1, combColors[i]);
 }
 
 void GpuRenderOgl::setCombBufColor(float r, float g, float b, float a) {
     // Update the texture combiner buffer color uniform
     flushVertices();
-    glUniform4f(combBufColorLoc, r, g, b, a);
+    combBufColor[0] = r, combBufColor[1] = g, combBufColor[2] = b, combBufColor[3] = a;
+    glUniform4fv(combBufColorLoc, 1, combBufColor);
 }
 
 void GpuRenderOgl::setCombBufMask(uint8_t mask) {
     // Update the texture combiner buffer mask uniform
     flushVertices();
-    glUniform1i(combBufMaskLoc, mask);
+    glUniform1i(combBufMaskLoc, combBufMask = mask);
 }
 
 void GpuRenderOgl::setBlendOper(int i, BlendOper oper) {
@@ -816,13 +846,13 @@ void GpuRenderOgl::setBlendColor(float r, float g, float b, float a) {
 void GpuRenderOgl::setAlphaFunc(TestFunc func) {
     // Update the alpha test function uniform
     flushVertices();
-    glUniform1i(alphaFuncLoc, func);
+    glUniform1i(alphaFuncLoc, alphaFunc = func);
 }
 
 void GpuRenderOgl::setAlphaValue(float value) {
     // Update the alpha test reference uniform
     flushVertices();
-    glUniform1f(alphaValueLoc, value);
+    glUniform1f(alphaValueLoc, alphaValue = value);
 }
 
 void GpuRenderOgl::setStencilTest(TestFunc func, bool enable) {

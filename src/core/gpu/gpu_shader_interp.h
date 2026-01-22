@@ -19,8 +19,8 @@
 
 #pragma once
 
-#include <cstdint>
 #include <deque>
+#include "gpu_shader.h"
 
 class GpuRender;
 class GpuShaderInterp;
@@ -56,7 +56,7 @@ struct ShaderCode {
     uint32_t value;
 };
 
-class GpuShaderInterp {
+class GpuShaderInterp: public GpuShader {
 public:
     GpuShaderInterp(GpuRender &gpuRender, float (*input)[4]);
 

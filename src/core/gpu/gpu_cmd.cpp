@@ -73,7 +73,7 @@ void Gpu::runCommands() {
     if (!running.exchange(true)) {
         if (Settings::threadedGpu)
             thread = new std::thread(&Gpu::runThreaded, this);
-        else if (curRenderer == 1)
+        else if (renderType == 1)
             (*contextFunc)();
     }
 

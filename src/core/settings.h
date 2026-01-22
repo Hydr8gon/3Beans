@@ -36,6 +36,8 @@ namespace Settings {
     extern int cartAutoBoot;
     extern int threadedGpu;
     extern int gpuRenderer;
+    extern int gpuShader;
+
     extern std::string boot11Path;
     extern std::string boot9Path;
     extern std::string nandPath;

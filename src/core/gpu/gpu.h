@@ -19,13 +19,16 @@
 
 #pragma once
 
+#include <atomic>
 #include <cstdint>
+#include <functional>
 #include <mutex>
+#include <queue>
 #include <thread>
 
 class Core;
 class GpuRender;
-class GpuShaderInterp;
+class GpuShader;
 
 enum PrimMode {
     TRIANGLES,
@@ -392,9 +395,9 @@ private:
     Core &core;
     std::function<void()> *contextFunc;
 
-    GpuShaderInterp *gpuShader = nullptr;
     GpuRender *gpuRender = nullptr;
-    int curRenderer = -1;
+    GpuShader *gpuShader = nullptr;
+    int renderType = -1, shaderType = -1;
 
     static void (Gpu::*cmdWrites[0x400])(uint32_t, uint32_t);
     static uint32_t maskTable[0x10];

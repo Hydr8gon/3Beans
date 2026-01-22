@@ -605,12 +605,12 @@ void GpuShaderInterp::shdMad(ShaderCode &op) {
 
 void GpuShaderInterp::vshUnk(ShaderCode &op) {
     // Handle an unknown vertex shader opcode
-    LOG_CRIT("Unknown GPU vertex shader opcode: 0x%X\n", op.value);
+    LOG_CRIT("Unknown vertex shader interpreter opcode: 0x%X\n", op.value);
 }
 
 void GpuShaderInterp::gshUnk(ShaderCode &op) {
     // Handle an unknown geometry shader opcode
-    LOG_CRIT("Unknown GPU geometry shader opcode: 0x%X\n", op.value);
+    LOG_CRIT("Unknown geometry shader interpreter opcode: 0x%X\n", op.value);
 }
 
 void GpuShaderInterp::setOutMap(uint8_t (*map)[2]) {
