@@ -76,8 +76,11 @@ GpuShaderGlsl::GpuShaderGlsl(GpuRenderOgl &gpuRender, float (*input)[4]): gpuRen
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
     // Configure input attributes for JITed shaders
-    glVertexAttribPointer(LOC_IN_REGS, 16 * 4, GL_FLOAT, GL_FALSE, sizeof(float[16][4]), nullptr);
-    glEnableVertexAttribArray(LOC_IN_REGS);
+    for (int i = 0; i < 16; i++) {
+        GLint loc = LOC_IN_REGS + i;
+        glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, sizeof(float[16][4]), (void*)(sizeof(float[4]) * i));
+        glEnableVertexAttribArray(loc);
+    }
 }
 
 GpuShaderGlsl::~GpuShaderGlsl() {
@@ -193,9 +196,8 @@ std::string GpuShaderGlsl::setDst(uint8_t dst, uint32_t desc, std::string value,
     static const char comps[] = { 'w', 'z', 'y', 'x' };
     for (int i = 3; i >= 0; i--)
         if (desc & BIT(i)) swiz += comps[i];
-    str += swiz + " = (" + value + ")";
-    if (!single) str += "." + swiz;
-    return str + ";\n";
+    str += swiz + " = " + (single ? "vec4" : "");
+    return str + "(" + value + ")." + swiz + ";\n";
 }
 
 void GpuShaderGlsl::shdAdd(std::string &code, uint32_t opcode) {
