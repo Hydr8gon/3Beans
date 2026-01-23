@@ -75,7 +75,7 @@ private:
 
     std::vector<ShaderCache> shaderCache;
     std::vector<ShaderFunc> shaderFuncs;
-    std::vector<uint32_t> ifStack;
+    std::vector<uint32_t> ifStack, loopStack;
 
     ShaderCache *current = nullptr;
     uint32_t *shdDesc = vshDesc;
@@ -112,13 +112,16 @@ private:
     void shdDphi(std::string &code, uint32_t opcode);
     void shdSgei(std::string &code, uint32_t opcode);
     void shdSlti(std::string &code, uint32_t opcode);
+    void shdBreak(std::string &code, uint32_t opcode);
     void shdNop(std::string &code, uint32_t opcode);
     void shdEnd(std::string &code, uint32_t opcode);
+    void shdBreakc(std::string &code, uint32_t opcode);
     void shdCall(std::string &code, uint32_t opcode);
     void shdCallc(std::string &code, uint32_t opcode);
     void shdCallu(std::string &code, uint32_t opcode);
     void shdIfu(std::string &code, uint32_t opcode);
     void shdIfc(std::string &code, uint32_t opcode);
+    void shdLoop(std::string &code, uint32_t opcode);
     void shdCmp(std::string &code, uint32_t opcode);
     void shdMadi(std::string &code, uint32_t opcode);
     void shdMad(std::string &code, uint32_t opcode);

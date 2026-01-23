@@ -33,9 +33,9 @@ void (GpuShaderGlsl::*GpuShaderGlsl::vshInstrs[])(std::string&, uint32_t) {
     &GpuShaderGlsl::vshUnk, &GpuShaderGlsl::vshUnk, &GpuShaderGlsl::vshUnk, &GpuShaderGlsl::vshUnk, // 0x14-0x17
     &GpuShaderGlsl::shdDphi, &GpuShaderGlsl::vshUnk, &GpuShaderGlsl::shdSgei, &GpuShaderGlsl::shdSlti, // 0x18-0x1B
     &GpuShaderGlsl::vshUnk, &GpuShaderGlsl::vshUnk, &GpuShaderGlsl::vshUnk, &GpuShaderGlsl::vshUnk, // 0x1C-0x1F
-    &GpuShaderGlsl::vshUnk, &GpuShaderGlsl::shdNop, &GpuShaderGlsl::shdEnd, &GpuShaderGlsl::vshUnk, // 0x20-0x23
+    &GpuShaderGlsl::shdBreak, &GpuShaderGlsl::shdNop, &GpuShaderGlsl::shdEnd, &GpuShaderGlsl::shdBreakc, // 0x20-0x23
     &GpuShaderGlsl::shdCall, &GpuShaderGlsl::shdCallc, &GpuShaderGlsl::shdCallu, &GpuShaderGlsl::shdIfu, // 0x24-0x27
-    &GpuShaderGlsl::shdIfc, &GpuShaderGlsl::vshUnk, &GpuShaderGlsl::vshUnk, &GpuShaderGlsl::vshUnk, // 0x28-0x2B
+    &GpuShaderGlsl::shdIfc, &GpuShaderGlsl::shdLoop, &GpuShaderGlsl::vshUnk, &GpuShaderGlsl::vshUnk, // 0x28-0x2B
     &GpuShaderGlsl::vshUnk, &GpuShaderGlsl::vshUnk, &GpuShaderGlsl::shdCmp, &GpuShaderGlsl::shdCmp, // 0x2C-0x2F
     &GpuShaderGlsl::shdMadi, &GpuShaderGlsl::shdMadi, &GpuShaderGlsl::shdMadi, &GpuShaderGlsl::shdMadi, // 0x30-0x33
     &GpuShaderGlsl::shdMadi, &GpuShaderGlsl::shdMadi, &GpuShaderGlsl::shdMadi, &GpuShaderGlsl::shdMadi, // 0x34-0x37
@@ -156,7 +156,7 @@ void GpuShaderGlsl::processVtx(uint32_t idx) {
     // Prepend the vertex shader base code and reset state
     vtxCode = vtxBase + vtxCode;
     shaderFuncs = {};
-    ifStack = {};
+    ifStack = loopStack = {};
 
     // Compile and cache a program from the finished vertex code
     LOG_INFO("Caching GLSL shader with CRCs 0x%X, 0x%X, and 0x%X\n", s.codeCrc, s.descCrc, s.mapCrc);
@@ -179,12 +179,21 @@ void GpuShaderGlsl::emitFuncBody(std::string &code, uint16_t entry, uint16_t end
         (this->*vshInstrs[opcode >> 26])(code, opcode);
 
         // Handle the else block of an if statement and then forget it
-        if (!ifStack.empty() && cmpPc == ((ifStack.back() >> 10) & 0x3FF)) {
-            code += "}\nelse {\n";
-            emitFuncBody(code, cmpPc, cmpPc + (ifStack.back() & 0xFF));
-            shdPc = shdStop, shdStop = end;
+        if (!ifStack.empty() && cmpPc == ((ifStack.back() >> 10) & 0x1FF)) {
             code += "}\n";
+            if (uint8_t ofs = ifStack.back()) {
+                code += "else {\n";
+                emitFuncBody(code, cmpPc, cmpPc + ofs);
+                shdPc = shdStop, shdStop = end;
+                code += "}\n";
+            }
             ifStack.pop_back();
+        }
+
+        // Handle the end of a for loop and then forget it
+        if (!loopStack.empty() && cmpPc == (loopStack.back() & 0x1FF)) {
+            code += "}\n";
+            loopStack.pop_back();
         }
     }
 }
@@ -371,6 +380,11 @@ void GpuShaderGlsl::shdSlti(std::string &code, uint32_t opcode) {
     code += setDst((opcode >> 21) & 0x1F, desc, "vec4(lessThan(" + s1 + ", " + s2 + "))");
 }
 
+void GpuShaderGlsl::shdBreak(std::string &code, uint32_t opcode) {
+    // Emit code to break out of a for loop
+    code += "break;\n";
+}
+
 void GpuShaderGlsl::shdNop(std::string &code, uint32_t opcode) {
     // Do nothing
 }
@@ -378,6 +392,18 @@ void GpuShaderGlsl::shdNop(std::string &code, uint32_t opcode) {
 void GpuShaderGlsl::shdEnd(std::string &code, uint32_t opcode) {
     // Finish shader emission
     shdPc = shdStop;
+}
+
+void GpuShaderGlsl::shdBreakc(std::string &code, uint32_t opcode) {
+    // Emit code to break out of a for loop if a comparison with the condition values is true
+    std::string refX = (opcode & BIT(25)) ? "" : "!", refY = (opcode & BIT(24)) ? "" : "!";
+    switch ((opcode >> 22) & 0x3) {
+        case 0x0: code += "if (" + refX + "condReg.x || " + refY + "condReg.y) "; break; // OR
+        case 0x1: code += "if (" + refX + "condReg.x && " + refY + "condReg.y) "; break; // AND
+        case 0x2: code += "if (" + refX + "condReg.x) "; break; // X
+        default: code += "if (" + refY + "condReg.y) "; break; // Y
+    }
+    code += "break;\n";
 }
 
 void GpuShaderGlsl::shdCall(std::string &code, uint32_t opcode) {
@@ -433,6 +459,14 @@ void GpuShaderGlsl::shdIfc(std::string &code, uint32_t opcode) {
     ifStack.push_back(opcode);
 }
 
+void GpuShaderGlsl::shdLoop(std::string &code, uint32_t opcode) {
+    // Emit the start of a for loop and remember where it ends
+    std::string ints = "ints[" + std::to_string((opcode >> 22) & 0x3) + "]";
+    code += "addrReg.z = " + ints + ".y;\n";
+    code += "for (int i = " + ints + ".x; i >= 0; i--, addrReg.z += " + ints + ".z) {\n";
+    loopStack.push_back((opcode >> 10) + 1);
+}
+
 void GpuShaderGlsl::shdCmp(std::string &code, uint32_t opcode) {
     // Emit code to compare the X/Y components of two source values
     uint32_t desc = shdDesc[opcode & 0x7F];
@@ -457,8 +491,8 @@ void GpuShaderGlsl::shdCmp(std::string &code, uint32_t opcode) {
 void GpuShaderGlsl::shdMadi(std::string &code, uint32_t opcode) {
     // Emit code to multiply two source values together and add a third one (alternate)
     uint32_t desc = shdDesc[opcode & 0x1F];
-    std::string s1 = getSrc((opcode >> 17) & 0x1F, desc, 0);
-    std::string s2 = getSrc((opcode >> 12) & 0x1F, desc >> 9, 0);
+    std::string s1 = getSrc((opcode >> 17) & 0x1F, desc);
+    std::string s2 = getSrc((opcode >> 12) & 0x1F, desc >> 9);
     std::string s3 = getSrc((opcode >> 5) & 0x7F, desc >> 18, (opcode >> 22) & 0x3);
     code += setDst((opcode >> 24) & 0x1F, desc, s1 + " * " + s2 + " + " + s3);
 }
