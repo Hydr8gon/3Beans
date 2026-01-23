@@ -34,6 +34,11 @@ struct ShaderCache {
     uint32_t entryEnd;
 };
 
+struct ShaderFunc {
+    std::string name;
+    uint16_t entry, end;
+};
+
 class GpuShaderGlsl: public GpuShader {
 public:
     GpuShaderGlsl(GpuRenderOgl &gpuRender, float (*input)[4]);
@@ -69,11 +74,13 @@ private:
     static const char *vtxBase;
 
     std::vector<ShaderCache> shaderCache;
-    ShaderCache *current = nullptr;
-    bool shaderDirty = false;
+    std::vector<ShaderFunc> shaderFuncs;
+    std::vector<uint32_t> ifStack;
 
+    ShaderCache *current = nullptr;
     uint32_t *shdDesc = vshDesc;
     uint16_t shdPc, shdStop;
+    bool shaderDirty = false;
 
     uint8_t outMap[0x18][2] = {};
     uint32_t vshCode[0x200] = {};
@@ -82,6 +89,7 @@ private:
     uint16_t vshEnd = 0;
 
     static uint32_t calcCrc32(uint8_t *data, uint32_t size);
+    void emitFuncBody(std::string &code, uint16_t entry, uint16_t end);
     static std::string getSrc(uint8_t src, uint32_t desc, uint8_t idx = 0);
     static std::string setDst(uint8_t dst, uint32_t desc, std::string value, bool single = false);
 
@@ -106,6 +114,11 @@ private:
     void shdSlti(std::string &code, uint32_t opcode);
     void shdNop(std::string &code, uint32_t opcode);
     void shdEnd(std::string &code, uint32_t opcode);
+    void shdCall(std::string &code, uint32_t opcode);
+    void shdCallc(std::string &code, uint32_t opcode);
+    void shdCallu(std::string &code, uint32_t opcode);
+    void shdIfu(std::string &code, uint32_t opcode);
+    void shdIfc(std::string &code, uint32_t opcode);
     void shdCmp(std::string &code, uint32_t opcode);
     void shdMadi(std::string &code, uint32_t opcode);
     void shdMad(std::string &code, uint32_t opcode);

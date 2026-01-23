@@ -34,8 +34,8 @@ void (GpuShaderGlsl::*GpuShaderGlsl::vshInstrs[])(std::string&, uint32_t) {
     &GpuShaderGlsl::shdDphi, &GpuShaderGlsl::vshUnk, &GpuShaderGlsl::shdSgei, &GpuShaderGlsl::shdSlti, // 0x18-0x1B
     &GpuShaderGlsl::vshUnk, &GpuShaderGlsl::vshUnk, &GpuShaderGlsl::vshUnk, &GpuShaderGlsl::vshUnk, // 0x1C-0x1F
     &GpuShaderGlsl::vshUnk, &GpuShaderGlsl::shdNop, &GpuShaderGlsl::shdEnd, &GpuShaderGlsl::vshUnk, // 0x20-0x23
-    &GpuShaderGlsl::vshUnk, &GpuShaderGlsl::vshUnk, &GpuShaderGlsl::vshUnk, &GpuShaderGlsl::vshUnk, // 0x24-0x27
-    &GpuShaderGlsl::vshUnk, &GpuShaderGlsl::vshUnk, &GpuShaderGlsl::vshUnk, &GpuShaderGlsl::vshUnk, // 0x28-0x2B
+    &GpuShaderGlsl::shdCall, &GpuShaderGlsl::shdCallc, &GpuShaderGlsl::shdCallu, &GpuShaderGlsl::shdIfu, // 0x24-0x27
+    &GpuShaderGlsl::shdIfc, &GpuShaderGlsl::vshUnk, &GpuShaderGlsl::vshUnk, &GpuShaderGlsl::vshUnk, // 0x28-0x2B
     &GpuShaderGlsl::vshUnk, &GpuShaderGlsl::vshUnk, &GpuShaderGlsl::shdCmp, &GpuShaderGlsl::shdCmp, // 0x2C-0x2F
     &GpuShaderGlsl::shdMadi, &GpuShaderGlsl::shdMadi, &GpuShaderGlsl::shdMadi, &GpuShaderGlsl::shdMadi, // 0x30-0x33
     &GpuShaderGlsl::shdMadi, &GpuShaderGlsl::shdMadi, &GpuShaderGlsl::shdMadi, &GpuShaderGlsl::shdMadi, // 0x34-0x37
@@ -64,8 +64,6 @@ const char *GpuShaderGlsl::vtxBase = R"(
     vec4 outRegs[16];
     ivec3 addrReg;
     bvec2 condReg;
-
-    void main() {
 )";
 
 GpuShaderGlsl::GpuShaderGlsl(GpuRenderOgl &gpuRender, float (*input)[4]): gpuRender(gpuRender), input(input) {
@@ -123,45 +121,72 @@ void GpuShaderGlsl::processVtx(uint32_t idx) {
             return gpuRender.setProgram((current = &c)->program);
     }
 
-    // Initialize a vertex shader and translate opcodes to GLSL
-    std::string code = vtxBase;
-    shdPc = vshEntry, shdStop = vshEnd;
-    while (shdPc != shdStop) {
-        uint32_t opcode = vshCode[shdPc];
-        shdPc = (shdPc + 1) & 0x1FF;
-        (this->*vshInstrs[opcode >> 26])(code, opcode);
-    }
+    // Emit the vertex shader main function
+    std::string vtxCode = "\nvoid main() {\n";
+    emitFuncBody(vtxCode, vshEntry, vshEnd);
 
     // Emit code to map vertex shader outputs to fragment shader inputs
-    code += "\ngl_Position = posScale * vec4(";
-    code += "outRegs[" + std::to_string(outMap[0x0][0]) + "][" + std::to_string(outMap[0x0][1]) + "], ";
-    code += "outRegs[" + std::to_string(outMap[0x1][0]) + "][" + std::to_string(outMap[0x1][1]) + "], ";
-    code += "outRegs[" + std::to_string(outMap[0x2][0]) + "][" + std::to_string(outMap[0x2][1]) + "], ";
-    code += "outRegs[" + std::to_string(outMap[0x3][0]) + "][" + std::to_string(outMap[0x3][1]) + "]);";
-    code += "\nvtxColor = vec4(";
-    code += "outRegs[" + std::to_string(outMap[0x8][0]) + "][" + std::to_string(outMap[0x8][1]) + "], ";
-    code += "outRegs[" + std::to_string(outMap[0x9][0]) + "][" + std::to_string(outMap[0x9][1]) + "], ";
-    code += "outRegs[" + std::to_string(outMap[0xA][0]) + "][" + std::to_string(outMap[0xA][1]) + "], ";
-    code += "outRegs[" + std::to_string(outMap[0xB][0]) + "][" + std::to_string(outMap[0xB][1]) + "]);";
-    code += "\nvtxCoordsS = vec3(";
-    code += "outRegs[" + std::to_string(outMap[0xC][0]) + "][" + std::to_string(outMap[0xC][1]) + "], ";
-    code += "outRegs[" + std::to_string(outMap[0xE][0]) + "][" + std::to_string(outMap[0xE][1]) + "], ";
-    code += "outRegs[" + std::to_string(outMap[0x16][0]) + "][" + std::to_string(outMap[0x16][1]) + "]);";
-    code += "\nvtxCoordsT = vec3(";
-    code += "outRegs[" + std::to_string(outMap[0xD][0]) + "][" + std::to_string(outMap[0xD][1]) + "], ";
-    code += "outRegs[" + std::to_string(outMap[0xF][0]) + "][" + std::to_string(outMap[0xF][1]) + "], ";
-    code += "outRegs[" + std::to_string(outMap[0x17][0]) + "][" + std::to_string(outMap[0x17][1]) + "]);";
-    code += "\n}";
+    vtxCode += "\ngl_Position = posScale * vec4(";
+    vtxCode += "outRegs[" + std::to_string(outMap[0x0][0]) + "][" + std::to_string(outMap[0x0][1]) + "], ";
+    vtxCode += "outRegs[" + std::to_string(outMap[0x1][0]) + "][" + std::to_string(outMap[0x1][1]) + "], ";
+    vtxCode += "outRegs[" + std::to_string(outMap[0x2][0]) + "][" + std::to_string(outMap[0x2][1]) + "], ";
+    vtxCode += "outRegs[" + std::to_string(outMap[0x3][0]) + "][" + std::to_string(outMap[0x3][1]) + "]);";
+    vtxCode += "\nvtxColor = vec4(";
+    vtxCode += "outRegs[" + std::to_string(outMap[0x8][0]) + "][" + std::to_string(outMap[0x8][1]) + "], ";
+    vtxCode += "outRegs[" + std::to_string(outMap[0x9][0]) + "][" + std::to_string(outMap[0x9][1]) + "], ";
+    vtxCode += "outRegs[" + std::to_string(outMap[0xA][0]) + "][" + std::to_string(outMap[0xA][1]) + "], ";
+    vtxCode += "outRegs[" + std::to_string(outMap[0xB][0]) + "][" + std::to_string(outMap[0xB][1]) + "]);";
+    vtxCode += "\nvtxCoordsS = vec3(";
+    vtxCode += "outRegs[" + std::to_string(outMap[0xC][0]) + "][" + std::to_string(outMap[0xC][1]) + "], ";
+    vtxCode += "outRegs[" + std::to_string(outMap[0xE][0]) + "][" + std::to_string(outMap[0xE][1]) + "], ";
+    vtxCode += "outRegs[" + std::to_string(outMap[0x16][0]) + "][" + std::to_string(outMap[0x16][1]) + "]);";
+    vtxCode += "\nvtxCoordsT = vec3(";
+    vtxCode += "outRegs[" + std::to_string(outMap[0xD][0]) + "][" + std::to_string(outMap[0xD][1]) + "], ";
+    vtxCode += "outRegs[" + std::to_string(outMap[0xF][0]) + "][" + std::to_string(outMap[0xF][1]) + "], ";
+    vtxCode += "outRegs[" + std::to_string(outMap[0x17][0]) + "][" + std::to_string(outMap[0x17][1]) + "]);";
+    vtxCode += "\n}";
+
+    // Emit any additional functions that get called
+    for (int i = 0; i < shaderFuncs.size(); i++) {
+        std::string func = "\nvoid " + shaderFuncs[i].name + "() {\n";
+        emitFuncBody(func, shaderFuncs[i].entry, shaderFuncs[i].end);
+        vtxCode = func + "}\n" + vtxCode;
+    }
+
+    // Prepend the vertex shader base code and reset state
+    vtxCode = vtxBase + vtxCode;
+    shaderFuncs = {};
+    ifStack = {};
 
     // Compile and cache a program from the finished vertex code
     LOG_INFO("Caching GLSL shader with CRCs 0x%X, 0x%X, and 0x%X\n", s.codeCrc, s.descCrc, s.mapCrc);
-    s.program = gpuRender.makeProgram(code.c_str());
+    s.program = gpuRender.makeProgram(vtxCode.c_str());
     gpuRender.setProgram(s.program);
     s.floatsLoc = glGetUniformLocation(s.program, "floats");
     s.intsLoc = glGetUniformLocation(s.program, "ints");
     s.boolsLoc = glGetUniformLocation(s.program, "bools");
     shaderCache.push_back(s);
     current = &shaderCache[shaderCache.size() - 1];
+}
+
+void GpuShaderGlsl::emitFuncBody(std::string &code, uint16_t entry, uint16_t end) {
+    // Emit a section of vertex shader code translated to GLSL
+    shdPc = entry, shdStop = end;
+    while (shdPc != shdStop) {
+        // Run an emitter function and increment the program counter
+        uint32_t opcode = vshCode[shdPc];
+        uint16_t cmpPc = shdPc = (shdPc + 1) & 0x1FF;
+        (this->*vshInstrs[opcode >> 26])(code, opcode);
+
+        // Handle the else block of an if statement and then forget it
+        if (!ifStack.empty() && cmpPc == ((ifStack.back() >> 10) & 0x3FF)) {
+            code += "}\nelse {\n";
+            emitFuncBody(code, cmpPc, cmpPc + (ifStack.back() & 0xFF));
+            shdPc = shdStop, shdStop = end;
+            code += "}\n";
+            ifStack.pop_back();
+        }
+    }
 }
 
 std::string GpuShaderGlsl::getSrc(uint8_t src, uint32_t desc, uint8_t idx) {
@@ -353,6 +378,59 @@ void GpuShaderGlsl::shdNop(std::string &code, uint32_t opcode) {
 void GpuShaderGlsl::shdEnd(std::string &code, uint32_t opcode) {
     // Finish shader emission
     shdPc = shdStop;
+}
+
+void GpuShaderGlsl::shdCall(std::string &code, uint32_t opcode) {
+    // Emit code to call an existing function if found
+    ShaderFunc func;
+    func.entry = (opcode >> 10) & 0xFFF;
+    func.end = func.entry + (opcode & 0xFF);
+    for (int i = 0; i < shaderFuncs.size(); i++) {
+        if (shaderFuncs[i].entry != func.entry || shaderFuncs[i].end != func.end) continue;
+        code += shaderFuncs[i].name + "();\n";
+        return;
+    }
+
+    // Emit code to call a new function and remember it
+    func.name = "func" + std::to_string(shaderFuncs.size());
+    code += func.name + "();\n";
+    shaderFuncs.push_back(func);
+}
+
+void GpuShaderGlsl::shdCallc(std::string &code, uint32_t opcode) {
+    // Emit code to call a function if a comparison with the condition values is true
+    std::string refX = (opcode & BIT(25)) ? "" : "!", refY = (opcode & BIT(24)) ? "" : "!";
+    switch ((opcode >> 22) & 0x3) {
+        case 0x0: code += "if (" + refX + "condReg.x || " + refY + "condReg.y) "; break; // OR
+        case 0x1: code += "if (" + refX + "condReg.x && " + refY + "condReg.y) "; break; // AND
+        case 0x2: code += "if (" + refX + "condReg.x) "; break; // X
+        default: code += "if (" + refY + "condReg.y) "; break; // Y
+    }
+    return shdCall(code, opcode);
+}
+
+void GpuShaderGlsl::shdCallu(std::string &code, uint32_t opcode) {
+    // Emit code to call a function if a uniform bool is true
+    code += "if (bools[" + std::to_string((opcode >> 22) & 0xF) + "]) ";
+    return shdCall(code, opcode);
+}
+
+void GpuShaderGlsl::shdIfu(std::string &code, uint32_t opcode) {
+    // Emit the start of an if/else based on a uniform bool and remember it
+    code += "if (bools[" + std::to_string((opcode >> 22) & 0xF) + "]) {\n";
+    ifStack.push_back(opcode);
+}
+
+void GpuShaderGlsl::shdIfc(std::string &code, uint32_t opcode) {
+    // Emit the start of an if/else based on a condition comparison and remember it
+    std::string refX = (opcode & BIT(25)) ? "" : "!", refY = (opcode & BIT(24)) ? "" : "!";
+    switch ((opcode >> 22) & 0x3) {
+        case 0x0: code += "if (" + refX + "condReg.x || " + refY + "condReg.y) {\n"; break; // OR
+        case 0x1: code += "if (" + refX + "condReg.x && " + refY + "condReg.y) {\n"; break; // AND
+        case 0x2: code += "if (" + refX + "condReg.x) {\n"; break; // X
+        default: code += "if (" + refY + "condReg.y) {\n"; break; // Y
+    }
+    ifStack.push_back(opcode);
 }
 
 void GpuShaderGlsl::shdCmp(std::string &code, uint32_t opcode) {
