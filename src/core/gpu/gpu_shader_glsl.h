@@ -75,7 +75,7 @@ private:
 
     std::vector<ShaderCache> shaderCache;
     std::vector<ShaderFunc> shaderFuncs;
-    std::vector<uint32_t> ifStack, loopStack;
+    std::vector<uint32_t> ifStack, loopStack, jmpStack;
 
     ShaderCache *current = nullptr;
     uint32_t *shdDesc = vshDesc;
@@ -87,11 +87,16 @@ private:
     uint32_t vshDesc[0x80] = {};
     uint16_t vshEntry = 0;
     uint16_t vshEnd = 0;
+    GLint vshBools[16] = {};
+    GLint vshInts[4][3] = {};
+    float vshFloats[96][4] = {};
 
     static uint32_t calcCrc32(uint8_t *data, uint32_t size);
-    void emitFuncBody(std::string &code, uint16_t entry, uint16_t end);
     static std::string getSrc(uint8_t src, uint32_t desc, uint8_t idx = 0);
     static std::string setDst(uint8_t dst, uint32_t desc, std::string value, bool single = false);
+
+    void updateUniforms();
+    void emitFuncBody(std::string &code, uint16_t entry, uint16_t end, bool full = true);
 
     void shdAdd(std::string &code, uint32_t opcode);
     void shdDp3(std::string &code, uint32_t opcode);
@@ -122,6 +127,8 @@ private:
     void shdIfu(std::string &code, uint32_t opcode);
     void shdIfc(std::string &code, uint32_t opcode);
     void shdLoop(std::string &code, uint32_t opcode);
+    void shdJmpc(std::string &code, uint32_t opcode);
+    void shdJmpu(std::string &code, uint32_t opcode);
     void shdCmp(std::string &code, uint32_t opcode);
     void shdMadi(std::string &code, uint32_t opcode);
     void shdMad(std::string &code, uint32_t opcode);

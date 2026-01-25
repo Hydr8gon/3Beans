@@ -36,7 +36,7 @@ void (GpuShaderGlsl::*GpuShaderGlsl::vshInstrs[])(std::string&, uint32_t) {
     &GpuShaderGlsl::shdBreak, &GpuShaderGlsl::shdNop, &GpuShaderGlsl::shdEnd, &GpuShaderGlsl::shdBreakc, // 0x20-0x23
     &GpuShaderGlsl::shdCall, &GpuShaderGlsl::shdCallc, &GpuShaderGlsl::shdCallu, &GpuShaderGlsl::shdIfu, // 0x24-0x27
     &GpuShaderGlsl::shdIfc, &GpuShaderGlsl::shdLoop, &GpuShaderGlsl::vshUnk, &GpuShaderGlsl::vshUnk, // 0x28-0x2B
-    &GpuShaderGlsl::vshUnk, &GpuShaderGlsl::vshUnk, &GpuShaderGlsl::shdCmp, &GpuShaderGlsl::shdCmp, // 0x2C-0x2F
+    &GpuShaderGlsl::shdJmpc, &GpuShaderGlsl::shdJmpu, &GpuShaderGlsl::shdCmp, &GpuShaderGlsl::shdCmp, // 0x2C-0x2F
     &GpuShaderGlsl::shdMadi, &GpuShaderGlsl::shdMadi, &GpuShaderGlsl::shdMadi, &GpuShaderGlsl::shdMadi, // 0x30-0x33
     &GpuShaderGlsl::shdMadi, &GpuShaderGlsl::shdMadi, &GpuShaderGlsl::shdMadi, &GpuShaderGlsl::shdMadi, // 0x34-0x37
     &GpuShaderGlsl::shdMad, &GpuShaderGlsl::shdMad, &GpuShaderGlsl::shdMad, &GpuShaderGlsl::shdMad, // 0x38-0x3B
@@ -100,6 +100,13 @@ uint32_t GpuShaderGlsl::calcCrc32(uint8_t *data, uint32_t size) {
     return crc;
 }
 
+void GpuShaderGlsl::updateUniforms() {
+    // Update all uniforms when the shader changes
+    glUniform4fv(current->floatsLoc, 96, vshFloats[0]);
+    glUniform3iv(current->intsLoc, 4, vshInts[0]);
+    glUniform1iv(current->boolsLoc, 16, vshBools);
+}
+
 void GpuShaderGlsl::processVtx(uint32_t idx) {
     // Submit input and check if the shader should update
     if (!shaderDirty) return gpuRender.submitInput(input);
@@ -117,8 +124,10 @@ void GpuShaderGlsl::processVtx(uint32_t idx) {
     // Use a cached shader program if one is found
     for (int i = 0; i < shaderCache.size(); i++) {
         ShaderCache &c = shaderCache[i];
-        if (c.codeCrc == s.codeCrc && c.descCrc == s.descCrc && c.mapCrc == s.mapCrc && c.entryEnd == s.entryEnd)
-            return gpuRender.setProgram((current = &c)->program);
+        if (c.codeCrc != s.codeCrc || c.descCrc != s.descCrc || c.mapCrc != s.mapCrc || c.entryEnd != s.entryEnd)
+            continue;
+        gpuRender.setProgram((current = &c)->program);
+        return updateUniforms();
     }
 
     // Emit the vertex shader main function
@@ -153,10 +162,9 @@ void GpuShaderGlsl::processVtx(uint32_t idx) {
         vtxCode = func + "}\n" + vtxCode;
     }
 
-    // Prepend the vertex shader base code and reset state
+    // Prepend the vertex shader base code and reset functions
     vtxCode = vtxBase + vtxCode;
     shaderFuncs = {};
-    ifStack = loopStack = {};
 
     // Compile and cache a program from the finished vertex code
     LOG_INFO("Caching GLSL shader with CRCs 0x%X, 0x%X, and 0x%X\n", s.codeCrc, s.descCrc, s.mapCrc);
@@ -167,11 +175,15 @@ void GpuShaderGlsl::processVtx(uint32_t idx) {
     s.boolsLoc = glGetUniformLocation(s.program, "bools");
     shaderCache.push_back(s);
     current = &shaderCache[shaderCache.size() - 1];
+    updateUniforms();
 }
 
-void GpuShaderGlsl::emitFuncBody(std::string &code, uint16_t entry, uint16_t end) {
-    // Emit a section of vertex shader code translated to GLSL
+void GpuShaderGlsl::emitFuncBody(std::string &code, uint16_t entry, uint16_t end, bool full) {
+    // Start functions with a do block that jumps can break out of
+    if (full) code += "do {\n";
     shdPc = entry, shdStop = end;
+
+    // Emit a section of vertex shader code translated to GLSL
     while (shdPc != shdStop) {
         // Run an emitter function and increment the program counter
         uint32_t opcode = vshCode[shdPc];
@@ -183,7 +195,7 @@ void GpuShaderGlsl::emitFuncBody(std::string &code, uint16_t entry, uint16_t end
             code += "}\n";
             if (uint8_t ofs = ifStack.back()) {
                 code += "else {\n";
-                emitFuncBody(code, cmpPc, cmpPc + ofs);
+                emitFuncBody(code, cmpPc, cmpPc + ofs, false);
                 shdPc = shdStop, shdStop = end;
                 code += "}\n";
             }
@@ -195,7 +207,22 @@ void GpuShaderGlsl::emitFuncBody(std::string &code, uint16_t entry, uint16_t end
             code += "}\n";
             loopStack.pop_back();
         }
+
+        // Handle jump destinations by ending and restarting the do block
+        if (!jmpStack.empty() && cmpPc == (jmpStack.back() & 0x1FF)) {
+            code += "} while (false);\n";
+            code += "do {\n";
+            while (!jmpStack.empty() && cmpPc == (jmpStack.back() & 0x1FF))
+                jmpStack.pop_back();
+        }
     }
+
+    // Finish any open blocks at the end of a function and reset them
+    if (!full) return;
+    for (int i = 0; i < ifStack.size() + loopStack.size(); i++)
+        code += "}\n";
+    code += "} while (false);\n";
+    ifStack = loopStack = jmpStack = {};
 }
 
 std::string GpuShaderGlsl::getSrc(uint8_t src, uint32_t desc, uint8_t idx) {
@@ -395,7 +422,7 @@ void GpuShaderGlsl::shdEnd(std::string &code, uint32_t opcode) {
 }
 
 void GpuShaderGlsl::shdBreakc(std::string &code, uint32_t opcode) {
-    // Emit code to break out of a for loop if a comparison with the condition values is true
+    // Emit code to break out of a for loop if a condition comparison is true
     std::string refX = (opcode & BIT(25)) ? "" : "!", refY = (opcode & BIT(24)) ? "" : "!";
     switch ((opcode >> 22) & 0x3) {
         case 0x0: code += "if (" + refX + "condReg.x || " + refY + "condReg.y) "; break; // OR
@@ -424,7 +451,7 @@ void GpuShaderGlsl::shdCall(std::string &code, uint32_t opcode) {
 }
 
 void GpuShaderGlsl::shdCallc(std::string &code, uint32_t opcode) {
-    // Emit code to call a function if a comparison with the condition values is true
+    // Emit code to call a function if a condition comparison is true
     std::string refX = (opcode & BIT(25)) ? "" : "!", refY = (opcode & BIT(24)) ? "" : "!";
     switch ((opcode >> 22) & 0x3) {
         case 0x0: code += "if (" + refX + "condReg.x || " + refY + "condReg.y) "; break; // OR
@@ -465,6 +492,28 @@ void GpuShaderGlsl::shdLoop(std::string &code, uint32_t opcode) {
     code += "addrReg.z = " + ints + ".y;\n";
     code += "for (int i = " + ints + ".x; i >= 0; i--, addrReg.z += " + ints + ".z) {\n";
     loopStack.push_back((opcode >> 10) + 1);
+}
+
+void GpuShaderGlsl::shdJmpc(std::string &code, uint32_t opcode) {
+    // Emit code to break out of a jump block if a condition comparison is true
+    uint16_t dst = (opcode >> 10) & 0xFFF;
+    if (dst < shdPc) {
+        LOG_CRIT("Unhandled GLSL JIT jump opcode with negative offset\n");
+        return;
+    }
+    shdBreakc(code, opcode);
+    jmpStack.push_back(dst);
+}
+
+void GpuShaderGlsl::shdJmpu(std::string &code, uint32_t opcode) {
+    // Emit code to break out of a jump block if a uniform bool is true
+    uint16_t dst = (opcode >> 10) & 0xFFF;
+    if (dst < shdPc) {
+        LOG_CRIT("Unhandled GLSL JIT jump opcode with negative offset\n");
+        return;
+    }
+    code += "if (bools[" + std::to_string((opcode >> 22) & 0xF) + "]) break;\n";
+    jmpStack.push_back(dst);
 }
 
 void GpuShaderGlsl::shdCmp(std::string &code, uint32_t opcode) {
@@ -538,15 +587,21 @@ void GpuShaderGlsl::setVshEntry(uint16_t entry, uint16_t end) {
 
 void GpuShaderGlsl::setVshBool(int i, bool value) {
     // Update one of the vertex shader boolean uniforms
+    gpuRender.flushVertices();
+    vshBools[i] = value;
     if (current) glUniform1i(current->boolsLoc + i, value);
 }
 
 void GpuShaderGlsl::setVshInts(int i, uint8_t int0, uint8_t int1, uint8_t int2) {
     // Update one of the vertex shader integer uniforms
+    gpuRender.flushVertices();
+    vshInts[i][0] = int0, vshInts[i][1] = int0, vshInts[i][2] = int2;
     if (current) glUniform3i(current->intsLoc + i, int0, int1, int2);
 }
 
 void GpuShaderGlsl::setVshFloats(int i, float *floats) {
     // Update one of the vertex shader float uniforms
+    gpuRender.flushVertices();
+    memcpy(vshFloats[i], floats, sizeof(float) * 4);
     if (current) glUniform4fv(current->floatsLoc + i, 1, floats);
 }
