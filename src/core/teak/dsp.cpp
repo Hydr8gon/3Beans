@@ -330,7 +330,7 @@ void Dsp::setAudClock(DspClock clock) {
     }
 
     // Set the audio FIFO event frequency and schedule it if newly enabled
-    audCycles = ((clock == CLK_32KHZ) ? 8192 : 5632) * 8;
+    audCycles = ((clock == CLK_33KHZ) ? 8130 : 5589) * 8;
     if (audScheduled || !audOutEnable) return;
     core.schedule(DSP_SEND_AUDIO, audCycles);
     audScheduled = true;

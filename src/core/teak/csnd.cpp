@@ -41,10 +41,10 @@ Csnd::~Csnd() {
 
 uint32_t *Csnd::getSamples(uint32_t freq, uint32_t count) {
     // Check if parameters changed and update the buffer details if so
-    dspSize = count * ((dspClock == CLK_32KHZ) ? 32730 : 47610) / freq;
+    dspSize = count * ((dspClock == CLK_33KHZ) ? 32978 : 47971) / freq;
     if (mixFreq != freq || mixSize != count) {
         mixFreq = freq, mixSize = count;
-        csndSize = count * 130920 / freq;
+        csndSize = count * 130914 / freq;
         csndOfs = 0;
 
         // Initialize or resize the buffers themselves
@@ -349,8 +349,8 @@ void Csnd::writeSndexcnt(uint32_t mask, uint32_t value) {
     if ((codecSndexcnt & 0x80008000) != 0x80008000) // Clock/timing enable
         dspClock = CLK_OFF;
     else if (codecSndexcnt & BIT(13)) // Frequency
-        dspClock = CLK_47KHZ;
+        dspClock = CLK_48KHZ;
     else
-        dspClock = CLK_32KHZ;
+        dspClock = CLK_33KHZ;
     core.dsp.setAudClock(dspClock);
 }

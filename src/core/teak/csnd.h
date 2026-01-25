@@ -29,8 +29,8 @@ class Core;
 
 enum DspClock {
     CLK_OFF,
-    CLK_32KHZ,
-    CLK_47KHZ
+    CLK_33KHZ,
+    CLK_48KHZ
 };
 
 class Csnd {
