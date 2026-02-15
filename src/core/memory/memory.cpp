@@ -173,6 +173,11 @@ template <typename T> void Memory::writeFallback(CpuId id, uint32_t address, T v
         LOG_CRIT("Unmapped ARM11 core %d memory write: 0x%X\n", id, address);
 }
 
+uint8_t Memory::readCfg9Unitinfo() {
+    // Read the unit type, which needs to be changed for development systems
+    return Settings::unitType;
+}
+
 uint32_t Memory::readPrngSource(int i) {
     // Use a made-up pseudo-random formula to adjust PRNG registers in a reproducible way
     // TODO: figure out what formula they actually use

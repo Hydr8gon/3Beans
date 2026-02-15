@@ -448,6 +448,7 @@ void Dsp::updateArmSemIrq() {
         dspPsts &= ~BIT(9);
     }
     else if (~dspPsts & BIT(9)) {
+        LOG_INFO("Triggering DSP-to-ARM semaphore with flags: 0x%X\n", dspSem & ~dspPmask);
         core.interrupts.sendInterrupt(ARM11, 0x4A);
         dspPsts |= BIT(9);
     }
@@ -455,7 +456,13 @@ void Dsp::updateArmSemIrq() {
 
 void Dsp::updateDspSemIrq() {
     // Update the DSP-side semaphore IRQ flag and trigger an interrupt if set
-    (dspPsem & ~hpiMask) ? (hpiSts |= BIT(9)) : (hpiSts &= ~BIT(9));
+    if (!(dspPsem & ~hpiMask)) {
+        hpiSts &= ~BIT(9);
+    }
+    else if (~hpiSts & BIT(9)) {
+        LOG_INFO("Triggering ARM-to-DSP semaphore with flags: 0x%X\n", dspPsem & ~hpiMask);
+        hpiSts |= BIT(9);
+    }
     updateIcuState();
 }
 

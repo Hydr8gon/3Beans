@@ -37,6 +37,7 @@ namespace Settings {
     extern int threadedGpu;
     extern int gpuRenderer;
     extern int gpuShader;
+    extern int unitType;
 
     extern std::string boot11Path;
     extern std::string boot9Path;

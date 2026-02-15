@@ -164,11 +164,15 @@ template <typename T> void Cp15::write(CpuId id, uint32_t address, T value) {
         if (!(data = map.write)) address = map.addr | (address & 0xFFF);
         (*map.memTag)++;
 
-        #if LOG_LEVEL > 3
+#if LOG_LEVEL > 3
         // Catch writes to special memory used by the 3DS OS
         if (address == 0xFFFF9004 && value) {
+            // Detect name location, which differs based on console type and version
+            uint32_t kCodeSet = read<uint32_t>(id, value + (core.n3dsMode ? 0xB8 : 0xB0));
+            if (read<uint8_t>(id, kCodeSet + 0x50) - 0x20 > 0x5FU)
+                kCodeSet = read<uint32_t>(id, value + 0xA8); // Pre-8.0.0
+
             // Log process names when the active 3DS kernel process struct changes
-            uint32_t kCodeSet = read<uint32_t>(id, value + 0xB0 + core.n3dsMode * 8);
             uint8_t procName[9] = {};
             for (int i = 0; i < 8; i++)
                 procName[i] = read<uint8_t>(id, kCodeSet + 0x50 + i);
@@ -178,7 +182,7 @@ template <typename T> void Cp15::write(CpuId id, uint32_t address, T value) {
             // Log IPC commands when the TLS buffer is written to
             LOG_OS("ARM11 core %d writing IPC command: 0x%X @ 0x%X\n", id, value, address - threadIdRegs[id][1] - 0x80);
         }
-        #endif
+#endif
     }
     else {
         // Write to ARM11 physical memory

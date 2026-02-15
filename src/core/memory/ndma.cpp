@@ -29,6 +29,7 @@ bool Ndma::shouldTransfer(int i, uint8_t type) {
     // Check if multiple DRQ types are active for channel sub-modes
     switch (ndmaCnt[i] & 0x1F) {
         case 0x08: return (BIT(type) & 0x140) && (drqMask & 0x140) == 0x140; // MMC to AES
+        case 0x0A: return (BIT(type) & 0x240) && (drqMask & 0x240) == 0x240; // AES to MMC
         case 0x10: return (BIT(type) & 0x600) && (drqMask & 0x600) == 0x600; // AES to SHA
         default: return false;
     }
@@ -173,7 +174,7 @@ void Ndma::writeCnt(int i, uint32_t mask, uint32_t value) {
         uint8_t sub = (ndmaCnt[i] & 0x1F);
         LOG_INFO("NDMA channel %d starting in sub-mode 0x%X, transferring from 0x%X to 0x%X with size "
             "0x%X in blocks of 0x%X\n", i, sub, ndmaSad[i], ndmaDad[i], ndmaTcnt[i] << 2, ndmaWcnt[i] << 2);
-        if (sub != 0x8 && sub != 0x10)
+        if (sub != 0x8 && sub != 0xA && sub != 0x10)
             LOG_CRIT("NDMA channel %d started in unimplemented sub-mode: 0x%X\n", i, sub);
     }
     else {

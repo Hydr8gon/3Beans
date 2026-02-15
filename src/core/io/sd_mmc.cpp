@@ -448,11 +448,11 @@ void SdMmc::writeData16Fifo(uint16_t mask, uint16_t value) {
     uint32_t size = (dataFifo16.size() << 1);
     if (size >= 0x200) return;
     dataFifo16.push(value & mask);
-    core.ndma.clearDrq(0x6 + id);
     if (size + 2 < sdData16Blklen) return;
 
     // Trigger a 16-bit FIFO full interrupt and write a block if in write mode
     sendInterrupt(24);
+    core.ndma.clearDrq(0x6 + id);
     if ((cardStatus & 0x1E00) == (0x6 << 9))
         core.schedule(Task(SDMMC0_WRITE_BLOCK + id), 1);
 }
@@ -487,13 +487,13 @@ void SdMmc::writeData32Fifo(uint32_t mask, uint32_t value) {
     if (size >= 0x200) return;
     dataFifo32.push(value & mask);
     sdData32Irq |= BIT(9); // Not empty
-    core.ndma.clearDrq(0x6 + id);
     if (size + 4 < sdData32Blklen) return;
 
     // Trigger a 32-bit FIFO full interrupt if enabled
     sdData32Irq |= BIT(8);
     if (sdData32Irq & BIT(11))
         core.interrupts.sendInterrupt(ARM9, 16 + (id << 1));
+    core.ndma.clearDrq(0x6 + id);
 
     // Write a block if in write mode
     if ((cardStatus & 0x1E00) == (0x6 << 9))

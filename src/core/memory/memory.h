@@ -108,6 +108,7 @@ private:
     uint8_t readCfg9Sysprot11() { return cfg9Sysprot11; }
     uint8_t readCfg9Extmemcnt9() { return cfg9Extmemcnt9; }
     uint32_t readCfg9Bootenv() { return cfg9Bootenv; }
+    uint8_t readCfg9Unitinfo();
     uint32_t readPrngSource(int i);
     uint32_t readOtpEncrypted(int i) { return otpEncrypted[i]; }
 

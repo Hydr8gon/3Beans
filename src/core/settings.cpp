@@ -26,6 +26,7 @@ namespace Settings {
     int threadedGpu = 0;
     int gpuRenderer = 0;
     int gpuShader = 0;
+    int unitType = 0;
 
     std::string boot11Path = "boot11.bin";
     std::string boot9Path = "boot9.bin";
@@ -39,6 +40,7 @@ namespace Settings {
         Setting("threadedGpu", &threadedGpu, false),
         Setting("gpuRenderer", &gpuRenderer, false),
         Setting("gpuShader", &gpuShader, false),
+        Setting("unitType", &unitType, false),
         Setting("boot11Path", &boot11Path, true),
         Setting("boot9Path", &boot9Path, true),
         Setting("nandPath", &nandPath, true),
