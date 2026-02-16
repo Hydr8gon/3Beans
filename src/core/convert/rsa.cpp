@@ -169,7 +169,7 @@ void Rsa::writeCnt(uint32_t mask, uint32_t value) {
 void Rsa::writeSlotcnt(int i, uint32_t mask, uint32_t value) {
     // Write to one of the RSA_SLOTCNT registers and clear its FIFO if triggered
     // TODO: handle the access disable bits
-    if (value & mask & BIT(0)) expFifos[i].clear();
+    if (~value & mask & BIT(0)) expFifos[i].clear();
     mask &= 0x80000006;
     rsaSlotcnt[i] = (rsaSlotcnt[i] & ~mask) | (value & mask);
 }

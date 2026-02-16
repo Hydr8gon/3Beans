@@ -190,29 +190,44 @@ void Sha::update() {
             hash2(src);
     }
 
-    // Check ARM9 DMA conditions
-    if (arm9) {
-        // Set or clear the SHA in DRQs
-        if (inFifo.empty() && outFifo.empty()) {
+    // Set or clear SHA in DRQs based on CPU type
+    if ((shaCnt & BIT(2)) && inFifo.empty() && outFifo.empty()) {
+        if (arm9) {
             core.ndma.setDrq(0xA);
-            if (shaCnt & BIT(2))
-                core.cdmas[XDMA].setDrq(0x6);
+            core.cdmas[XDMA].setDrq(0x6);
         }
         else {
-            core.ndma.clearDrq(0xA);
-            core.cdmas[XDMA].clearDrq(0x6);
+            core.cdmas[CDMA0].setDrq(0xB);
+            core.cdmas[CDMA1].setDrq(0xB);
         }
+    }
+    else if (arm9) {
+        core.ndma.clearDrq(0xA);
+        core.cdmas[XDMA].clearDrq(0x6);
+    }
+    else {
+        core.cdmas[CDMA0].clearDrq(0xB);
+        core.cdmas[CDMA1].clearDrq(0xB);
+    }
 
-        // Set or clear the SHA out DRQs
-        if (outFifo.size() >= 16) {
+    // Set or clear SHA out DRQs based on CPU type
+    if ((shaCnt & BIT(10)) && outFifo.size() >= 16) {
+        if (arm9) {
             core.ndma.setDrq(0xB);
-            if (shaCnt & BIT(10))
-                core.cdmas[XDMA].setDrq(0x7);
+            core.cdmas[XDMA].setDrq(0x7);
         }
         else {
-            core.ndma.clearDrq(0xB);
-            core.cdmas[XDMA].clearDrq(0x7);
+            core.cdmas[CDMA0].setDrq(0xC);
+            core.cdmas[CDMA1].setDrq(0xC);
         }
+    }
+    else if (arm9) {
+        core.ndma.clearDrq(0xB);
+        core.cdmas[XDMA].clearDrq(0x7);
+    }
+    else {
+        core.cdmas[CDMA0].clearDrq(0xC);
+        core.cdmas[CDMA1].clearDrq(0xC);
     }
 
     // Disable the FIFO after the final block is processed

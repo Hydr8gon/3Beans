@@ -319,11 +319,29 @@ void Aes::update() {
         }
     }
 
-    // Update FIFO sizes and NDMA request conditions
+    // Update the AES FIFO sizes
     aesCnt = (aesCnt & ~0x3FF) | (std::min<uint8_t>(16, readFifo.size()) << 5) | writeFifo.size();
-    (writeFifo.size() <= ((aesCnt >> 10) & 0xC)) ? core.ndma.setDrq(0x8) : core.ndma.clearDrq(0x8); // AES in
-    (readFifo.size() >= ((aesCnt >> 12) & 0xC) + 4) ? core.ndma.setDrq(0x9) : core.ndma.clearDrq(0x9); // AES out
     scheduled = false;
+
+    // Set or clear AES in DRQs
+    if (writeFifo.size() <= ((aesCnt >> 10) & 0xC)) {
+        core.ndma.setDrq(0x8);
+        core.cdmas[XDMA].setDrq(0x4);
+    }
+    else {
+        core.ndma.clearDrq(0x8);
+        core.cdmas[XDMA].clearDrq(0x4);
+    }
+
+    // Set or clear AES out DRQs
+    if (readFifo.size() >= ((aesCnt >> 12) & 0xC) + 4) {
+        core.ndma.setDrq(0x9);
+        core.cdmas[XDMA].setDrq(0x5);
+    }
+    else {
+        core.ndma.clearDrq(0x9);
+        core.cdmas[XDMA].clearDrq(0x5);
+    }
 }
 
 void Aes::flushKeyFifo(bool keyX) {
