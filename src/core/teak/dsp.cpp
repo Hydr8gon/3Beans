@@ -808,15 +808,13 @@ void Dsp::writePcfg(uint16_t mask, uint16_t value) {
     uint16_t old = dspPcfg;
     dspPcfg = (dspPcfg & ~mask) | (value & mask);
 
-    // Start or stop a read FIFO transfer based on its start bit
-    if (dspPcfg & BIT(4)) {
+    // Start a read FIFO transfer if its bit was newly set
+    if (~old & dspPcfg & BIT(4)) {
         uint8_t len = (dspPcfg >> 2) & 0x3;
         readLength = len ? (4 << len) : 1;
         dspPsts |= BIT(0); // Active
+        readFifo = {};
         updateReadFifo();
-    }
-    else {
-        readLength = 0;
     }
 
     // Reset the DSP if the reset bit was newly set
