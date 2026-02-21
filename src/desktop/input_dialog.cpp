@@ -315,14 +315,15 @@ void InputDialog::updateJoystick(wxTimerEvent &event) {
     }
 
     // Map the current button to a joystick axis if one is offset far enough
+    int margin = abs(joystick->GetXMax() - joystick->GetXMin()) / 4;
     for (int i = 0; i < joystick->GetNumberAxes(); i++) {
-        if (joystick->GetPosition(i) - axisBases[i] > joystick->GetXMax() / 2) { // Positive
+        if (joystick->GetPosition(i) - axisBases[i] > margin) { // Positive
             keyBinds[keyIndex] = 2000 + i;
             current->SetLabel(keyToStr(keyBinds[keyIndex]));
             current = nullptr;
             return;
         }
-        else if (joystick->GetPosition(i) - axisBases[i] < joystick->GetXMin() / 2) { // Negative
+        else if (joystick->GetPosition(i) - axisBases[i] < -margin) { // Negative
             keyBinds[keyIndex] = 3000 + i;
             current->SetLabel(keyToStr(keyBinds[keyIndex]));
             current = nullptr;

@@ -150,11 +150,8 @@ b3Frame::b3Frame(): wxFrame(nullptr, wxID_ANY, "3Beans") {
     // Prepare a joystick if one is connected
     joystick = new wxJoystick();
     if (joystick->IsOk()) {
-        // Save initial axis values so inputs can be detected as offsets from resting
-        for (int i = 0; i < joystick->GetNumberAxes(); i++)
-            axisBases.push_back(joystick->GetPosition(i));
-
-        // Start a timer to update joystick input, since wxJoystickEvents are unreliable
+        // Initialize data and start the joystick update timer
+        axisBases.reserve(joystick->GetNumberAxes());
         timer = new wxTimer(this, UPDATE_JOYSTICK);
         timer->Start(10);
     }
@@ -204,6 +201,10 @@ void b3Frame::startCore(bool full) {
             return;
         }
     }
+
+    // Update the resting axis values so relative offsets can be taken
+    for (int i = 0; i < joystick->GetNumberAxes(); i++)
+        axisBases[i] = joystick->GetPosition(i);
 
     // Start the core thread if not already running
     if (running.load()) return;
@@ -430,6 +431,7 @@ void b3Frame::inputBindings(wxCommandEvent &event) {
 void b3Frame::updateJoystick(wxTimerEvent &event) {
     // Check the status of mapped joystick inputs
     int stickX = 0, stickY = 0;
+    int size = abs(joystick->GetXMax() - joystick->GetXMin()) / 2;
     for (int i = 0; i < MAX_KEYS; i++) {
         if (b3App::keyBinds[i] >= 3000 && joystick->GetNumberAxes() > b3App::keyBinds[i] - 3000) { // Axis -
             int j = b3App::keyBinds[i] - 3000;
@@ -437,30 +439,30 @@ void b3Frame::updateJoystick(wxTimerEvent &event) {
             case 12: // Stick Right
                 // Scale the axis position and apply it to the stick in the right direction
                 if (joystick->GetPosition(j) < axisBases[j])
-                    stickX -= (joystick->GetPosition(j) - axisBases[j]) * 0x7FF / joystick->GetXMax();
+                    stickX += (joystick->GetPosition(j) - axisBases[j]) * 0x7FF / size;
                 continue;
 
             case 13: // Stick Left
                 // Scale the axis position and apply it to the stick in the left direction
                 if (joystick->GetPosition(j) < axisBases[j])
-                    stickX += (joystick->GetPosition(j) - axisBases[j]) * 0x7FF / joystick->GetXMin();
+                    stickX -= (joystick->GetPosition(j) - axisBases[j]) * 0x7FF / size;
                 continue;
 
             case 14: // Stick Up
                 // Scale the axis position and apply it to the stick in the up direction
                 if (joystick->GetPosition(j) < axisBases[j])
-                    stickY += (joystick->GetPosition(j) - axisBases[j]) * 0x7FF / joystick->GetYMin();
+                    stickY -= (joystick->GetPosition(j) - axisBases[j]) * 0x7FF / size;
                 continue;
 
             case 15: // Stick Down
                 // Scale the axis position and apply it to the stick in the down direction
                 if (joystick->GetPosition(j) < axisBases[j])
-                    stickY -= (joystick->GetPosition(j) - axisBases[j]) * 0x7FF / joystick->GetYMax();
+                    stickY += (joystick->GetPosition(j) - axisBases[j]) * 0x7FF / size;
                 continue;
 
             default:
                 // Trigger a key press or release based on the axis position
-                if (joystick->GetPosition(j) < axisBases[j] - joystick->GetXMax() / 2)
+                if (joystick->GetPosition(j) - axisBases[j] < -size / 2)
                     pressKey(i);
                 else
                     releaseKey(i);
@@ -473,30 +475,30 @@ void b3Frame::updateJoystick(wxTimerEvent &event) {
             case 12: // Stick Right
                 // Scale the axis position and apply it to the stick in the right direction
                 if (joystick->GetPosition(j) > axisBases[j])
-                    stickX -= (joystick->GetPosition(j) - axisBases[j]) * 0x7FF / joystick->GetXMax();
+                    stickX -= (joystick->GetPosition(j) - axisBases[j]) * 0x7FF / size;
                 continue;
 
             case 13: // Stick Left
                 // Scale the axis position and apply it to the stick in the left direction
                 if (joystick->GetPosition(j) > axisBases[j])
-                    stickX += (joystick->GetPosition(j) - axisBases[j]) * 0x7FF / joystick->GetXMin();
+                    stickX += (joystick->GetPosition(j) - axisBases[j]) * 0x7FF / size;
                 continue;
 
             case 14: // Stick Up
                 // Scale the axis position and apply it to the stick in the up direction
                 if (joystick->GetPosition(j) > axisBases[j])
-                    stickY += (joystick->GetPosition(j) - axisBases[j]) * 0x7FF / joystick->GetYMin();
+                    stickY += (joystick->GetPosition(j) - axisBases[j]) * 0x7FF / size;
                 continue;
 
             case 15: // Stick Down
                 // Scale the axis position and apply it to the stick in the down direction
                 if (joystick->GetPosition(j) > axisBases[j])
-                    stickY -= (joystick->GetPosition(j) - axisBases[j]) * 0x7FF / joystick->GetYMax();
+                    stickY -= (joystick->GetPosition(j) - axisBases[j]) * 0x7FF / size;
                 continue;
 
             default:
                 // Trigger a key press or release based on the axis position
-                if (joystick->GetPosition(j) > axisBases[j] + joystick->GetXMax() / 2)
+                if (joystick->GetPosition(j) - axisBases[j] > size / 2)
                     pressKey(i);
                 else
                     releaseKey(i);
