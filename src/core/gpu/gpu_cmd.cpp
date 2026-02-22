@@ -580,8 +580,8 @@ void Gpu::writeColbufLoc(uint32_t mask, uint32_t value) {
 void Gpu::writeBufferDim(uint32_t mask, uint32_t value) {
     // Write to the render buffer dimensions and send them to the renderer
     mask &= 0x13FF7FF;
-    gpuColbufLoc = (gpuColbufLoc & ~mask) | (value & mask);
-    gpuRender->setBufferDims(gpuColbufLoc & 0x7FF, ((gpuColbufLoc >> 12) & 0x3FF) + 1, gpuColbufLoc & BIT(24));
+    gpuBufferDim = (gpuBufferDim & ~mask) | (value & mask);
+    gpuRender->setBufferDims(gpuBufferDim & 0x7FF, ((gpuBufferDim >> 12) & 0x3FF) + 1, gpuBufferDim & BIT(24));
 }
 
 void Gpu::writeAttrBase(uint32_t mask, uint32_t value) {

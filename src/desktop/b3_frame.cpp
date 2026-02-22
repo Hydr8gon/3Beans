@@ -203,8 +203,9 @@ void b3Frame::startCore(bool full) {
     }
 
     // Update the resting axis values so relative offsets can be taken
-    for (int i = 0; i < joystick->GetNumberAxes(); i++)
-        axisBases[i] = joystick->GetPosition(i);
+    if (joystick)
+        for (int i = 0; i < joystick->GetNumberAxes(); i++)
+            axisBases[i] = joystick->GetPosition(i);
 
     // Start the core thread if not already running
     if (running.load()) return;
