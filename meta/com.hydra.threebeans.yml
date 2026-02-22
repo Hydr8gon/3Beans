@@ -19,7 +19,7 @@ modules:
     sources:
       - type: git
         url: https://github.com/wxWidgets/wxWidgets.git
-        commit: 1fd12d7bd6987603b8d63000a593a4286f5cad46
+        commit: 9720f1fdce0e11313d383a6ceb92275e7910e540
     modules:
       - name: glu
         config-opts:

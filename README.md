@@ -46,7 +46,7 @@ install a custom build by running the following commands:
 ```
 git clone --recursive https://github.com/wxWidgets/wxWidgets.git
 cd wxWidgets
-git reset --hard 1fd12d7bd6987603b8d63000a593a4286f5cad46
+git reset --hard 9720f1fdce0e11313d383a6ceb92275e7910e540
 ./configure --disable-sys-libs --disable-shared --disable-tests --without-libcurl
 make -j4
 sudo make install
