@@ -128,7 +128,6 @@ void (TeakInterp::**TeakInterp::writeBx16M)(uint16_t) = &writeAb16M[0];
 void (TeakInterp::**TeakInterp::writeAxlM)(uint16_t) = &writeAblM[2];
 
 int8_t TeakInterp::offsTable[] = { 0, 1, -1, -1 };
-int32_t TeakInterp::stepTable[] = { 0, 1, -1, STEP_S, 2, -2, 2, -2 };
 
 void TeakInterp::initLookup() {
     // Build an instruction lookup table using all 16 opcode bits

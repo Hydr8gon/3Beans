@@ -305,7 +305,7 @@ uint16_t TeakInterp::offsReg(uint8_t reg, int8_t offs) {
     return regR[reg] + offs;
 }
 
-uint16_t TeakInterp::stepReg(uint8_t reg, int32_t step) {
+uint16_t TeakInterp::stepReg(uint8_t reg, StepType step) {
     // Get the current address to return, bit-reversed if enabled
     bool md = (regMod[2] & BIT(reg));
     bool br = (regMod[2] & BIT(reg + 8));
@@ -313,24 +313,30 @@ uint16_t TeakInterp::stepReg(uint8_t reg, int32_t step) {
 
     // Clear R3/R7 instead of single-stepping them if enabled
     int i = (reg >> 2);
-    if ((reg & 0x3) == 3 && (regMod[1] & BIT(14 + i)) && abs(step) != 2) {
+    if ((reg & 0x3) == 3 && (regMod[1] & BIT(14 + i)) && step < STEP_INC2) {
         regR[reg] = 0;
         return address;
     }
 
     // Get the actual value to step with based on configuration
     int32_t value;
-    if (step != STEP_S) {
-        // Use a constant step value directly
-        value = step;
-    }
-    else if ((regMod[1] & 0x3000) == 0x1000 || (br && !md)) {
-        // Use a 16-bit step register, truncated to 9-bit with modulo
-        value = md ? (int16_t(regStep0[i] << 7) >> 7) : regStep0[i];
-    }
-    else {
-        // Use a 7-bit step register in TL1 mode or when 16-bit is disabled
-        value = int8_t(regCfg[i] << 1) >> 1;
+    switch (step) {
+        case STEP_NONE: value = 0; break;
+        case STEP_INC1: value = 1; break;
+        case STEP_DEC1: value = -1; break;
+        case STEP_INC2: case STEP_INC2_ALT: value = 2; break;
+        case STEP_DEC2: case STEP_DEC2_ALT: value = -2; break;
+
+    default:
+        if ((regMod[1] & 0x3000) == 0x1000 || (br && !md)) {
+            // Use a 16-bit step register, truncated to 9-bit with modulo
+            value = md ? (int16_t(regStep0[i] << 7) >> 7) : regStep0[i];
+        }
+        else {
+            // Use a 7-bit step register in TL1 mode or when 16-bit is disabled
+            value = int8_t(regCfg[i] << 1) >> 1;
+        }
+        break;
     }
 
     // Apply the step to the address register without modulo
@@ -339,19 +345,43 @@ uint16_t TeakInterp::stepReg(uint8_t reg, int32_t step) {
         return address;
     }
 
-    // Break the step into two parts if it's a double constant
-    int count = 1;
-    if (abs(step) == 2)
-        value >>= 1, count++;
+    // Check the modulo value and mode
+    uint16_t mod = (regCfg[i] >> 7);
+    if (!mod || !value) return address;
+    bool cmd = (regMod[1] & BIT(13));
 
-    // Apply the step to the address register with modulo, wrapping at bounds
-    // TODO: handle TL1/TL2 modes properly
-    while (count--) {
-        if (step > 0 && (regR[reg] & modMasks[i]) == (regCfg[i] >> 7))
-            regR[reg] = (regR[reg] & ~modMasks[i]) | 0;
-        else if (step < 0 && (regR[reg] & modMasks[i]) == 0)
-            regR[reg] = (regR[reg] & ~modMasks[i]) | (regCfg[i] >> 7);
-        else regR[reg] += value;
+    // Apply the step to the address register with modulo based on mode
+    if (cmd || step == STEP_INC2_ALT || step == STEP_DEC2_ALT) { // TL1
+        // Expand the modulo mask if the step is larger than it
+        if (!cmd && mod == 1) return address;
+        uint16_t mask = modMasks[i] + 1, base;
+        uint16_t val = (value < 0) ? ~value : value;
+        while (mask <= val) mask <<= 1;
+        mask--;
+
+        // Use legacy logic to wrap the result after stepping
+        bool cond = (cmd || mod != mask);
+        if (value < 0)
+            base = (cond && (regR[reg] & mask) == 0) ? mod : (regR[reg] + value);
+        else
+            base = (cond && (regR[reg] & mask) == mod) ? 0 : (regR[reg] + value);
+        regR[reg] = (regR[reg] & ~mask) | (base & mask);
+    }
+    else { // TL2
+        // Split double steps into two parts
+        int count = 1;
+        if (step == STEP_INC2 || step == STEP_DEC2)
+            value >>= 1, count++;
+
+        // Use updated logic to wrap the result after stepping
+        while (count--) {
+            uint16_t mask = modMasks[i], base;
+            if (value < 0)
+                base = ((regR[reg] & mask) ? regR[reg] : (mod + 1)) + value;
+            else
+                base = (((regR[reg] + value) ^ (mod + 1)) & mask) ? (regR[reg] + value) : 0;
+            regR[reg] = (regR[reg] & ~mask) | (base & mask);
+        }
     }
     return address;
 }
@@ -526,7 +556,7 @@ template <int i> void TeakInterp::writeCfg(uint16_t value) {
 
     // Calculate a modulo mask based on the base modulo value
     modMasks[i] = 2;
-    while (modMasks[i] < (regCfg[i] >> 7)) modMasks[i] <<= 1;
+    while (modMasks[i] <= (regCfg[i] >> 7)) modMasks[i] <<= 1;
     modMasks[i]--;
 }
 
@@ -537,8 +567,8 @@ template <int i> void TeakInterp::writeAr(uint16_t value) {
     arRn[i * 2 + 1] = (value >> 10) & 0x7;
     arCs[i * 2 + 0] = offsTable[(value >> 8) & 0x3];
     arCs[i * 2 + 1] = offsTable[(value >> 3) & 0x3];
-    arPm[i * 2 + 0] = stepTable[(value >> 5) & 0x7];
-    arPm[i * 2 + 1] = stepTable[(value >> 0) & 0x7];
+    arPm[i * 2 + 0] = StepType((value >> 5) & 0x7);
+    arPm[i * 2 + 1] = StepType((value >> 0) & 0x7);
 }
 
 template <int i> void TeakInterp::writeArp(uint16_t value) {
@@ -548,8 +578,8 @@ template <int i> void TeakInterp::writeArp(uint16_t value) {
     arpRj[i] = ((value >> 13) & 0x3) + 4;
     arpCi[i] = offsTable[(value >> 3) & 0x3];
     arpCj[i] = offsTable[(value >> 8) & 0x3];
-    arpPi[i] = stepTable[(value >> 0) & 0x7];
-    arpPj[i] = stepTable[(value >> 5) & 0x7];
+    arpPi[i] = StepType((value >> 0) & 0x7);
+    arpPj[i] = StepType((value >> 5) & 0x7);
 }
 
 void TeakInterp::writeP0h(uint16_t value) {

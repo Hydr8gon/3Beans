@@ -21,9 +21,18 @@
 
 #include <cstdint>
 
-#define STEP_S 0x7FFFFFFF
-
 class Core;
+
+enum StepType {
+    STEP_NONE = 0,
+    STEP_INC1,
+    STEP_DEC1,
+    STEP_STEP,
+    STEP_INC2,
+    STEP_DEC2,
+    STEP_INC2_ALT,
+    STEP_DEC2_ALT
+};
 
 union SplitReg {
     int64_t v;
@@ -94,7 +103,6 @@ private:
     static void (TeakInterp::**writeAxlM)(uint16_t);
 
     static int8_t offsTable[0x4];
-    static int32_t stepTable[0x8];
     uint16_t modMasks[2] = { 0x1, 0x1 };
     bool dmod = false;
 
@@ -104,9 +112,9 @@ private:
     int8_t arCs[4] = { 0, 1, -1, 0 };
     int8_t arpCi[4] = { 0, 1, -1, 0 };
     int8_t arpCj[4] = { 0, 1, -1, 0 };
-    int32_t arPm[4] = { 1, 2, -2, STEP_S };
-    int32_t arpPi[4] = { 1, 2, -2, STEP_S };
-    int32_t arpPj[4] = { 1, 2, -2, STEP_S };
+    StepType arPm[4] = { STEP_INC1, STEP_INC2, STEP_DEC2, STEP_STEP };
+    StepType arpPi[4] = { STEP_INC1, STEP_INC2, STEP_DEC2, STEP_STEP };
+    StepType arpPj[4] = { STEP_INC1, STEP_INC2, STEP_DEC2, STEP_STEP };
 
     SplitReg regA[2] = {};
     SplitReg regB[2] = {};
@@ -158,8 +166,8 @@ private:
     static uint16_t revBits(uint16_t value);
 
     uint16_t offsReg(uint8_t reg, int8_t offs);
-    uint16_t stepReg(uint8_t reg, int32_t step);
-    uint16_t getRnStepZids(uint8_t rnStep) { return stepReg(rnStep & 0x7, stepTable[(rnStep >> 3) & 0x3]); }
+    uint16_t stepReg(uint8_t reg, StepType step);
+    uint16_t getRnStepZids(uint8_t rnStep) { return stepReg(rnStep & 0x7, StepType((rnStep >> 3) & 0x3)); }
     uint16_t getRarOffsAr(uint8_t rarOffs) { return offsReg(arRn[(rarOffs >> 2) & 0x3], arCs[rarOffs & 0x3]); }
     uint16_t getRarStepAr(uint8_t rarStep) { return stepReg(arRn[(rarStep >> 2) & 0x3], arPm[rarStep & 0x3]); }
 

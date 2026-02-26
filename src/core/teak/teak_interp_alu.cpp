@@ -568,8 +568,8 @@ MMAY_FUNC(mmusa3aY, 16, ,,,u, 1, 2, 4) // MMUSA3A Y, MemRar1StepAr1, Ax
     return 1; \
 }
 
-MODR_FUNC(modrD2, stepReg(opcode & 0x7, -2)) // MODR MemRnStepD2
-MODR_FUNC(modrI2, stepReg(opcode & 0x7, 2)) // MODR MemRnStepI2
+MODR_FUNC(modrD2, stepReg(opcode & 0x7, STEP_DEC2)) // MODR MemRnStepD2
+MODR_FUNC(modrI2, stepReg(opcode & 0x7, STEP_INC2)) // MODR MemRnStepI2
 MODR_FUNC(modrZids, getRnStepZids(opcode)) // MODR MemRnStepZids
 
 // Modify an address register with modulo disabled and set the R flag if zero
@@ -582,8 +582,8 @@ MODR_FUNC(modrZids, getRnStepZids(opcode)) // MODR MemRnStepZids
     return 1; \
 }
 
-MODRD_FUNC(modrD2d, stepReg(opcode & 0x7, -2)) // MODR MemRnStepD2, DMOD
-MODRD_FUNC(modrI2d, stepReg(opcode & 0x7, 2)) // MODR MemRnStepI2, DMOD
+MODRD_FUNC(modrD2d, stepReg(opcode & 0x7, STEP_DEC2)) // MODR MemRnStepD2, DMOD
+MODRD_FUNC(modrI2d, stepReg(opcode & 0x7, STEP_INC2)) // MODR MemRnStepI2, DMOD
 MODRD_FUNC(modrZidsd, getRnStepZids(opcode)) // MODR MemRnStepZids, DMOD
 
 int TeakInterp::modrMrmr(uint16_t opcode) { // MODR MemRiStepArp, MemRjStepArp

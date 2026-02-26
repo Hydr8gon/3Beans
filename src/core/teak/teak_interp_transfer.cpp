@@ -108,7 +108,8 @@ MOV_FUNC(movStpa0h, regStep0[(opcode >> 8) & 0x1], writeAhM<0>, 1) // MOV Step0,
 
 // Move a value directly to memory
 #define MOVM_FUNC(name, op0, op1a) int TeakInterp::name(uint16_t opcode) { \
-    core.dsp.writeData(op1a, op0); \
+    uint16_t val = op0; \
+    core.dsp.writeData(op1a, val); \
     return 1; \
 }
 
@@ -141,7 +142,8 @@ MOVMH_FUNC(movMrnreg, getRnStepZids(opcode), writeRegM[(opcode >> 5) & 0x1F], 1)
 
 // Move a value from a read handler to data memory
 #define MOVHM_FUNC(name, op0, op1a, cyc) int TeakInterp::name(uint16_t opcode) { \
-    core.dsp.writeData(op1a, (this->*op0)()); \
+    uint16_t val = (this->*op0)(); \
+    core.dsp.writeData(op1a, val); \
     return cyc; \
 }
 
