@@ -62,7 +62,7 @@ void DspHle::update() {
         sendResponse(2, 0x5);
         setSemaphore(15);
 
-        // Schedule the next stage in a while
+        // Schedule the next stage in a bit
         state = STATE_PIPE_4;
         core.schedule(DSP_HLE_UPDATE, 100000);
         return;
@@ -72,8 +72,18 @@ void DspHle::update() {
         sendResponse(2, 0x4);
         setSemaphore(15);
 
-        // Switch to ready state but don't do anything else for now
+        // Schedule the first periodic update in a while
         state = STATE_READY;
+        core.schedule(DSP_HLE_UPDATE, 10000000);
+        return;
+
+    case STATE_READY:
+        // Send a pipe 4 response to pretend things are happening
+        sendResponse(2, 0x4);
+        setSemaphore(15);
+
+        // Schedule the next periodic update in a while
+        core.schedule(DSP_HLE_UPDATE, 10000000);
         return;
     }
 }
