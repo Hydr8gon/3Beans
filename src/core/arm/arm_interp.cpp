@@ -20,8 +20,10 @@
 #include "arm_interp.h"
 #include "../core.h"
 
-template void ArmInterp::runFrame<false>(Core&);
-template void ArmInterp::runFrame<true>(Core&);
+template void ArmInterp::runFrame<false, false>(Core&);
+template void ArmInterp::runFrame<false, true>(Core&);
+template void ArmInterp::runFrame<true, false>(Core&);
+template void ArmInterp::runFrame<true, true>(Core&);
 
 ArmInterp::ArmInterp(Core &core, CpuId id): core(core), id(id) {
     // Initialize the registers for user mode
@@ -53,25 +55,35 @@ void ArmInterp::stopCycles(Core *core) {
             core->arms[i].cycles = -1;
 }
 
-template <bool extra> void ArmInterp::runFrame(Core &core) {
+template <bool cores, bool dsp> void ArmInterp::runFrame(Core &core) {
     // Run a frame of CPU instructions and events
     while (core.running.exchange(true)) {
         // Run the CPUs until the next scheduled task
         while (core.events[0].cycles > core.globalCycles) {
-            // Run 2 or 4 ARM11 cores depending on execution mode
-            for (int i = 0; i < (extra ? 4 : 2); i++)
+            // Run 2 or 4 ARM11 cores depending on what's enabled
+            for (int i = 0; i < (cores ? 4 : 2); i++)
                 if (core.globalCycles >= core.arms[i].cycles)
                     core.arms[i].cycles = core.globalCycles + core.arms[i].runOpcode();
 
-            // Run the ARM9 and DSP at half the speed of the ARM11
+            // Run the ARM9 at half the speed of the ARM11
             if (core.globalCycles >= core.arms[ARM9].cycles)
                 core.arms[ARM9].cycles = core.globalCycles + (core.arms[ARM9].runOpcode() << 1);
-            if (core.globalCycles >= core.teak.cycles)
-                core.teak.cycles = core.globalCycles + (core.teak.runOpcode() << 1);
 
-            // Count cycles up to the next soonest CPU event
-            core.globalCycles = std::min(core.arms[ARM9].cycles, core.teak.cycles);
-            for (int i = 0; i < (extra ? 4 : 2); i++)
+            // Handle the DSP CPU if it's enabled
+            if (dsp) {
+                // Run the Teak and jump to the next soonest ARM9 or Teak cycle
+                TeakInterp &teak = ((DspLle*)core.dsp)->teak;
+                if (core.globalCycles >= teak.cycles)
+                    teak.cycles = core.globalCycles + (teak.runOpcode() << 1);
+                core.globalCycles = std::min(core.arms[ARM9].cycles, teak.cycles);
+            }
+            else {
+                // Jump to the next soonest ARM9 cycle
+                core.globalCycles = core.arms[ARM9].cycles;
+            }
+
+            // Jump to the next soonest ARM11 cycle if it's closer
+            for (int i = 0; i < (cores ? 4 : 2); i++)
                 core.globalCycles = std::min(core.globalCycles, core.arms[i].cycles);
         }
 

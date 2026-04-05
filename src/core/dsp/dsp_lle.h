@@ -19,15 +19,20 @@
 
 #pragma once
 
-#include <cstdint>
 #include <queue>
+
+#include "dsp.h"
+#include "teak_interp.h"
 
 class Core;
 
-class Dsp {
+class DspLle: public Dsp {
 public:
-    Dsp(Core &core): core(core) {}
+    TeakInterp teak;
+
+    DspLle(Core &core): core(core), teak(core, *this) {}
     void resetCycles();
+    void setAudClock(DspClock clock);
 
     uint16_t readData(uint16_t address);
     void writeData(uint16_t address, uint16_t value);
@@ -35,7 +40,6 @@ public:
     void underflowTmr(int i);
     void unsignalTmr(int i);
     void sendAudio();
-    void setAudClock(DspClock clock);
     uint32_t getIcuVector();
     void updateIcuState();
 
@@ -72,15 +76,6 @@ private:
     uint16_t icuState = 0;
     uint32_t audCycles = 0;
     bool audScheduled = false;
-
-    uint16_t dspPadr = 0;
-    uint16_t dspPcfg = 0;
-    uint16_t dspPsts = 0x100;
-    uint16_t dspPsem = 0;
-    uint16_t dspPmask = 0;
-    uint16_t dspSem = 0;
-    uint16_t dspCmd[3] = {};
-    uint16_t dspRep[3] = {};
 
     uint16_t tmrCtrl[2] = {};
     uint32_t tmrReload[2] = {};

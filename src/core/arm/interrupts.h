@@ -25,6 +25,8 @@ class Core;
 
 class Interrupts {
 public:
+    uint8_t cfg11MpBootcnt[2] = {};
+
     Interrupts(Core &core): core(core) {}
 
     void sendInterrupt(CpuId id, int type);
@@ -75,7 +77,6 @@ private:
     uint8_t sources[MAX_CPUS - 1][0x10] = {};
 
     uint32_t cfg11MpClkcnt = 0;
-    uint8_t cfg11MpBootcnt[2] = {};
     uint32_t mpIle[MAX_CPUS - 1] = {};
     uint32_t mpPrioMask[MAX_CPUS - 1] = { 0xF0, 0xF0, 0xF0, 0xF0 };
     uint32_t mpIge = 0;

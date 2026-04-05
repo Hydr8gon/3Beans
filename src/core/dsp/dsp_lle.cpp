@@ -19,14 +19,29 @@
 
 #include "../core.h"
 
-void Dsp::resetCycles() {
+void DspLle::resetCycles() {
     // Adjust timer end cycles for a global cycle reset
     for (int i = 0; i < 2; i++)
         if (tmrCycles[i] != -1)
             tmrCycles[i] -= core.globalCycles;
+    teak.resetCycles();
 }
 
-uint32_t Dsp::getMiuAddr(uint16_t address) {
+void DspLle::setAudClock(DspClock clock) {
+    // Stop the audio FIFO event if its clock is disabled
+    if (clock == CLK_OFF) {
+        audCycles = 0;
+        return;
+    }
+
+    // Set the audio FIFO event frequency and schedule it if newly enabled
+    audCycles = ((clock == CLK_33KHZ) ? 8130 : 5589) * 8;
+    if (audScheduled || !audOutEnable) return;
+    core.schedule(DSP_SEND_AUDIO, audCycles);
+    audScheduled = true;
+}
+
+uint32_t DspLle::getMiuAddr(uint16_t address) {
     // Convert a DSP word address to an ARM byte address using MIU data pages
     uint16_t page = miuPageZ;
     if (miuMisc & BIT(6)) { // PGM
@@ -38,7 +53,7 @@ uint32_t Dsp::getMiuAddr(uint16_t address) {
     return 0x1FF40000 + ((page << 17) & 0x20000) + (address << 1);
 }
 
-uint16_t Dsp::readData(uint16_t address) {
+uint16_t DspLle::readData(uint16_t address) {
     // Read a value from DSP data memory if not within the I/O area
     if (address < miuIoBase || address >= miuIoBase + 0x800)
         return core.memory.read<uint16_t>(ARM11, getMiuAddr(address));
@@ -147,7 +162,7 @@ uint16_t Dsp::readData(uint16_t address) {
     }
 }
 
-void Dsp::writeData(uint16_t address, uint16_t value) {
+void DspLle::writeData(uint16_t address, uint16_t value) {
     // Write a value to DSP data memory if not within the I/O area
     if (address < miuIoBase || address >= miuIoBase + 0x800)
         return core.memory.write<uint16_t>(ARM11, getMiuAddr(address), value);
@@ -244,7 +259,7 @@ void Dsp::writeData(uint16_t address, uint16_t value) {
     }
 }
 
-void Dsp::underflowTmr(int i) {
+void DspLle::underflowTmr(int i) {
     // Ensure underflow should still occur at the current timestamp
     if (tmrCycles[i] != core.globalCycles)
         return;
@@ -274,13 +289,13 @@ void Dsp::underflowTmr(int i) {
     }
 }
 
-void Dsp::unsignalTmr(int i) {
+void DspLle::unsignalTmr(int i) {
     // Clear a timer's output signal automatically
     tmrSignals[i] = false;
     updateIcuState();
 }
 
-void Dsp::scheduleTmr(int i) {
+void DspLle::scheduleTmr(int i) {
     // Unschedule the timer if stopped, using external clock, or in event mode
     if ((tmrCtrl[i] & 0x1100) || !tmrCount[i] || ((tmrCtrl[i] >> 2) & 0x7) == 0x3) {
         tmrCycles[i] = -1;
@@ -296,7 +311,7 @@ void Dsp::scheduleTmr(int i) {
     tmrCycles[i] += core.globalCycles;
 }
 
-void Dsp::flushAudOut() {
+void DspLle::flushAudOut() {
     // Empty the audio output FIFO, sending left and right samples to be mixed
     while (audOutFifo.size() >= 2) {
         uint16_t value = audOutFifo.front();
@@ -310,7 +325,7 @@ void Dsp::flushAudOut() {
     updateIcuState();
 }
 
-void Dsp::sendAudio() {
+void DspLle::sendAudio() {
     // Ignore and unschedule the audio FIFO event if stopped
     if (!audOutEnable || !audCycles) {
         audScheduled = false;
@@ -322,21 +337,7 @@ void Dsp::sendAudio() {
     core.schedule(DSP_SEND_AUDIO, audCycles);
 }
 
-void Dsp::setAudClock(DspClock clock) {
-    // Stop the audio FIFO event if its clock is disabled
-    if (clock == CLK_OFF) {
-        audCycles = 0;
-        return;
-    }
-
-    // Set the audio FIFO event frequency and schedule it if newly enabled
-    audCycles = ((clock == CLK_33KHZ) ? 8130 : 5589) * 8;
-    if (audScheduled || !audOutEnable) return;
-    core.schedule(DSP_SEND_AUDIO, audCycles);
-    audScheduled = true;
-}
-
-uint32_t Dsp::getIcuVector() {
+uint32_t DspLle::getIcuVector() {
     // Get the ICU vector for the lowest pending and enabled vector bit
     if (!(icuEnable[3] & icuPending)) return 0;
     int v = 0;
@@ -344,7 +345,7 @@ uint32_t Dsp::getIcuVector() {
     return icuVector[v];
 }
 
-uint16_t Dsp::dmaRead(uint8_t area, uint32_t address) {
+uint16_t DspLle::dmaRead(uint8_t area, uint32_t address) {
     // Read a 16-bit value from a DMA area if it exists
     // TODO: handle restricted AHBM addresses
     switch (area) {
@@ -360,7 +361,7 @@ uint16_t Dsp::dmaRead(uint8_t area, uint32_t address) {
     }
 }
 
-void Dsp::dmaWrite(uint8_t area, uint32_t address, uint16_t value) {
+void DspLle::dmaWrite(uint8_t area, uint32_t address, uint16_t value) {
     // Write a 16-bit value to a DMA area if it exists
     // TODO: handle restricted AHBM addresses
     switch (area) {
@@ -376,7 +377,7 @@ void Dsp::dmaWrite(uint8_t area, uint32_t address, uint16_t value) {
     }
 }
 
-void Dsp::dmaTransfer(int i) {
+void DspLle::dmaTransfer(int i) {
     // Get the source and destination parameters
     uint8_t srcArea = (dmaAreaCfg[i] >> 0) & 0xF;
     uint8_t dstArea = (dmaAreaCfg[i] >> 4) & 0xF;
@@ -422,7 +423,7 @@ void Dsp::dmaTransfer(int i) {
     updateIcuState();
 }
 
-void Dsp::updateIcuState() {
+void DspLle::updateIcuState() {
     // Update ICU state bits and set pending for newly-enabled bits
     bool dma = (dmaSignals[0] || dmaSignals[1] || dmaSignals[2]);
     bool hpi = (hpiSts & BIT(9)) || (hpiSts & ~hpiCfg & 0x3100);
@@ -439,10 +440,10 @@ void Dsp::updateIcuState() {
     for (int i = 0; i < 4; i++)
         if (icuEnable[i] & edge)
             mask |= BIT(i);
-    core.teak.setPendingIrqs(mask);
+    teak.setPendingIrqs(mask);
 }
 
-void Dsp::updateArmSemIrq() {
+void DspLle::updateArmSemIrq() {
     // Update the ARM-side semaphore IRQ flag and trigger an interrupt if set
     if (!(dspSem & ~dspPmask)) {
         dspPsts &= ~BIT(9);
@@ -454,7 +455,7 @@ void Dsp::updateArmSemIrq() {
     }
 }
 
-void Dsp::updateDspSemIrq() {
+void DspLle::updateDspSemIrq() {
     // Update the DSP-side semaphore IRQ flag and trigger an interrupt if set
     if (!(dspPsem & ~hpiMask)) {
         hpiSts &= ~BIT(9);
@@ -466,7 +467,7 @@ void Dsp::updateDspSemIrq() {
     updateIcuState();
 }
 
-void Dsp::updateReadFifo() {
+void DspLle::updateReadFifo() {
     // Fill the read FIFO until it's finished or full
     uint8_t area = (dspPcfg >> 12);
     while (readLength > 0 && readFifo.size() < 16) {
@@ -483,7 +484,7 @@ void Dsp::updateReadFifo() {
         core.interrupts.sendInterrupt(ARM11, 0x4A);
 }
 
-uint32_t Dsp::readTmrCount(int i) {
+uint32_t DspLle::readTmrCount(int i) {
     // Update the counter based on its underflow timestamp if scheduled
     if (tmrCycles[i] != -1) {
         uint8_t shift = (tmrCtrl[i] & 0x3);
@@ -497,7 +498,7 @@ uint32_t Dsp::readTmrCount(int i) {
     return (tmrCtrl[i] & BIT(9)) ? tmrCount[i] : tmrLatches[i];
 }
 
-uint16_t Dsp::readHpiCmd(int i) {
+uint16_t DspLle::readHpiCmd(int i) {
     // Read from one of the DSP-side CMD registers and clear its update flags
     hpiSts &= ~BIT(i ? (11 + i) : 8);
     dspPsts &= ~BIT(13 + i);
@@ -505,7 +506,7 @@ uint16_t Dsp::readHpiCmd(int i) {
     return dspCmd[i];
 }
 
-uint16_t Dsp::readDmaEnd(int i) {
+uint16_t DspLle::readDmaEnd(int i) {
     // Read from one of the DMA end flag registers and clear it
     uint16_t value = dmaEnd[i];
     dmaEnd[i] = 0;
@@ -514,7 +515,7 @@ uint16_t Dsp::readDmaEnd(int i) {
     return value;
 }
 
-void Dsp::writeTmrCtrl(int i, uint16_t value) {
+void DspLle::writeTmrCtrl(int i, uint16_t value) {
     // Update the timer before changing things
     readTmrCount(i);
 
@@ -544,7 +545,7 @@ void Dsp::writeTmrCtrl(int i, uint16_t value) {
     scheduleTmr(i);
 }
 
-void Dsp::writeTmrEvent(int i, uint16_t value) {
+void DspLle::writeTmrEvent(int i, uint16_t value) {
     // Trigger a timer event for certain modes if bit 0 is set
     if (~value & BIT(0)) return;
     uint8_t mode = (tmrCtrl[i] >> 2) & 0x7;
@@ -561,17 +562,17 @@ void Dsp::writeTmrEvent(int i, uint16_t value) {
     }
 }
 
-void Dsp::writeTmrReloadL(int i, uint16_t value) {
+void DspLle::writeTmrReloadL(int i, uint16_t value) {
     // Write to the low part of a timer reload value
     tmrReload[i] = (tmrReload[i] & ~0xFFFF) | value;
 }
 
-void Dsp::writeTmrReloadH(int i, uint16_t value) {
+void DspLle::writeTmrReloadH(int i, uint16_t value) {
     // Write to the high part of a timer reload value
     tmrReload[i] = (tmrReload[i] & 0xFFFF) | ((value & 0x8003) << 16);
 }
 
-void Dsp::writeHpiRep(int i, uint16_t value) {
+void DspLle::writeHpiRep(int i, uint16_t value) {
     // Write to one of the DSP-side REP registers and set its update flags
     dspRep[i] = value;
     LOG_INFO("Writing DSP reply register %d: 0x%X\n", i, dspRep[i]);
@@ -583,170 +584,170 @@ void Dsp::writeHpiRep(int i, uint16_t value) {
         core.interrupts.sendInterrupt(ARM11, 0x4A);
 }
 
-void Dsp::writeHpiSem(uint16_t value) {
+void DspLle::writeHpiSem(uint16_t value) {
     // Write to the DSP-side semaphore flag register
     dspSem = value;
     updateArmSemIrq();
 }
 
-void Dsp::writeHpiMask(uint16_t value) {
+void DspLle::writeHpiMask(uint16_t value) {
     // Write to the DSP-side semaphore interrupt mask
     hpiMask = value;
     updateDspSemIrq();
 }
 
-void Dsp::writeHpiClear(uint16_t value) {
+void DspLle::writeHpiClear(uint16_t value) {
     // Clear semaphore flags in the ARM-side register
     dspPsem &= ~value;
     updateDspSemIrq();
 }
 
-void Dsp::writeHpiCfg(uint16_t value) {
+void DspLle::writeHpiCfg(uint16_t value) {
     // Write to the HPI control register
     hpiCfg = (value & 0x3104);
     if (hpiCfg & BIT(2))
         LOG_CRIT("Unhandled DSP big-endian I/O mode enabled\n");
 }
 
-void Dsp::writeMiuPageX(uint16_t value) {
+void DspLle::writeMiuPageX(uint16_t value) {
     // Write to the MIU page X register
     miuPageX = value;
 }
 
-void Dsp::writeMiuPageY(uint16_t value) {
+void DspLle::writeMiuPageY(uint16_t value) {
     // Write to the MIU page Y register
     miuPageY = (value & 0xFF);
 }
 
-void Dsp::writeMiuPageZ(uint16_t value) {
+void DspLle::writeMiuPageZ(uint16_t value) {
     // Write to the MIU page Z register
     miuPageZ = value;
 }
 
-void Dsp::writeMiuSize0(uint16_t value) {
+void DspLle::writeMiuSize0(uint16_t value) {
     // Write to the MIU page 0 size register and auto-adjust page Y
     miuSize0 = std::min(0x4000, std::max(0x100, value & 0x7F00)) | (value & 0x3F);
     miuBoundX = ((miuSize0 << 10) & 0xFC00);
     miuBoundY = ((miuSize0 << 2) & 0x1FC00) + miuBoundX;
 }
 
-void Dsp::writeMiuMisc(uint16_t value) {
+void DspLle::writeMiuMisc(uint16_t value) {
     // Write to the MIU miscellaneous config register
     // TODO: handle bits other than PGM?
     miuMisc = (value & 0x79) | 0x4;
 }
 
-void Dsp::writeMiuIoBase(uint16_t value) {
+void DspLle::writeMiuIoBase(uint16_t value) {
     // Write to the MIU I/O base address register
     miuIoBase = (value & 0xFC00);
     LOG_INFO("Remapping DSP I/O registers to 0x%X\n", miuIoBase);
 }
 
-void Dsp::writeDmaStart(uint16_t value) {
+void DspLle::writeDmaStart(uint16_t value) {
     // Perform DMA transfers for any started channels (except 0 for PDATA)
     for (int i = 1; i < 8; i++)
         if (value & BIT(i)) dmaTransfer(i);
 }
 
-void Dsp::writeDmaSelect(uint16_t value) {
+void DspLle::writeDmaSelect(uint16_t value) {
     // Write to the DMA channel select register
     dmaSelect = (value & 0x7);
 }
 
-void Dsp::writeDmaSrcAddrL(uint16_t value) {
+void DspLle::writeDmaSrcAddrL(uint16_t value) {
     // Write to the low part of the selected DMA source address
     dmaSrcAddr[dmaSelect] = (dmaSrcAddr[dmaSelect] & ~0xFFFF) | value;
 }
 
-void Dsp::writeDmaSrcAddrH(uint16_t value) {
+void DspLle::writeDmaSrcAddrH(uint16_t value) {
     // Write to the high part of the selected DMA source address
     dmaSrcAddr[dmaSelect] = (dmaSrcAddr[dmaSelect] & 0xFFFF) | (value << 16);
 }
 
-void Dsp::writeDmaDstAddrL(uint16_t value) {
+void DspLle::writeDmaDstAddrL(uint16_t value) {
     // Write to the low part of the selected DMA destination address
     dmaDstAddr[dmaSelect] = (dmaDstAddr[dmaSelect] & ~0xFFFF) | value;
 }
 
-void Dsp::writeDmaDstAddrH(uint16_t value) {
+void DspLle::writeDmaDstAddrH(uint16_t value) {
     // Write to the high part of the selected DMA destination address
     dmaDstAddr[dmaSelect] = (dmaDstAddr[dmaSelect] & 0xFFFF) | (value << 16);
 }
 
-void Dsp::writeDmaSize(int i, uint16_t value) {
+void DspLle::writeDmaSize(int i, uint16_t value) {
     // Write to one of the selected DMA size registers with a minimum of 1
     dmaSize[i][dmaSelect] = std::max<uint16_t>(0x1, value);
 }
 
-void Dsp::writeDmaSrcStep(int i, uint16_t value) {
+void DspLle::writeDmaSrcStep(int i, uint16_t value) {
     // Write to one of the selected DMA source step registers
     dmaSrcStep[i][dmaSelect] = value;
 }
 
-void Dsp::writeDmaDstStep(int i, uint16_t value) {
+void DspLle::writeDmaDstStep(int i, uint16_t value) {
     // Write to one of the selected DMA destination step registers
     dmaDstStep[i][dmaSelect] = value;
 }
 
-void Dsp::writeDmaAreaCfg(uint16_t value) {
+void DspLle::writeDmaAreaCfg(uint16_t value) {
     // Write to the selected DMA area config register
     dmaAreaCfg[dmaSelect] = (value & 0xF7FF);
 }
 
-void Dsp::writeDmaCtrl(uint16_t value) {
+void DspLle::writeDmaCtrl(uint16_t value) {
     // Write to the selected DMA control register and transfer if started
     // TODO: handle bits other than interrupt enable?
     dmaCtrl[dmaSelect] = (value & 0xFF);
     if (value & BIT(14)) dmaTransfer(dmaSelect);
 }
 
-void Dsp::writeIcuAck(uint16_t value) {
+void DspLle::writeIcuAck(uint16_t value) {
     // Clear ICU pending bits if edge-triggered or inactive
     updateIcuState();
     icuPending &= ~(value & (icuMode | ~icuState));
 }
 
-void Dsp::writeIcuTrigger(uint16_t value) {
+void DspLle::writeIcuTrigger(uint16_t value) {
     // Write to the ICU manual trigger mask
     icuTrigger = value;
     updateIcuState();
 }
 
-void Dsp::writeIcuEnable(int i, uint16_t value) {
+void DspLle::writeIcuEnable(int i, uint16_t value) {
     // Write to one of the ICU enable masks
     icuEnable[i] = value;
     updateIcuState();
 }
 
-void Dsp::writeIcuMode(uint16_t value) {
+void DspLle::writeIcuMode(uint16_t value) {
     // Write to the ICU trigger mode mask
     icuMode = value;
 }
 
-void Dsp::writeIcuVectorL(int i, uint16_t value) {
+void DspLle::writeIcuVectorL(int i, uint16_t value) {
     // Write to the low part of an ICU vector address
     icuVector[i] = (icuVector[i] & ~0xFFFF) | value;
 }
 
-void Dsp::writeIcuVectorH(int i, uint16_t value) {
+void DspLle::writeIcuVectorH(int i, uint16_t value) {
     // Write to the high part of an ICU vector address
     icuVector[i] = (icuVector[i] & 0xFFFF) | ((value & 0x8003) << 16);
 }
 
-void Dsp::writeIcuDisable(uint16_t value) {
+void DspLle::writeIcuDisable(uint16_t value) {
     // Write to the ICU global disable mask
     icuDisable = value;
     updateIcuState();
 }
 
-void Dsp::writeAudOutCtrl(uint16_t value) {
+void DspLle::writeAudOutCtrl(uint16_t value) {
     // Write to the audio output control register
     // TODO: handle bits other than interrupt enable?
     audOutCtrl = value;
     updateIcuState();
 }
 
-void Dsp::writeAudOutEnable(uint16_t value) {
+void DspLle::writeAudOutEnable(uint16_t value) {
     // Write to the audio output enable register
     audOutEnable = (value & 0x8000);
 
@@ -756,7 +757,7 @@ void Dsp::writeAudOutEnable(uint16_t value) {
     audScheduled = true;
 }
 
-void Dsp::writeAudOutFifo(uint16_t value) {
+void DspLle::writeAudOutFifo(uint16_t value) {
     // Write a 16-bit sample to the audio output FIFO if there's room
     if (audOutFifo.size() >= 16) return;
     audOutFifo.push(value);
@@ -766,13 +767,13 @@ void Dsp::writeAudOutFifo(uint16_t value) {
     updateIcuState();
 }
 
-void Dsp::writeAudOutFlush(uint16_t value) {
+void DspLle::writeAudOutFlush(uint16_t value) {
     // Write to the audio output flush register and flush the FIFO if requested
     audOutFlush = (value & 0x3);
     if (value & BIT(2)) flushAudOut();
 }
 
-uint16_t Dsp::readPdata() {
+uint16_t DspLle::readPdata() {
     // Pop a value from the read FIFO and update it if necessary
     uint16_t value = readFifo.front();
     readFifo.pop();
@@ -781,14 +782,14 @@ uint16_t Dsp::readPdata() {
     return value;
 }
 
-uint16_t Dsp::readRep(int i) {
+uint16_t DspLle::readRep(int i) {
     // Read from one of the ARM-side REP registers and clear its update flags
     dspPsts &= ~BIT(10 + i);
     hpiSts &= ~BIT(5 + i);
     return dspRep[i];
 }
 
-void Dsp::writePdata(uint16_t mask, uint16_t value) {
+void DspLle::writePdata(uint16_t mask, uint16_t value) {
     // Write a value to DMA instantly and adjust the address
     dmaWrite(dspPcfg >> 12, (dmaDstAddr[0] & ~0xFFFF) | dspPadr, value & mask);
     dspPadr += (dspPcfg >> 1) & 0x1;
@@ -798,12 +799,12 @@ void Dsp::writePdata(uint16_t mask, uint16_t value) {
         core.interrupts.sendInterrupt(ARM11, 0x4A);
 }
 
-void Dsp::writePadr(uint16_t mask, uint16_t value) {
+void DspLle::writePadr(uint16_t mask, uint16_t value) {
     // Write to the DSP_PADR register
     dspPadr = (dspPadr & ~mask) | (value & mask);
 }
 
-void Dsp::writePcfg(uint16_t mask, uint16_t value) {
+void DspLle::writePcfg(uint16_t mask, uint16_t value) {
     // Write to the DSP_PCFG register
     uint16_t old = dspPcfg;
     dspPcfg = (dspPcfg & ~mask) | (value & mask);
@@ -819,30 +820,30 @@ void Dsp::writePcfg(uint16_t mask, uint16_t value) {
 
     // Reset the DSP if the reset bit was newly set
     if (!(~old & dspPcfg & BIT(0))) return;
-    LOG_INFO("Restarting Teak DSP execution\n");
-    core.teak.cycles = 0;
-    core.teak.regPc = 0;
+    LOG_INFO("Restarting LLE DSP execution\n");
+    teak.cycles = teak.regPc = 0;
+    core.schedule(UPDATE_RUN_FUNC, 0);
 }
 
-void Dsp::writePsem(uint16_t mask, uint16_t value) {
+void DspLle::writePsem(uint16_t mask, uint16_t value) {
     // Write to the ARM-side semaphore flag register
     dspPsem = (dspPsem & ~mask) | (value & mask);
     updateDspSemIrq();
 }
 
-void Dsp::writePmask(uint16_t mask, uint16_t value) {
+void DspLle::writePmask(uint16_t mask, uint16_t value) {
     // Write to the ARM-side semaphore interrupt mask
     dspPmask = (dspPmask & ~mask) | (value & mask);
     updateArmSemIrq();
 }
 
-void Dsp::writePclear(uint16_t mask, uint16_t value) {
+void DspLle::writePclear(uint16_t mask, uint16_t value) {
     // Clear semaphore flags in the DSP-side register
     dspSem &= ~(value & mask);
     updateArmSemIrq();
 }
 
-void Dsp::writeCmd(int i, uint16_t mask, uint16_t value) {
+void DspLle::writeCmd(int i, uint16_t mask, uint16_t value) {
     // Write to one of the ARM-side CMD registers and set its update flags
     dspCmd[i] = (dspCmd[i] & ~mask) | (value & mask);
     LOG_INFO("Writing DSP command register %d: 0x%X\n", i, dspCmd[i]);

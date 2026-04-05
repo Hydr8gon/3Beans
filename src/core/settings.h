@@ -34,6 +34,7 @@ struct Setting {
 namespace Settings {
     extern int fpsLimiter;
     extern int cartAutoBoot;
+    extern int dspBackend;
     extern int threadedGpu;
     extern int gpuRenderer;
     extern int gpuShader;

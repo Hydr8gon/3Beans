@@ -352,5 +352,5 @@ void Csnd::writeSndexcnt(uint32_t mask, uint32_t value) {
         dspClock = CLK_48KHZ;
     else
         dspClock = CLK_33KHZ;
-    core.dsp.setAudClock(dspClock);
+    core.dsp->setAudClock(dspClock);
 }

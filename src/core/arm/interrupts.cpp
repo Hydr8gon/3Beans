@@ -96,10 +96,7 @@ void Interrupts::halt(CpuId id, uint8_t type) {
     if ((cfg11MpBootcnt[id - 2] & (BIT(0) | BIT(4))) != BIT(4)) return;
     cfg11MpBootcnt[id - 2] &= ~BIT(4);
     LOG_INFO("Disabling ARM11 core %d\n", id);
-
-    // Switch to 2-core execution if both extra cores are now stopped
-    if (~cfg11MpBootcnt[(id - 2) ^ 1] & BIT(4))
-        core.schedule(TOGGLE_RUN_FUNC, 1);
+    core.schedule(UPDATE_RUN_FUNC, 0);
 }
 
 uint16_t Interrupts::readCfg11Socinfo() {
@@ -186,10 +183,7 @@ void Interrupts::writeCfg11MpBootcnt(int i, uint8_t value) {
     core.arms[i].unhalt(BIT(0) | BIT(1));
     cfg11MpBootcnt[i - 2] |= (BIT(4) | BIT(5));
     LOG_INFO("Enabling ARM11 core %d\n", i);
-
-    // Switch to 4-core execution if both extra cores were stopped
-    if (~cfg11MpBootcnt[(i - 2) ^ 1] & BIT(4))
-        core.schedule(TOGGLE_RUN_FUNC, 1);
+    core.schedule(UPDATE_RUN_FUNC, 0);
 }
 
 void Interrupts::writeMpIle(CpuId id, uint32_t mask, uint32_t value) {

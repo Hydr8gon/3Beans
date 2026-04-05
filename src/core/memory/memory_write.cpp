@@ -424,15 +424,15 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x10200D0C, core.cdmas[CDMA0].writeDbginst1(IO_PARAMS)) // CDMA0_DBGINST1
                 DEF_IO32(0x10200020, core.cdmas[CDMA0].writeInten(IO_PARAMS)) // CDMA0_INTEN
                 DEF_IO32(0x1020002C, core.cdmas[CDMA0].writeIntclr(IO_PARAMS)) // CDMA0_INTCLR
-                DEF_IO16(0x10203000, core.dsp.writePdata(IO_PARAMS)) // DSP_PDATA
-                DEF_IO16(0x10203004, core.dsp.writePadr(IO_PARAMS)) // DSP_PADR
-                DEF_IO16(0x10203008, core.dsp.writePcfg(IO_PARAMS)) // DSP_PCFG
-                DEF_IO16(0x10203010, core.dsp.writePsem(IO_PARAMS)) // DSP_PSEM
-                DEF_IO16(0x10203014, core.dsp.writePmask(IO_PARAMS)) // DSP_PMASK
-                DEF_IO16(0x10203018, core.dsp.writePclear(IO_PARAMS)) // DSP_PCLEAR
-                DEF_IO16(0x10203020, core.dsp.writeCmd(0, IO_PARAMS)) // DSP_CMD0
-                DEF_IO16(0x10203028, core.dsp.writeCmd(1, IO_PARAMS)) // DSP_CMD1
-                DEF_IO16(0x10203030, core.dsp.writeCmd(2, IO_PARAMS)) // DSP_CMD2
+                DEF_IO16(0x10203000, core.dsp->writePdata(IO_PARAMS)) // DSP_PDATA
+                DEF_IO16(0x10203004, core.dsp->writePadr(IO_PARAMS)) // DSP_PADR
+                DEF_IO16(0x10203008, core.dsp->writePcfg(IO_PARAMS)) // DSP_PCFG
+                DEF_IO16(0x10203010, core.dsp->writePsem(IO_PARAMS)) // DSP_PSEM
+                DEF_IO16(0x10203014, core.dsp->writePmask(IO_PARAMS)) // DSP_PMASK
+                DEF_IO16(0x10203018, core.dsp->writePclear(IO_PARAMS)) // DSP_PCLEAR
+                DEF_IO16(0x10203020, core.dsp->writeCmd(0, IO_PARAMS)) // DSP_CMD0
+                DEF_IO16(0x10203028, core.dsp->writeCmd(1, IO_PARAMS)) // DSP_CMD1
+                DEF_IO16(0x10203030, core.dsp->writeCmd(2, IO_PARAMS)) // DSP_CMD2
                 DEF_IO32(0x10206D04, core.cdmas[CDMA1].writeDbgcmd(IO_PARAMS)) // CDMA1_DBGCMD
                 DEF_IO32(0x10206D08, core.cdmas[CDMA1].writeDbginst0(IO_PARAMS)) // CDMA1_DBGINST0
                 DEF_IO32(0x10206D0C, core.cdmas[CDMA1].writeDbginst1(IO_PARAMS)) // CDMA1_DBGINST1

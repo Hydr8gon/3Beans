@@ -35,6 +35,10 @@
 #include "convert/rsa.h"
 #include "convert/sha.h"
 #include "convert/y2r.h"
+#include "dsp/csnd.h"
+#include "dsp/dsp_hle.h"
+#include "dsp/dsp_lle.h"
+#include "dsp/teak_interp.h"
 #include "gpu/gpu.h"
 #include "gpu/pdc.h"
 #include "io/cartridge.h"
@@ -46,9 +50,6 @@
 #include "memory/cdma.h"
 #include "memory/memory.h"
 #include "memory/ndma.h"
-#include "teak/csnd.h"
-#include "teak/dsp.h"
-#include "teak/teak_interp.h"
 
 enum CoreError {
     ERROR_BOOTROM
@@ -57,7 +58,7 @@ enum CoreError {
 enum Task {
     RESET_CYCLES,
     END_FRAME,
-    TOGGLE_RUN_FUNC,
+    UPDATE_RUN_FUNC,
     ARM_STOP_CYCLES,
     TEAK_STOP_CYCLES,
     ARM11A_INTERRUPT,
@@ -86,6 +87,7 @@ enum Task {
     DSP_UNSIGNAL0,
     DSP_UNSIGNAL1,
     DSP_SEND_AUDIO,
+    DSP_HLE_UPDATE,
     AES_UPDATE,
     CDMA0_UPDATE,
     CDMA1_UPDATE,
@@ -129,7 +131,7 @@ public:
     Cdma cdmas[3];
     Cp15 cp15;
     Csnd csnd;
-    Dsp dsp;
+    Dsp *dsp;
     Gpu gpu;
     I2c i2c;
     Input input;
@@ -141,7 +143,6 @@ public:
     Rsa rsa;
     SdMmc sdMmcs[2];
     Sha shas[2];
-    TeakInterp teak;
     Timers timers;
     Vfp11Interp vfp11s[MAX_CPUS - 1];
     Wifi wifi;
@@ -152,16 +153,20 @@ public:
     uint64_t globalCycles = 0;
 
     Core(std::string &cartPath, std::function<void()> *contextFunc = nullptr);
+    ~Core();
+
     void runFrame() { (*runFunc)(*this); }
     void schedule(Task task, uint64_t cycles);
 
 private:
-    void (*runFunc)(Core&) = &ArmInterp::runFrame<false>;
     std::function<void()> tasks[MAX_TASKS];
+    void (*runFunc)(Core&) = &ArmInterp::runFrame<false, false>;
+    int dspCurrent = 0;
+
     std::chrono::steady_clock::time_point lastFpsTime;
     int fpsCount = 0;
 
     void resetCycles();
     void endFrame();
-    void toggleRunFunc();
+    void updateRunFunc();
 };

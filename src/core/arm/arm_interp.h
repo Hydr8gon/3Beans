@@ -35,7 +35,7 @@ public:
 
     void resetCycles();
     static void stopCycles(Core *core);
-    template <bool extra> static void runFrame(Core &core);
+    template <bool cores, bool dsp> static void runFrame(Core &core);
 
     void halt(uint8_t mask);
     void unhalt(uint8_t mask);

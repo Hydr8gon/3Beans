@@ -73,6 +73,7 @@ private:
     void stop(wxCommandEvent &event);
     void fpsLimiter(wxCommandEvent &event);
     void cartAutoBoot(wxCommandEvent &event);
+    template <int i> void dspBackend(wxCommandEvent &event);
     void threadedGpu(wxCommandEvent &event);
     template <int i> void gpuRenderer(wxCommandEvent &event);
     template <int i> void gpuShader(wxCommandEvent &event);

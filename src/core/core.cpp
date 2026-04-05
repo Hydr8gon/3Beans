@@ -23,9 +23,9 @@
 Core::Core(std::string &cartPath, std::function<void()> *contextFunc): aes(*this), arms { ArmInterp(*this, ARM11A),
         ArmInterp(*this, ARM11B), ArmInterp(*this, ARM11C), ArmInterp(*this, ARM11D), ArmInterp(*this, ARM9) },
         cartridge(*this, cartPath), cdmas { Cdma(*this, CDMA0), Cdma(*this, CDMA1), Cdma(*this, XDMA) }, cp15(*this),
-        csnd(*this), dsp(*this), gpu(*this, contextFunc), i2c(*this), input(*this), interrupts(*this), memory(*this),
-        ndma(*this), pdc(*this), pxi(*this), rsa(*this), sdMmcs { SdMmc(*this), SdMmc(*this) }, shas { Sha(*this, 0),
-        Sha(*this, 1) }, teak(*this), timers(*this), vfp11s { Vfp11Interp(*this, ARM11A), Vfp11Interp(*this, ARM11B),
+        csnd(*this), gpu(*this, contextFunc), i2c(*this), input(*this), interrupts(*this), memory(*this),
+        ndma(*this), pdc(*this), pxi(*this), rsa(*this), sdMmcs { SdMmc(*this), SdMmc(*this) }, shas { Sha(*this,
+        0), Sha(*this, 1) }, timers(*this), vfp11s { Vfp11Interp(*this, ARM11A), Vfp11Interp(*this, ARM11B),
         Vfp11Interp(*this, ARM11C), Vfp11Interp(*this, ARM11D) }, wifi(*this), y2rs { Y2r(*this, 0), Y2r(*this, 1) } {
     // Initialize things that need to be done after construction
     n3dsMode = sdMmcs[0].init(sdMmcs[1]);
@@ -35,21 +35,16 @@ Core::Core(std::string &cartPath, std::function<void()> *contextFunc): aes(*this
         arms[i].init();
     LOG_INFO("Running in %s 3DS mode\n", n3dsMode ? "new" : "old");
 
-    // Define the tasks that can be scheduled
+    // Define static tasks that can be scheduled
     tasks[RESET_CYCLES] = std::bind(&Core::resetCycles, this);
     tasks[END_FRAME] = std::bind(&Core::endFrame, this);
-    tasks[TOGGLE_RUN_FUNC] = std::bind(&Core::toggleRunFunc, this);
+    tasks[UPDATE_RUN_FUNC] = std::bind(&Core::updateRunFunc, this);
     tasks[ARM_STOP_CYCLES] = std::bind(&ArmInterp::stopCycles, this);
-    tasks[TEAK_STOP_CYCLES] = std::bind(&TeakInterp::stopCycles, &teak);
     tasks[ARM11A_INTERRUPT] = std::bind(&Interrupts::interrupt, &interrupts, ARM11A);
     tasks[ARM11B_INTERRUPT] = std::bind(&Interrupts::interrupt, &interrupts, ARM11B);
     tasks[ARM11C_INTERRUPT] = std::bind(&Interrupts::interrupt, &interrupts, ARM11C);
     tasks[ARM11D_INTERRUPT] = std::bind(&Interrupts::interrupt, &interrupts, ARM11D);
     tasks[ARM9_INTERRUPT] = std::bind(&Interrupts::interrupt, &interrupts, ARM9);
-    tasks[TEAK_INTERRUPT0] = std::bind(&TeakInterp::interrupt, &teak, 0);
-    tasks[TEAK_INTERRUPT1] = std::bind(&TeakInterp::interrupt, &teak, 1);
-    tasks[TEAK_INTERRUPT2] = std::bind(&TeakInterp::interrupt, &teak, 2);
-    tasks[TEAK_INTERRUPT3] = std::bind(&TeakInterp::interrupt, &teak, 3);
     tasks[TMR11A_UNDERFLOW0] = std::bind(&Timers::underflowMp, &timers, ARM11A, 0);
     tasks[TMR11A_UNDERFLOW1] = std::bind(&Timers::underflowMp, &timers, ARM11A, 1);
     tasks[TMR11B_UNDERFLOW0] = std::bind(&Timers::underflowMp, &timers, ARM11B, 0);
@@ -62,11 +57,6 @@ Core::Core(std::string &cartPath, std::function<void()> *contextFunc): aes(*this
     tasks[TMR9_OVERFLOW1] = std::bind(&Timers::overflowTm, &timers, 1);
     tasks[TMR9_OVERFLOW2] = std::bind(&Timers::overflowTm, &timers, 2);
     tasks[TMR9_OVERFLOW3] = std::bind(&Timers::overflowTm, &timers, 3);
-    tasks[DSP_UNDERFLOW0] = std::bind(&Dsp::underflowTmr, &dsp, 0);
-    tasks[DSP_UNDERFLOW1] = std::bind(&Dsp::underflowTmr, &dsp, 1);
-    tasks[DSP_UNSIGNAL0] = std::bind(&Dsp::unsignalTmr, &dsp, 0);
-    tasks[DSP_UNSIGNAL1] = std::bind(&Dsp::unsignalTmr, &dsp, 1);
-    tasks[DSP_SEND_AUDIO] = std::bind(&Dsp::sendAudio, &dsp);
     tasks[AES_UPDATE] = std::bind(&Aes::update, &aes);
     tasks[CDMA0_UPDATE] = std::bind(&Cdma::update, &cdmas[CDMA0]);
     tasks[CDMA1_UPDATE] = std::bind(&Cdma::update, &cdmas[CDMA1]);
@@ -89,10 +79,39 @@ Core::Core(std::string &cartPath, std::function<void()> *contextFunc): aes(*this
     tasks[NTR_WORD_READY] = std::bind(&Cartridge::ntrWordReady, &cartridge);
     tasks[CTR_WORD_READY] = std::bind(&Cartridge::ctrWordReady, &cartridge);
 
+    // Create a DSP using the selected backend and define its scheduler tasks
+    // TODO: support changing this without reset?
+    DspLle *dspLle; DspHle *dspHle;
+    switch (dspCurrent = Settings::dspBackend) {
+    default: // Interpreter
+        dsp = dspLle = new DspLle(*this);
+        tasks[TEAK_STOP_CYCLES] = std::bind(&TeakInterp::stopCycles, &dspLle->teak);
+        tasks[TEAK_INTERRUPT0] = std::bind(&TeakInterp::interrupt, &dspLle->teak, 0);
+        tasks[TEAK_INTERRUPT1] = std::bind(&TeakInterp::interrupt, &dspLle->teak, 1);
+        tasks[TEAK_INTERRUPT2] = std::bind(&TeakInterp::interrupt, &dspLle->teak, 2);
+        tasks[TEAK_INTERRUPT3] = std::bind(&TeakInterp::interrupt, &dspLle->teak, 3);
+        tasks[DSP_UNDERFLOW0] = std::bind(&DspLle::underflowTmr, dspLle, 0);
+        tasks[DSP_UNDERFLOW1] = std::bind(&DspLle::underflowTmr, dspLle, 1);
+        tasks[DSP_UNSIGNAL0] = std::bind(&DspLle::unsignalTmr, dspLle, 0);
+        tasks[DSP_UNSIGNAL1] = std::bind(&DspLle::unsignalTmr, dspLle, 1);
+        tasks[DSP_SEND_AUDIO] = std::bind(&DspLle::sendAudio, dspLle);
+        break;
+
+    case 1: // HLE
+        dsp = dspHle = new DspHle(*this);
+        tasks[DSP_HLE_UPDATE] = std::bind(&DspHle::update, dspHle);
+        break;
+    }
+
     // Schedule the initial tasks
     schedule(RESET_CYCLES, 0x7FFFFFFFFFFFFFFF);
     schedule(END_FRAME, 268111856 / 60);
     schedule(CSND_SAMPLE, 2048);
+}
+
+Core::~Core() {
+    // Clean up the DSP backend
+    delete dsp;
 }
 
 void Core::resetCycles() {
@@ -101,10 +120,9 @@ void Core::resetCycles() {
         events[i].cycles -= globalCycles;
     for (int i = 0; i < MAX_CPUS; i++)
         arms[i].resetCycles();
-    dsp.resetCycles();
-    teak.resetCycles();
+    dsp->resetCycles();
     timers.resetCycles();
-    globalCycles -= globalCycles;
+    globalCycles = 0;
     schedule(RESET_CYCLES, 0x7FFFFFFFFFFFFFFF);
 }
 
@@ -128,9 +146,13 @@ void Core::endFrame() {
     schedule(END_FRAME, 268111856 / 60);
 }
 
-void Core::toggleRunFunc() {
-    // Switch between 2-core and 4-core ARM11 run functions and break execution
-    runFunc = (runFunc == &ArmInterp::runFrame<true>) ? &ArmInterp::runFrame<false> : &ArmInterp::runFrame<true>;
+void Core::updateRunFunc() {
+    // Swap out the run function based on ARM11 cores 2/3 and DSP backend
+    bool dspOff = (dspCurrent == 1 || ((DspLle*)dsp)->teak.cycles == -1);
+    if ((interrupts.cfg11MpBootcnt[0] | interrupts.cfg11MpBootcnt[1]) & BIT(4)) // Cores enabled
+        runFunc = dspOff ? &ArmInterp::runFrame<true, false> : &ArmInterp::runFrame<true, true>;
+    else // Cores disabled
+        runFunc = dspOff ? &ArmInterp::runFrame<false, false> : &ArmInterp::runFrame<false, true>;
     running.store(false);
 }
 

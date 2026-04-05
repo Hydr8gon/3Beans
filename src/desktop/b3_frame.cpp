@@ -32,6 +32,8 @@ enum FrameEvent {
     STOP,
     FPS_LIMITER,
     CART_AUTO_BOOT,
+    DSP_INTERP,
+    DSP_HLE,
     THREADED_GPU,
     GPU_RENDER_SOFT,
     GPU_RENDER_OGL,
@@ -51,6 +53,8 @@ EVT_MENU(RESTART, b3Frame::restart)
 EVT_MENU(STOP, b3Frame::stop)
 EVT_MENU(FPS_LIMITER, b3Frame::fpsLimiter)
 EVT_MENU(CART_AUTO_BOOT, b3Frame::cartAutoBoot)
+EVT_MENU(DSP_INTERP, b3Frame::dspBackend<0>)
+EVT_MENU(DSP_HLE, b3Frame::dspBackend<1>)
 EVT_MENU(THREADED_GPU, b3Frame::threadedGpu)
 EVT_MENU(GPU_RENDER_SOFT, b3Frame::gpuRenderer<0>)
 EVT_MENU(GPU_RENDER_OGL, b3Frame::gpuRenderer<1>)
@@ -77,12 +81,17 @@ b3Frame::b3Frame(): wxFrame(nullptr, wxID_ANY, "3Beans") {
     systemMenu->Append(RESTART, "&Restart");
     systemMenu->Append(STOP, "&Stop");
 
-    // Set up the renderer submenu
+    // Set up the DSP backend submenu
+    wxMenu *dspMenu = new wxMenu();
+    dspMenu->AppendRadioItem(DSP_INTERP, "&Interpreter");
+    dspMenu->AppendRadioItem(DSP_HLE, "&HLE");
+
+    // Set up the GPU renderer submenu
     wxMenu *renderMenu = new wxMenu();
     renderMenu->AppendRadioItem(GPU_RENDER_SOFT, "&Software");
     renderMenu->AppendRadioItem(GPU_RENDER_OGL, "&OpenGL");
 
-    // Set up the shader submenu
+    // Set up the GPU shader submenu
     shaderMenu = new wxMenu();
     shaderMenu->AppendRadioItem(GPU_SHADER_INTERP, "&Interpreter");
     shaderMenu->AppendRadioItem(GPU_SHADER_GLSL, "&GLSL JIT");
@@ -91,6 +100,7 @@ b3Frame::b3Frame(): wxFrame(nullptr, wxID_ANY, "3Beans") {
     wxMenu *settingsMenu = new wxMenu();
     settingsMenu->AppendCheckItem(FPS_LIMITER, "&FPS Limiter");
     settingsMenu->AppendCheckItem(CART_AUTO_BOOT, "&Cart Auto-Boot");
+    settingsMenu->AppendSubMenu(dspMenu, "&DSP Backend");
     settingsMenu->AppendSeparator();
     settingsMenu->AppendCheckItem(THREADED_GPU, "&Threaded GPU");
     settingsMenu->AppendSubMenu(renderMenu, "&GPU Renderer");
@@ -143,6 +153,7 @@ b3Frame::b3Frame(): wxFrame(nullptr, wxID_ANY, "3Beans") {
     // Set the initial setting states
     settingsMenu->Check(FPS_LIMITER, Settings::fpsLimiter);
     settingsMenu->Check(CART_AUTO_BOOT, Settings::cartAutoBoot);
+    dspMenu->Check(DSP_INTERP + std::min(Settings::dspBackend, 1), true);
     settingsMenu->Check(THREADED_GPU, Settings::threadedGpu);
     renderMenu->Check(GPU_RENDER_SOFT + std::min(Settings::gpuRenderer, 1), true);
     shaderMenu->Check(GPU_SHADER_INTERP + std::min(Settings::gpuShader, 1), true);
@@ -387,6 +398,12 @@ void b3Frame::fpsLimiter(wxCommandEvent &event) {
 void b3Frame::cartAutoBoot(wxCommandEvent &event) {
     // Toggle the cart auto-boot setting
     Settings::cartAutoBoot = !Settings::cartAutoBoot;
+    Settings::save();
+}
+
+template <int i> void b3Frame::dspBackend(wxCommandEvent &event) {
+    // Set the DSP backend to a specific value
+    Settings::dspBackend = i;
     Settings::save();
 }
 

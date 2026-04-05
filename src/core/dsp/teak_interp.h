@@ -22,6 +22,7 @@
 #include <cstdint>
 
 class Core;
+class DspLle;
 
 enum StepType {
     STEP_NONE = 0,
@@ -49,7 +50,7 @@ public:
     uint32_t regPc = 0;
     bool halted = false;
 
-    TeakInterp(Core &core);
+    TeakInterp(Core &core, DspLle &dsp);
     void resetCycles();
     void stopCycles();
 
@@ -59,6 +60,7 @@ public:
 
 private:
     Core &core;
+    DspLle &dsp;
     bool scheduled = false;
 
     uint16_t *readReg[0x20] = { &regR[0], &regR[1], &regR[2], &regR[3], &regR[4], &regR[5], &regR[7],
