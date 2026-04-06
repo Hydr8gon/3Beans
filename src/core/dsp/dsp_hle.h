@@ -27,10 +27,10 @@
 enum DspState {
     STATE_OFF,
     STATE_HANDSHAKE,
-    STATE_INITPIPES,
-    STATE_PIPE_5,
-    STATE_PIPE_4,
-    STATE_READY
+    STATE_INIT,
+    STATE_RECEIVE,
+    STATE_REPLY,
+    STATE_RUNNING
 };
 
 class Core;
@@ -41,7 +41,7 @@ public:
     void update();
 
     void resetCycles() {}
-    void setAudClock(DspClock clock) {}
+    void setAudClock(DspClock clock);
 
     uint16_t readPdata();
     uint16_t readPcfg() { return dspPcfg; }
@@ -65,6 +65,12 @@ private:
 
     std::queue<uint16_t> readFifo;
     DspState state = STATE_OFF;
+    uint32_t base = 0;
+    uint32_t cycles = 0;
+    bool scheduled = false;
+
+    uint16_t readData(uint32_t address);
+    void writeData(uint32_t address, uint16_t value);
 
     void sendResponse(int i, uint16_t value);
     void setSemaphore(int bit);
