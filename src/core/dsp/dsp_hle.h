@@ -24,6 +24,8 @@
 #include "csnd.h"
 #include "dsp.h"
 
+class Core;
+
 enum DspState {
     STATE_OFF,
     STATE_HANDSHAKE,
@@ -33,7 +35,20 @@ enum DspState {
     STATE_RUNNING
 };
 
-class Core;
+struct InputBuffer {
+    uint32_t address;
+    uint32_t count;
+    uint16_t seqId;
+};
+
+struct InputState {
+    uint16_t playFlags;
+    uint16_t syncCount;
+    uint32_t position;
+    uint16_t seqId;
+    uint16_t format;
+    InputBuffer buffers[5];
+};
 
 class DspHle: public Dsp {
 public:
@@ -63,14 +78,17 @@ public:
 private:
     Core &core;
 
-    std::queue<uint16_t> readFifo;
-    DspState state = STATE_OFF;
-    uint32_t base = 0;
     uint32_t cycles = 0;
     bool scheduled = false;
 
-    uint16_t readData(uint32_t address);
-    void writeData(uint32_t address, uint16_t value);
+    InputState inputs[24] = {};
+    std::queue<uint16_t> readFifo;
+    DspState state = STATE_OFF;
+    uint32_t frameBase = 0x1FF60000;
+
+    void processFrame();
+    uint16_t readData(uint16_t address);
+    void writeData(uint16_t address, uint16_t value);
 
     void sendResponse(int i, uint16_t value);
     void setSemaphore(int bit);
