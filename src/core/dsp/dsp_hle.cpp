@@ -180,6 +180,20 @@ void DspHle::processFrame() {
             input.format = format;
         }
 
+        // Update the play status if dirty
+        if (dirty & BIT(16)) {
+            uint16_t playStatus = readData(cfgBase + 0x50);
+            writeData(cfgBase + 0x50, playStatus);
+            input.playFlags = (playStatus ? BIT(0) : (input.playFlags & ~BIT(0)));
+        }
+
+        // Update the resample rate if dirty
+        if (dirty & BIT(18)) {
+            uint32_t rate = readData(cfgBase + 0x1A) | (readData(cfgBase + 0x1B) << 16);
+            writeData(cfgBase + 0x1A, rate), writeData(cfgBase + 0x1B, rate >> 16);
+            input.rate = *(float*)&rate;
+        }
+
         // Update queued buffer parameters if dirty
         if (dirty & BIT(19)) {
             uint16_t bufDirty = readData(cfgBase + 0x25);
@@ -197,13 +211,6 @@ void DspHle::processFrame() {
                 input.buffers[b + 1].count = count;
                 input.buffers[b + 1].seqId = seqId;
             }
-        }
-
-        // Update the play status if dirty
-        if (dirty & BIT(16)) {
-            uint16_t playStatus = readData(cfgBase + 0x50);
-            writeData(cfgBase + 0x50, playStatus);
-            input.playFlags = (playStatus ? BIT(0) : 0);
         }
 
         // Update the sync count if dirty
@@ -232,51 +239,54 @@ void DspHle::processFrame() {
             // Step through buffers until frame end or input end
             if (buffer) {
                 for (int j = 0; j < 8 * 20; j++) {
-                    if (input.position < buffer->count) {
+                    uint32_t position = input.position;
+                    if (position < buffer->count) {
                         // Add a sample based on format and adjust the position
                         uint32_t value;
                         switch (input.format & 0xF) {
                         case 0x0: case 0x1: case 0x3: // PCM8 mono
-                            value = core.memory.read<uint8_t>(ARM11, buffer->address + input.position);
+                            value = core.memory.read<uint8_t>(ARM11, buffer->address + position);
                             samples[j][0] += (value << 8);
                             samples[j][1] += (value << 8);
                             break;
                         case 0x2: // PCM8 stereo
-                            value = core.memory.read<uint16_t>(ARM11, buffer->address + input.position * 2);
+                            value = core.memory.read<uint16_t>(ARM11, buffer->address + position * 2);
                             samples[j][0] += (value << 8);
                             samples[j][1] += (value & 0xFF00);
                             break;
                         case 0x4: case 0x5: case 0x7: // PCM16 mono
-                            value = core.memory.read<uint16_t>(ARM11, buffer->address + input.position * 2);
+                            value = core.memory.read<uint16_t>(ARM11, buffer->address + position * 2);
                             samples[j][0] += value;
                             samples[j][1] += value;
                             break;
                         case 0x6: // PCM16 stereo
-                            value = core.memory.read<uint32_t>(ARM11, buffer->address + input.position * 4);
+                            value = core.memory.read<uint32_t>(ARM11, buffer->address + position * 4);
                             samples[j][0] += (value >> 0);
                             samples[j][1] += (value >> 16);
                             break;
                         }
-                        input.position++;
+                        input.position += input.rate;
                     }
                     else {
-                        // Find the next sequenced buffer when the current one's done
+                        // Increment the sequence at the end of a buffer
+                        input.playFlags |= BIT(8);
+                        input.seqId++;
+
+                        // Find the next sequenced buffer, if any
                         buffer = nullptr;
                         for (int b = 1; b < 5; b++) {
-                            if (input.buffers[b].seqId != input.seqId + 1) continue;
+                            if (input.buffers[b].seqId != input.seqId) continue;
                             buffer = &input.buffers[b];
                             break;
                         }
 
                         // Stop playing if a buffer wasn't found
                         if (!buffer) {
-                            input.playFlags = 0;
+                            input.playFlags &= ~BIT(0);
                             break;
                         }
 
-                        // Move to the next sequence and redo the sample
-                        input.seqId++;
-                        input.playFlags |= BIT(8);
+                        // Redo the sample at the next buffer's start
                         input.position = 0;
                         j--;
                     }
@@ -287,8 +297,8 @@ void DspHle::processFrame() {
         // Update the input status struct
         writeData(stsBase + 0x0, input.playFlags);
         writeData(stsBase + 0x1, input.syncCount);
-        writeData(stsBase + 0x2, input.position >> 16);
-        writeData(stsBase + 0x3, input.position >> 0);
+        writeData(stsBase + 0x2, uint32_t(input.position) >> 16);
+        writeData(stsBase + 0x3, uint32_t(input.position) >> 0);
         writeData(stsBase + 0x4, input.seqId);
     }
 

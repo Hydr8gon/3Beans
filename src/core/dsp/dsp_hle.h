@@ -44,9 +44,10 @@ struct InputBuffer {
 struct InputState {
     uint16_t playFlags;
     uint16_t syncCount;
-    uint32_t position;
     uint16_t seqId;
     uint16_t format;
+    float rate;
+    double position;
     InputBuffer buffers[5];
 };
 
