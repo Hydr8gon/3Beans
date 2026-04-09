@@ -458,7 +458,7 @@ void Gpu::writeBlendFunc(uint32_t mask, uint32_t value) {
     // Set the blend operands for the renderer if they're valid
     for (int i = 0; i < 4; i++) {
         uint8_t oper = (gpuBlendFunc >> (16 + (i * 4))) & 0xF;
-        if (oper < 0xE) {
+        if (oper < 0xF) {
             gpuRender->setBlendOper(i, BlendOper(oper));
             continue;
         }

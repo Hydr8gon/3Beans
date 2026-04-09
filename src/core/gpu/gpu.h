@@ -130,7 +130,8 @@ enum BlendOper {
     BLND_CONST,
     BLND_1MCON,
     BLND_CONSTA,
-    BLND_1MCONA
+    BLND_1MCONA,
+    BLND_ALPHSAT
 };
 
 enum TexFmt {

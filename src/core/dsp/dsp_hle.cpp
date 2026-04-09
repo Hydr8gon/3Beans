@@ -184,7 +184,7 @@ void DspHle::processFrame() {
         if (dirty & BIT(16)) {
             uint16_t playStatus = readData(cfgBase + 0x50);
             writeData(cfgBase + 0x50, playStatus);
-            input.playFlags = (playStatus ? BIT(0) : (input.playFlags & ~BIT(0)));
+            input.playFlags = (playStatus ? BIT(0) : BIT(8));
         }
 
         // Update the resample rate if dirty
@@ -241,28 +241,28 @@ void DspHle::processFrame() {
                 for (int j = 0; j < 8 * 20; j++) {
                     uint32_t position = input.position;
                     if (position < buffer->count) {
-                        // Add a sample based on format and adjust the position
+                        // Add a sample based on format and adjust the position (half-volume for now)
                         uint32_t value;
                         switch (input.format & 0xF) {
                         case 0x0: case 0x1: case 0x3: // PCM8 mono
                             value = core.memory.read<uint8_t>(ARM11, buffer->address + position);
-                            samples[j][0] += (value << 8);
-                            samples[j][1] += (value << 8);
+                            samples[j][0] += int16_t(value << 8) / 2;
+                            samples[j][1] += int16_t(value << 8) / 2;
                             break;
                         case 0x2: // PCM8 stereo
                             value = core.memory.read<uint16_t>(ARM11, buffer->address + position * 2);
-                            samples[j][0] += (value << 8);
-                            samples[j][1] += (value & 0xFF00);
+                            samples[j][0] += int16_t(value << 8) / 2;
+                            samples[j][1] += int16_t(value & 0xFF00) / 2;
                             break;
                         case 0x4: case 0x5: case 0x7: // PCM16 mono
                             value = core.memory.read<uint16_t>(ARM11, buffer->address + position * 2);
-                            samples[j][0] += value;
-                            samples[j][1] += value;
+                            samples[j][0] += int16_t(value) / 2;
+                            samples[j][1] += int16_t(value) / 2;
                             break;
                         case 0x6: // PCM16 stereo
                             value = core.memory.read<uint32_t>(ARM11, buffer->address + position * 4);
-                            samples[j][0] += (value >> 0);
-                            samples[j][1] += (value >> 16);
+                            samples[j][0] += int16_t(value >> 0) / 2;
+                            samples[j][1] += int16_t(value >> 16) / 2;
                             break;
                         }
                         input.position += input.rate;

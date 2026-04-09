@@ -46,7 +46,7 @@ public:
     GpuRenderSoft(Core &core): core(core) {}
 
     void submitVertex(SoftVertex &vertex);
-    void flushBuffers() {}
+    void flushBuffers(uint32_t mod = 0) {}
 
     void setPrimMode(PrimMode mode);
     void setCullMode(CullMode mode) { cullMode = mode; }

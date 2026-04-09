@@ -29,7 +29,7 @@ public:
     virtual ~GpuRender() {}
 
     virtual void submitVertex(SoftVertex &vertex) = 0;
-    virtual void flushBuffers() = 0;
+    virtual void flushBuffers(uint32_t mod = 0) = 0;
 
     virtual void setPrimMode(PrimMode mode) = 0;
     virtual void setCullMode(CullMode mode) = 0;

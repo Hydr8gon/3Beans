@@ -671,12 +671,13 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
         case BLND_1MCON: s1.r *= 1.0f - blendColor.r, s1.g *= 1.0f - blendColor.g, s1.b *= 1.0f - blendColor.b; break;
         case BLND_CONSTA: s1.r *= blendColor.a, s1.g *= blendColor.a, s1.b *= blendColor.a; break;
         case BLND_1MCONA: s1.r *= 1.0f - blendColor.a, s1.g *= 1.0f - blendColor.a, s1.b *= 1.0f - blendColor.a; break;
+        case BLND_ALPHSAT: { float min = std::min(s0.a, 1.0f - d0.a); s1.r *= min, s1.g *= min, s1.b *= min; break; }
     }
 
     // Multiply source alpha values with the selected operand
     switch (blendOpers[2]) {
         case BLND_ZERO: s1.a = 0.0f; break;
-        case BLND_ONE: break;
+        case BLND_ONE: case BLND_ALPHSAT: break;
         case BLND_SRC: case BLND_SRCA: s1.a *= s0.a; break;
         case BLND_1MSRC: case BLND_1MSRCA: s1.a *= 1.0f - s0.a; break;
         case BLND_DST: case BLND_DSTA: s1.a *= d0.a; break;
@@ -702,12 +703,13 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
         case BLND_1MCON: d1.r *= 1.0f - blendColor.r, d1.g *= 1.0f - blendColor.g, d1.b *= 1.0f - blendColor.b; break;
         case BLND_CONSTA: d1.r *= blendColor.a, d1.g *= blendColor.a, d1.b *= blendColor.a; break;
         case BLND_1MCONA: d1.r *= 1.0f - blendColor.a, d1.g *= 1.0f - blendColor.a, d1.b *= 1.0f - blendColor.a; break;
+        case BLND_ALPHSAT: { float min = std::min(s0.a, 1.0f - d0.a); d1.r *= min, d1.g *= min, d1.b *= min; break; }
     }
 
     // Multiply destination alpha values with the selected operand
     switch (blendOpers[3]) {
         case BLND_ZERO: d1.a = 0.0f; break;
-        case BLND_ONE: break;
+        case BLND_ONE: case BLND_ALPHSAT: break;
         case BLND_SRC: case BLND_SRCA: d1.a *= s0.a; break;
         case BLND_1MSRC: case BLND_1MSRCA: d1.a *= 1.0f - s0.a; break;
         case BLND_DST: case BLND_DSTA: d1.a *= d0.a; break;

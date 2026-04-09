@@ -53,7 +53,7 @@ public:
     void submitInput(float (*input)[4]);
     void submitVertex(SoftVertex &vertex);
     void flushVertices();
-    void flushBuffers();
+    void flushBuffers(uint32_t mod = 0);
 
     void setPrimMode(PrimMode mode);
     void setCullMode(CullMode mode);
@@ -88,7 +88,7 @@ public:
     void setColbufAddr(uint32_t address);
     void setColbufFmt(ColbufFmt format);
     void setColbufMask(uint8_t mask);
-    void setDepbufAddr(uint32_t address) {}
+    void setDepbufAddr(uint32_t address);
     void setDepbufFmt(DepbufFmt format) {}
     void setDepbufMask(uint8_t mask);
     void setDepthFunc(TestFunc func);
@@ -118,7 +118,7 @@ private:
     std::vector<TexCache> texCache;
     GLint primMode = GL_TRIANGLES;
     uint8_t texDirty = 0;
-    bool readDirty = false;
+    uint8_t readDirty = 0;
     bool writeDirty = false;
 
     uint32_t texAddrs[3] = {};
@@ -146,6 +146,7 @@ private:
     GLsizei bufHeight = 0;
     uint32_t colbufAddr = 0;
     ColbufFmt colbufFmt = COL_UNK;
+    uint32_t depbufAddr = 0;
     GLboolean depbufMask = GL_FALSE;
     GLenum stencilFunc = GL_NEVER;
     GLint stencilValue = 0;

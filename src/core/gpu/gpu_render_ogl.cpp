@@ -369,14 +369,15 @@ void GpuRenderOgl::flushVertices() {
     writeDirty = true;
 }
 
-void GpuRenderOgl::flushBuffers() {
-    // Check if anything has been drawn and make sure it's done
+void GpuRenderOgl::flushBuffers(uint32_t mod) {
+    // Finish drawing and update dirty state if a buffer is being modified
     flushVertices();
+    readDirty |= (mod == colbufAddr) | ((mod == depbufAddr) << 1);
     if (!writeDirty) return;
     glFinish();
 
     // Copy data from the color buffer to memory based on format
-    uint32_t *data;
+    uint32_t *data = nullptr;
     uint16_t w = bufWidth, h = bufHeight;
     switch (colbufFmt) {
     case COL_RGBA8:
@@ -420,15 +421,27 @@ void GpuRenderOgl::flushBuffers() {
                 core.memory.write<uint32_t>(ARM11, colbufAddr + getSwizzle(x, y, w) * 2, data[(y * w + x) / 2]);
         break;
     }
-
-    // Clean up and finish
     delete[] data;
     writeDirty = false;
 }
 
 void GpuRenderOgl::updateBuffers() {
-    // Copy data from memory to the color buffer based on format
-    uint32_t *data;
+    // Resize and clear the depth/stencil buffer if dirty, restoring state after
+    if (readDirty & BIT(1)) {
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, bufWidth, bufHeight);
+        glDepthMask(GL_TRUE);
+        glStencilMask(0xFF);
+        glViewport(0, 0, bufWidth, bufHeight);
+        glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+        glDepthMask(depbufMask);
+        glStencilMask(stencilMasks[0]);
+        updateViewport();
+        readDirty &= ~BIT(1);
+    }
+
+    // Copy data from memory to the color buffer based on format if dirty
+    if (~readDirty & BIT(0)) return;
+    uint32_t *data = nullptr;
     uint16_t w = bufWidth, h = bufHeight;
     glActiveTexture(GL_TEXTURE4);
     switch (colbufFmt) {
@@ -468,20 +481,8 @@ void GpuRenderOgl::updateBuffers() {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bufWidth, bufHeight, 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, data);
         break;
     }
-
-    // Resize and clear the depth/stencil buffer, restoring state after
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, bufWidth, bufHeight);
-    glDepthMask(GL_TRUE);
-    glStencilMask(0xFF);
-    glViewport(0, 0, bufWidth, bufHeight);
-    glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-    glDepthMask(depbufMask);
-    glStencilMask(stencilMasks[0]);
-    updateViewport();
-
-    // Clean up and finish
     delete[] data;
-    readDirty = false;
+    readDirty &= ~BIT(0);
 }
 
 void GpuRenderOgl::updateTextures() {
@@ -820,6 +821,7 @@ void GpuRenderOgl::setBlendOper(int i, BlendOper oper) {
         case BLND_1MCON: blendOpers[i] = GL_ONE_MINUS_CONSTANT_COLOR; break;
         case BLND_CONSTA: blendOpers[i] = GL_CONSTANT_ALPHA; break;
         case BLND_1MCONA: blendOpers[i] = GL_ONE_MINUS_CONSTANT_ALPHA; break;
+        case BLND_ALPHSAT: blendOpers[i] = GL_SRC_ALPHA_SATURATE; break;
     }
     glBlendFuncSeparate(blendOpers[0], blendOpers[1], blendOpers[2], blendOpers[3]);
 }
@@ -927,7 +929,7 @@ void GpuRenderOgl::setBufferDims(uint16_t width, uint16_t height, bool flip) {
     flushBuffers();
     bufWidth = width;
     bufHeight = height;
-    readDirty = true;
+    readDirty |= BIT(0) | BIT(1);
 
     // Update the position scale to flip the Y-axis if enabled
     glUniform4f(posScaleLoc, 1.0f, flip ? -1.0f : 1.0f, -1.0f, 1.0f);
@@ -938,20 +940,27 @@ void GpuRenderOgl::setColbufAddr(uint32_t address) {
     // Set a new color buffer address and mark it as dirty
     flushBuffers();
     colbufAddr = address;
-    readDirty = true;
+    readDirty |= BIT(0);
 }
 
 void GpuRenderOgl::setColbufFmt(ColbufFmt format) {
     // Set a new color buffer format and mark it as dirty
     flushBuffers();
     colbufFmt = format;
-    readDirty = true;
+    readDirty |= BIT(0);
 }
 
 void GpuRenderOgl::setColbufMask(uint8_t mask) {
     // Update the color write mask
     flushVertices();
     glColorMask(bool(mask & BIT(0)), bool(mask & BIT(1)), bool(mask & BIT(2)), bool(mask & BIT(3)));
+}
+
+void GpuRenderOgl::setDepbufAddr(uint32_t address) {
+    // Set a new depth buffer address and mark it as dirty
+    flushBuffers();
+    depbufAddr = address;
+    readDirty |= BIT(1);
 }
 
 void GpuRenderOgl::setDepbufMask(uint8_t mask) {
