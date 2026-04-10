@@ -39,16 +39,21 @@ struct InputBuffer {
     uint32_t address;
     uint32_t count;
     uint16_t seqId;
+    int16_t adpcmPrev[2];
 };
 
 struct InputState {
     uint16_t playFlags;
     uint16_t syncCount;
-    uint16_t seqId;
     uint16_t format;
     float rate;
+
     double position;
+    uint16_t seqId;
+    int16_t adpcmPrev[2];
+
     InputBuffer buffers[5];
+    int16_t adpcmCoeffs[8][2];
 };
 
 class DspHle: public Dsp {
@@ -85,7 +90,7 @@ private:
     InputState inputs[24] = {};
     std::queue<uint16_t> readFifo;
     DspState state = STATE_OFF;
-    uint32_t frameBase = 0x1FF60000;
+    uint32_t frameBase = 0x1FF40000;
 
     void processFrame();
     uint16_t readData(uint16_t address);

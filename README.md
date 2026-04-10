@@ -52,9 +52,10 @@ make -j4
 sudo make install
 ```
 
-### Hardware References
+### References
 * [GBATEK](https://problemkaputt.de/gbatek.htm) - Incomplete but great reference for the 3DS hardware
 * [3DBrew](https://www.3dbrew.org) - Comprehensive wiki covering high- and low-level details
+* [libctru](https://github.com/devkitPro/libctru) - A homebrew library that shows how to interact with the OS
 * [Teakra](https://github.com/wwylele/teakra) - The only source for newer aspects of the Teak architecture
 * [Corgi3DS](https://github.com/PSI-Rockin/Corgi3DS) - The first LLE 3DS emulator, whose logs helped me debug
 

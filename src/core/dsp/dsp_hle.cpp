@@ -28,7 +28,7 @@
 #define FRAME_COUNT 0xBFFF
 #define INPUT_CONFIG 0x9E92
 #define INPUT_STATUS 0x8680
-#define INPUT_ADPCM 0xA792
+#define ADPCM_COEFFS 0xA792
 #define DSP_CONFIG 0x9430
 #define DSP_STATUS 0x8400
 #define OUT_SAMPLES 0x8540
@@ -109,7 +109,7 @@ void DspHle::update() {
         writeData(PIPE2_OUT + 0x1, FRAME_COUNT);
         writeData(PIPE2_OUT + 0x2, INPUT_CONFIG);
         writeData(PIPE2_OUT + 0x3, INPUT_STATUS);
-        writeData(PIPE2_OUT + 0x4, INPUT_ADPCM);
+        writeData(PIPE2_OUT + 0x4, ADPCM_COEFFS);
         writeData(PIPE2_OUT + 0x5, DSP_CONFIG);
         writeData(PIPE2_OUT + 0x6, DSP_STATUS);
         writeData(PIPE2_OUT + 0x7, OUT_SAMPLES);
@@ -161,36 +161,36 @@ void DspHle::processFrame() {
         writeData(cfgBase + 0x0, 0), writeData(cfgBase + 0x1, 0);
         InputState &input = inputs[i];
 
+        // Update the ADPCM coefficients if dirty
+        if (dirty & BIT(2)) {
+            uint16_t coeffBase = ADPCM_COEFFS + i * 0x10;
+            for (int j = 0; j < 8; j++) {
+                input.adpcmCoeffs[j][0] = readData(coeffBase + j * 2 + 0);
+                input.adpcmCoeffs[j][1] = readData(coeffBase + j * 2 + 1);
+            }
+        }
+
         // Update embedded buffer parameters if dirty
-        if (dirty & BIT(4)) {
-            uint32_t position = (readData(cfgBase + 0x52) << 16) | readData(cfgBase + 0x53);
-            uint32_t address = (readData(cfgBase + 0x56) << 16) | readData(cfgBase + 0x57);
-            uint32_t count = (readData(cfgBase + 0x58) << 16) | readData(cfgBase + 0x59);
-            uint16_t format = readData(cfgBase + 0x5A);
-            uint16_t seqId = readData(cfgBase + 0x5F);
-            writeData(cfgBase + 0x52, position >> 16), writeData(cfgBase + 0x53, position);
-            writeData(cfgBase + 0x56, address >> 16), writeData(cfgBase + 0x57, address);
-            writeData(cfgBase + 0x58, count >> 16), writeData(cfgBase + 0x59, count);
-            writeData(cfgBase + 0x5A, format);
-            writeData(cfgBase + 0x5F, seqId);
-            input.buffers[0].address = address;
-            input.buffers[0].count = count;
-            input.buffers[0].seqId = seqId;
-            input.position = position;
-            input.format = format;
+        if (dirty & (BIT(4) | BIT(21) | BIT(30))) { // TODO: which bits are which?
+            input.position = (readData(cfgBase + 0x52) << 16) | readData(cfgBase + 0x53);
+            input.buffers[4].address = (readData(cfgBase + 0x56) << 16) | readData(cfgBase + 0x57);
+            input.buffers[4].count = (readData(cfgBase + 0x58) << 16) | readData(cfgBase + 0x59);
+            input.format = readData(cfgBase + 0x5A);
+            input.buffers[4].adpcmPrev[0] = readData(cfgBase + 0x5C);
+            input.buffers[4].adpcmPrev[1] = readData(cfgBase + 0x5D);
+            input.buffers[4].seqId = readData(cfgBase + 0x5F);
         }
 
         // Update the play status if dirty
+        bool wasPlaying = (input.playFlags & BIT(0));
         if (dirty & BIT(16)) {
             uint16_t playStatus = readData(cfgBase + 0x50);
-            writeData(cfgBase + 0x50, playStatus);
             input.playFlags = (playStatus ? BIT(0) : BIT(8));
         }
 
         // Update the resample rate if dirty
         if (dirty & BIT(18)) {
             uint32_t rate = readData(cfgBase + 0x1A) | (readData(cfgBase + 0x1B) << 16);
-            writeData(cfgBase + 0x1A, rate), writeData(cfgBase + 0x1B, rate >> 16);
             input.rate = *(float*)&rate;
         }
 
@@ -201,39 +201,36 @@ void DspHle::processFrame() {
             for (int b = 0; b < 4; b++) {
                 if (~bufDirty & BIT(b)) continue;
                 uint16_t bufBase = cfgBase + 0x26 + b * 0xA;
-                uint32_t address = (readData(bufBase + 0x0) << 16) | readData(bufBase + 0x1);
-                uint32_t count = (readData(bufBase + 0x2) << 16) | readData(bufBase + 0x3);
-                uint16_t seqId = readData(bufBase + 0x8);
-                writeData(bufBase + 0x0, address >> 16), writeData(bufBase + 0x1, address);
-                writeData(bufBase + 0x2, count >> 16), writeData(bufBase + 0x3, count);
-                writeData(bufBase + 0x8, seqId);
-                input.buffers[b + 1].address = address;
-                input.buffers[b + 1].count = count;
-                input.buffers[b + 1].seqId = seqId;
+                input.buffers[b].address = (readData(bufBase + 0x0) << 16) | readData(bufBase + 0x1);
+                input.buffers[b].count = (readData(bufBase + 0x2) << 16) | readData(bufBase + 0x3);
+                input.buffers[b].adpcmPrev[0] = readData(bufBase + 0x5);
+                input.buffers[b].adpcmPrev[1] = readData(bufBase + 0x6);
+                input.buffers[b].seqId = readData(bufBase + 0x8);
             }
         }
 
         // Update the sync count if dirty
-        if (dirty & BIT(28)) {
-            uint16_t syncCount = readData(cfgBase + 0x51);
-            writeData(cfgBase + 0x51, syncCount);
-            input.syncCount = syncCount;
-        }
+        if (dirty & BIT(28))
+            input.syncCount = readData(cfgBase + 0x51);
 
         // Mix input into the frame output if it's playing
         if (input.playFlags & BIT(0)) {
             // Get the current buffer based on state, if any
             InputBuffer *buffer = nullptr;
             if (input.playFlags & BIT(8)) { // Queue
-                for (int b = 1; b < 5; b++) {
+                for (int b = 0; b < 4; b++) {
                     if (input.buffers[b].seqId != input.seqId) continue;
                     buffer = &input.buffers[b];
                     break;
                 }
             }
             else { // Embedded
-                buffer = &input.buffers[0];
-                input.seqId = buffer->seqId;
+                buffer = &input.buffers[4];
+                if (!wasPlaying) {
+                    input.seqId = buffer->seqId;
+                    input.adpcmPrev[0] = buffer->adpcmPrev[0];
+                    input.adpcmPrev[1] = buffer->adpcmPrev[1];
+                }
             }
 
             // Step through buffers until frame end or input end
@@ -242,7 +239,7 @@ void DspHle::processFrame() {
                     uint32_t position = input.position;
                     if (position < buffer->count) {
                         // Add a sample based on format and adjust the position (half-volume for now)
-                        uint32_t value;
+                        int32_t value;
                         switch (input.format & 0xF) {
                         case 0x0: case 0x1: case 0x3: // PCM8 mono
                             value = core.memory.read<uint8_t>(ARM11, buffer->address + position);
@@ -264,7 +261,21 @@ void DspHle::processFrame() {
                             samples[j][0] += int16_t(value >> 0) / 2;
                             samples[j][1] += int16_t(value >> 16) / 2;
                             break;
-                        }
+                        case 0x8: case 0x9: case 0xB: { // ADPCM mono
+                            uint32_t block = (position / 14) * 8, sample = position % 14;
+                            uint8_t header = core.memory.read<uint8_t>(ARM11, buffer->address + block);
+                            int8_t nybble = core.memory.read<uint8_t>(ARM11, buffer->address + block + sample / 2 + 1);
+                            uint8_t shift = (header & 0xF) + 11;
+                            int16_t *coeffs = input.adpcmCoeffs[header >> 4];
+                            nybble = int8_t((sample & 0x1) ? nybble : (nybble << 4)) >> 4;
+                            value = (nybble << shift) + coeffs[0] * input.adpcmPrev[0] + coeffs[1] * input.adpcmPrev[1];
+                            value = std::max(-0x8000, std::min(0x7FFF, (value + 0x400) >> 11));
+                            input.adpcmPrev[1] = input.adpcmPrev[0];
+                            input.adpcmPrev[0] = value;
+                            samples[j][0] += value / 2;
+                            samples[j][1] += value / 2;
+                            break;
+                        }}
                         input.position += input.rate;
                     }
                     else {
@@ -274,7 +285,7 @@ void DspHle::processFrame() {
 
                         // Find the next sequenced buffer, if any
                         buffer = nullptr;
-                        for (int b = 1; b < 5; b++) {
+                        for (int b = 0; b < 4; b++) {
                             if (input.buffers[b].seqId != input.seqId) continue;
                             buffer = &input.buffers[b];
                             break;
@@ -288,6 +299,8 @@ void DspHle::processFrame() {
 
                         // Redo the sample at the next buffer's start
                         input.position = 0;
+                        input.adpcmPrev[0] = buffer->adpcmPrev[0];
+                        input.adpcmPrev[1] = buffer->adpcmPrev[1];
                         j--;
                     }
                 }
@@ -308,13 +321,15 @@ void DspHle::processFrame() {
 }
 
 uint16_t DspHle::readData(uint16_t address) {
-    // Read a value from the current frame's data block
-    return core.memory.read<uint16_t>(ARM11, frameBase + (address << 1));
+    // Read a value from the previous frame and forward it to the next one
+    uint16_t value = core.memory.read<uint16_t>(ARM11, (frameBase ^ 0x20000) + (address << 1));
+    writeData(address, value);
+    return value;
 }
 
 void DspHle::writeData(uint16_t address, uint16_t value) {
-    // Write a value to the next frame's data block
-    core.memory.write<uint16_t>(ARM11, (frameBase ^ 0x20000) + (address << 1), value);
+    // Write a value to the current frame's data block
+    core.memory.write<uint16_t>(ARM11, frameBase + (address << 1), value);
 }
 
 void DspHle::sendResponse(int i, uint16_t value) {
