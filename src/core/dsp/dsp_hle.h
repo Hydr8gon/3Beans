@@ -47,6 +47,7 @@ struct InputState {
     uint16_t syncCount;
     uint16_t format;
     float rate;
+    float volume[2];
 
     double position;
     InputBuffer current;

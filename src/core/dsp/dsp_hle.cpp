@@ -209,6 +209,14 @@ void DspHle::processFrame() {
             }
         }
 
+        // Update the output mixer volume if dirty
+        if (dirty & BIT(25)) {
+            for (int j = 0; j < 4; j += 2) {
+                uint32_t volume = readData(cfgBase + 0x2 + j) | (readData(cfgBase + 0x3 + j) << 16);
+                input.volume[j / 2] = *(float*)&volume;
+            }
+        }
+
         // Update the sync count if dirty
         if (dirty & BIT(28))
             input.syncCount = readData(cfgBase + 0x51);
@@ -223,28 +231,28 @@ void DspHle::processFrame() {
             for (int j = 0; j < 8 * 20; j++) {
                 uint32_t position = input.position;
                 if (position < cur.count) {
-                    // Add a sample based on format and adjust the position (half-volume for now)
+                    // Mix a sample based on format and volume, then adjust the position
                     int32_t value;
                     switch (input.format & 0xF) {
                     case 0x0: case 0x1: case 0x3: // PCM8 mono
                         value = core.memory.read<uint8_t>(ARM11, cur.address + position);
-                        samples[j][0] += int16_t(value << 8) / 2;
-                        samples[j][1] += int16_t(value << 8) / 2;
+                        samples[j][0] += input.volume[0] * int16_t(value << 8);
+                        samples[j][1] += input.volume[1] * int16_t(value << 8);
                         break;
                     case 0x2: // PCM8 stereo
                         value = core.memory.read<uint16_t>(ARM11, cur.address + position * 2);
-                        samples[j][0] += int16_t(value << 8) / 2;
-                        samples[j][1] += int16_t(value & 0xFF00) / 2;
+                        samples[j][0] += input.volume[0] * int16_t(value << 8);
+                        samples[j][1] += input.volume[1] * int16_t(value & 0xFF00);
                         break;
                     case 0x4: case 0x5: case 0x7: // PCM16 mono
                         value = core.memory.read<uint16_t>(ARM11, cur.address + position * 2);
-                        samples[j][0] += int16_t(value) / 2;
-                        samples[j][1] += int16_t(value) / 2;
+                        samples[j][0] += input.volume[0] * int16_t(value);
+                        samples[j][1] += input.volume[1] * int16_t(value);
                         break;
                     case 0x6: // PCM16 stereo
                         value = core.memory.read<uint32_t>(ARM11, cur.address + position * 4);
-                        samples[j][0] += int16_t(value >> 0) / 2;
-                        samples[j][1] += int16_t(value >> 16) / 2;
+                        samples[j][0] += input.volume[0] * int16_t(value >> 0);
+                        samples[j][1] += input.volume[1] * int16_t(value >> 16);
                         break;
                     case 0x8: case 0x9: case 0xB: { // ADPCM mono
                         uint32_t block = (position / 14) * 8, sample = position % 14;
@@ -257,8 +265,8 @@ void DspHle::processFrame() {
                         value = std::max(-0x8000, std::min(0x7FFF, (value + 0x400) >> 11));
                         cur.adpcmPrev[1] = cur.adpcmPrev[0];
                         cur.adpcmPrev[0] = value;
-                        samples[j][0] += value / 2;
-                        samples[j][1] += value / 2;
+                        samples[j][0] += input.volume[0] * value;
+                        samples[j][1] += input.volume[1] * value;
                         break;
                     }}
                     input.position += input.rate;
