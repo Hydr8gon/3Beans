@@ -26,6 +26,7 @@
 
 class b3App: public wxApp {
 public:
+    static int audBufSize;
     static int keyBinds[MAX_KEYS];
 
 private:

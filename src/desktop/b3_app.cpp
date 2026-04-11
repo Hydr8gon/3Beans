@@ -29,6 +29,7 @@ wxBEGIN_EVENT_TABLE(b3App, wxApp)
 EVT_TIMER(UPDATE, b3App::update)
 wxEND_EVENT_TABLE()
 
+int b3App::audBufSize = 1024;
 int b3App::keyBinds[] = {
     'L', 'K', 'G', 'H', WXK_RIGHT, WXK_LEFT, WXK_UP, WXK_DOWN, // A, B, Select, Start, D-pad
     'P', 'Q', 'O', 'I', 'D', 'A', 'W', 'S', WXK_SHIFT, WXK_SPACE // R, L, X, Y, L-stick, Home
@@ -37,6 +38,7 @@ int b3App::keyBinds[] = {
 bool b3App::OnInit() {
     // Define and add platform-specific settings
     std::vector<Setting> platSettings = {
+        Setting("audBufSize", &audBufSize, false),
         Setting("keyA", &keyBinds[0], false),
         Setting("keyB", &keyBinds[1], false),
         Setting("keySelect", &keyBinds[2], false),
@@ -88,7 +90,7 @@ bool b3App::OnInit() {
 
     // Initialize the audio output stream
     Pa_Initialize();
-    Pa_OpenDefaultStream(&stream, 0, 2, paInt16, 48000, 1024, audioCallback, frame);
+    Pa_OpenDefaultStream(&stream, 0, 2, paInt16, 48000, audBufSize, audioCallback, frame);
     Pa_StartStream(stream);
     return true;
 }
