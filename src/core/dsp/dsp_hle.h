@@ -49,9 +49,7 @@ struct InputState {
     float rate;
 
     double position;
-    uint16_t seqId;
-    int16_t adpcmPrev[2];
-
+    InputBuffer current;
     InputBuffer buffers[5];
     int16_t adpcmCoeffs[8][2];
 };

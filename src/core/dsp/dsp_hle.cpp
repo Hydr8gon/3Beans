@@ -215,94 +215,78 @@ void DspHle::processFrame() {
 
         // Mix input into the frame output if it's playing
         if (input.playFlags & BIT(0)) {
-            // Get the current buffer based on state, if any
-            InputBuffer *buffer = nullptr;
-            if (input.playFlags & BIT(8)) { // Queue
-                for (int b = 0; b < 4; b++) {
-                    if (input.buffers[b].seqId != input.seqId) continue;
-                    buffer = &input.buffers[b];
-                    break;
-                }
-            }
-            else { // Embedded
-                buffer = &input.buffers[4];
-                if (!wasPlaying) {
-                    input.seqId = buffer->seqId;
-                    input.adpcmPrev[0] = buffer->adpcmPrev[0];
-                    input.adpcmPrev[1] = buffer->adpcmPrev[1];
-                }
-            }
+            // Load the embedded buffer at playback start
+            InputBuffer &cur = input.current;
+            if (!wasPlaying) cur = input.buffers[4];
 
             // Step through buffers until frame end or input end
-            if (buffer) {
-                for (int j = 0; j < 8 * 20; j++) {
-                    uint32_t position = input.position;
-                    if (position < buffer->count) {
-                        // Add a sample based on format and adjust the position (half-volume for now)
-                        int32_t value;
-                        switch (input.format & 0xF) {
-                        case 0x0: case 0x1: case 0x3: // PCM8 mono
-                            value = core.memory.read<uint8_t>(ARM11, buffer->address + position);
-                            samples[j][0] += int16_t(value << 8) / 2;
-                            samples[j][1] += int16_t(value << 8) / 2;
-                            break;
-                        case 0x2: // PCM8 stereo
-                            value = core.memory.read<uint16_t>(ARM11, buffer->address + position * 2);
-                            samples[j][0] += int16_t(value << 8) / 2;
-                            samples[j][1] += int16_t(value & 0xFF00) / 2;
-                            break;
-                        case 0x4: case 0x5: case 0x7: // PCM16 mono
-                            value = core.memory.read<uint16_t>(ARM11, buffer->address + position * 2);
-                            samples[j][0] += int16_t(value) / 2;
-                            samples[j][1] += int16_t(value) / 2;
-                            break;
-                        case 0x6: // PCM16 stereo
-                            value = core.memory.read<uint32_t>(ARM11, buffer->address + position * 4);
-                            samples[j][0] += int16_t(value >> 0) / 2;
-                            samples[j][1] += int16_t(value >> 16) / 2;
-                            break;
-                        case 0x8: case 0x9: case 0xB: { // ADPCM mono
-                            uint32_t block = (position / 14) * 8, sample = position % 14;
-                            uint8_t header = core.memory.read<uint8_t>(ARM11, buffer->address + block);
-                            int8_t nybble = core.memory.read<uint8_t>(ARM11, buffer->address + block + sample / 2 + 1);
-                            uint8_t shift = (header & 0xF) + 11;
-                            int16_t *coeffs = input.adpcmCoeffs[header >> 4];
-                            nybble = int8_t((sample & 0x1) ? nybble : (nybble << 4)) >> 4;
-                            value = (nybble << shift) + coeffs[0] * input.adpcmPrev[0] + coeffs[1] * input.adpcmPrev[1];
-                            value = std::max(-0x8000, std::min(0x7FFF, (value + 0x400) >> 11));
-                            input.adpcmPrev[1] = input.adpcmPrev[0];
-                            input.adpcmPrev[0] = value;
-                            samples[j][0] += value / 2;
-                            samples[j][1] += value / 2;
-                            break;
-                        }}
-                        input.position += input.rate;
+            for (int j = 0; j < 8 * 20; j++) {
+                uint32_t position = input.position;
+                if (position < cur.count) {
+                    // Add a sample based on format and adjust the position (half-volume for now)
+                    int32_t value;
+                    switch (input.format & 0xF) {
+                    case 0x0: case 0x1: case 0x3: // PCM8 mono
+                        value = core.memory.read<uint8_t>(ARM11, cur.address + position);
+                        samples[j][0] += int16_t(value << 8) / 2;
+                        samples[j][1] += int16_t(value << 8) / 2;
+                        break;
+                    case 0x2: // PCM8 stereo
+                        value = core.memory.read<uint16_t>(ARM11, cur.address + position * 2);
+                        samples[j][0] += int16_t(value << 8) / 2;
+                        samples[j][1] += int16_t(value & 0xFF00) / 2;
+                        break;
+                    case 0x4: case 0x5: case 0x7: // PCM16 mono
+                        value = core.memory.read<uint16_t>(ARM11, cur.address + position * 2);
+                        samples[j][0] += int16_t(value) / 2;
+                        samples[j][1] += int16_t(value) / 2;
+                        break;
+                    case 0x6: // PCM16 stereo
+                        value = core.memory.read<uint32_t>(ARM11, cur.address + position * 4);
+                        samples[j][0] += int16_t(value >> 0) / 2;
+                        samples[j][1] += int16_t(value >> 16) / 2;
+                        break;
+                    case 0x8: case 0x9: case 0xB: { // ADPCM mono
+                        uint32_t block = (position / 14) * 8, sample = position % 14;
+                        uint8_t header = core.memory.read<uint8_t>(ARM11, cur.address + block);
+                        int8_t nybble = core.memory.read<uint8_t>(ARM11, cur.address + block + sample / 2 + 1);
+                        uint8_t shift = (header & 0xF) + 11;
+                        int16_t *coeffs = input.adpcmCoeffs[header >> 4];
+                        nybble = int8_t((sample & 0x1) ? nybble : (nybble << 4)) >> 4;
+                        value = (nybble << shift) + coeffs[0] * cur.adpcmPrev[0] + coeffs[1] * cur.adpcmPrev[1];
+                        value = std::max(-0x8000, std::min(0x7FFF, (value + 0x400) >> 11));
+                        cur.adpcmPrev[1] = cur.adpcmPrev[0];
+                        cur.adpcmPrev[0] = value;
+                        samples[j][0] += value / 2;
+                        samples[j][1] += value / 2;
+                        break;
+                    }}
+                    input.position += input.rate;
+                }
+                else {
+                    // Increment the sequence at the end of a buffer
+                    input.playFlags |= BIT(8);
+                    cur.seqId++;
+
+                    // Try to find the next sequence in the buffer queue
+                    InputBuffer *buffer = nullptr;
+                    for (int b = 0; b < 4; b++) {
+                        if (input.buffers[b].seqId != cur.seqId) continue;
+                        buffer = &input.buffers[b];
+                        break;
                     }
-                    else {
-                        // Increment the sequence at the end of a buffer
-                        input.playFlags |= BIT(8);
-                        input.seqId++;
 
-                        // Find the next sequenced buffer, if any
-                        buffer = nullptr;
-                        for (int b = 0; b < 4; b++) {
-                            if (input.buffers[b].seqId != input.seqId) continue;
-                            buffer = &input.buffers[b];
-                            break;
-                        }
-
-                        // Stop playing if a buffer wasn't found
-                        if (!buffer) {
-                            input.playFlags &= ~BIT(0);
-                            break;
-                        }
-
-                        // Redo the sample at the next buffer's start
-                        input.position = 0;
-                        input.adpcmPrev[0] = buffer->adpcmPrev[0];
-                        input.adpcmPrev[1] = buffer->adpcmPrev[1];
-                        j--;
+                    // Stop playing if a buffer wasn't found
+                    if (!buffer) {
+                        input.playFlags &= ~BIT(0);
+                        break;
                     }
+
+                    // Load the next buffer and dequeue it
+                    cur = *buffer;
+                    buffer->seqId = 0;
+                    input.position = 0;
+                    j--; // Redo sample
                 }
             }
         }
@@ -312,7 +296,7 @@ void DspHle::processFrame() {
         writeData(stsBase + 0x1, input.syncCount);
         writeData(stsBase + 0x2, uint32_t(input.position) >> 16);
         writeData(stsBase + 0x3, uint32_t(input.position) >> 0);
-        writeData(stsBase + 0x4, input.seqId);
+        writeData(stsBase + 0x4, input.current.seqId);
     }
 
     // Output a frame's worth of samples
