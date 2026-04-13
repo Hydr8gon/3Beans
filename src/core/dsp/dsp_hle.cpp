@@ -160,6 +160,7 @@ void DspHle::processFrame() {
         uint32_t dirty = readData(cfgBase + 0x0) | (readData(cfgBase + 0x1) << 16);
         writeData(cfgBase + 0x0, 0), writeData(cfgBase + 0x1, 0);
         InputState &input = inputs[i];
+        bool wasPlaying = (input.playFlags & BIT(0));
 
         // Update the ADPCM coefficients if dirty
         if (dirty & BIT(2)) {
@@ -179,10 +180,10 @@ void DspHle::processFrame() {
             input.buffers[4].adpcmPrev[0] = readData(cfgBase + 0x5C);
             input.buffers[4].adpcmPrev[1] = readData(cfgBase + 0x5D);
             input.buffers[4].seqId = readData(cfgBase + 0x5F);
+            wasPlaying = false; // Reset if playing
         }
 
         // Update the play status if dirty
-        bool wasPlaying = (input.playFlags & BIT(0));
         if (dirty & BIT(16)) {
             uint16_t playStatus = readData(cfgBase + 0x50);
             input.playFlags = (playStatus ? BIT(0) : BIT(8));
@@ -229,9 +230,11 @@ void DspHle::processFrame() {
 
             // Step through buffers until frame end or input end
             for (int j = 0; j < 8 * 20; j++) {
+                // Check buffer bounds and adjust position based on rate
                 uint32_t position = input.position;
+                input.position += input.rate;
                 if (position < cur.count) {
-                    // Mix a sample based on format and volume, then adjust the position
+                    // Mix a sample based on format and volume
                     int32_t value;
                     switch (input.format & 0xF) {
                     case 0x0: case 0x1: case 0x3: // PCM8 mono
@@ -263,13 +266,14 @@ void DspHle::processFrame() {
                         nybble = int8_t((sample & 0x1) ? nybble : (nybble << 4)) >> 4;
                         value = (nybble << shift) + coeffs[0] * cur.adpcmPrev[0] + coeffs[1] * cur.adpcmPrev[1];
                         value = std::max(-0x8000, std::min(0x7FFF, (value + 0x400) >> 11));
-                        cur.adpcmPrev[1] = cur.adpcmPrev[0];
-                        cur.adpcmPrev[0] = value;
                         samples[j][0] += input.volume[0] * value;
                         samples[j][1] += input.volume[1] * value;
+                        if (uint32_t(input.position) > position) {
+                            cur.adpcmPrev[1] = cur.adpcmPrev[0];
+                            cur.adpcmPrev[0] = value;
+                        }
                         break;
                     }}
-                    input.position += input.rate;
                 }
                 else {
                     // Increment the sequence at the end of a buffer
