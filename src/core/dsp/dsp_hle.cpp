@@ -150,7 +150,7 @@ void DspHle::update() {
 void DspHle::processFrame() {
     // Alternate the frame base pointer
     frameBase ^= 0x20000;
-    int16_t samples[8 * 20][2] = {};
+    int32_t samples[8 * 20][2] = {};
 
     // Loop through inputs to update and mix them
     for (int i = 0; i < 24; i++) {
@@ -311,9 +311,20 @@ void DspHle::processFrame() {
         writeData(stsBase + 0x4, input.current.seqId);
     }
 
-    // Output a frame's worth of samples
-    for (int i = 0; i < 8 * 20; i++)
+    // Update the final output volume if dirty
+    uint32_t dirty = readData(DSP_CONFIG + 0x0) | (readData(DSP_CONFIG + 0x1) << 16);
+    writeData(DSP_CONFIG + 0x0, 0), writeData(DSP_CONFIG + 0x1, 0);
+    if (dirty & BIT(16)) {
+        uint32_t volume = readData(DSP_CONFIG + 0x2) | (readData(DSP_CONFIG + 0x3) << 16);
+        outVolume = *(float*)&volume;
+    }
+
+    // Clamp and output a frame's worth of samples
+    for (int i = 0; i < 8 * 20; i++) {
+        samples[i][0] = std::max(-0x8000, std::min(0x7FFF, int(outVolume * samples[i][0])));
+        samples[i][1] = std::max(-0x8000, std::min(0x7FFF, int(outVolume * samples[i][1])));
         core.csnd.sampleDsp(samples[i][0], samples[i][1]);
+    }
 }
 
 uint16_t DspHle::readData(uint16_t address) {

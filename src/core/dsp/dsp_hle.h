@@ -83,13 +83,14 @@ public:
 private:
     Core &core;
 
+    std::queue<uint16_t> readFifo;
+    uint32_t frameBase = 0x1FF40000;
     uint32_t cycles = 0;
     bool scheduled = false;
 
     InputState inputs[24] = {};
-    std::queue<uint16_t> readFifo;
     DspState state = STATE_OFF;
-    uint32_t frameBase = 0x1FF40000;
+    float outVolume = 1.0f;
 
     void processFrame();
     uint16_t readData(uint16_t address);
