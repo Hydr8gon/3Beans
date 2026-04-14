@@ -29,11 +29,11 @@ Core::Core(std::string &cartPath, std::function<void()> *contextFunc): aes(*this
         Vfp11Interp(*this, ARM11C), Vfp11Interp(*this, ARM11D) }, wifi(*this), y2rs { Y2r(*this, 0), Y2r(*this, 1) } {
     // Initialize things that need to be done after construction
     n3dsMode = sdMmcs[0].init(sdMmcs[1]);
-    if (!memory.init())
-        throw ERROR_BOOTROM;
+    LOG_INFO("Running in %s 3DS mode\n", n3dsMode ? "new" : "old");
+    if (!memory.init()) throw ERROR_BOOTROM;
     for (int i = 0; i < MAX_CPUS; i++)
         arms[i].init();
-    LOG_INFO("Running in %s 3DS mode\n", n3dsMode ? "new" : "old");
+    initDsp();
 
     // Define static tasks that can be scheduled
     tasks[RESET_CYCLES] = std::bind(&Core::resetCycles, this);
@@ -79,9 +79,36 @@ Core::Core(std::string &cartPath, std::function<void()> *contextFunc): aes(*this
     tasks[NTR_WORD_READY] = std::bind(&Cartridge::ntrWordReady, &cartridge);
     tasks[CTR_WORD_READY] = std::bind(&Cartridge::ctrWordReady, &cartridge);
 
-    // Create a DSP using the selected backend and define its scheduler tasks
-    // TODO: support changing this without reset?
-    DspLle *dspLle; DspHle *dspHle;
+    // Schedule the initial tasks
+    schedule(RESET_CYCLES, 0x7FFFFFFFFFFFFFFF);
+    schedule(END_FRAME, 268111856 / 60);
+    schedule(CSND_SAMPLE, 2048);
+}
+
+Core::~Core() {
+    // Clean up the DSP
+    delete dsp;
+}
+
+void Core::initDsp() {
+    // Make a list of possible DSP tasks
+    Task dspTasks[] = {
+        TEAK_STOP_CYCLES, TEAK_INTERRUPT0, TEAK_INTERRUPT1, TEAK_INTERRUPT2, TEAK_INTERRUPT3,
+        DSP_UNDERFLOW0, DSP_UNDERFLOW1, DSP_UNSIGNAL0, DSP_UNSIGNAL1, DSP_SEND_AUDIO, DSP_HLE_UPDATE
+    };
+
+    // Remove any tasks scheduled for the current DSP
+    for (int i = 0; i < events.size(); i++)
+        for (int j = 0; j < sizeof(dspTasks) / sizeof(Task); j++)
+            if (events[i].task == &tasks[dspTasks[j]])
+                events.erase(events.begin() + i--);
+
+    // Clean up the current DSP
+    delete dsp;
+    DspLle *dspLle;
+    DspHle *dspHle;
+
+    // Create a new DSP using the selected backend and redefine its tasks
     switch (dspCurrent = Settings::dspBackend) {
     default: // Interpreter
         dsp = dspLle = new DspLle(*this);
@@ -95,23 +122,13 @@ Core::Core(std::string &cartPath, std::function<void()> *contextFunc): aes(*this
         tasks[DSP_UNSIGNAL0] = std::bind(&DspLle::unsignalTmr, dspLle, 0);
         tasks[DSP_UNSIGNAL1] = std::bind(&DspLle::unsignalTmr, dspLle, 1);
         tasks[DSP_SEND_AUDIO] = std::bind(&DspLle::sendAudio, dspLle);
-        break;
+        return;
 
     case 1: // HLE
         dsp = dspHle = new DspHle(*this);
         tasks[DSP_HLE_UPDATE] = std::bind(&DspHle::update, dspHle);
-        break;
+        return;
     }
-
-    // Schedule the initial tasks
-    schedule(RESET_CYCLES, 0x7FFFFFFFFFFFFFFF);
-    schedule(END_FRAME, 268111856 / 60);
-    schedule(CSND_SAMPLE, 2048);
-}
-
-Core::~Core() {
-    // Clean up the DSP backend
-    delete dsp;
 }
 
 void Core::resetCycles() {

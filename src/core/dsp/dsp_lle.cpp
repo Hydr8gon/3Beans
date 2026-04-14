@@ -818,11 +818,17 @@ void DspLle::writePcfg(uint16_t mask, uint16_t value) {
         updateReadFifo();
     }
 
-    // Reset the DSP if the reset bit was newly set
+    // Update the DSP backend if newly reset
     if (!(~old & dspPcfg & BIT(0))) return;
+    core.schedule(UPDATE_RUN_FUNC, 0);
+    if (Settings::dspBackend != 0) {
+        core.initDsp();
+        return core.dsp->writePcfg(mask, value);
+    }
+
+    // Reset LLE DSP if the backend is unchanged
     LOG_INFO("Restarting LLE DSP execution\n");
     teak.cycles = teak.regPc = 0;
-    core.schedule(UPDATE_RUN_FUNC, 0);
 }
 
 void DspLle::writePsem(uint16_t mask, uint16_t value) {

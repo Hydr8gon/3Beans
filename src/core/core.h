@@ -131,7 +131,7 @@ public:
     Cdma cdmas[3];
     Cp15 cp15;
     Csnd csnd;
-    Dsp *dsp;
+    Dsp *dsp = nullptr;
     Gpu gpu;
     I2c i2c;
     Input input;
@@ -157,6 +157,7 @@ public:
 
     void runFrame() { (*runFunc)(*this); }
     void schedule(Task task, uint64_t cycles);
+    void initDsp();
 
 private:
     std::function<void()> tasks[MAX_TASKS];

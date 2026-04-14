@@ -32,7 +32,10 @@ enum DspState {
     STATE_INIT,
     STATE_RECEIVE,
     STATE_REPLY,
-    STATE_RUNNING
+    STATE_RUNNING,
+    STATE_INTERRUPT,
+    STATE_RESET,
+    STATE_STOPPED
 };
 
 struct InputBuffer {
@@ -88,8 +91,8 @@ private:
     uint32_t cycles = 0;
     bool scheduled = false;
 
-    InputState inputs[24] = {};
     DspState state = STATE_OFF;
+    InputState inputs[24] = {};
     float outVolume = 1.0f;
 
     void processFrame();

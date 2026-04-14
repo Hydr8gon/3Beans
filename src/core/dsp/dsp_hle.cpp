@@ -17,6 +17,7 @@
     along with 3Beans. If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <cstring>
 #include "../core.h"
 
 // Define base addresses for pipes
@@ -143,6 +144,37 @@ void DspHle::update() {
             core.schedule(DSP_HLE_UPDATE, cycles);
         else
             scheduled = false;
+        return;
+
+    case STATE_INTERRUPT:
+        // Acknowledge pipe 2's input and set the ready semaphore
+        sendResponse(2, 0x5);
+        setSemaphore(15);
+
+        // Schedule the next stage in a bit
+        state = STATE_RESET;
+        core.schedule(DSP_HLE_UPDATE, 100000);
+        return;
+
+    case STATE_RESET:
+        // Pretend to reply through pipe 2
+        sendResponse(2, 0x4);
+        setSemaphore(15);
+
+        // Clear state and send a reset signal
+        memset(inputs, 0, sizeof(inputs));
+        outVolume = 1.0f;
+        sendResponse(0, 0x1);
+
+        // Schedule the next stage in a while
+        state = STATE_STOPPED;
+        core.schedule(DSP_HLE_UPDATE, 100000000);
+        return;
+
+    case STATE_STOPPED:
+        // Send a final reply and stop running
+        sendResponse(2, 0x8000);
+        scheduled = false;
         return;
     }
 }
@@ -436,12 +468,19 @@ void DspHle::writePcfg(uint16_t mask, uint16_t value) {
             core.interrupts.sendInterrupt(ARM11, 0x4A);
     }
 
-    // Reset the DSP state if the reset bit was newly set
+    // Update the DSP backend if newly reset
     if (!(~old & dspPcfg & BIT(0))) return;
+    if (Settings::dspBackend != 1) {
+        core.initDsp();
+        return core.dsp->writePcfg(mask, value);
+    }
+
+    // Reset HLE DSP if the backend is unchanged
     LOG_INFO("Restarting HLE DSP execution\n");
     state = STATE_HANDSHAKE;
+    frameBase = 0x1FF40000;
     if (scheduled) return;
-    core.schedule(DSP_HLE_UPDATE, 10000);
+    core.schedule(DSP_HLE_UPDATE, 100000000);
     scheduled = true;
 }
 
@@ -467,4 +506,8 @@ void DspHle::writeCmd(int i, uint16_t mask, uint16_t value) {
     // Write to a DSP command register but ignore its flag to appear acknowledged
     dspCmd[i] = (dspCmd[i] & ~mask) | (value & mask);
     LOG_INFO("Writing DSP command register %d: 0x%X\n", i, dspCmd[i]);
+
+    // Initiate a reset if pipe 2 is written while running
+    if (state == STATE_RUNNING && i == 2 && value == 0x5)
+        state = STATE_INTERRUPT;
 }
