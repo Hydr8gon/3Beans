@@ -257,23 +257,24 @@ void DspHle::processFrame() {
                         samples[j][0] += input.volume[0] * int16_t(value >> 0);
                         samples[j][1] += input.volume[1] * int16_t(value >> 16);
                         break;
-                    case 0x8: case 0x9: case 0xB: { // ADPCM mono
-                        uint32_t block = (position / 14) * 8, sample = position % 14;
-                        uint8_t header = core.memory.read<uint8_t>(ARM11, cur.address + block);
-                        int8_t nybble = core.memory.read<uint8_t>(ARM11, cur.address + block + sample / 2 + 1);
-                        uint8_t shift = (header & 0xF) + 11;
-                        int16_t *coeffs = input.adpcmCoeffs[header >> 4];
-                        nybble = int8_t((sample & 0x1) ? nybble : (nybble << 4)) >> 4;
-                        value = (nybble << shift) + coeffs[0] * cur.adpcmPrev[0] + coeffs[1] * cur.adpcmPrev[1];
-                        value = std::max(-0x8000, std::min(0x7FFF, (value + 0x400) >> 11));
-                        samples[j][0] += input.volume[0] * value;
-                        samples[j][1] += input.volume[1] * value;
-                        if (uint32_t(input.position) > position) {
+                    case 0x8: case 0x9: case 0xB: // ADPCM mono
+                        value = cur.adpcmPrev[0];
+                        for (uint32_t p = position; p < uint32_t(input.position); p++) {
+                            uint32_t block = (p / 14) * 8, sample = p % 14;
+                            uint8_t header = core.memory.read<uint8_t>(ARM11, cur.address + block);
+                            int8_t nybble = core.memory.read<uint8_t>(ARM11, cur.address + block + sample / 2 + 1);
+                            uint8_t shift = (header & 0xF) + 11;
+                            int16_t *coeffs = input.adpcmCoeffs[header >> 4];
+                            nybble = int8_t((sample & 0x1) ? nybble : (nybble << 4)) >> 4;
+                            value = (nybble << shift) + coeffs[0] * cur.adpcmPrev[0] + coeffs[1] * cur.adpcmPrev[1];
+                            value = std::max(-0x8000, std::min(0x7FFF, (value + 0x400) >> 11));
                             cur.adpcmPrev[1] = cur.adpcmPrev[0];
                             cur.adpcmPrev[0] = value;
                         }
+                        samples[j][0] += input.volume[0] * value;
+                        samples[j][1] += input.volume[1] * value;
                         break;
-                    }}
+                    }
                 }
                 else {
                     // Increment the sequence at the end of a buffer
