@@ -28,14 +28,20 @@ class Core;
 
 enum DspState {
     STATE_OFF,
-    STATE_HANDSHAKE,
-    STATE_INIT,
-    STATE_RECEIVE,
-    STATE_REPLY,
+    STATE_HANDSHAKE0,
+    STATE_HANDSHAKE1,
+    STATE_INIT0,
+    STATE_INIT1,
+    STATE_RECEIVE0,
+    STATE_RECEIVE1,
+    STATE_REPLY0,
+    STATE_REPLY1,
     STATE_RUNNING,
     STATE_INTERRUPT,
-    STATE_RESET,
-    STATE_STOPPED
+    STATE_RESET0,
+    STATE_RESET1,
+    STATE_STOPPED0,
+    STATE_STOPPED1
 };
 
 struct InputBuffer {
@@ -95,7 +101,9 @@ private:
     InputState inputs[24] = {};
     float outVolume = 1.0f;
 
+    void advanceState();
     void processFrame();
+
     uint16_t readData(uint16_t address);
     void writeData(uint16_t address, uint16_t value);
 

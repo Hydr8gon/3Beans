@@ -59,18 +59,18 @@ void DspHle::setAudClock(DspClock clock) {
 void DspHle::update() {
     // HLE the Teak based on its current state
     switch (state) {
-    case STATE_HANDSHAKE:
+    case STATE_HANDSHAKE1:
         // Send the initial handshake responses
         sendResponse(0, 0x1);
         sendResponse(1, 0x1);
         sendResponse(2, 0x1);
 
-        // Schedule the next stage shortly
-        state = STATE_INIT;
-        core.schedule(DSP_HLE_UPDATE, 10000);
+        // Wait for the response to be read
+        state = STATE_INIT0;
+        scheduled = false;
         return;
 
-    case STATE_INIT:
+    case STATE_INIT1:
         // Fill a struct with info for the pipe 2 output FIFO
         writeData(PIPE_BASE + 20, PIPE2_OUT); // Address
         writeData(PIPE_BASE + 21, 0x80); // Size
@@ -89,22 +89,22 @@ void DspHle::update() {
         sendResponse(2, PIPE_BASE);
         setSemaphore(15);
 
-        // Schedule the next stage in a bit
-        state = STATE_RECEIVE;
-        core.schedule(DSP_HLE_UPDATE, 100000);
+        // Wait for the pipe 2 input command
+        state = STATE_RECEIVE0;
+        scheduled = false;
         return;
 
-    case STATE_RECEIVE:
+    case STATE_RECEIVE1:
         // Acknowledge pipe 2's input and set the ready semaphore
         sendResponse(2, 0x5);
         setSemaphore(15);
 
-        // Schedule the next stage in a bit
-        state = STATE_REPLY;
-        core.schedule(DSP_HLE_UPDATE, 100000);
+        // Wait for the response to be read
+        state = STATE_REPLY0;
+        scheduled = false;
         return;
 
-    case STATE_REPLY:
+    case STATE_REPLY1:
         // Write DSP struct addresses to pipe 2's output
         writeData(PIPE2_OUT + 0x0, 0xF); // Count
         writeData(PIPE2_OUT + 0x1, FRAME_COUNT);
@@ -151,12 +151,12 @@ void DspHle::update() {
         sendResponse(2, 0x5);
         setSemaphore(15);
 
-        // Schedule the next stage in a bit
-        state = STATE_RESET;
-        core.schedule(DSP_HLE_UPDATE, 100000);
+        // Wait for the response to be read
+        state = STATE_RESET0;
+        scheduled = false;
         return;
 
-    case STATE_RESET:
+    case STATE_RESET1:
         // Pretend to reply through pipe 2
         sendResponse(2, 0x4);
         setSemaphore(15);
@@ -166,17 +166,25 @@ void DspHle::update() {
         outVolume = 1.0f;
         sendResponse(0, 0x1);
 
-        // Schedule the next stage in a while
-        state = STATE_STOPPED;
-        core.schedule(DSP_HLE_UPDATE, 100000000);
+        // Wait for the final reset command
+        state = STATE_STOPPED0;
+        scheduled = false;
         return;
 
-    case STATE_STOPPED:
+    case STATE_STOPPED1:
         // Send a final reply and stop running
         sendResponse(2, 0x8000);
         scheduled = false;
         return;
     }
+}
+
+void DspHle::advanceState() {
+    // Advance to the next DSP state and schedule an update
+    state = DspState(state + 1);
+    if (scheduled) return;
+    core.schedule(DSP_HLE_UPDATE, 10000);
+    scheduled = true;
 }
 
 void DspHle::processFrame() {
@@ -410,6 +418,16 @@ uint16_t DspHle::readPdata() {
 }
 
 uint16_t DspHle::readRep(int i) {
+    // Advance state when waiting for a response to be read
+    if (i == 2) {
+        switch (state) {
+        case STATE_HANDSHAKE0: case STATE_INIT0:
+        case STATE_REPLY0: case STATE_RESET0:
+            advanceState();
+            break;
+        }
+    }
+
     // Read from a DSP response register and clear its update flag
     dspPsts &= ~BIT(10 + i);
     return dspRep[i];
@@ -477,11 +495,8 @@ void DspHle::writePcfg(uint16_t mask, uint16_t value) {
 
     // Reset HLE DSP if the backend is unchanged
     LOG_INFO("Restarting HLE DSP execution\n");
-    state = STATE_HANDSHAKE;
+    state = STATE_HANDSHAKE0;
     frameBase = 0x1FF40000;
-    if (scheduled) return;
-    core.schedule(DSP_HLE_UPDATE, 100000000);
-    scheduled = true;
 }
 
 void DspHle::writePsem(uint16_t mask, uint16_t value) {
@@ -507,7 +522,20 @@ void DspHle::writeCmd(int i, uint16_t mask, uint16_t value) {
     dspCmd[i] = (dspCmd[i] & ~mask) | (value & mask);
     LOG_INFO("Writing DSP command register %d: 0x%X\n", i, dspCmd[i]);
 
-    // Initiate a reset if pipe 2 is written while running
-    if (state == STATE_RUNNING && i == 2 && value == 0x5)
-        state = STATE_INTERRUPT;
+    // Advance state when waiting for a specific command
+    if (i != 2) return;
+    switch (state) {
+    case STATE_RECEIVE0:
+        if (value == 0x5)
+            advanceState();
+        return;
+    case STATE_RUNNING:
+        if (value == 0x5)
+            state = STATE_INTERRUPT;
+        return;
+    case STATE_STOPPED0:
+        if (value == 0x8000)
+            advanceState();
+        return;
+    }
 }
