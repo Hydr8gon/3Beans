@@ -42,6 +42,9 @@
 #define QUAD_FILTER1 0xAC52
 #define QUAD_FILTER2 0xAC5C
 
+// Reserve memory in an area saved/restored by the OS (0x8400-0x8C3F)
+#define SAVE_STATE 0x8C30
+
 void DspHle::setAudClock(DspClock clock) {
     // Stop the HLE frame event if its clock is disabled
     if (clock == CLK_OFF) {
@@ -95,6 +98,20 @@ void DspHle::update() {
         return;
 
     case STATE_RECEIVE1:
+        // Check if the resume command was received through pipe 2
+        if (core.memory.read<uint16_t>(ARM11, frameBase + (PIPE2_IN << 1)) == 2 && canRestore) {
+            // Read the save state address and clear it
+            uint32_t address = core.memory.read<uint32_t>(ARM11, 0x1FF40000 + (SAVE_STATE << 1));
+            core.memory.write<uint32_t>(ARM11, 0x1FF40000 + (SAVE_STATE << 1), 0);
+
+            // Restore DSP state from the address if it's valid
+            if (address >= 0x1FF68000 && address < 0x1FF70000) {
+                LOG_INFO("Restoring HLE DSP state from 0x%X\n", address);
+                for (uint32_t i = 0; i < sizeof(inputs); i += 4)
+                    ((uint32_t*)inputs)[i / 4] = core.memory.read<uint32_t>(ARM11, address + i);
+            }
+        }
+
         // Acknowledge pipe 2's input and set the ready semaphore
         sendResponse(2, 0x5);
         setSemaphore(15);
@@ -157,13 +174,21 @@ void DspHle::update() {
         return;
 
     case STATE_RESET1:
-        // Pretend to reply through pipe 2
+        // Write DSP state to untouched memory and its address to saved memory
+        LOG_INFO("Saving HLE DSP state to 0x%X\n", saveAddress);
+        for (uint32_t i = 0; i < sizeof(inputs); i += 4)
+            core.memory.write<uint32_t>(ARM11, saveAddress + i, ((uint32_t*)inputs)[i / 4]);
+        core.memory.write<uint32_t>(ARM11, 0x1FF40000 + (SAVE_STATE << 1), saveAddress);
+
+        // Adjust the address for next save, within untouched memory bounds
+        saveAddress += (sizeof(inputs) + 0x3) & ~0x3;
+        if (saveAddress + sizeof(inputs) >= 0x1FF70000)
+            saveAddress = 0x1FF68000;
+        canRestore = true;
+
+        // Pretend to reply through pipe 2 and send a reset signal
         sendResponse(2, 0x4);
         setSemaphore(15);
-
-        // Clear state and send a reset signal
-        memset(inputs, 0, sizeof(inputs));
-        outVolume = 1.0f;
         sendResponse(0, 0x1);
 
         // Wait for the final reset command

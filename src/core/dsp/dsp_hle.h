@@ -93,13 +93,16 @@ private:
     Core &core;
 
     std::queue<uint16_t> readFifo;
-    uint32_t frameBase = 0x1FF40000;
     uint32_t cycles = 0;
     bool scheduled = false;
 
     DspState state = STATE_OFF;
     InputState inputs[24] = {};
     float outVolume = 1.0f;
+
+    uint32_t frameBase = 0x1FF40000;
+    uint32_t saveAddress = 0x1FF68000;
+    bool canRestore = false;
 
     void advanceState();
     void processFrame();
