@@ -41,7 +41,7 @@ Csnd::~Csnd() {
 
 uint32_t *Csnd::getSamples(uint32_t freq, uint32_t count) {
     // Check if parameters changed and update the buffer details if so
-    dspSize = count * ((dspClock == CLK_33KHZ) ? 32978 : 47971) / freq;
+    dspSize = count * ((dspClock == CLK_33KHZ) ? 32728 : 47605) / freq;
     if (mixFreq != freq || mixSize != count) {
         mixFreq = freq, mixSize = count;
         csndSize = count * 130914 / freq;
