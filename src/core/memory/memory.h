@@ -23,14 +23,14 @@
 
 #define DEF_IO08(addr, func) \
     case addr + 0: \
-        base -= addr; \
+        base &= 0x0; \
         size = 1; \
         func; \
         goto next;
 
 #define DEF_IO16(addr, func) \
     case addr + 0: case addr + 1: \
-        base -= addr; \
+        base &= 0x1; \
         size = 2; \
         func; \
         goto next;
@@ -38,7 +38,7 @@
 #define DEF_IO32(addr, func) \
     case addr + 0: case addr + 1: \
     case addr + 2: case addr + 3: \
-        base -= addr; \
+        base &= 0x3; \
         size = 4; \
         func; \
         goto next;
