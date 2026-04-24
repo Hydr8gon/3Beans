@@ -570,8 +570,8 @@ void GpuShaderInterp::shdJmpc(ShaderCode &op) {
 }
 
 void GpuShaderInterp::shdJmpu(ShaderCode &op) {
-    // If a uniform bool is true, jump to an address
-    if (!shdBools[(op.value >> 22) & 0xF]) return;
+    // If a uniform bool is true/false, jump to an address
+    if (shdBools[(op.value >> 22) & 0xF] == (op.value & BIT(0))) return;
     shdPc = (op.value >> 10) & 0xFFF;
 }
 

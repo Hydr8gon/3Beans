@@ -759,7 +759,9 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x10401734, data = core.gpu.readLightLutData()) // GPU_LIGHT_LUT_DATA
                 DEF_IO32(0x10401738, data = core.gpu.readLightLutData()) // GPU_LIGHT_LUT_DATA
                 DEF_IO32(0x1040173C, data = core.gpu.readLightLutData()) // GPU_LIGHT_LUT_DATA
+                DEF_IO32(0x10401740, data = core.gpu.readLightLutAbs()) // GPU_LIGHT_LUT_ABS
                 DEF_IO32(0x10401744, data = core.gpu.readLightLutSel()) // GPU_LIGHT_LUT_SEL
+                DEF_IO32(0x10401748, data = core.gpu.readLightLutScl()) // GPU_LIGHT_LUT_SCL
                 DEF_IO32(0x10401764, data = core.gpu.readLightIds()) // GPU_LIGHT_IDS
                 DEF_IO32(0x10401800, data = core.gpu.readAttrBase()) // GPU_ATTR_BASE
                 DEF_IO32(0x10401804, data = core.gpu.readAttrFmtL()) // GPU_ATTR_FMT_L

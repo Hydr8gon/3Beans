@@ -91,7 +91,9 @@ public:
     void setLightBaseAmb(float r, float g, float b) {}
     void setLightLutVal(LutId id, int i, float entry, float diff) {}
     void setLightLutMask(uint32_t mask) {}
-    void setLightInputs(LutInput *inputs) {}
+    void setLightLutAbs(bool *flags) {}
+    void setLightLutInps(LutInput *inputs) {}
+    void setLightLutScls(float *scales) {}
     void setLightMap(int8_t *map) {}
 
     void setViewScaleH(float scale);

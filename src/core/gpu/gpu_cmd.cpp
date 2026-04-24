@@ -851,6 +851,18 @@ void Gpu::writeLightLutData(uint32_t mask, uint32_t value) {
     gpuRender->setLightLutVal(id, i, entry, diff);
 }
 
+void Gpu::writeLightLutAbs(uint32_t mask, uint32_t value) {
+    // Write to the light LUT absolute flags
+    mask &= 0x3333333;
+    gpuLightLutAbs = (gpuLightLutAbs & ~mask) | (value & mask);
+
+    // Set flags for the renderer in bool form
+    bool flags[7];
+    for (int i = 0; i < 7; i++)
+        flags[i] = (gpuLightLutAbs >> (i * 4)) & 0x2;
+    gpuRender->setLightLutAbs(flags);
+}
+
 void Gpu::writeLightLutSel(uint32_t mask, uint32_t value) {
     // Write to the light LUT input selector
     mask &= 0x7777777;
@@ -862,7 +874,27 @@ void Gpu::writeLightLutSel(uint32_t mask, uint32_t value) {
         uint8_t val = (gpuLightLutSel >> (i * 4)) & 0x7;
         inputs[i] = (val <= 0x5) ? LutInput(val) : INPUT_UNK;
     }
-    gpuRender->setLightInputs(inputs);
+    gpuRender->setLightLutInps(inputs);
+}
+
+void Gpu::writeLightLutScl(uint32_t mask, uint32_t value) {
+    // Write to the light LUT output scaler
+    mask &= 0x77777777;
+    gpuLightLutScl = (gpuLightLutScl & ~mask) | (value & mask);
+
+    // Set scales for the renderer in float form
+    float scales[7];
+    for (int i = 0; i < 7; i++) {
+        switch ((gpuLightLutScl >> (i * 4)) & 0x7) {
+            case 0x1: scales[i] = 2.0f; continue;
+            case 0x2: scales[i] = 4.0f; continue;
+            case 0x3: scales[i] = 8.0f; continue;
+            case 0x6: scales[i] = 0.25f; continue;
+            case 0x7: scales[i] = 0.5f; continue;
+            default: scales[i] = 1.0f; continue;
+        }
+    }
+    gpuRender->setLightLutScls(scales);
 }
 
 void Gpu::writeLightIds(uint32_t mask, uint32_t value) {

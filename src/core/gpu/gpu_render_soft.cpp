@@ -117,10 +117,11 @@ void GpuRenderSoft::normalize(float &x, float &y, float &z) {
     x /= n, y /= n, z /= n;
 }
 
-float GpuRenderSoft::readLut(float (*lut)[2], float idx) {
-    // Read from a lookup table with interpolation
+float GpuRenderSoft::readLut(float (*lut)[2], float *inp, int i) {
+    // Read from a lookup table with interpolation and scaling
+    float idx = (lutAbsFlags[i] ? abs(inp[lutInputs[i]]) : inp[lutInputs[i]]) * 0x7F + 0x80;
     float *val = lut[int(idx) & 0xFF];
-    return val[0] + val[1] * (idx - int(idx));
+    return (val[0] + val[1] * (idx - int(idx))) * lutScales[i];
 }
 
 uint8_t GpuRenderSoft::stencilOp(uint8_t value, StenOper oper) {
@@ -330,16 +331,22 @@ void GpuRenderSoft::updateFrag(float qx, float qy, float qz, float qw, float vx,
         float cp = 0.0f; // TODO: implement this
         float inp[] = { nh, vh, nv, ln, lp, cp, 0.0f };
 
-        // Read values from each LUT using scaled inputs if enabled
-        float d0 = (lutMask & BIT(LUT_D0)) ? readLut(lutD0, inp[lutInputs[0]] * 0x7F + 0x7F) : 1.0f;
-        float d1 = (lutMask & BIT(LUT_D1)) ? readLut(lutD1, inp[lutInputs[1]] * 0x7F + 0x7F) : 1.0f;
-        float sp = (lutMask & BIT(LUT_SP0 + i)) ? readLut(lutSp[i], inp[lutInputs[2]] * 0x7F + 0x7F) : 1.0f;
-        float fr = (lutMask & BIT(LUT_FR)) ? readLut(lutFr, inp[lutInputs[3]] * 0x7F + 0x7F) : 1.0f;
-        float rr = (lutMask & BIT(LUT_RR)) ? readLut(lutRr, inp[lutInputs[6]] * 0x7F + 0x7F) : 1.0f;
-        float rg = (lutMask & BIT(LUT_RG)) ? readLut(lutRg, inp[lutInputs[5]] * 0x7F + 0x7F) : rr;
-        float rb = (lutMask & BIT(LUT_RB)) ? readLut(lutRb, inp[lutInputs[4]] * 0x7F + 0x7F) : rr;
-        float atn = std::min(1.0f, std::max(0.0f, l.atnBias + z * l.atnScale)) * 0xFF;
-        float da = (lutMask & BIT(LUT_DA0 + i)) ? readLut(lutDa[i], atn) : 1.0f;
+        // Read values from each LUT using the inputs if enabled
+        float d0 = (lutMask & BIT(LUT_D0)) ? readLut(lutD0, inp, 0) : 1.0f;
+        float d1 = (lutMask & BIT(LUT_D1)) ? readLut(lutD1, inp, 1) : 1.0f;
+        float sp = (lutMask & BIT(LUT_SP0 + i)) ? readLut(lutSp[i], inp, 2) : 1.0f;
+        float fr = (lutMask & BIT(LUT_FR)) ? readLut(lutFr, inp, 3) : 1.0f;
+        float rr = (lutMask & BIT(LUT_RR)) ? readLut(lutRr, inp, 6) : 1.0f;
+        float rg = (lutMask & BIT(LUT_RG)) ? readLut(lutRg, inp, 5) : rr;
+        float rb = (lutMask & BIT(LUT_RB)) ? readLut(lutRb, inp, 4) : rr;
+
+        // Read from the distance attenuation LUT with its unique input
+        float da = 1.0f;
+        if (lutMask & BIT(LUT_DA0 + i)) {
+            float atn = std::min(1.0f, std::max(0.0f, l.atnBias + z * l.atnScale)) * 0xFF;
+            float *val = lutDa[i][int(atn) & 0xFF];
+            da = val[0] + val[1] * (atn - int(atn));
+        }
 
         // Add the light components for each RGB value
         float r[3] = { rr, rg, rb };
@@ -1231,9 +1238,19 @@ void GpuRenderSoft::setLightMap(int8_t *map) {
     }
 }
 
-void GpuRenderSoft::setLightInputs(LutInput *inputs) {
+void GpuRenderSoft::setLightLutAbs(bool *flags) {
+    // Update the light LUT absolute flags
+    memcpy(lutAbsFlags, flags, sizeof(lutAbsFlags));
+}
+
+void GpuRenderSoft::setLightLutInps(LutInput *inputs) {
     // Update the light LUT input selections
     memcpy(lutInputs, inputs, sizeof(lutInputs));
+}
+
+void GpuRenderSoft::setLightLutScls(float *scales) {
+    // Update the light LUT output scales
+    memcpy(lutScales, scales, sizeof(lutScales));
 }
 
 void GpuRenderSoft::setBufferDims(uint16_t width, uint16_t height, bool flip) {

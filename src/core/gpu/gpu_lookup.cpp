@@ -137,7 +137,7 @@ void (Gpu::*Gpu::cmdWrites[])(uint32_t, uint32_t) {
     &Gpu::writeLightConfig1, &Gpu::writeLightLutIdx, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x1C4-0x1C7
     &Gpu::writeLightLutData, &Gpu::writeLightLutData, &Gpu::writeLightLutData, &Gpu::writeLightLutData, // 0x1C8-0x1CB
     &Gpu::writeLightLutData, &Gpu::writeLightLutData, &Gpu::writeLightLutData, &Gpu::writeLightLutData, // 0x1CC-0x1CF
-    &Gpu::writeUnkCmd, &Gpu::writeLightLutSel, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x1D0-0x1D3
+    &Gpu::writeLightLutAbs, &Gpu::writeLightLutSel, &Gpu::writeLightLutScl, &Gpu::writeUnkCmd, // 0x1D0-0x1D3
     &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x1D4-0x1D7
     &Gpu::writeUnkCmd, &Gpu::writeLightIds, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x1D8-0x1DB
     &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x1DC-0x1DF

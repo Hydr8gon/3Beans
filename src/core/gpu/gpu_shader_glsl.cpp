@@ -506,13 +506,14 @@ void GpuShaderGlsl::shdJmpc(std::string &code, uint32_t opcode) {
 }
 
 void GpuShaderGlsl::shdJmpu(std::string &code, uint32_t opcode) {
-    // Emit code to break out of a jump block if a uniform bool is true
+    // Emit code to break out of a jump block if a uniform bool is true/false
     uint16_t dst = (opcode >> 10) & 0xFFF;
     if (dst < shdPc) {
         LOG_CRIT("Unhandled GLSL JIT jump opcode with negative offset\n");
         return;
     }
-    code += "if (bools[" + std::to_string((opcode >> 22) & 0xF) + "]) break;\n";
+    code += "if (bools[" + std::to_string((opcode >> 22) & 0xF) + "] == ";
+    code += std::string((opcode & BIT(0)) ? "false" : "true") + ") break;\n";
     jmpStack.push_back(dst);
 }
 

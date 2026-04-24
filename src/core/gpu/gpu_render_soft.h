@@ -96,7 +96,9 @@ public:
     void setLightBaseAmb(float r, float g, float b);
     void setLightLutVal(LutId id, int i, float entry, float diff);
     void setLightLutMask(uint32_t mask) { lutMask = mask; }
-    void setLightInputs(LutInput *inputs);
+    void setLightLutAbs(bool *flags);
+    void setLightLutInps(LutInput *inputs);
+    void setLightLutScls(float *scales);
     void setLightMap(int8_t *map);
 
     void setViewScaleH(float scale) { viewScaleH = scale; }
@@ -164,7 +166,9 @@ private:
     float lutSp[8][0x100][2] = {};
     float lutDa[8][0x100][2] = {};
     uint32_t lutMask = 0;
+    bool lutAbsFlags[7] = {};
     LutInput lutInputs[7] = {};
+    float lutScales[7] = {};
     SoftLight *lightMap[9] = {};
 
     float viewScaleH = 0;
@@ -193,9 +197,10 @@ private:
     static SoftVertex intersect(SoftVertex &v1, SoftVertex &v2, float x1, float x2);
     static int32_t procTexCoord(float c, uint16_t size, TexWrap wrap);
     static void normalize(float &x, float &y, float &z);
-    static float readLut(float (*lut)[2], float idx);
 
+    float readLut(float (*lut)[2], float *inp, int i);
     uint8_t stencilOp(uint8_t value, StenOper oper);
+
     void updateTexel(int i, float s, float t);
     void updateFrag(float qx, float qy, float qz, float qw, float vx, float vy, float vz, float z);
     void updateCombine(SoftVertex &v);

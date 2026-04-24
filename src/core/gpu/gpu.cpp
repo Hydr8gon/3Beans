@@ -241,7 +241,9 @@ void Gpu::syncRender() {
     writeLightTotal(0xFFFFFFFF, gpuLightTotal);
     writeLightConfig0(0xFFFFFFFF, gpuLightConfig0);
     writeLightConfig1(0xFFFFFFFF, gpuLightConfig1);
+    writeLightLutAbs(0xFFFFFFFF, gpuLightLutAbs);
     writeLightLutSel(0xFFFFFFFF, gpuLightLutSel);
+    writeLightLutScl(0xFFFFFFFF, gpuLightLutScl);
     writeLightIds(0xFFFFFFFF, gpuLightIds);
 
     // Restore the renderer light tables

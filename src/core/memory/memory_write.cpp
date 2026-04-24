@@ -895,7 +895,9 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x10401734, core.gpu.writeLightLutData(IO_PARAMS)) // GPU_LIGHT_LUT_DATA
                 DEF_IO32(0x10401738, core.gpu.writeLightLutData(IO_PARAMS)) // GPU_LIGHT_LUT_DATA
                 DEF_IO32(0x1040173C, core.gpu.writeLightLutData(IO_PARAMS)) // GPU_LIGHT_LUT_DATA
+                DEF_IO32(0x10401740, core.gpu.writeLightLutAbs(IO_PARAMS)) // GPU_LIGHT_LUT_ABS
                 DEF_IO32(0x10401744, core.gpu.writeLightLutSel(IO_PARAMS)) // GPU_LIGHT_LUT_SEL
+                DEF_IO32(0x10401748, core.gpu.writeLightLutScl(IO_PARAMS)) // GPU_LIGHT_LUT_SCL
                 DEF_IO32(0x10401764, core.gpu.writeLightIds(IO_PARAMS)) // GPU_LIGHT_IDS
                 DEF_IO32(0x10401800, core.gpu.writeAttrBase(IO_PARAMS)) // GPU_ATTR_BASE
                 DEF_IO32(0x10401804, core.gpu.writeAttrFmtL(IO_PARAMS)) // GPU_ATTR_FMT_L

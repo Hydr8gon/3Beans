@@ -67,7 +67,9 @@ public:
     virtual void setLightBaseAmb(float r, float g, float b) = 0;
     virtual void setLightLutVal(LutId id, int i, float entry, float diff) = 0;
     virtual void setLightLutMask(uint32_t mask) = 0;
-    virtual void setLightInputs(LutInput *inputs) = 0;
+    virtual void setLightLutAbs(bool *flags) = 0;
+    virtual void setLightLutInps(LutInput *inputs) = 0;
+    virtual void setLightLutScls(float *scales) = 0;
     virtual void setLightMap(int8_t *map) = 0;
 
     virtual void setViewScaleH(float scale) = 0;
