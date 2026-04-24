@@ -228,6 +228,10 @@ void GpuShaderInterp::buildVertex(SoftVertex &vertex) {
     vertex.y = shdOut[outMap[0x1][0]][outMap[0x1][1]];
     vertex.z = shdOut[outMap[0x2][0]][outMap[0x2][1]];
     vertex.w = shdOut[outMap[0x3][0]][outMap[0x3][1]];
+    vertex.qx = shdOut[outMap[0x4][0]][outMap[0x4][1]];
+    vertex.qy = shdOut[outMap[0x5][0]][outMap[0x5][1]];
+    vertex.qz = shdOut[outMap[0x6][0]][outMap[0x6][1]];
+    vertex.qw = shdOut[outMap[0x7][0]][outMap[0x7][1]];
     vertex.r = shdOut[outMap[0x8][0]][outMap[0x8][1]];
     vertex.g = shdOut[outMap[0x9][0]][outMap[0x9][1]];
     vertex.b = shdOut[outMap[0xA][0]][outMap[0xA][1]];
@@ -236,6 +240,9 @@ void GpuShaderInterp::buildVertex(SoftVertex &vertex) {
     vertex.t0 = shdOut[outMap[0xD][0]][outMap[0xD][1]];
     vertex.s1 = shdOut[outMap[0xE][0]][outMap[0xE][1]];
     vertex.t1 = shdOut[outMap[0xF][0]][outMap[0xF][1]];
+    vertex.vx = shdOut[outMap[0x12][0]][outMap[0x12][1]];
+    vertex.vy = shdOut[outMap[0x13][0]][outMap[0x13][1]];
+    vertex.vz = shdOut[outMap[0x14][0]][outMap[0x14][1]];
     vertex.s2 = shdOut[outMap[0x16][0]][outMap[0x16][1]];
     vertex.t2 = shdOut[outMap[0x17][0]][outMap[0x17][1]];
 }

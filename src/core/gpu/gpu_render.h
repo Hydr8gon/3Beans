@@ -56,6 +56,20 @@ public:
     virtual void setStencilMasks(uint8_t bufMask, uint8_t refMask) = 0;
     virtual void setStencilValue(uint8_t value) = 0;
 
+    virtual void setLightSpec0(int i, float r, float g, float b) = 0;
+    virtual void setLightSpec1(int i, float r, float g, float b) = 0;
+    virtual void setLightDiff(int i, float r, float g, float b) = 0;
+    virtual void setLightAmb(int i, float r, float g, float b) = 0;
+    virtual void setLightVector(int i, float x, float y, float z) = 0;
+    virtual void setLightSpot(int i, float x, float y, float z) = 0;
+    virtual void setLightAtten(int i, float bias, float scale) = 0;
+    virtual void setLightType(int i, bool direction) = 0;
+    virtual void setLightBaseAmb(float r, float g, float b) = 0;
+    virtual void setLightLutVal(LutId id, int i, float entry, float diff) = 0;
+    virtual void setLightLutMask(uint32_t mask) = 0;
+    virtual void setLightInputs(LutInput *inputs) = 0;
+    virtual void setLightMap(int8_t *map) = 0;
+
     virtual void setViewScaleH(float scale) = 0;
     virtual void setViewStepH(float step) = 0;
     virtual void setViewScaleV(float scale) = 0;

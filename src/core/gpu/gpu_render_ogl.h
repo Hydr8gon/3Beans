@@ -80,6 +80,20 @@ public:
     void setStencilMasks(uint8_t bufMask, uint8_t refMask);
     void setStencilValue(uint8_t value);
 
+    void setLightSpec0(int i, float r, float g, float b) {}
+    void setLightSpec1(int i, float r, float g, float b) {}
+    void setLightDiff(int i, float r, float g, float b) {}
+    void setLightAmb(int i, float r, float g, float b) {}
+    void setLightVector(int i, float x, float y, float z) {}
+    void setLightSpot(int i, float x, float y, float z) {}
+    void setLightAtten(int i, float bias, float scale) {}
+    void setLightType(int i, bool direction) {}
+    void setLightBaseAmb(float r, float g, float b) {}
+    void setLightLutVal(LutId id, int i, float entry, float diff) {}
+    void setLightLutMask(uint32_t mask) {}
+    void setLightInputs(LutInput *inputs) {}
+    void setLightMap(int8_t *map) {}
+
     void setViewScaleH(float scale);
     void setViewStepH(float step) {}
     void setViewScaleV(float scale);

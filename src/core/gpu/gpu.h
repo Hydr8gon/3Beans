@@ -168,6 +168,41 @@ enum DepbufFmt {
     DEP_UNK
 };
 
+enum LutInput {
+    INPUT_NH,
+    INPUT_VH,
+    INPUT_NV,
+    INPUT_LN,
+    INPUT_LP,
+    INPUT_CP,
+    INPUT_UNK
+};
+
+enum LutId {
+    LUT_D0 = 0x00,
+    LUT_D1 = 0x01,
+    LUT_FR = 0x03,
+    LUT_RB = 0x04,
+    LUT_RG = 0x05,
+    LUT_RR = 0x06,
+    LUT_SP0 = 0x08,
+    LUT_SP1 = 0x09,
+    LUT_SP2 = 0x0A,
+    LUT_SP3 = 0x0B,
+    LUT_SP4 = 0x0C,
+    LUT_SP5 = 0x0D,
+    LUT_SP6 = 0x0E,
+    LUT_SP7 = 0x0F,
+    LUT_DA0 = 0x10,
+    LUT_DA1 = 0x11,
+    LUT_DA2 = 0x12,
+    LUT_DA3 = 0x13,
+    LUT_DA4 = 0x14,
+    LUT_DA5 = 0x15,
+    LUT_DA6 = 0x16,
+    LUT_DA7 = 0x17
+};
+
 enum GpuTaskType {
     TASK_CMD,
     TASK_FILL,
@@ -262,6 +297,25 @@ public:
     uint32_t readDepbufLoc() { return gpuDepbufLoc; }
     uint32_t readColbufLoc() { return gpuColbufLoc; }
     uint32_t readBufferDim() { return gpuBufferDim; }
+    uint32_t readLightSpec0(int i) { return gpuLightSpec0[i]; }
+    uint32_t readLightSpec1(int i) { return gpuLightSpec1[i]; }
+    uint32_t readLightDiff(int i) { return gpuLightDiff[i]; }
+    uint32_t readLightAmb(int i) { return gpuLightAmb[i]; }
+    uint32_t readLightVecL(int i) { return gpuLightVecL[i]; }
+    uint32_t readLightVecH(int i) { return gpuLightVecH[i]; }
+    uint32_t readLightSpotL(int i) { return gpuLightSpotL[i]; }
+    uint32_t readLightSpotH(int i) { return gpuLightSpotH[i]; }
+    uint32_t readLightConfig(int i) { return gpuLightConfig[i]; }
+    uint32_t readLightAtnBias(int i) { return gpuLightAtnBias[i]; }
+    uint32_t readLightAtnScl(int i) { return gpuLightAtnScl[i]; }
+    uint32_t readLightBaseAmb() { return gpuLightBaseAmb; }
+    uint32_t readLightTotal() { return gpuLightTotal; }
+    uint32_t readLightConfig0() { return gpuLightConfig0; }
+    uint32_t readLightConfig1() { return gpuLightConfig1; }
+    uint32_t readLightLutIdx() { return gpuLightLutIdx; }
+    uint32_t readLightLutData();
+    uint32_t readLightLutSel() { return gpuLightLutSel; }
+    uint32_t readLightIds() { return gpuLightIds; }
     uint32_t readAttrBase() { return gpuAttrBase; }
     uint32_t readAttrFmtL() { return gpuAttrFmt >> 0; }
     uint32_t readAttrFmtH() { return gpuAttrFmt >> 32; }
@@ -344,6 +398,25 @@ public:
     void writeDepbufLoc(uint32_t mask, uint32_t value);
     void writeColbufLoc(uint32_t mask, uint32_t value);
     void writeBufferDim(uint32_t mask, uint32_t value);
+    template <int i> void writeLightSpec0(uint32_t mask, uint32_t value);
+    template <int i> void writeLightSpec1(uint32_t mask, uint32_t value);
+    template <int i> void writeLightDiff(uint32_t mask, uint32_t value);
+    template <int i> void writeLightAmb(uint32_t mask, uint32_t value);
+    template <int i> void writeLightVecL(uint32_t mask, uint32_t value);
+    template <int i> void writeLightVecH(uint32_t mask, uint32_t value);
+    template <int i> void writeLightSpotL(uint32_t mask, uint32_t value);
+    template <int i> void writeLightSpotH(uint32_t mask, uint32_t value);
+    template <int i> void writeLightConfig(uint32_t mask, uint32_t value);
+    template <int i> void writeLightAtnBias(uint32_t mask, uint32_t value);
+    template <int i> void writeLightAtnScl(uint32_t mask, uint32_t value);
+    void writeLightBaseAmb(uint32_t mask, uint32_t value);
+    void writeLightTotal(uint32_t mask, uint32_t value);
+    void writeLightConfig0(uint32_t mask, uint32_t value);
+    void writeLightConfig1(uint32_t mask, uint32_t value);
+    void writeLightLutIdx(uint32_t mask, uint32_t value);
+    void writeLightLutData(uint32_t mask, uint32_t value);
+    void writeLightLutSel(uint32_t mask, uint32_t value);
+    void writeLightIds(uint32_t mask, uint32_t value);
     void writeAttrBase(uint32_t mask, uint32_t value);
     void writeAttrFmtL(uint32_t mask, uint32_t value);
     void writeAttrFmtH(uint32_t mask, uint32_t value);
@@ -473,6 +546,32 @@ private:
     uint32_t gpuDepbufLoc = 0;
     uint32_t gpuColbufLoc = 0;
     uint32_t gpuBufferDim = 0;
+    uint32_t gpuLightSpec0[8] = {};
+    uint32_t gpuLightSpec1[8] = {};
+    uint32_t gpuLightDiff[8] = {};
+    uint32_t gpuLightAmb[8] = {};
+    uint32_t gpuLightVecL[8] = {};
+    uint32_t gpuLightVecH[8] = {};
+    uint32_t gpuLightSpotL[8] = {};
+    uint32_t gpuLightSpotH[8] = {};
+    uint32_t gpuLightConfig[8] = {};
+    uint32_t gpuLightAtnBias[8] = {};
+    uint32_t gpuLightAtnScl[8] = {};
+    uint32_t gpuLightBaseAmb = 0;
+    uint32_t gpuLightTotal = 0;
+    uint32_t gpuLightConfig0 = 0;
+    uint32_t gpuLightConfig1 = 0;
+    uint32_t gpuLightLutIdx = 0;
+    uint32_t gpuLightLutD0[0x100] = {};
+    uint32_t gpuLightLutD1[0x100] = {};
+    uint32_t gpuLightLutFr[0x100] = {};
+    uint32_t gpuLightLutRb[0x100] = {};
+    uint32_t gpuLightLutRg[0x100] = {};
+    uint32_t gpuLightLutRr[0x100] = {};
+    uint32_t gpuLightLutSp[8][0x100] = {};
+    uint32_t gpuLightLutDa[8][0x100] = {};
+    uint32_t gpuLightLutSel = 0;
+    uint32_t gpuLightIds = 0;
     uint32_t gpuAttrBase = 0;
     uint64_t gpuAttrFmt = 0;
     uint32_t gpuAttrOfs[12] = {};
@@ -514,10 +613,15 @@ private:
     void startFill(GpuFillRegs &regs);
     void startCopy(GpuCopyRegs &regs);
 
+    static uint32_t flt16e5to32e8(uint16_t value);
+    static uint32_t flt20e7to32e8(uint32_t value);
     static uint32_t flt24e7to32e8(uint32_t value);
     static uint32_t flt32e7to32e8(uint32_t value);
 
     void runCommands();
     void drawAttrIdx(uint32_t idx);
     void updateShdMaps();
+    void updateLightMap();
+    void updateLutMask();
+    uint32_t *getLightLut(LutId id);
 };

@@ -30,6 +30,8 @@ struct SoftVertex {
     float r, g, b, a;
     float s0, s1, s2;
     float t0, t1, t2;
+    float qx, qy, qz, qw;
+    float vx, vy, vz;
 };
 
 struct VertexCache {

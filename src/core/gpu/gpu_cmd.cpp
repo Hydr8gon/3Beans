@@ -41,6 +41,28 @@ TEMPLATE3(void Gpu::writeCombMode, 0, uint32_t, uint32_t)
 TEMPLATE3(void Gpu::writeCombMode, 3, uint32_t, uint32_t)
 TEMPLATE3(void Gpu::writeCombColor, 0, uint32_t, uint32_t)
 TEMPLATE3(void Gpu::writeCombColor, 3, uint32_t, uint32_t)
+TEMPLATE4(void Gpu::writeLightSpec0, 0, uint32_t, uint32_t)
+TEMPLATE4(void Gpu::writeLightSpec0, 4, uint32_t, uint32_t)
+TEMPLATE4(void Gpu::writeLightSpec1, 0, uint32_t, uint32_t)
+TEMPLATE4(void Gpu::writeLightSpec1, 4, uint32_t, uint32_t)
+TEMPLATE4(void Gpu::writeLightDiff, 0, uint32_t, uint32_t)
+TEMPLATE4(void Gpu::writeLightDiff, 4, uint32_t, uint32_t)
+TEMPLATE4(void Gpu::writeLightAmb, 0, uint32_t, uint32_t)
+TEMPLATE4(void Gpu::writeLightAmb, 4, uint32_t, uint32_t)
+TEMPLATE4(void Gpu::writeLightVecL, 0, uint32_t, uint32_t)
+TEMPLATE4(void Gpu::writeLightVecL, 4, uint32_t, uint32_t)
+TEMPLATE4(void Gpu::writeLightVecH, 0, uint32_t, uint32_t)
+TEMPLATE4(void Gpu::writeLightVecH, 4, uint32_t, uint32_t)
+TEMPLATE4(void Gpu::writeLightSpotL, 0, uint32_t, uint32_t)
+TEMPLATE4(void Gpu::writeLightSpotL, 4, uint32_t, uint32_t)
+TEMPLATE4(void Gpu::writeLightSpotH, 0, uint32_t, uint32_t)
+TEMPLATE4(void Gpu::writeLightSpotH, 4, uint32_t, uint32_t)
+TEMPLATE4(void Gpu::writeLightConfig, 0, uint32_t, uint32_t)
+TEMPLATE4(void Gpu::writeLightConfig, 4, uint32_t, uint32_t)
+TEMPLATE4(void Gpu::writeLightAtnBias, 0, uint32_t, uint32_t)
+TEMPLATE4(void Gpu::writeLightAtnBias, 4, uint32_t, uint32_t)
+TEMPLATE4(void Gpu::writeLightAtnScl, 0, uint32_t, uint32_t)
+TEMPLATE4(void Gpu::writeLightAtnScl, 4, uint32_t, uint32_t)
 TEMPLATE4(void Gpu::writeAttrOfs, 0, uint32_t, uint32_t)
 TEMPLATE4(void Gpu::writeAttrOfs, 4, uint32_t, uint32_t)
 TEMPLATE4(void Gpu::writeAttrOfs, 8, uint32_t, uint32_t)
@@ -55,6 +77,18 @@ TEMPLATE2(void Gpu::writeCmdAddr, 0, uint32_t, uint32_t)
 TEMPLATE2(void Gpu::writeCmdJump, 0, uint32_t, uint32_t)
 TEMPLATE4(void Gpu::writeGshInts, 0, uint32_t, uint32_t)
 TEMPLATE4(void Gpu::writeVshInts, 0, uint32_t, uint32_t)
+
+FORCE_INLINE uint32_t Gpu::flt16e5to32e8(uint16_t value) {
+    // Convert a 16-bit float with 5-bit exponent to 32-bit with 8-bit exponent
+    if (!value) return 0;
+    return ((value << 16) & BIT(31)) | (((value & 0x7FFF) + 0x1C000) << 13);
+}
+
+FORCE_INLINE uint32_t Gpu::flt20e7to32e8(uint32_t value) {
+    // Convert a 20-bit float with 7-bit exponent to 32-bit with 8-bit exponent
+    if (!(value & 0xFFFFF)) return 0;
+    return ((value << 12) & BIT(31)) | (((value & 0x7FFFF) + 0x40000) << 11);
+}
 
 FORCE_INLINE uint32_t Gpu::flt24e7to32e8(uint32_t value) {
     // Convert a 24-bit float with 7-bit exponent to 32-bit with 8-bit exponent
@@ -214,6 +248,79 @@ void Gpu::updateShdMaps() {
     if ((gpuGshInputCfg & 0xF) < 0xF)
         gshInMap[(gpuGshInputCfg & 0xF) + 1] = -1; // End
     gpuShader->setGshInMap(gshInMap);
+}
+
+void Gpu::updateLightMap() {
+    // Build an ordered map of enabled lights
+    int8_t map[9];
+    for (uint32_t i = 0; i <= gpuLightTotal; i++)
+        map[i] = (gpuLightIds >> 4) & 0x7;
+    map[gpuLightTotal + 1] = -1; // End
+    gpuRender->setLightMap(map);
+}
+
+void Gpu::updateLutMask() {
+    // Mask out light LUTs disabled by the environment configuration
+    uint32_t mask = 0xFFFFFFFF;
+    switch ((gpuLightConfig0 >> 4) & 0xF) {
+        case 0x0: mask &= ~(BIT(LUT_D1) | BIT(LUT_FR) | BIT(LUT_RB) | BIT(LUT_RG)); break;
+        case 0x1: mask &= ~(BIT(LUT_D0) | BIT(LUT_D1) | BIT(LUT_RB) | BIT(LUT_RG)); break;
+        case 0x2: mask &= ~(BIT(LUT_FR) | BIT(LUT_RB) | BIT(LUT_RG) | (0xFF << LUT_SP0)); break;
+        case 0x3: mask &= ~(BIT(LUT_RB) | BIT(LUT_RG) | BIT(LUT_RR) | (0xFF << LUT_SP0)); break;
+        case 0x4: mask &= ~BIT(LUT_FR); break;
+        case 0x5: mask &= ~BIT(LUT_D1); break;
+        case 0x6: mask &= ~(BIT(LUT_RB) | BIT(LUT_RG)); break;
+    }
+
+    // Mask out light LUTs disabled by individual bits
+    mask &= ~(((gpuLightConfig1 >> 8) & 0xFF) << LUT_SP0);
+    if (gpuLightConfig1 & BIT(16)) mask &= ~BIT(LUT_D0);
+    if (gpuLightConfig1 & BIT(17)) mask &= ~BIT(LUT_D1);
+    if (gpuLightConfig1 & BIT(19)) mask &= ~BIT(LUT_FR);
+    if (gpuLightConfig1 & BIT(20)) mask &= ~BIT(LUT_RB);
+    if (gpuLightConfig1 & BIT(21)) mask &= ~BIT(LUT_RG);
+    if (gpuLightConfig1 & BIT(22)) mask &= ~BIT(LUT_RR);
+    mask &= ~(((gpuLightConfig1 >> 24) & 0xFF) << LUT_DA0);
+    gpuRender->setLightLutMask(mask);
+}
+
+uint32_t *Gpu::getLightLut(LutId id) {
+    // Get a light LUT pointer based on its ID
+    switch (id) {
+        case LUT_D0: return gpuLightLutD0;
+        case LUT_D1: return gpuLightLutD1;
+        case LUT_FR: return gpuLightLutFr;
+        case LUT_RB: return gpuLightLutRb;
+        case LUT_RG: return gpuLightLutRg;
+        case LUT_RR: return gpuLightLutRr;
+        case LUT_SP0: return gpuLightLutSp[0];
+        case LUT_SP1: return gpuLightLutSp[1];
+        case LUT_SP2: return gpuLightLutSp[2];
+        case LUT_SP3: return gpuLightLutSp[3];
+        case LUT_SP4: return gpuLightLutSp[4];
+        case LUT_SP5: return gpuLightLutSp[5];
+        case LUT_SP6: return gpuLightLutSp[6];
+        case LUT_SP7: return gpuLightLutSp[7];
+        case LUT_DA0: return gpuLightLutDa[0];
+        case LUT_DA1: return gpuLightLutDa[1];
+        case LUT_DA2: return gpuLightLutDa[2];
+        case LUT_DA3: return gpuLightLutDa[3];
+        case LUT_DA4: return gpuLightLutDa[4];
+        case LUT_DA5: return gpuLightLutDa[5];
+        case LUT_DA6: return gpuLightLutDa[6];
+        case LUT_DA7: return gpuLightLutDa[7];
+    }
+    return nullptr;
+}
+
+uint32_t Gpu::readLightLutData() {
+    // Read a value from the selected light LUT at the current index and increment it
+    LutId id = LutId(gpuLightLutIdx >> 8);
+    uint32_t *lut = getLightLut(id);
+    if (!lut) return 0;
+    lut += (gpuLightLutIdx & 0xFF);
+    gpuLightLutIdx = (gpuLightLutIdx & ~0xFF) | ((gpuLightLutIdx + 1) & 0xFF);
+    return *lut;
 }
 
 template <int i> void Gpu::writeIrqReq(uint32_t mask, uint32_t value) {
@@ -582,6 +689,187 @@ void Gpu::writeBufferDim(uint32_t mask, uint32_t value) {
     mask &= 0x13FF7FF;
     gpuBufferDim = (gpuBufferDim & ~mask) | (value & mask);
     gpuRender->setBufferDims(gpuBufferDim & 0x7FF, ((gpuBufferDim >> 12) & 0x3FF) + 1, gpuBufferDim & BIT(24));
+}
+
+template <int i> void Gpu::writeLightSpec0(uint32_t mask, uint32_t value) {
+    // Write to a light's first specular color and update the renderer's floats
+    mask &= 0x3FFFFFFF;
+    gpuLightSpec0[i] = (gpuLightSpec0[i] & ~mask) | (value & mask);
+    float r = float((gpuLightSpec0[i] >> 20) & 0xFF) / 0xFF;
+    float g = float((gpuLightSpec0[i] >> 10) & 0xFF) / 0xFF;
+    float b = float((gpuLightSpec0[i] >> 0) & 0xFF) / 0xFF;
+    gpuRender->setLightSpec0(i, r, g, b);
+}
+
+template <int i> void Gpu::writeLightSpec1(uint32_t mask, uint32_t value) {
+    // Write to a light's second specular color and update the renderer's floats
+    mask &= 0x3FFFFFFF;
+    gpuLightSpec1[i] = (gpuLightSpec1[i] & ~mask) | (value & mask);
+    float r = float((gpuLightSpec1[i] >> 20) & 0xFF) / 0xFF;
+    float g = float((gpuLightSpec1[i] >> 10) & 0xFF) / 0xFF;
+    float b = float((gpuLightSpec1[i] >> 0) & 0xFF) / 0xFF;
+    gpuRender->setLightSpec1(i, r, g, b);
+}
+
+template <int i> void Gpu::writeLightDiff(uint32_t mask, uint32_t value) {
+    // Write to a light's diffuse color and update the renderer's floats
+    mask &= 0x3FFFFFFF;
+    gpuLightDiff[i] = (gpuLightDiff[i] & ~mask) | (value & mask);
+    float r = float((gpuLightDiff[i] >> 20) & 0xFF) / 0xFF;
+    float g = float((gpuLightDiff[i] >> 10) & 0xFF) / 0xFF;
+    float b = float((gpuLightDiff[i] >> 0) & 0xFF) / 0xFF;
+    gpuRender->setLightDiff(i, r, g, b);
+}
+
+template <int i> void Gpu::writeLightAmb(uint32_t mask, uint32_t value) {
+    // Write to a light's ambient color and update the renderer's floats
+    mask &= 0x3FFFFFFF;
+    gpuLightAmb[i] = (gpuLightAmb[i] & ~mask) | (value & mask);
+    float r = float((gpuLightAmb[i] >> 20) & 0xFF) / 0xFF;
+    float g = float((gpuLightAmb[i] >> 10) & 0xFF) / 0xFF;
+    float b = float((gpuLightAmb[i] >> 0) & 0xFF) / 0xFF;
+    gpuRender->setLightAmb(i, r, g, b);
+}
+
+template <int i> void Gpu::writeLightVecL(uint32_t mask, uint32_t value) {
+    // Write to the low part of a light's vector and update the renderer's floats
+    gpuLightVecL[i] = (gpuLightVecL[i] & ~mask) | (value & mask);
+    float x = *(float*)&(value = flt16e5to32e8(gpuLightVecL[i] >> 0));
+    float y = *(float*)&(value = flt16e5to32e8(gpuLightVecL[i] >> 16));
+    float z = *(float*)&(value = flt16e5to32e8(gpuLightVecH[i] >> 0));
+    gpuRender->setLightVector(i, x, y, z);
+}
+
+template <int i> void Gpu::writeLightVecH(uint32_t mask, uint32_t value) {
+    // Write to the high part of a light's vector and update the renderer's floats
+    mask &= 0xFFFF;
+    gpuLightVecH[i] = (gpuLightVecH[i] & ~mask) | (value & mask);
+    float x = *(float*)&(value = flt16e5to32e8(gpuLightVecL[i] >> 0));
+    float y = *(float*)&(value = flt16e5to32e8(gpuLightVecL[i] >> 16));
+    float z = *(float*)&(value = flt16e5to32e8(gpuLightVecH[i] >> 0));
+    gpuRender->setLightVector(i, x, y, z);
+}
+
+template <int i> void Gpu::writeLightSpotL(uint32_t mask, uint32_t value) {
+    // Write to the low part of a spotlight vector and update the renderer's floats
+    mask &= 0x1FFF1FFF;
+    gpuLightSpotL[i] = (gpuLightSpotL[i] & ~mask) | (value & mask);
+    float x = float(int16_t(gpuLightSpotL[i] << 3)) / 0x3FFF;
+    float y = float(int16_t(gpuLightSpotL[i] >> 13)) / 0x3FFF;
+    float z = float(int16_t(gpuLightSpotH[i] << 3)) / 0x3FFF;
+    gpuRender->setLightSpot(i, x, y, z);
+}
+
+template <int i> void Gpu::writeLightSpotH(uint32_t mask, uint32_t value) {
+    // Write to the high part of a spotlight vector and update the renderer's floats
+    mask &= 0x1FFF;
+    gpuLightSpotH[i] = (gpuLightSpotH[i] & ~mask) | (value & mask);
+    float x = float(int16_t(gpuLightSpotL[i] << 3)) / 0x3FFF;
+    float y = float(int16_t(gpuLightSpotL[i] >> 13)) / 0x3FFF;
+    float z = float(int16_t(gpuLightSpotH[i] << 3)) / 0x3FFF;
+    gpuRender->setLightSpot(i, x, y, z);
+}
+
+template <int i> void Gpu::writeLightConfig(uint32_t mask, uint32_t value) {
+    // Write to a light's configuration and update the renderer's type
+    // TODO: handle diffuse and factor bits
+    mask &= 0xF;
+    gpuLightConfig[i] = (gpuLightConfig[i] & ~mask) | (value & mask);
+    gpuRender->setLightType(i, gpuLightConfig[i] & BIT(0));
+}
+
+template <int i> void Gpu::writeLightAtnBias(uint32_t mask, uint32_t value) {
+    // Write to a light's attenuation bias and update the renderer's floats
+    mask &= 0xFFFFF;
+    gpuLightAtnBias[i] = (gpuLightAtnBias[i] & ~mask) | (value & mask);
+    float bias = *(float*)&(value = flt20e7to32e8(gpuLightAtnBias[i]));
+    float scale = *(float*)&(value = flt20e7to32e8(gpuLightAtnScl[i]));
+    gpuRender->setLightAtten(i, bias, scale);
+}
+
+template <int i> void Gpu::writeLightAtnScl(uint32_t mask, uint32_t value) {
+    // Write to a light's attenuation scale and update the renderer's floats
+    mask &= 0xFFFFF;
+    gpuLightAtnScl[i] = (gpuLightAtnScl[i] & ~mask) | (value & mask);
+    float bias = *(float*)&(value = flt20e7to32e8(gpuLightAtnBias[i]));
+    float scale = *(float*)&(value = flt20e7to32e8(gpuLightAtnScl[i]));
+    gpuRender->setLightAtten(i, bias, scale);
+}
+
+void Gpu::writeLightBaseAmb(uint32_t mask, uint32_t value) {
+    // Write to the base ambient color and update the renderer's floats
+    mask &= 0x3FFFFFFF;
+    gpuLightBaseAmb = (gpuLightBaseAmb & ~mask) | (value & mask);
+    float r = float((gpuLightBaseAmb >> 20) & 0xFF) / 0xFF;
+    float g = float((gpuLightBaseAmb >> 10) & 0xFF) / 0xFF;
+    float b = float((gpuLightBaseAmb >> 0) & 0xFF) / 0xFF;
+    gpuRender->setLightBaseAmb(r, g, b);
+}
+
+void Gpu::writeLightTotal(uint32_t mask, uint32_t value) {
+    // Write to the total enabled light count and update the map
+    mask &= 0x7;
+    gpuLightTotal = (gpuLightTotal & ~mask) | (value & mask);
+    updateLightMap();
+}
+
+void Gpu::writeLightConfig0(uint32_t mask, uint32_t value) {
+    // Write to the first light config register and update the LUT mask
+    // TODO: use bits other than environment
+    mask &= 0xFFFF0FFD;
+    gpuLightConfig0 = (gpuLightConfig0 & ~mask) | (value & mask);
+    updateLutMask();
+}
+
+void Gpu::writeLightConfig1(uint32_t mask, uint32_t value) {
+    // Write to the second light config register and update the LUT mask
+    mask &= 0xFF7FFFFF;
+    gpuLightConfig1 = (gpuLightConfig1 & ~mask) | (value & mask);
+    updateLutMask();
+}
+
+void Gpu::writeLightLutIdx(uint32_t mask, uint32_t value) {
+    // Write to the light LUT index register
+    mask &= 0x1FFF;
+    gpuLightLutIdx = (gpuLightLutIdx & ~mask) | (value & mask);
+}
+
+void Gpu::writeLightLutData(uint32_t mask, uint32_t value) {
+    // Write a value to the selected light LUT at the current index and increment it
+    LutId id = LutId(gpuLightLutIdx >> 8);
+    uint32_t *lut = getLightLut(id);
+    if (!lut) return;
+    mask &= 0xFFFFFF;
+    uint8_t i = (gpuLightLutIdx & 0xFF);
+    lut[i] = (lut[i] & ~mask) | (value & mask);
+    gpuLightLutIdx = (gpuLightLutIdx & ~0xFF) | ((gpuLightLutIdx + 1) & 0xFF);
+
+    // Convert to floats and update the renderer state
+    float entry = float((lut[i] >> 0) & 0xFFF) / 0xFFF;
+    float diff = float((lut[i] >> 12) & 0x7FF) / 0x7FF;
+    if (lut[i] & BIT(23)) diff = -diff;
+    gpuRender->setLightLutVal(id, i, entry, diff);
+}
+
+void Gpu::writeLightLutSel(uint32_t mask, uint32_t value) {
+    // Write to the light LUT input selector
+    mask &= 0x7777777;
+    gpuLightLutSel = (gpuLightLutSel & ~mask) | (value & mask);
+
+    // Set inputs for the renderer if they're valid
+    LutInput inputs[7];
+    for (int i = 0; i < 7; i++) {
+        uint8_t val = (gpuLightLutSel >> (i * 4)) & 0x7;
+        inputs[i] = (val <= 0x5) ? LutInput(val) : INPUT_UNK;
+    }
+    gpuRender->setLightInputs(inputs);
+}
+
+void Gpu::writeLightIds(uint32_t mask, uint32_t value) {
+    // Write to the enabled light ID register and update the map
+    mask &= 0x77777777;
+    gpuLightIds = (gpuLightIds & ~mask) | (value & mask);
+    updateLightMap();
 }
 
 void Gpu::writeAttrBase(uint32_t mask, uint32_t value) {

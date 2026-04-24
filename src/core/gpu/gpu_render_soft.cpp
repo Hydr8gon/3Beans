@@ -26,7 +26,6 @@
 const uint8_t GpuRenderSoft::paramCounts[] = { 1, 2, 2, 2, 3, 2, 2, 2, 3, 3 };
 SoftColor GpuRenderSoft::zeroColor = { 0.0f, 0.0f, 0.0f, 0.0f };
 SoftColor GpuRenderSoft::oneColor = { 1.0f, 1.0f, 1.0f, 1.0f };
-SoftColor GpuRenderSoft::stubColor = { 0.5f, 0.5f, 0.5f, 1.0f };
 
 template <bool doX> SoftVertex GpuRenderSoft::interpolate(SoftVertex &v1, SoftVertex &v2, float x1, float x, float x2) {
     // Check bounds and calculate an interpolation factor
@@ -49,6 +48,13 @@ template <bool doX> SoftVertex GpuRenderSoft::interpolate(SoftVertex &v1, SoftVe
     v.t0 = v1.t0 + (v2.t0 - v1.t0) * factor;
     v.t1 = v1.t1 + (v2.t1 - v1.t1) * factor;
     v.t2 = v1.t2 + (v2.t2 - v1.t2) * factor;
+    v.qx = v1.qx + (v2.qx - v1.qx) * factor;
+    v.qy = v1.qy + (v2.qy - v1.qy) * factor;
+    v.qz = v1.qz + (v2.qz - v1.qz) * factor;
+    v.qw = v1.qw + (v2.qw - v1.qw) * factor;
+    v.vx = v1.vx + (v2.vx - v1.vx) * factor;
+    v.vy = v1.vy + (v2.vy - v1.vy) * factor;
+    v.vz = v1.vz + (v2.vz - v1.vz) * factor;
     return v;
 }
 
@@ -56,20 +62,28 @@ SoftVertex GpuRenderSoft::intersect(SoftVertex &v1, SoftVertex &v2, float x1, fl
     // Calculate the intersection of two vertices at a clipping bound
     SoftVertex v;
     float c1 = x1 + v1.w, c2 = x2 + v2.w;
-    v.x = ((v1.x * c2) - (v2.x * c1)) / (c2 - c1);
-    v.y = ((v1.y * c2) - (v2.y * c1)) / (c2 - c1);
-    v.z = ((v1.z * c2) - (v2.z * c1)) / (c2 - c1);
-    v.w = ((v1.w * c2) - (v2.w * c1)) / (c2 - c1);
-    v.r = ((v1.r * c2) - (v2.r * c1)) / (c2 - c1);
-    v.g = ((v1.g * c2) - (v2.g * c1)) / (c2 - c1);
-    v.b = ((v1.b * c2) - (v2.b * c1)) / (c2 - c1);
-    v.a = ((v1.a * c2) - (v2.a * c1)) / (c2 - c1);
-    v.s0 = ((v1.s0 * c2) - (v2.s0 * c1)) / (c2 - c1);
-    v.s1 = ((v1.s1 * c2) - (v2.s1 * c1)) / (c2 - c1);
-    v.s2 = ((v1.s2 * c2) - (v2.s2 * c1)) / (c2 - c1);
-    v.t0 = ((v1.t0 * c2) - (v2.t0 * c1)) / (c2 - c1);
-    v.t1 = ((v1.t1 * c2) - (v2.t1 * c1)) / (c2 - c1);
-    v.t2 = ((v1.t2 * c2) - (v2.t2 * c1)) / (c2 - c1);
+    float c3 = 1.0f / (c2 - c1);
+    v.x = (v1.x * c2 - v2.x * c1) * c3;
+    v.y = (v1.y * c2 - v2.y * c1) * c3;
+    v.z = (v1.z * c2 - v2.z * c1) * c3;
+    v.w = (v1.w * c2 - v2.w * c1) * c3;
+    v.r = (v1.r * c2 - v2.r * c1) * c3;
+    v.g = (v1.g * c2 - v2.g * c1) * c3;
+    v.b = (v1.b * c2 - v2.b * c1) * c3;
+    v.a = (v1.a * c2 - v2.a * c1) * c3;
+    v.s0 = (v1.s0 * c2 - v2.s0 * c1) * c3;
+    v.s1 = (v1.s1 * c2 - v2.s1 * c1) * c3;
+    v.s2 = (v1.s2 * c2 - v2.s2 * c1) * c3;
+    v.t0 = (v1.t0 * c2 - v2.t0 * c1) * c3;
+    v.t1 = (v1.t1 * c2 - v2.t1 * c1) * c3;
+    v.t2 = (v1.t2 * c2 - v2.t2 * c1) * c3;
+    v.qx = (v1.qx * c2 - v2.qx * c1) * c3;
+    v.qy = (v1.qy * c2 - v2.qy * c1) * c3;
+    v.qz = (v1.qz * c2 - v2.qz * c1) * c3;
+    v.qw = (v1.qw * c2 - v2.qw * c1) * c3;
+    v.vx = (v1.vx * c2 - v2.vx * c1) * c3;
+    v.vy = (v1.vy * c2 - v2.vy * c1) * c3;
+    v.vz = (v1.vz * c2 - v2.vz * c1) * c3;
     return v;
 }
 
@@ -95,6 +109,18 @@ int32_t GpuRenderSoft::procTexCoord(float c, uint16_t size, TexWrap wrap) {
             case WRAP_MIRROR: return ((i %= size * 2) < size) ? i : (size * 2 + ~i);
         }
     }
+}
+
+void GpuRenderSoft::normalize(float &x, float &y, float &z) {
+    // Normalize a 3-component vector
+    float n = sqrt(x * x + y * y + z * z);
+    x /= n, y /= n, z /= n;
+}
+
+float GpuRenderSoft::readLut(float (*lut)[2], float idx) {
+    // Read from a lookup table with interpolation
+    float *val = lut[int(idx) & 0xFF];
+    return val[0] + val[1] * (idx - int(idx));
 }
 
 uint8_t GpuRenderSoft::stencilOp(uint8_t value, StenOper oper) {
@@ -265,12 +291,84 @@ void GpuRenderSoft::updateTexel(int i, float s, float t) {
     lastU[i] = u, lastV[i] = v;
 }
 
+void GpuRenderSoft::updateFrag(float qx, float qy, float qz, float qw, float vx, float vy, float vz, float z) {
+    // Extract a normal vector from the quaternion
+    float n = 2.0f / (qx * qx + qy * qy + qz * qz + qw * qw);
+    float nx = n * qx * qz - n * qy * qw;
+    float ny = n * qy * qz + n * qx * qw;
+    float nz = 1.0f - n * qx * qx - n * qy * qy;
+    normalize(nx, ny, nz);
+
+    // Normalize the view vector and set base colors
+    float vnx = vx, vny = vy, vnz = vz;
+    normalize(vnx, vny, vnz);
+    float c[2][4] = {{ baseAmbient[0], baseAmbient[1], baseAmbient[2] }};
+
+    // Loop through enabled lights and process them
+    for (SoftLight **light = &lightMap[0]; *light != nullptr; light++) {
+        uint32_t i = (uintptr_t(*light) - uintptr_t(&lights[0])) / sizeof(SoftLight);
+        SoftLight &l = **light;
+
+        // Get the normalized light vector, plus view for positional lights
+        float lx = l.x + (l.direction ? 0.0f : vx);
+        float ly = l.y + (l.direction ? 0.0f : vy);
+        float lz = l.z + (l.direction ? 0.0f : vz);
+        normalize(lx, ly, lz);
+
+        // Calculate the normalized half vector
+        float hx = (lx + vx) / 2;
+        float hy = (ly + vy) / 2;
+        float hz = (lz + vz) / 2;
+        normalize(hx, hy, hz);
+
+        // Calculate dot products of vectors used as inputs for LUTs
+        float nh = nx * hx + ny * hy + nz * hz;
+        float vh = vnx * hx + vny * hy + vnz * hz;
+        float nv = nx * vnx + ny * vny + nz * vnz;
+        float ln = lx * nx + ly * ny + lz * nz;
+        float lp = -lx * l.px + -ly * l.py + -lz * l.pz;
+        float cp = 0.0f; // TODO: implement this
+        float inp[] = { nh, vh, nv, ln, lp, cp, 0.0f };
+
+        // Read values from each LUT using scaled inputs if enabled
+        float d0 = (lutMask & BIT(LUT_D0)) ? readLut(lutD0, inp[lutInputs[0]] * 0x7F + 0x7F) : 1.0f;
+        float d1 = (lutMask & BIT(LUT_D1)) ? readLut(lutD1, inp[lutInputs[1]] * 0x7F + 0x7F) : 1.0f;
+        float sp = (lutMask & BIT(LUT_SP0 + i)) ? readLut(lutSp[i], inp[lutInputs[2]] * 0x7F + 0x7F) : 1.0f;
+        float fr = (lutMask & BIT(LUT_FR)) ? readLut(lutFr, inp[lutInputs[3]] * 0x7F + 0x7F) : 1.0f;
+        float rr = (lutMask & BIT(LUT_RR)) ? readLut(lutRr, inp[lutInputs[6]] * 0x7F + 0x7F) : 1.0f;
+        float rg = (lutMask & BIT(LUT_RG)) ? readLut(lutRg, inp[lutInputs[5]] * 0x7F + 0x7F) : rr;
+        float rb = (lutMask & BIT(LUT_RB)) ? readLut(lutRb, inp[lutInputs[4]] * 0x7F + 0x7F) : rr;
+        float atn = std::min(1.0f, std::max(0.0f, l.atnBias + z * l.atnScale)) * 0xFF;
+        float da = (lutMask & BIT(LUT_DA0 + i)) ? readLut(lutDa[i], atn) : 1.0f;
+
+        // Add the light components for each RGB value
+        float r[3] = { rr, rg, rb };
+        for (int j = 0; j < 3; j++) {
+            c[0][j] += da * sp * (l.ambient[j] + l.diffuse[j] * ln);
+            c[1][j] += da * sp * (l.specular0[j] * d0 + l.specular1[j] * d1 * r[j]);
+        }
+
+        // Add the alpha components
+        c[0][3] += fr;
+        c[1][3] += fr;
+    }
+
+    // Clamp and output the final color values
+    for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < 4; j++)
+            c[i][j] = std::min(1.0f, std::max(0.0f, c[i][j]));
+        fragColors[i] = { c[i][0], c[i][1], c[i][2], c[i][3] };
+    }
+}
+
 void GpuRenderSoft::updateCombine(SoftVertex &v) {
     // Update the per-pixel color sources that are used
     if (paramMask & BIT(COMB_PRIM)) primColor = { v.r / v.w, v.g / v.w, v.b / v.w, v.a / v.w };
     if (paramMask & BIT(COMB_TEX0)) updateTexel(0, v.s0 / v.w, v.t0 / v.w);
     if (paramMask & BIT(COMB_TEX1)) updateTexel(1, v.s1 / v.w, v.t1 / v.w);
     if (paramMask & BIT(COMB_TEX2)) updateTexel(2, v.s2 / v.w, v.t2 / v.w);
+    if (paramMask & (BIT(COMB_FRAG0) | BIT(COMB_FRAG1)))
+        updateFrag(v.qx / v.w, v.qy / v.w, v.qz / v.w, v.qw / v.w, v.vx / v.w, v.vy / v.w, v.vz / v.w, v.z);
     SoftColor c[3];
 
     // Process the texture combiner opcode cache
@@ -424,8 +522,8 @@ CombParam GpuRenderSoft::cacheParam(int i, int j) {
         case COMB_TEX1: param.color = &texColors[1]; return param;
         case COMB_TEX2: param.color = &texColors[2]; return param;
         case COMB_CONST: param.color = &combColors[i]; return param;
-        case COMB_FRAG0: param.color = &stubColor; return param;
-        case COMB_FRAG1: param.color = &stubColor; return param;
+        case COMB_FRAG0: param.color = &fragColors[0]; return param;
+        case COMB_FRAG1: param.color = &fragColors[1]; return param;
         case COMB_TEX3: param.color = &oneColor; return param;
         case COMB_UNK: param.color = &zeroColor; return param;
 
@@ -865,13 +963,15 @@ void GpuRenderSoft::clipTriangle(SoftVertex &a, SoftVertex &b, SoftVertex &c) {
     // Apply perspective division, scale coordinates, and draw clipped triangles in a fan
     if (size < 3) return;
     for (int i = 0; i < size; i++) {
-        vert[i].x = (vert[i].x / vert[i].w) * viewScaleH + viewScaleH;
-        vert[i].y = (vert[i].y / vert[i].w) * viewScaleV + viewScaleV;
-        vert[i].z /= vert[i].w, vert[i].a /= vert[i].w;
-        vert[i].r /= vert[i].w, vert[i].g /= vert[i].w, vert[i].b /= vert[i].w;
-        vert[i].s0 /= vert[i].w, vert[i].s1 /= vert[i].w, vert[i].s2 /= vert[i].w;
-        vert[i].t0 /= vert[i].w, vert[i].t1 /= vert[i].w, vert[i].t2 /= vert[i].w;
         vert[i].w = 1.0f / vert[i].w;
+        vert[i].x = vert[i].x * vert[i].w * viewScaleH + viewScaleH;
+        vert[i].y = vert[i].y * vert[i].w * viewScaleV + viewScaleV;
+        vert[i].z *= vert[i].w, vert[i].a *= vert[i].w;
+        vert[i].r *= vert[i].w, vert[i].g *= vert[i].w, vert[i].b *= vert[i].w;
+        vert[i].s0 *= vert[i].w, vert[i].s1 *= vert[i].w, vert[i].s2 *= vert[i].w;
+        vert[i].t0 *= vert[i].w, vert[i].t1 *= vert[i].w, vert[i].t2 *= vert[i].w;
+        vert[i].qx *= vert[i].w, vert[i].qy *= vert[i].w, vert[i].qz *= vert[i].w, vert[i].qw *= vert[i].w;
+        vert[i].vx *= vert[i].w, vert[i].vy *= vert[i].w, vert[i].vz *= vert[i].w;
         if (i >= 2) drawTriangle(vert[0], vert[i - 1], vert[i]);
     }
 }
@@ -1029,6 +1129,111 @@ void GpuRenderSoft::setStencilMasks(uint8_t bufMask, uint8_t refMask) {
     // Set the stencil buffer and reference value masks
     stencilMasks[0] = bufMask;
     stencilMasks[1] = refMask;
+}
+
+void GpuRenderSoft::setLightSpec0(int i, float r, float g, float b) {
+    // Set a light source's first specular color
+    lights[i].specular0[0] = r;
+    lights[i].specular0[1] = g;
+    lights[i].specular0[2] = b;
+}
+
+void GpuRenderSoft::setLightSpec1(int i, float r, float g, float b) {
+    // Set a light source's second specular color
+    lights[i].specular1[0] = r;
+    lights[i].specular1[1] = g;
+    lights[i].specular1[2] = b;
+}
+
+void GpuRenderSoft::setLightDiff(int i, float r, float g, float b) {
+    // Set a light source's diffuse color
+    lights[i].diffuse[0] = r;
+    lights[i].diffuse[1] = g;
+    lights[i].diffuse[2] = b;
+}
+
+void GpuRenderSoft::setLightAmb(int i, float r, float g, float b) {
+    // Set a light source's ambient color
+    lights[i].ambient[0] = r;
+    lights[i].ambient[1] = g;
+    lights[i].ambient[2] = b;
+}
+
+void GpuRenderSoft::setLightVector(int i, float x, float y, float z) {
+    // Set a light source's position/direction vector
+    lights[i].x = x;
+    lights[i].y = y;
+    lights[i].z = z;
+}
+
+void GpuRenderSoft::setLightSpot(int i, float x, float y, float z) {
+    // Set a light source's spotlight vector
+    lights[i].px = x;
+    lights[i].py = y;
+    lights[i].pz = z;
+}
+
+void GpuRenderSoft::setLightAtten(int i, float bias, float scale) {
+    // Set a light source's attenuation bias and scale
+    lights[i].atnBias = bias;
+    lights[i].atnScale = scale;
+}
+
+void GpuRenderSoft::setLightBaseAmb(float r, float g, float b) {
+    // Set the scene's base ambient color
+    baseAmbient[0] = r;
+    baseAmbient[1] = g;
+    baseAmbient[2] = b;
+}
+
+void GpuRenderSoft::setLightLutVal(LutId id, int i, float entry, float diff) {
+    // Get a LUT pointer based on its ID
+    float (*lut)[2];
+    switch (id) {
+        case LUT_D0: lut = lutD0; break;
+        case LUT_D1: lut = lutD1; break;
+        case LUT_FR: lut = lutFr; break;
+        case LUT_RB: lut = lutRb; break;
+        case LUT_RG: lut = lutRg; break;
+        case LUT_RR: lut = lutRr; break;
+        case LUT_SP0: lut = lutSp[0]; break;
+        case LUT_SP1: lut = lutSp[1]; break;
+        case LUT_SP2: lut = lutSp[2]; break;
+        case LUT_SP3: lut = lutSp[3]; break;
+        case LUT_SP4: lut = lutSp[4]; break;
+        case LUT_SP5: lut = lutSp[5]; break;
+        case LUT_SP6: lut = lutSp[6]; break;
+        case LUT_SP7: lut = lutSp[7]; break;
+        case LUT_DA0: lut = lutDa[0]; break;
+        case LUT_DA1: lut = lutDa[1]; break;
+        case LUT_DA2: lut = lutDa[2]; break;
+        case LUT_DA3: lut = lutDa[3]; break;
+        case LUT_DA4: lut = lutDa[4]; break;
+        case LUT_DA5: lut = lutDa[5]; break;
+        case LUT_DA6: lut = lutDa[6]; break;
+        case LUT_DA7: lut = lutDa[7]; break;
+        default: return;
+    }
+
+    // Set a LUT entry's value and difference
+    lut[i][0] = entry;
+    lut[i][1] = diff;
+}
+
+void GpuRenderSoft::setLightMap(int8_t *map) {
+    // Update the ordered map of enabled lights
+    for (int i = 0; i < 9; i++) {
+        if (map[i] < 0) { // End
+            lightMap[i] = nullptr;
+            return;
+        }
+        lightMap[i] = &lights[map[i]];
+    }
+}
+
+void GpuRenderSoft::setLightInputs(LutInput *inputs) {
+    // Update the light LUT input selections
+    memcpy(lutInputs, inputs, sizeof(lutInputs));
 }
 
 void GpuRenderSoft::setBufferDims(uint16_t width, uint16_t height, bool flip) {
