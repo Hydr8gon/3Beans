@@ -254,7 +254,7 @@ void Gpu::updateLightMap() {
     // Build an ordered map of enabled lights
     int8_t map[9];
     for (uint32_t i = 0; i <= gpuLightTotal; i++)
-        map[i] = (gpuLightIds >> 4) & 0x7;
+        map[i] = (gpuLightIds >> (i * 4)) & 0x7;
     map[gpuLightTotal + 1] = -1; // End
     gpuRender->setLightMap(map);
 }
