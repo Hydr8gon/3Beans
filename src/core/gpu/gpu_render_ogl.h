@@ -80,21 +80,21 @@ public:
     void setStencilMasks(uint8_t bufMask, uint8_t refMask);
     void setStencilValue(uint8_t value);
 
-    void setLightSpec0(int i, float r, float g, float b) {}
-    void setLightSpec1(int i, float r, float g, float b) {}
-    void setLightDiff(int i, float r, float g, float b) {}
-    void setLightAmb(int i, float r, float g, float b) {}
-    void setLightVector(int i, float x, float y, float z) {}
-    void setLightSpot(int i, float x, float y, float z) {}
-    void setLightAtten(int i, float bias, float scale) {}
-    void setLightType(int i, bool direction) {}
-    void setLightBaseAmb(float r, float g, float b) {}
-    void setLightLutVal(LutId id, int i, float entry, float diff) {}
-    void setLightLutMask(uint32_t mask) {}
-    void setLightLutAbs(bool *flags) {}
-    void setLightLutInps(LutInput *inputs) {}
-    void setLightLutScls(float *scales) {}
-    void setLightMap(int8_t *map) {}
+    void setLightSpec0(int i, float r, float g, float b);
+    void setLightSpec1(int i, float r, float g, float b);
+    void setLightDiff(int i, float r, float g, float b);
+    void setLightAmb(int i, float r, float g, float b);
+    void setLightVector(int i, float x, float y, float z);
+    void setLightSpot(int i, float x, float y, float z);
+    void setLightAtten(int i, float bias, float scale);
+    void setLightType(int i, bool direction);
+    void setLightBaseAmb(float r, float g, float b);
+    void setLightLutVal(LutId id, int i, float entry, float diff);
+    void setLightLutMask(uint32_t mask);
+    void setLightLutAbs(bool *flags);
+    void setLightLutInps(LutInput *inputs);
+    void setLightLutScls(float *scales);
+    void setLightMap(int8_t *map);
 
     void setViewScaleH(float scale);
     void setViewStepH(float step) {}
@@ -115,7 +115,7 @@ private:
     GLuint softProgram;
     GLuint vao, vbo;
     GLuint colBuf, depBuf;
-    GLuint texture;
+    GLuint textures[9];
 
     GLint posScaleLoc;
     GLint combSrcsLoc;
@@ -126,6 +126,20 @@ private:
     GLint combBufMaskLoc;
     GLint alphaFuncLoc;
     GLint alphaValueLoc;
+    GLint lightSpec0Loc;
+    GLint lightSpec1Loc;
+    GLint lightDiffLoc;
+    GLint lightAmbLoc;
+    GLint lightVectorLoc;
+    GLint lightSpotLoc;
+    GLint lightAttenLoc;
+    GLint lightTypesLoc;
+    GLint lightBaseAmbLoc;
+    GLint lutMaskLoc;
+    GLint lutAbsFlagsLoc;
+    GLint lutInputsLoc;
+    GLint lutScalesLoc;
+    GLint lightMapLoc;
 
     static const char *vtxCodeSoft;
     static const char *fragCode;
@@ -133,6 +147,7 @@ private:
     std::vector<VertexInput> vertices;
     std::vector<TexCache> texCache;
     GLint primMode = GL_TRIANGLES;
+    uint32_t lutDirty = 0;
     uint8_t texDirty = 0;
     uint8_t readDirty = 0;
     bool writeDirty = false;
@@ -144,16 +159,39 @@ private:
     TexFmt texFmts[3] = {};
     GLint texWrapS[3] = {};
     GLint texWrapT[3] = {};
-    GLint combSrcs[6 * 6] = {};
-    GLint combOpers[6 * 6] = {};
-    GLint combModes[6 * 2] = {};
-    float combColors[6][4] = {};
-    float combBufColor[4] = {};
+    GLint combSrcs[12][3] = {};
+    GLint combOpers[12][3] = {};
+    GLint combModes[6][2] = {};
+    GLfloat combColors[6][4] = {};
+    GLfloat combBufColor[4] = {};
     uint8_t combBufMask = 0;
     GLenum blendOpers[4] = {};
     GLenum blendModes[2] = {};
     TestFunc alphaFunc = TEST_AL;
     float alphaValue = 0;
+
+    GLfloat lightSpec0[8][3] = {};
+    GLfloat lightSpec1[8][3] = {};
+    GLfloat lightDiff[8][3] = {};
+    GLfloat lightAmb[8][3] = {};
+    GLfloat lightVector[8][3] = {};
+    GLfloat lightSpot[8][3] = {};
+    GLfloat lightAtten[8][2] = {};
+    GLint lightTypes[8] = {};
+    GLfloat lightBaseAmb[3] = {};
+    GLfloat lutD0[0x100] = {};
+    GLfloat lutD1[0x100] = {};
+    GLfloat lutFr[0x100] = {};
+    GLfloat lutRb[0x100] = {};
+    GLfloat lutRg[0x100] = {};
+    GLfloat lutRr[0x100] = {};
+    GLfloat lutSp[8][0x100] = {};
+    GLfloat lutDa[8][0x100] = {};
+    uint32_t lutMask = 0;
+    GLint lutAbsFlags[7] = {};
+    GLint lutInputs[7] = {};
+    GLfloat lutScales[7] = {};
+    GLint lightMap[9] = {};
 
     GLsizei viewWidth = 0;
     GLsizei viewHeight = 0;
@@ -173,5 +211,6 @@ private:
 
     void updateBuffers();
     void updateTextures();
+    void updateLuts();
     void updateViewport();
 };

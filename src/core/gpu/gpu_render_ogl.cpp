@@ -27,7 +27,25 @@ enum RenderLoc {
     LOC_IN_POS = 0,
     LOC_IN_COL = 1,
     LOC_IN_CRDS = 2,
-    LOC_IN_CRDT = 3
+    LOC_IN_CRDT = 3,
+    LOC_IN_QUAT = 4,
+    LOC_IN_VIEW = 5
+};
+
+enum TexSlot {
+    TEX_BUFFER = 0,
+    TEX_LUTD0,
+    TEX_LUTD1,
+    TEX_LUTFR,
+    TEX_LUTRB,
+    TEX_LUTRG,
+    TEX_LUTRR,
+    TEX_LUTSP,
+    TEX_LUTDA,
+    TEX_UNIT0,
+    TEX_UNIT1,
+    TEX_UNIT2,
+    TEX_UNIT3
 };
 
 const char *GpuRenderOgl::vtxCodeSoft = R"(
@@ -37,17 +55,23 @@ const char *GpuRenderOgl::vtxCodeSoft = R"(
     layout(location = 1) in vec4 inColor;
     layout(location = 2) in vec3 inCoordsS;
     layout(location = 3) in vec3 inCoordsT;
+    layout(location = 4) in vec4 inNormQuat;
+    layout(location = 5) in vec3 inViewVec;
 
     out vec4 vtxColor;
     out vec3 vtxCoordsS;
     out vec3 vtxCoordsT;
+    out vec4 vtxNormQuat;
+    out vec3 vtxViewVec;
     uniform vec4 posScale;
 
     void main() {
+        gl_Position = inPosition * posScale;
         vtxColor = inColor;
         vtxCoordsS = inCoordsS;
         vtxCoordsT = inCoordsT;
-        gl_Position = inPosition * posScale;
+        vtxNormQuat = inNormQuat;
+        vtxViewVec = inViewVec;
     }
 )";
 
@@ -57,31 +81,116 @@ const char *GpuRenderOgl::fragCode = R"(
     in vec4 vtxColor;
     in vec3 vtxCoordsS;
     in vec3 vtxCoordsT;
+    in vec4 vtxNormQuat;
+    in vec3 vtxViewVec;
     out vec4 fragColor;
 
-    uniform sampler2D texUnits[3];
-    uniform int combSrcs[6 * 6];
-    uniform int combOpers[6 * 6];
-    uniform int combModes[6 * 2];
+    uniform ivec3 combSrcs[12];
+    uniform ivec3 combOpers[12];
+    uniform ivec2 combModes[6];
     uniform vec4 combColors[6];
     uniform vec4 combBufColor;
     uniform int combBufMask;
     uniform int alphaFunc;
     uniform float alphaValue;
 
+    uniform vec3 lightSpec0[8];
+    uniform vec3 lightSpec1[8];
+    uniform vec3 lightDiff[8];
+    uniform vec3 lightAmb[8];
+    uniform vec3 lightVector[8];
+    uniform vec3 lightSpot[8];
+    uniform vec2 lightAtten[8];
+    uniform int lightTypes[8];
+    uniform vec3 lightBaseAmb;
+    uniform int lutMask;
+    uniform int lutAbsFlags[7];
+    uniform int lutInputs[7];
+    uniform float lutScales[7];
+    uniform int lightMap[9];
+
+    uniform sampler1D lutD0;
+    uniform sampler1D lutD1;
+    uniform sampler1D lutFr;
+    uniform sampler1D lutRb;
+    uniform sampler1D lutRg;
+    uniform sampler1D lutRr;
+    uniform sampler1DArray lutSp;
+    uniform sampler1DArray lutDa;
+    uniform sampler2D texUnits[3];
+
     vec4 prevColor = vec4(0.0, 0.0, 0.0, 0.0);
     vec4 combBuffer = combBufColor;
+    vec4 fragColors[2];
+    bool fragDone = false;
 
     float dot3(vec3 c0, vec3 c1) {
         return 4.0 * c0.r - 0.5 * c1.r - 0.5 + c0.g - 0.5 * c1.g - 0.5 + c0.b - 0.5 * c1.b - 0.5;
     }
 
+    void updateFrag() {
+        float n = 2.0f / dot(vtxNormQuat, vtxNormQuat);
+        float x = (vtxNormQuat.x * vtxNormQuat.z - vtxNormQuat.y * vtxNormQuat.w) * n;
+        float y = (vtxNormQuat.y * vtxNormQuat.z + vtxNormQuat.x * vtxNormQuat.w) * n;
+        float z = 1.0f - (vtxNormQuat.x * vtxNormQuat.x - vtxNormQuat.y * vtxNormQuat.y) * n;
+        vec3 normalVec = normalize(vec3(x, y, z));
+        vec3 viewVec = normalize(vtxViewVec);
+        fragColors[0] = vec4(lightBaseAmb, 0.0);
+        fragColors[1] = vec4(0.0, 0.0, 0.0, 0.0);
+
+        for (int i = 0; lightMap[i] >= 0; i++) {
+            int id = lightMap[i];
+            vec3 lightVec = lightVector[id] + (lightTypes[id] == 0 ? vtxViewVec : vec3(0.0));
+            vec3 halfVec = normalize((lightVec + vtxViewVec) / 2);
+            vec3 spotVec = normalize(lightSpot[id]);
+            lightVec = normalize(lightVec);
+
+            float inp[7];
+            inp[0] = dot(normalVec, halfVec);
+            inp[1] = dot(viewVec, halfVec);
+            inp[2] = dot(normalVec, viewVec);
+            inp[3] = dot(lightVec, normalVec);
+            inp[4] = dot(-lightVec, spotVec);
+            inp[5] = inp[6] = 0.0;
+
+            float idx = (lutAbsFlags[0] != 0) ? abs(inp[lutInputs[0]]) : inp[lutInputs[0]];
+            float d0 = ((lutMask & (1 << 0)) != 0) ? texture(lutD0, (idx * 0x7F + 0x80) / 0xFF).r * lutScales[0] : 1.0;
+            idx = (lutAbsFlags[1] != 0) ? abs(inp[lutInputs[1]]) : inp[lutInputs[1]];
+            float d1 = ((lutMask & (1 << 1)) != 0) ? texture(lutD1, (idx * 0x7F + 0x80) / 0xFF).r * lutScales[1] : 1.0;
+            idx = (lutAbsFlags[3] != 0) ? abs(inp[lutInputs[3]]) : inp[lutInputs[3]];
+            float fr = ((lutMask & (1 << 3)) != 0) ? texture(lutFr, (idx * 0x7F + 0x80) / 0xFF).r * lutScales[3] : 1.0;
+            idx = (lutAbsFlags[6] != 0) ? abs(inp[lutInputs[6]]) : inp[lutInputs[6]];
+            float rr = ((lutMask & (1 << 6)) != 0) ? texture(lutRr, (idx * 0x7F + 0x80) / 0xFF).r * lutScales[6] : 1.0;
+            idx = (lutAbsFlags[5] != 0) ? abs(inp[lutInputs[5]]) : inp[lutInputs[5]];
+            float rg = ((lutMask & (1 << 5)) != 0) ? texture(lutRg, (idx * 0x7F + 0x80) / 0xFF).r * lutScales[5] : rr;
+            idx = (lutAbsFlags[4] != 0) ? abs(inp[lutInputs[4]]) : inp[lutInputs[4]];
+            float rb = ((lutMask & (1 << 4)) != 0) ? texture(lutRb, (idx * 0x7F + 0x80) / 0xFF).r * lutScales[4] : rr;
+            vec3 r = vec3(rr, rg, rb);
+
+            float sp = 1.0;
+            if ((lutMask & (1 << (8 + id))) != 0) {
+                idx = (lutAbsFlags[2] != 0) ? abs(inp[lutInputs[2]]) : inp[lutInputs[2]];
+                sp = texture(lutSp, vec2((idx * 0x7F + 0x80) / 0xFF, id)).r * lutScales[2];
+            }
+            if ((lutMask & (1 << (16 + id))) != 0) {
+                idx = lightAtten[id][0] + gl_FragCoord.z * lightAtten[id][1];
+                sp *= texture(lutDa, vec2(idx, id)).r;
+            }
+
+            fragColors[0] += vec4(sp * (lightAmb[id] + lightDiff[id] * inp[3]), fr);
+            fragColors[1] += vec4(sp * (lightSpec0[id] * d0 + lightSpec1[id] * d1 * r), fr);
+        }
+        fragColors[0] = min(max(fragColors[0], 0.0), 1.0);
+        fragColors[1] = min(max(fragColors[1], 0.0), 1.0);
+        fragDone = true;
+    }
+
     vec4 getSrc(int i, int j) {
         vec4 color;
-        switch (combSrcs[i * 6 + j]) {
+        switch (combSrcs[i * 2 + ((j > 2) ? 1 : 0)][j % 3]) {
             case 0: color = vtxColor; break;
-            case 1: color = vec4(0.5, 0.5, 0.5, 1.0); break;
-            case 2: color = vec4(0.5, 0.5, 0.5, 1.0); break;
+            case 1: if (!fragDone) updateFrag(); color = fragColors[0]; break;
+            case 2: if (!fragDone) updateFrag(); color = fragColors[1]; break;
             case 3: color = texture(texUnits[0], vec2(vtxCoordsS[0], vtxCoordsT[0])); break;
             case 4: color = texture(texUnits[1], vec2(vtxCoordsS[1], vtxCoordsT[1])); break;
             case 5: color = texture(texUnits[2], vec2(vtxCoordsS[2], vtxCoordsT[2])); break;
@@ -92,7 +201,7 @@ const char *GpuRenderOgl::fragCode = R"(
             default: color = vec4(0.0, 0.0, 0.0, 0.0); break;
         }
 
-        switch (combOpers[i * 6 + j]) {
+        switch (combOpers[i * 2 + ((j > 2) ? 1 : 0)][j % 3]) {
             default: return color;
             case 1: return 1.0 - color;
             case 2: return color.aaaa;
@@ -109,7 +218,7 @@ const char *GpuRenderOgl::fragCode = R"(
     void main() {
         vec4 color;
         for (int i = 0; i < 6; i++) {
-            switch (combModes[i * 2 + 0]) {
+            switch (combModes[i][0]) {
                 case 0: color.rgb = getSrc(i, 0).rgb; break;
                 case 1: color.rgb = getSrc(i, 0).rgb * getSrc(i, 1).rgb; break;
                 case 2: color.rgb = getSrc(i, 0).rgb + getSrc(i, 1).rgb; break;
@@ -123,7 +232,7 @@ const char *GpuRenderOgl::fragCode = R"(
                 default: color.rgb = vec3(0.0, 0.0, 0.0); break;
             }
 
-            switch (combModes[i * 2 + 1]) {
+            switch (combModes[i][1]) {
                 case 0: color.a = getSrc(i, 3).a; break;
                 case 1: color.a = getSrc(i, 3).a * getSrc(i, 4).a; break;
                 case 2: color.a = getSrc(i, 3).a + getSrc(i, 4).a; break;
@@ -165,6 +274,17 @@ GpuRenderOgl::GpuRenderOgl(Core &core): core(core) {
     softProgram = makeProgram(vtxCodeSoft);
     setProgram(softProgram);
 
+    // Check for fragment compilation errors and log them
+    GLint res, size;
+    glGetShaderiv(fragShader, GL_COMPILE_STATUS, &res);
+    if (res == GL_FALSE) {
+        glGetShaderiv(fragShader, GL_INFO_LOG_LENGTH, &size);
+        GLchar *log = new GLchar[size];
+        glGetShaderInfoLog(fragShader, size, &size, log);
+        LOG_CRIT("Fragment shader GLSL compilation error: %s", log);
+        delete[] log;
+    }
+
     // Create array and buffer objects for the soft vertex shader
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
@@ -180,12 +300,15 @@ GpuRenderOgl::GpuRenderOgl(Core &core): core(core) {
     glEnableVertexAttribArray(LOC_IN_CRDS);
     glVertexAttribPointer(LOC_IN_CRDT, 3, GL_FLOAT, GL_FALSE, sizeof(VertexInput), (void*)offsetof(SoftVertex, t0));
     glEnableVertexAttribArray(LOC_IN_CRDT);
+    glVertexAttribPointer(LOC_IN_QUAT, 4, GL_FLOAT, GL_FALSE, sizeof(VertexInput), (void*)offsetof(SoftVertex, qx));
+    glEnableVertexAttribArray(LOC_IN_QUAT);
+    glVertexAttribPointer(LOC_IN_VIEW, 3, GL_FLOAT, GL_FALSE, sizeof(VertexInput), (void*)offsetof(SoftVertex, vx));
+    glEnableVertexAttribArray(LOC_IN_VIEW);
 
     // Set some state that only has to be done once
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glClearDepth(1.0f);
     glClearStencil(0);
-    glEnable(GL_TEXTURE_2D);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glFrontFace(GL_CW);
@@ -197,17 +320,29 @@ GpuRenderOgl::GpuRenderOgl(Core &core): core(core) {
     glBindRenderbuffer(GL_RENDERBUFFER, depBuf);
 
     // Create a texture to back the color buffer
-    glGenTextures(1, &texture);
-    glActiveTexture(GL_TEXTURE4);
-    glBindTexture(GL_TEXTURE_2D, texture);
+    glGenTextures(9, textures);
+    glActiveTexture(GL_TEXTURE0 + TEX_BUFFER);
+    glBindTexture(GL_TEXTURE_2D, textures[0]);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
     // Bind everything for drawing and reading
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, texture, 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, textures[0], 0);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depBuf);
     glDrawBuffer(GL_COLOR_ATTACHMENT0);
     glReadBuffer(GL_COLOR_ATTACHMENT0);
+
+    // Initialize and allocate 1D textures for interpolated light LUTs
+    for (int i = 0; i < 8; i++) {
+        glActiveTexture(GL_TEXTURE0 + LUT_D0 + i);
+        GLenum type = (i < 6) ? GL_TEXTURE_1D : GL_TEXTURE_1D_ARRAY;
+        glBindTexture(type, textures[LUT_D0 + i]);
+        glTexParameteri(type, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(type, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(type, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        if (i < 6) glTexImage1D(type, 0, GL_RED, 0x100, 0, GL_RED, GL_FLOAT, nullptr); // D0, D1, FR, RB, RG, RR
+        else glTexImage2D(type, 0, GL_RED, 0x100, 8, 0, GL_RED, GL_FLOAT, nullptr); // SP0-7, DA0-7
+    }
 }
 
 GpuRenderOgl::~GpuRenderOgl() {
@@ -218,7 +353,7 @@ GpuRenderOgl::~GpuRenderOgl() {
     }
 
     // Clean up everything else that was generated
-    glDeleteTextures(1, &texture);
+    glDeleteTextures(9, textures);
     glDeleteRenderbuffers(1, &depBuf);
     glDeleteFramebuffers(1, &colBuf);
     glDeleteBuffers(1, &vbo);
@@ -233,7 +368,7 @@ GLuint GpuRenderOgl::makeProgram(const char *vtxCode) {
     glShaderSource(vtxShader, 1, &vtxCode, nullptr);
     glCompileShader(vtxShader);
 
-    // Check for compilation errors and log them
+    // Check for vertex compilation errors and log them
     GLint res, size;
     glGetShaderiv(vtxShader, GL_COMPILE_STATUS, &res);
     if (res == GL_FALSE) {
@@ -267,19 +402,57 @@ void GpuRenderOgl::setProgram(GLuint program) {
     combBufMaskLoc = glGetUniformLocation(program, "combBufMask");
     alphaFuncLoc = glGetUniformLocation(program, "alphaFunc");
     alphaValueLoc = glGetUniformLocation(program, "alphaValue");
-    GLint texUnitsLoc = glGetUniformLocation(program, "texUnits");
+    lightSpec0Loc = glGetUniformLocation(program, "lightSpec0");
+    lightSpec1Loc = glGetUniformLocation(program, "lightSpec1");
+    lightDiffLoc = glGetUniformLocation(program, "lightDiff");
+    lightAmbLoc = glGetUniformLocation(program, "lightAmb");
+    lightVectorLoc = glGetUniformLocation(program, "lightVector");
+    lightSpotLoc = glGetUniformLocation(program, "lightSpot");
+    lightAttenLoc = glGetUniformLocation(program, "lightAtten");
+    lightTypesLoc = glGetUniformLocation(program, "lightTypes");
+    lightBaseAmbLoc = glGetUniformLocation(program, "lightBaseAmb");
+    lutMaskLoc = glGetUniformLocation(program, "lutMask");
+    lutAbsFlagsLoc = glGetUniformLocation(program, "lutAbsFlags");
+    lutInputsLoc = glGetUniformLocation(program, "lutInputs");
+    lutScalesLoc = glGetUniformLocation(program, "lutScales");
+    lightMapLoc = glGetUniformLocation(program, "lightMap");
 
     // Restore uniform values for the new program
     glUniform4f(posScaleLoc, 1.0f, flipY ? -1.0f : 1.0f, -1.0f, 1.0f);
-    glUniform1iv(combSrcsLoc, 6 * 6, combSrcs);
-    glUniform1iv(combOpersLoc, 6 * 6, combOpers);
-    glUniform1iv(combModesLoc, 6 * 2, combModes);
+    glUniform3iv(combSrcsLoc, 12, combSrcs[0]);
+    glUniform3iv(combOpersLoc, 12, combOpers[0]);
+    glUniform2iv(combModesLoc, 6, combModes[0]);
     glUniform4fv(combColorsLoc, 6, combColors[0]);
     glUniform4fv(combBufColorLoc, 1, combBufColor);
     glUniform1i(combBufMaskLoc, combBufMask);
     glUniform1i(alphaFuncLoc, alphaFunc);
     glUniform1f(alphaValueLoc, alphaValue);
-    for (int i = 0; i < 3; i++) glUniform1i(texUnitsLoc + i, i);
+    glUniform3fv(lightSpec0Loc, 8, lightSpec0[0]);
+    glUniform3fv(lightSpec1Loc, 8, lightSpec1[0]);
+    glUniform3fv(lightDiffLoc, 8, lightDiff[0]);
+    glUniform3fv(lightAmbLoc, 8, lightAmb[0]);
+    glUniform3fv(lightVectorLoc, 8, lightVector[0]);
+    glUniform3fv(lightSpotLoc, 8, lightSpot[0]);
+    glUniform2fv(lightAttenLoc, 8, lightAtten[0]);
+    glUniform1iv(lightTypesLoc, 8, lightTypes);
+    glUniform3fv(lightBaseAmbLoc, 1, lightBaseAmb);
+    glUniform1i(lutMaskLoc, lutMask);
+    glUniform1iv(lutAbsFlagsLoc, 7, lutAbsFlags);
+    glUniform1iv(lutInputsLoc, 7, lutInputs);
+    glUniform1fv(lutScalesLoc, 7, lutScales);
+    glUniform1iv(lightMapLoc, 9, lightMap);
+
+    // Map texture slots for the new program
+    glUniform1i(glGetUniformLocation(program, "lutD0"), TEX_LUTD0);
+    glUniform1i(glGetUniformLocation(program, "lutD1"), TEX_LUTD1);
+    glUniform1i(glGetUniformLocation(program, "lutFr"), TEX_LUTFR);
+    glUniform1i(glGetUniformLocation(program, "lutRb"), TEX_LUTRB);
+    glUniform1i(glGetUniformLocation(program, "lutRg"), TEX_LUTRG);
+    glUniform1i(glGetUniformLocation(program, "lutRr"), TEX_LUTRR);
+    glUniform1i(glGetUniformLocation(program, "lutSp"), TEX_LUTSP);
+    glUniform1i(glGetUniformLocation(program, "lutDa"), TEX_LUTDA);
+    GLint loc = glGetUniformLocation(program, "texUnits");
+    for (int i = 0; i < 3; i++) glUniform1i(loc + i, TEX_UNIT0 + i);
 }
 
 uint32_t GpuRenderOgl::getSwizzle(int x, int y, int width) {
@@ -363,6 +536,7 @@ void GpuRenderOgl::flushVertices() {
     if (vertices.empty()) return;
     if (readDirty) updateBuffers();
     if (texDirty) updateTextures();
+    if (lutDirty) updateLuts();
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(VertexInput), &vertices[0], GL_DYNAMIC_DRAW);
     glDrawArrays(primMode, 0, vertices.size());
     vertices = {};
@@ -443,7 +617,7 @@ void GpuRenderOgl::updateBuffers() {
     if (~readDirty & BIT(0)) return;
     uint32_t *data = nullptr;
     uint16_t w = bufWidth, h = bufHeight;
-    glActiveTexture(GL_TEXTURE4);
+    glActiveTexture(GL_TEXTURE0 + TEX_BUFFER);
     switch (colbufFmt) {
     case COL_RGBA8:
         data = new uint32_t[w * h];
@@ -489,7 +663,7 @@ void GpuRenderOgl::updateTextures() {
     // Update any textures that are dirty
     for (int i = 0; texDirty >> i; i++) {
         if (~texDirty & BIT(i)) continue;
-        glActiveTexture(GL_TEXTURE0 + i);
+        glActiveTexture(GL_TEXTURE0 + TEX_UNIT0 + i);
 
         // Check for a matching texture in the cache
         const TexCache *cache = nullptr;
@@ -681,6 +855,52 @@ void GpuRenderOgl::updateTextures() {
     texDirty = 0;
 }
 
+void GpuRenderOgl::updateLuts() {
+    // Update any light LUT textures that are dirty
+    for (int i = 0; lutDirty != 0; i++) {
+        if (~lutDirty & BIT(i)) continue;
+        lutDirty &= ~BIT(i);
+
+        // Replace light LUT data based on ID without reallocating
+        switch (i) {
+        case LUT_D0:
+            glActiveTexture(GL_TEXTURE0 + TEX_LUTD0);
+            glTexSubImage1D(GL_TEXTURE_1D, 0, 0, 0x100, GL_RED, GL_FLOAT, lutD0);
+            continue;
+        case LUT_D1:
+            glActiveTexture(GL_TEXTURE0 + TEX_LUTD1);
+            glTexSubImage1D(GL_TEXTURE_1D, 0, 0, 0x100, GL_RED, GL_FLOAT, lutD1);
+            continue;
+        case LUT_FR:
+            glActiveTexture(GL_TEXTURE0 + TEX_LUTFR);
+            glTexSubImage1D(GL_TEXTURE_1D, 0, 0, 0x100, GL_RED, GL_FLOAT, lutFr);
+            continue;
+        case LUT_RB:
+            glActiveTexture(GL_TEXTURE0 + TEX_LUTRB);
+            glTexSubImage1D(GL_TEXTURE_1D, 0, 0, 0x100, GL_RED, GL_FLOAT, lutRb);
+            continue;
+        case LUT_RG:
+            glActiveTexture(GL_TEXTURE0 + TEX_LUTRG);
+            glTexSubImage1D(GL_TEXTURE_1D, 0, 0, 0x100, GL_RED, GL_FLOAT, lutRg);
+            continue;
+        case LUT_RR:
+            glActiveTexture(GL_TEXTURE0 + TEX_LUTRR);
+            glTexSubImage1D(GL_TEXTURE_1D, 0, 0, 0x100, GL_RED, GL_FLOAT, lutRr);
+            continue;
+        case LUT_SP0: case LUT_SP1: case LUT_SP2: case LUT_SP3:
+        case LUT_SP4: case LUT_SP5: case LUT_SP6: case LUT_SP7:
+            glActiveTexture(GL_TEXTURE0 + TEX_LUTSP);
+            glTexSubImage2D(GL_TEXTURE_1D_ARRAY, 0, 0, i - LUT_SP0, 0x100, 1, GL_RED, GL_FLOAT, lutSp[i - LUT_SP0]);
+            continue;
+        case LUT_DA0: case LUT_DA1: case LUT_DA2: case LUT_DA3:
+        case LUT_DA4: case LUT_DA5: case LUT_DA6: case LUT_DA7:
+            glActiveTexture(GL_TEXTURE0 + TEX_LUTDA);
+            glTexSubImage2D(GL_TEXTURE_1D_ARRAY, 0, 0, i - LUT_DA0, 0x100, 1, GL_RED, GL_FLOAT, lutDa[i - LUT_DA0]);
+            continue;
+        }
+    }
+}
+
 void GpuRenderOgl::updateViewport() {
     // Update the viewport, adjusting Y-position when flipped
     GLint y = flipY ? (bufHeight - viewHeight) : 0;
@@ -765,22 +985,22 @@ void GpuRenderOgl::setTexWrapT(int i, TexWrap wrap) {
 void GpuRenderOgl::setCombSrc(int i, int j, CombSrc src) {
     // Update one of the texture combiner source uniforms
     flushVertices();
-    const int ofs = i * 6 + j;
-    glUniform1i(combSrcsLoc + ofs, combSrcs[ofs] = src);
+    combSrcs[i = i * 2 + (j > 2)][j % 3] = src;
+    glUniform3iv(combSrcsLoc + i, 1, combSrcs[i]);
 }
 
 void GpuRenderOgl::setCombOper(int i, int j, CombOper oper) {
     // Update one of the texture combiner operand uniforms
     flushVertices();
-    const int ofs = i * 6 + j;
-    glUniform1i(combOpersLoc + ofs, combOpers[ofs] = oper);
+    combOpers[i = i * 2 + (j > 2)][j % 3] = oper;
+    glUniform3iv(combOpersLoc + i, 1, combOpers[i]);
 }
 
 void GpuRenderOgl::setCombMode(int i, int j, CalcMode mode) {
     // Update one of the texture combiner mode uniforms
     flushVertices();
-    const int ofs = i * 2 + j;
-    glUniform1i(combModesLoc + ofs, combModes[ofs] = mode);
+    combModes[i][j] = mode;
+    glUniform2iv(combModesLoc + i, 1, combModes[i]);
 }
 
 void GpuRenderOgl::setCombColor(int i, float r, float g, float b, float a) {
@@ -908,6 +1128,137 @@ void GpuRenderOgl::setStencilValue(uint8_t value) {
     flushVertices();
     stencilValue = value;
     glStencilFunc(stencilFunc, stencilValue, stencilMasks[1]);
+}
+
+void GpuRenderOgl::setLightSpec0(int i, float r, float g, float b) {
+    // Update one of the first light specular colors
+    flushVertices();
+    lightSpec0[i][0] = r, lightSpec0[i][1] = g, lightSpec0[i][2] = b;
+    glUniform3fv(lightSpec0Loc + i, 1, lightSpec0[i]);
+}
+
+void GpuRenderOgl::setLightSpec1(int i, float r, float g, float b) {
+    // Update one of the second light specular colors
+    flushVertices();
+    lightSpec1[i][0] = r, lightSpec1[i][1] = g, lightSpec1[i][2] = b;
+    glUniform3fv(lightSpec1Loc + i, 1, lightSpec1[i]);
+}
+
+void GpuRenderOgl::setLightDiff(int i, float r, float g, float b) {
+    // Update one of the light diffuse colors
+    flushVertices();
+    lightDiff[i][0] = r, lightDiff[i][1] = g, lightDiff[i][2] = b;
+    glUniform3fv(lightDiffLoc + i, 1, lightDiff[i]);
+}
+
+void GpuRenderOgl::setLightAmb(int i, float r, float g, float b) {
+    // Update one of the light ambient colors
+    flushVertices();
+    lightAmb[i][0] = r, lightAmb[i][1] = g, lightAmb[i][2] = b;
+    glUniform3fv(lightAmbLoc + i, 1, lightAmb[i]);
+}
+
+void GpuRenderOgl::setLightVector(int i, float x, float y, float z) {
+    // Update one of the light position/direction vectors
+    flushVertices();
+    lightVector[i][0] = x, lightVector[i][1] = y, lightVector[i][2] = z;
+    glUniform3fv(lightVectorLoc + i, 1, lightVector[i]);
+}
+
+void GpuRenderOgl::setLightSpot(int i, float x, float y, float z) {
+    // Update one of the spotlight vectors
+    flushVertices();
+    lightSpot[i][0] = x, lightSpot[i][1] = y, lightSpot[i][2] = z;
+    glUniform3fv(lightSpotLoc + i, 1, lightSpot[i]);
+}
+
+void GpuRenderOgl::setLightAtten(int i, float bias, float scale) {
+    // Update one of the light depth attenuation parameters
+    flushVertices();
+    lightAtten[i][0] = bias, lightAtten[i][1] = scale;
+    glUniform2fv(lightAttenLoc + i, 1, lightAtten[i]);
+}
+
+void GpuRenderOgl::setLightType(int i, bool direction) {
+    // Update one of the light type values
+    flushVertices();
+    glUniform1i(lightTypesLoc + i, lightTypes[i] = direction);
+}
+
+void GpuRenderOgl::setLightBaseAmb(float r, float g, float b) {
+    // Update the light base ambient color
+    flushVertices();
+    lightBaseAmb[0] = r, lightBaseAmb[1] = g, lightBaseAmb[2] = b;
+    glUniform3fv(lightBaseAmbLoc, 1, lightBaseAmb);
+}
+
+void GpuRenderOgl::setLightLutVal(LutId id, int i, float entry, float diff) {
+    // Get a LUT pointer based on its ID
+    float *lut;
+    switch (id) {
+        case LUT_D0: lut = lutD0; break;
+        case LUT_D1: lut = lutD1; break;
+        case LUT_FR: lut = lutFr; break;
+        case LUT_RB: lut = lutRb; break;
+        case LUT_RG: lut = lutRg; break;
+        case LUT_RR: lut = lutRr; break;
+        case LUT_SP0: lut = lutSp[0]; break;
+        case LUT_SP1: lut = lutSp[1]; break;
+        case LUT_SP2: lut = lutSp[2]; break;
+        case LUT_SP3: lut = lutSp[3]; break;
+        case LUT_SP4: lut = lutSp[4]; break;
+        case LUT_SP5: lut = lutSp[5]; break;
+        case LUT_SP6: lut = lutSp[6]; break;
+        case LUT_SP7: lut = lutSp[7]; break;
+        case LUT_DA0: lut = lutDa[0]; break;
+        case LUT_DA1: lut = lutDa[1]; break;
+        case LUT_DA2: lut = lutDa[2]; break;
+        case LUT_DA3: lut = lutDa[3]; break;
+        case LUT_DA4: lut = lutDa[4]; break;
+        case LUT_DA5: lut = lutDa[5]; break;
+        case LUT_DA6: lut = lutDa[6]; break;
+        case LUT_DA7: lut = lutDa[7]; break;
+        default: return;
+    }
+
+    // Set a LUT entry and mark its table as dirty
+    // TODO: use the difference values
+    lut[i] = entry;
+    lutDirty |= BIT(id);
+}
+
+void GpuRenderOgl::setLightLutMask(uint32_t mask) {
+    // Update the light LUT enable mask
+    flushVertices();
+    glUniform1i(lutMaskLoc, lutMask = mask);
+}
+
+void GpuRenderOgl::setLightLutAbs(bool *flags) {
+    // Update the light LUT absolute flags
+    flushVertices();
+    for (int i = 0; i < 7; i++) lutAbsFlags[i] = flags[i];
+    glUniform1iv(lutAbsFlagsLoc, 7, lutAbsFlags);
+}
+
+void GpuRenderOgl::setLightLutInps(LutInput *inputs) {
+    // Update the light LUT input selectors
+    flushVertices();
+    for (int i = 0; i < 7; i++) lutInputs[i] = inputs[i];
+    glUniform1iv(lutInputsLoc, 7, lutInputs);
+}
+
+void GpuRenderOgl::setLightLutScls(float *scales) {
+    // Update the light LUT scale values
+    flushVertices();
+    memcpy(lutScales, scales, sizeof(lutScales));
+    glUniform1fv(lutScalesLoc, 7, lutScales);
+}
+
+void GpuRenderOgl::setLightMap(int8_t *map) {
+    // Update the map of enabled light IDs
+    flushVertices();
+    for (int i = 0; i < 9; i++) lightMap[i] = map[i];
+    glUniform1iv(lightMapLoc, 9, lightMap);
 }
 
 void GpuRenderOgl::setViewScaleH(float scale) {

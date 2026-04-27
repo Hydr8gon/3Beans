@@ -295,9 +295,9 @@ void GpuRenderSoft::updateTexel(int i, float s, float t) {
 void GpuRenderSoft::updateFrag(float qx, float qy, float qz, float qw, float vx, float vy, float vz, float z) {
     // Extract a normal vector from the quaternion
     float n = 2.0f / (qx * qx + qy * qy + qz * qz + qw * qw);
-    float nx = n * qx * qz - n * qy * qw;
-    float ny = n * qy * qz + n * qx * qw;
-    float nz = 1.0f - n * qx * qx - n * qy * qy;
+    float nx = (qx * qz - qy * qw) * n;
+    float ny = (qy * qz + qx * qw) * n;
+    float nz = 1.0f - (qx * qx - qy * qy) * n;
     normalize(nx, ny, nz);
 
     // Normalize the view vector and set base colors
@@ -310,24 +310,24 @@ void GpuRenderSoft::updateFrag(float qx, float qy, float qz, float qw, float vx,
         uint32_t i = (uintptr_t(*light) - uintptr_t(&lights[0])) / sizeof(SoftLight);
         SoftLight &l = **light;
 
-        // Get the normalized light vector, plus view for positional lights
+        // Get normalized vectors, with positional lights adjusted by view
         float lx = l.x + (l.direction ? 0.0f : vx);
         float ly = l.y + (l.direction ? 0.0f : vy);
         float lz = l.z + (l.direction ? 0.0f : vz);
-        normalize(lx, ly, lz);
-
-        // Calculate the normalized half vector
         float hx = (lx + vx) / 2;
         float hy = (ly + vy) / 2;
         float hz = (lz + vz) / 2;
+        float px = l.px, py = l.py, pz = l.pz;
+        normalize(lx, ly, lz);
         normalize(hx, hy, hz);
+        normalize(px, py, pz);
 
         // Calculate dot products of vectors used as inputs for LUTs
         float nh = nx * hx + ny * hy + nz * hz;
         float vh = vnx * hx + vny * hy + vnz * hz;
         float nv = nx * vnx + ny * vny + nz * vnz;
         float ln = lx * nx + ly * ny + lz * nz;
-        float lp = -lx * l.px + -ly * l.py + -lz * l.pz;
+        float lp = -lx * px + -ly * py + -lz * pz;
         float cp = 0.0f; // TODO: implement this
         float inp[] = { nh, vh, nv, ln, lp, cp, 0.0f };
 
@@ -340,19 +340,18 @@ void GpuRenderSoft::updateFrag(float qx, float qy, float qz, float qw, float vx,
         float rg = (lutMask & BIT(LUT_RG)) ? readLut(lutRg, inp, 5) : rr;
         float rb = (lutMask & BIT(LUT_RB)) ? readLut(lutRb, inp, 4) : rr;
 
-        // Read from the distance attenuation LUT with its unique input
-        float da = 1.0f;
+        // Apply distance attenuation with its unique LUT input if enabled
         if (lutMask & BIT(LUT_DA0 + i)) {
             float atn = std::min(1.0f, std::max(0.0f, l.atnBias + z * l.atnScale)) * 0xFF;
             float *val = lutDa[i][int(atn) & 0xFF];
-            da = val[0] + val[1] * (atn - int(atn));
+            sp *= val[0] + val[1] * (atn - int(atn));
         }
 
         // Add the light components for each RGB value
         float r[3] = { rr, rg, rb };
         for (int j = 0; j < 3; j++) {
-            c[0][j] += da * sp * (l.ambient[j] + l.diffuse[j] * ln);
-            c[1][j] += da * sp * (l.specular0[j] * d0 + l.specular1[j] * d1 * r[j]);
+            c[0][j] += sp * (l.ambient[j] + l.diffuse[j] * ln);
+            c[1][j] += sp * (l.specular0[j] * d0 + l.specular1[j] * d1 * r[j]);
         }
 
         // Add the alpha components

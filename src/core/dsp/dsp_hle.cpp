@@ -461,7 +461,7 @@ uint16_t DspHle::readRep(int i) {
 
 void DspHle::writePdata(uint16_t mask, uint16_t value) {
     // Write a value to DMA instantly and adjust the address
-    switch (dspPcfg >> 12) {
+    switch (uint8_t area = dspPcfg >> 12) {
         case 7: core.memory.write<uint16_t>(ARM11, dspPadr & ~0x1, value); break; // AHBM
         case 5: core.memory.write<uint16_t>(ARM11, 0x1FF00000 + (dspPadr << 1), value); break; // Code
         case 0: core.memory.write<uint16_t>(ARM11, 0x1FF40000 + (dspPadr << 1), value); break; // Data
@@ -494,7 +494,7 @@ void DspHle::writePcfg(uint16_t mask, uint16_t value) {
 
         // Fill the read DMA with all values instantly and adjust the address
         for (int i = 0; i < len; i++) {
-            switch (dspPcfg >> 12) {
+            switch (uint8_t area = dspPcfg >> 12) {
                 case 7: readFifo.push(core.memory.read<uint16_t>(ARM11, dspPadr & ~0x1)); break; // AHBM
                 case 5: readFifo.push(core.memory.read<uint16_t>(ARM11, 0x1FF00000 + (dspPadr << 1))); break; // Code
                 case 0: readFifo.push(core.memory.read<uint16_t>(ARM11, 0x1FF40000 + (dspPadr << 1))); break; // Data
