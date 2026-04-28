@@ -293,6 +293,18 @@ void Gpu::syncRender() {
     if (renderType == 1) (*contextFunc)();
 }
 
+void Gpu::addThreadTask(GpuTaskType type, void *data) {
+    // Add a thread task to the queue
+    uint16_t end = taskEnd.load();
+    taskBuffer[end] = { type, data };
+    end = (end + 1) & 0xFFF;
+
+    // Wait for a task to be processed if full
+    uint16_t start = taskStart.load();
+    while (end == start) start = taskStart.load();
+    taskEnd.store(end);
+}
+
 void Gpu::runThreaded() {
     // Set the OpenGL context on this thread if needed
     if (renderType == 1)
@@ -301,21 +313,18 @@ void Gpu::runThreaded() {
     // Process GPU thread tasks
     while (true) {
         // Wait for more tasks or finish and release context if stopped
-        while (tasks.empty()) {
+        uint16_t start = taskStart.load();
+        if (start == taskEnd.load()) {
             if (!running.load()) {
                 if (renderType == 1) (*contextFunc)();
                 return;
             }
             std::this_thread::yield();
+            continue;
         }
 
-        // Get and pop the next task from the queue
-        mutex.lock();
-        GpuThreadTask task = tasks.front();
-        tasks.pop();
-        mutex.unlock();
-
-        // Handle the task based on its type
+        // Get the next queued task and handle it
+        GpuThreadTask task = taskBuffer[start];
         switch (task.type) {
         case TASK_CMD: {
             // Decode a GPU command header
@@ -333,24 +342,25 @@ void Gpu::runThreaded() {
                 for (int i = 0; i < count; i++)
                     (this->*cmdWrites[cmd])(mask, cmds[i + 2]);
             delete[] cmds;
-            continue;
+            break;
         }
-
         case TASK_FILL: {
             // Start a GPU fill using saved register values
             GpuFillRegs *regs = (GpuFillRegs*)task.data;
             startFill(*regs);
             delete regs;
-            continue;
+            break;
         }
-
         case TASK_COPY: {
             // Start a GPU copy using saved register values
             GpuCopyRegs *regs = (GpuCopyRegs*)task.data;
             startCopy(*regs);
             delete regs;
-            continue;
+            break;
         }}
+
+        // Remove the task from the queue
+        taskStart.store((start + 1) & 0xFFF);
     }
 }
 
@@ -794,9 +804,7 @@ void Gpu::writeFillCnt(int i, uint32_t mask, uint32_t value) {
     // Start the fill now or forward it to the thread if running
     if (!thread) return startFill(gpuFill[i]);
     GpuFillRegs *regs = new GpuFillRegs(gpuFill[i]);
-    mutex.lock();
-    tasks.emplace(TASK_FILL, regs);
-    mutex.unlock();
+    addThreadTask(TASK_FILL, regs);
 }
 
 void Gpu::writeCopySrcAddr(uint32_t mask, uint32_t value) {
@@ -842,9 +850,7 @@ void Gpu::writeCopyCnt(uint32_t mask, uint32_t value) {
     // Start the copy now or forward it to the thread if running
     if (!thread) return startCopy(gpuCopy);
     GpuCopyRegs *regs = new GpuCopyRegs(gpuCopy);
-    mutex.lock();
-    tasks.emplace(TASK_COPY, regs);
-    mutex.unlock();
+    addThreadTask(TASK_COPY, regs);
 }
 
 void Gpu::writeCopyTexSize(uint32_t mask, uint32_t value) {

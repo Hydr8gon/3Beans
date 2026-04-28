@@ -130,9 +130,7 @@ void Gpu::runCommands() {
             data[1] = core.memory.read<uint32_t>(ARM11, address - 4);
             for (int i = 0; i < count; i++)
                 data[i + 2] = core.memory.read<uint32_t>(ARM11, address += 4);
-            mutex.lock();
-            tasks.emplace(TASK_CMD, data);
-            mutex.unlock();
+            addThreadTask(TASK_CMD, data);
             continue;
         }
 
@@ -1260,6 +1258,7 @@ void Gpu::writeVshDescData(uint32_t mask, uint32_t value) {
 
 void Gpu::writeUnkCmd(uint32_t mask, uint32_t value) {
     // Catch unknown GPU commands, pulling ID from the thread if running
-    uint16_t cmd = (tasks.empty() ? curCmd : *(uint32_t*)tasks.front().data) & 0x3FF;
+    uint16_t start = taskStart.load();
+    uint16_t cmd = (start == taskEnd.load() ? curCmd : *(uint32_t*)taskBuffer[start].data) & 0x3FF;
     LOG_WARN("Unknown GPU command ID: 0x%X\n", cmd);
 }

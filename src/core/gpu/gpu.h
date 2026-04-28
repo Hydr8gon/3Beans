@@ -22,8 +22,6 @@
 #include <atomic>
 #include <cstdint>
 #include <functional>
-#include <mutex>
-#include <queue>
 #include <thread>
 
 class Core;
@@ -231,7 +229,6 @@ struct GpuCopyRegs {
 struct GpuThreadTask {
     GpuTaskType type;
     void *data;
-    GpuThreadTask(GpuTaskType type, void *data): type(type), data(data) {}
 };
 
 class Gpu {
@@ -480,10 +477,11 @@ private:
     static void (Gpu::*cmdWrites[0x400])(uint32_t, uint32_t);
     static uint32_t maskTable[0x10];
 
-    std::queue<GpuThreadTask> tasks;
-    std::mutex mutex;
-    std::thread *thread;
+    GpuThreadTask taskBuffer[0x1000];
+    std::atomic<uint16_t> taskStart{0};
+    std::atomic<uint16_t> taskEnd{0};
     std::atomic<bool> running{false};
+    std::thread *thread;
 
     uint32_t cmdAddr = -1;
     uint32_t cmdEnd = 0;
@@ -611,6 +609,7 @@ private:
     void createRender();
     void destroyRender();
 
+    void addThreadTask(GpuTaskType type, void *data);
     void runThreaded();
     bool checkInterrupt(int i);
 
