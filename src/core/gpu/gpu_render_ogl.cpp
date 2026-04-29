@@ -904,7 +904,7 @@ void GpuRenderOgl::updateLuts() {
 void GpuRenderOgl::updateViewport() {
     // Update the viewport, adjusting Y-position when flipped
     GLint y = flipY ? (bufHeight - viewHeight) : 0;
-    glViewport(0, y, viewWidth, viewHeight);
+    glViewport(0 - viewX, y - viewY, viewWidth, viewHeight);
 }
 
 void GpuRenderOgl::setPrimMode(PrimMode mode) {
@@ -1272,6 +1272,13 @@ void GpuRenderOgl::setViewScaleV(float scale) {
     // Update the viewport height
     flushVertices();
     viewHeight = scale * 2;
+    updateViewport();
+}
+
+void GpuRenderOgl::setViewOffset(int x, int y) {
+    // Update the viewport X/Y offsets
+    flushVertices();
+    viewX = x, viewY = y;
     updateViewport();
 }
 

@@ -610,7 +610,8 @@ void GpuRenderSoft::cacheCombA(int i) {
 
 void GpuRenderSoft::drawPixel(SoftVertex &p) {
     // Check bounds and convert coordinates to an 8x8 tile offset
-    int x = int(p.x), y = flipY ? (bufHeight - int(p.y) - 1) : int(p.y);
+    int x = int(p.x) - viewX;
+    int y = (flipY ? (bufHeight - int(p.y) - 1) : int(p.y)) - viewY;
     if (x < 0 || x >= bufWidth || y < 0 || y >= bufHeight) return;
     uint32_t val, ofs = (((y >> 3) * (bufWidth >> 3) + (x >> 3)) << 6);
     ofs |= ((y << 3) & 0x20) | ((y << 2) & 0x8) | ((y << 1) & 0x2);

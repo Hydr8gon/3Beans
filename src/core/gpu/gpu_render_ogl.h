@@ -100,6 +100,7 @@ public:
     void setViewStepH(float step) {}
     void setViewScaleV(float scale);
     void setViewStepV(float step) {}
+    void setViewOffset(int x, int y);
     void setBufferDims(uint16_t width, uint16_t height, bool flip);
     void setColbufAddr(uint32_t address);
     void setColbufFmt(ColbufFmt format);
@@ -195,6 +196,7 @@ private:
 
     GLsizei viewWidth = 0;
     GLsizei viewHeight = 0;
+    GLint viewX = 0, viewY = 0;
     bool flipY = false;
     GLsizei bufWidth = 0;
     GLsizei bufHeight = 0;

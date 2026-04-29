@@ -604,6 +604,7 @@ template <typename T> T Memory::ioRead(CpuId id, uint32_t address) {
                 DEF_IO32(0x10401150, data = core.gpu.readShdOutMap(4)) // GPU_SHD_OUT_MAP4
                 DEF_IO32(0x10401154, data = core.gpu.readShdOutMap(5)) // GPU_SHD_OUT_MAP5
                 DEF_IO32(0x10401158, data = core.gpu.readShdOutMap(6)) // GPU_SHD_OUT_MAP6
+                DEF_IO32(0x104011A0, data = core.gpu.readViewXY()) // GPU_VIEW_XY
                 DEF_IO32(0x10401204, data = core.gpu.readTexBorder(0)) // GPU_TEX0_BORDER
                 DEF_IO32(0x10401208, data = core.gpu.readTexDim(0)) // GPU_TEX0_DIM
                 DEF_IO32(0x1040120C, data = core.gpu.readTexParam(0)) // GPU_TEX0_PARAM

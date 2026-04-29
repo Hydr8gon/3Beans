@@ -384,6 +384,15 @@ template <int i> void Gpu::writeShdOutMap(uint32_t mask, uint32_t value) {
     shdMapDirty = true;
 }
 
+void Gpu::writeViewXY(uint32_t mask, uint32_t value) {
+    // Write to the viewport X/Y offsets and send them to the renderer
+    mask &= 0x3FF03FF;
+    gpuViewXY = (gpuViewXY & ~mask) | (value & mask);
+    int x = int16_t(gpuViewXY << 6) >> 6;
+    int y = int16_t(gpuViewXY >> 10) >> 6;
+    gpuRender->setViewOffset(x, y);
+}
+
 template <int i> void Gpu::writeTexBorder(uint32_t mask, uint32_t value) {
     // Write to one of the texture border colors and send it to the renderer
     gpuTexBorder[i] = (gpuTexBorder[i] & ~mask) | (value & mask);

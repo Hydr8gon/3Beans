@@ -92,6 +92,7 @@ void Gpu::syncRender() {
     writeViewStepH(0xFFFFFFFF, gpuViewStepH);
     writeViewScaleV(0xFFFFFFFF, gpuViewScaleV);
     writeViewStepV(0xFFFFFFFF, gpuViewStepV);
+    writeViewXY(0xFFFFFFFF, gpuViewXY);
     writeTexBorder<0>(0xFFFFFFFF, gpuTexBorder[0]);
     writeTexBorder<1>(0xFFFFFFFF, gpuTexBorder[1]);
     writeTexBorder<2>(0xFFFFFFFF, gpuTexBorder[2]);

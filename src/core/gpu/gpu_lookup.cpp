@@ -47,7 +47,7 @@ void (Gpu::*Gpu::cmdWrites[])(uint32_t, uint32_t) {
     &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x05C-0x05F
     &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x060-0x063
     &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x064-0x067
-    &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x068-0x06B
+    &Gpu::writeViewXY, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x068-0x06B
     &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x06C-0x06F
     &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x070-0x073
     &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, &Gpu::writeUnkCmd, // 0x074-0x077

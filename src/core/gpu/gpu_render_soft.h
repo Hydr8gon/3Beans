@@ -105,6 +105,7 @@ public:
     void setViewStepH(float step) { viewStepH = step; }
     void setViewScaleV(float scale) { viewScaleV = scale; }
     void setViewStepV(float step) { viewStepV = step; }
+    void setViewOffset(int x, int y) { viewX = x, viewY = y; }
     void setBufferDims(uint16_t width, uint16_t height, bool flip);
     void setColbufAddr(uint32_t address) { colbufAddr = address; }
     void setColbufFmt(ColbufFmt format) { colbufFmt = format; }
@@ -175,6 +176,7 @@ private:
     float viewStepH = 0;
     float viewScaleV = 0;
     float viewStepV = 0;
+    int viewX = 0, viewY = 0;
     bool flipY = false;
     uint16_t bufWidth = 0;
     uint16_t bufHeight = 0;

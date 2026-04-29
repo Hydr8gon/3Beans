@@ -740,6 +740,7 @@ template <typename T> void Memory::ioWrite(CpuId id, uint32_t address, T value) 
                 DEF_IO32(0x10401150, core.gpu.writeShdOutMap<4>(IO_PARAMS)) // GPU_SHD_OUT_MAP4
                 DEF_IO32(0x10401154, core.gpu.writeShdOutMap<5>(IO_PARAMS)) // GPU_SHD_OUT_MAP5
                 DEF_IO32(0x10401158, core.gpu.writeShdOutMap<6>(IO_PARAMS)) // GPU_SHD_OUT_MAP6
+                DEF_IO32(0x104011A0, core.gpu.writeViewXY(IO_PARAMS)) // GPU_VIEW_XY
                 DEF_IO32(0x10401204, core.gpu.writeTexBorder<0>(IO_PARAMS)) // GPU_TEX0_BORDER
                 DEF_IO32(0x10401208, core.gpu.writeTexDim<0>(IO_PARAMS)) // GPU_TEX0_DIM
                 DEF_IO32(0x1040120C, core.gpu.writeTexParam<0>(IO_PARAMS)) // GPU_TEX0_PARAM

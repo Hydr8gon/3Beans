@@ -76,6 +76,7 @@ public:
     virtual void setViewStepH(float step) = 0;
     virtual void setViewScaleV(float scale) = 0;
     virtual void setViewStepV(float step) = 0;
+    virtual void setViewOffset(int x, int y) = 0;
     virtual void setBufferDims(uint16_t width, uint16_t height, bool flip) = 0;
     virtual void setColbufAddr(uint32_t address) = 0;
     virtual void setColbufFmt(ColbufFmt format) = 0;
