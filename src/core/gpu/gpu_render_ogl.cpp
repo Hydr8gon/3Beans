@@ -944,10 +944,11 @@ void GpuRenderOgl::setTexDims(int i, uint16_t width, uint16_t height) {
     texDirty |= BIT(i);
 }
 
-void GpuRenderOgl::setTexBorder(int i, float r, float g, float b, float a) {
+void GpuRenderOgl::setTexBorder(int i, float *color) {
     // Set a texture unit's border and mark it as dirty
     flushVertices();
-    texBorders[i][0] = r, texBorders[i][1] = g, texBorders[i][2] = b, texBorders[i][3] = a;
+    for (int j = 0; j < 4; j++)
+        texBorders[i][j] = color[j];
     texDirty |= BIT(i);
 }
 
@@ -958,23 +959,19 @@ void GpuRenderOgl::setTexFmt(int i, TexFmt format) {
     texDirty |= BIT(i);
 }
 
-void GpuRenderOgl::setTexWrapS(int i, TexWrap wrap) {
+void GpuRenderOgl::setTexWrap(int i, TexWrap wrapS, TexWrap wrapT) {
     // Set a texture unit's S-wrap and mark it as dirty
     flushVertices();
     texDirty |= BIT(i);
-    switch (wrap) {
-        case WRAP_CLAMP: texWrapS[i] = GL_CLAMP_TO_EDGE; return;
-        case WRAP_BORDER: texWrapS[i] = GL_CLAMP_TO_BORDER; return;
-        case WRAP_REPEAT: texWrapS[i] = GL_REPEAT; return;
-        case WRAP_MIRROR: texWrapS[i] = GL_MIRRORED_REPEAT; return;
+    switch (wrapS) {
+        case WRAP_CLAMP: texWrapS[i] = GL_CLAMP_TO_EDGE; break;
+        case WRAP_BORDER: texWrapS[i] = GL_CLAMP_TO_BORDER; break;
+        case WRAP_REPEAT: texWrapS[i] = GL_REPEAT; break;
+        case WRAP_MIRROR: texWrapS[i] = GL_MIRRORED_REPEAT; break;
     }
-}
 
-void GpuRenderOgl::setTexWrapT(int i, TexWrap wrap) {
-    // Set a texture unit's T-wrap and mark it as dirty
-    flushVertices();
-    texDirty |= BIT(i);
-    switch (wrap) {
+    // Set a texture unit's T-wrap
+    switch (wrapT) {
         case WRAP_CLAMP: texWrapT[i] = GL_CLAMP_TO_EDGE; return;
         case WRAP_BORDER: texWrapT[i] = GL_CLAMP_TO_BORDER; return;
         case WRAP_REPEAT: texWrapT[i] = GL_REPEAT; return;
@@ -982,38 +979,43 @@ void GpuRenderOgl::setTexWrapT(int i, TexWrap wrap) {
     }
 }
 
-void GpuRenderOgl::setCombSrc(int i, int j, CombSrc src) {
-    // Update one of the texture combiner source uniforms
+void GpuRenderOgl::setCombSrcs(int i, CombSrc *srcs) {
+    // Update a group of texture combiner source uniforms
     flushVertices();
-    combSrcs[i = i * 2 + (j > 2)][j % 3] = src;
-    glUniform3iv(combSrcsLoc + i, 1, combSrcs[i]);
+    for (int j = 0; j < 6; j++)
+        combSrcs[i * 2 + (j > 2)][j % 3] = srcs[j];
+    glUniform3iv(combSrcsLoc + i * 2, 2, combSrcs[i * 2]);
 }
 
-void GpuRenderOgl::setCombOper(int i, int j, CombOper oper) {
-    // Update one of the texture combiner operand uniforms
+void GpuRenderOgl::setCombOpers(int i, CombOper *opers) {
+    // Update a group of texture combiner operand uniforms
     flushVertices();
-    combOpers[i = i * 2 + (j > 2)][j % 3] = oper;
-    glUniform3iv(combOpersLoc + i, 1, combOpers[i]);
+    for (int j = 0; j < 6; j++)
+        combOpers[i * 2 + (j > 2)][j % 3] = opers[j];
+    glUniform3iv(combOpersLoc + i * 2, 2, combOpers[i * 2]);
 }
 
-void GpuRenderOgl::setCombMode(int i, int j, CalcMode mode) {
-    // Update one of the texture combiner mode uniforms
+void GpuRenderOgl::setCombModes(int i, CalcMode *modes) {
+    // Update a group of texture combiner mode uniforms
     flushVertices();
-    combModes[i][j] = mode;
+    for (int j = 0; j < 2; j++)
+        combModes[i][j] = modes[j];
     glUniform2iv(combModesLoc + i, 1, combModes[i]);
 }
 
-void GpuRenderOgl::setCombColor(int i, float r, float g, float b, float a) {
+void GpuRenderOgl::setCombColor(int i, float *color) {
     // Update one of the texture combiner color uniforms
     flushVertices();
-    combColors[i][0] = r, combColors[i][1] = g, combColors[i][2] = b, combColors[i][3] = a;
+    for (int j = 0; j < 4; j++)
+        combColors[i][j] = color[j];
     glUniform4fv(combColorsLoc + i, 1, combColors[i]);
 }
 
-void GpuRenderOgl::setCombBufColor(float r, float g, float b, float a) {
+void GpuRenderOgl::setCombBufColor(float *color) {
     // Update the texture combiner buffer color uniform
     flushVertices();
-    combBufColor[0] = r, combBufColor[1] = g, combBufColor[2] = b, combBufColor[3] = a;
+    for (int i = 0; i < 4; i++)
+        combBufColor[i] = color[i];
     glUniform4fv(combBufColorLoc, 1, combBufColor);
 }
 
@@ -1023,57 +1025,58 @@ void GpuRenderOgl::setCombBufMask(uint8_t mask) {
     glUniform1i(combBufMaskLoc, combBufMask = mask);
 }
 
-void GpuRenderOgl::setBlendOper(int i, BlendOper oper) {
-    // Update one of the source or destination RGB/alpha blend functions
+void GpuRenderOgl::setBlendOpers(BlendOper *opers) {
+    // Update the source and destination RGB/alpha blend functions
     flushVertices();
-    switch (oper) {
-        case BLND_ZERO: blendOpers[i] = GL_ZERO; break;
-        case BLND_ONE: blendOpers[i] = GL_ONE; break;
-        case BLND_SRC: blendOpers[i] = GL_SRC_COLOR; break;
-        case BLND_1MSRC: blendOpers[i] = GL_ONE_MINUS_SRC_COLOR; break;
-        case BLND_DST: blendOpers[i] = GL_DST_COLOR; break;
-        case BLND_1MDST: blendOpers[i] = GL_ONE_MINUS_DST_COLOR; break;
-        case BLND_SRCA: blendOpers[i] = GL_SRC_ALPHA; break;
-        case BLND_1MSRCA: blendOpers[i] = GL_ONE_MINUS_SRC_ALPHA; break;
-        case BLND_DSTA: blendOpers[i] = GL_DST_ALPHA; break;
-        case BLND_1MDSTA: blendOpers[i] = GL_ONE_MINUS_DST_ALPHA; break;
-        case BLND_CONST: blendOpers[i] = GL_CONSTANT_COLOR; break;
-        case BLND_1MCON: blendOpers[i] = GL_ONE_MINUS_CONSTANT_COLOR; break;
-        case BLND_CONSTA: blendOpers[i] = GL_CONSTANT_ALPHA; break;
-        case BLND_1MCONA: blendOpers[i] = GL_ONE_MINUS_CONSTANT_ALPHA; break;
-        case BLND_ALPHSAT: blendOpers[i] = GL_SRC_ALPHA_SATURATE; break;
+    GLenum blendOpers[4];
+    for (int i = 0; i < 4; i++) {
+        switch (opers[i]) {
+            case BLND_ZERO: blendOpers[i] = GL_ZERO; continue;
+            case BLND_ONE: blendOpers[i] = GL_ONE; continue;
+            case BLND_SRC: blendOpers[i] = GL_SRC_COLOR; continue;
+            case BLND_1MSRC: blendOpers[i] = GL_ONE_MINUS_SRC_COLOR; continue;
+            case BLND_DST: blendOpers[i] = GL_DST_COLOR; continue;
+            case BLND_1MDST: blendOpers[i] = GL_ONE_MINUS_DST_COLOR; continue;
+            case BLND_SRCA: blendOpers[i] = GL_SRC_ALPHA; continue;
+            case BLND_1MSRCA: blendOpers[i] = GL_ONE_MINUS_SRC_ALPHA; continue;
+            case BLND_DSTA: blendOpers[i] = GL_DST_ALPHA; continue;
+            case BLND_1MDSTA: blendOpers[i] = GL_ONE_MINUS_DST_ALPHA; continue;
+            case BLND_CONST: blendOpers[i] = GL_CONSTANT_COLOR; continue;
+            case BLND_1MCON: blendOpers[i] = GL_ONE_MINUS_CONSTANT_COLOR; continue;
+            case BLND_CONSTA: blendOpers[i] = GL_CONSTANT_ALPHA; continue;
+            case BLND_1MCONA: blendOpers[i] = GL_ONE_MINUS_CONSTANT_ALPHA; continue;
+            case BLND_ALPHSAT: blendOpers[i] = GL_SRC_ALPHA_SATURATE; continue;
+        }
     }
     glBlendFuncSeparate(blendOpers[0], blendOpers[1], blendOpers[2], blendOpers[3]);
 }
 
-void GpuRenderOgl::setBlendMode(int i, CalcMode mode) {
-    // Update one of the RGB or alpha blend equations
+void GpuRenderOgl::setBlendModes(CalcMode *modes) {
+    // Update the RGB and alpha blend equations
     flushVertices();
-    switch (mode) {
-        default: blendModes[i] = GL_FUNC_ADD; break;
-        case MODE_SUB: blendModes[i] = GL_FUNC_SUBTRACT; break;
-        case MODE_RSUB: blendModes[i] = GL_FUNC_REVERSE_SUBTRACT; break;
-        case MODE_MIN: blendModes[i] = GL_MIN; break;
-        case MODE_MAX: blendModes[i] = GL_MAX; break;
+    GLenum blendModes[2];
+    for (int i = 0; i < 2; i++) {
+        switch (modes[i]) {
+            default: blendModes[i] = GL_FUNC_ADD; continue;
+            case MODE_SUB: blendModes[i] = GL_FUNC_SUBTRACT; continue;
+            case MODE_RSUB: blendModes[i] = GL_FUNC_REVERSE_SUBTRACT; continue;
+            case MODE_MIN: blendModes[i] = GL_MIN; continue;
+            case MODE_MAX: blendModes[i] = GL_MAX; continue;
+        }
     }
     glBlendEquationSeparate(blendModes[0], blendModes[1]);
 }
 
-void GpuRenderOgl::setBlendColor(float r, float g, float b, float a) {
+void GpuRenderOgl::setBlendColor(float *color) {
     // Update the blend color
     flushVertices();
-    glBlendColor(r, g, b, a);
+    glBlendColor(color[0], color[1], color[2], color[3]);
 }
 
-void GpuRenderOgl::setAlphaFunc(TestFunc func) {
-    // Update the alpha test function uniform
+void GpuRenderOgl::setAlphaTest(TestFunc func, float value) {
+    // Update the alpha test function and value uniforms
     flushVertices();
     glUniform1i(alphaFuncLoc, alphaFunc = func);
-}
-
-void GpuRenderOgl::setAlphaValue(float value) {
-    // Update the alpha test reference uniform
-    flushVertices();
     glUniform1f(alphaValueLoc, alphaValue = value);
 }
 
@@ -1275,7 +1278,7 @@ void GpuRenderOgl::setViewScaleV(float scale) {
     updateViewport();
 }
 
-void GpuRenderOgl::setViewOffset(int x, int y) {
+void GpuRenderOgl::setViewOffset(int16_t x, int16_t y) {
     // Update the viewport X/Y offsets
     flushVertices();
     viewX = x, viewY = y;

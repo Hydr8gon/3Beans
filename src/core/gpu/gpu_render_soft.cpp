@@ -1057,12 +1057,12 @@ void GpuRenderSoft::setTexDims(int i, uint16_t width, uint16_t height) {
     lastU[i] = lastV[i] = -1;
 }
 
-void GpuRenderSoft::setTexBorder(int i, float r, float g, float b, float a) {
+void GpuRenderSoft::setTexBorder(int i, float *color) {
     // Set one of the texture unit border colors
-    texBorders[i].r = r;
-    texBorders[i].g = g;
-    texBorders[i].b = b;
-    texBorders[i].a = a;
+    texBorders[i].r = color[0];
+    texBorders[i].g = color[1];
+    texBorders[i].b = color[2];
+    texBorders[i].a = color[3];
 }
 
 void GpuRenderSoft::setTexFmt(int i, TexFmt format) {
@@ -1071,38 +1071,44 @@ void GpuRenderSoft::setTexFmt(int i, TexFmt format) {
     lastU[i] = lastV[i] = -1;
 }
 
-void GpuRenderSoft::setCombSrc(int i, int j, CombSrc src) {
-    // Set a texture combiner source and invalidate the cache
-    combSrcs[i][j] = src;
+void GpuRenderSoft::setTexWrap(int i, TexWrap wrapS, TexWrap wrapT) {
+    // Set one of the texture S/T wrap types
+    texWrapS[i] = wrapS;
+    texWrapT[i] = wrapT;
+}
+
+void GpuRenderSoft::setCombSrcs(int i, CombSrc *srcs) {
+    // Set a group of texture combiner sources and invalidate the cache
+    memcpy(combSrcs[i], srcs, sizeof(combSrcs[i]));
     combEnd = -1;
 }
 
-void GpuRenderSoft::setCombOper(int i, int j, CombOper oper) {
-    // Set a texture combiner operand and invalidate the cache
-    combOpers[i][j] = oper;
+void GpuRenderSoft::setCombOpers(int i, CombOper *opers) {
+    // Set a group of texture combiner operands and invalidate the cache
+    memcpy(combOpers[i], opers, sizeof(combOpers[i]));
     combEnd = -1;
 }
 
-void GpuRenderSoft::setCombMode(int i, int j, CalcMode mode) {
-    // Set a texture combiner mode and invalidate the cache
-    combModes[i][j] = mode;
+void GpuRenderSoft::setCombModes(int i, CalcMode *modes) {
+    // Set a group of texture combiner modes and invalidate the cache
+    memcpy(combModes[i], modes, sizeof(combModes[i]));
     combEnd = -1;
 }
 
-void GpuRenderSoft::setCombColor(int i, float r, float g, float b, float a) {
+void GpuRenderSoft::setCombColor(int i, float *color) {
     // Set one of the texture combiner constant colors
-    combColors[i].r = r;
-    combColors[i].g = g;
-    combColors[i].b = b;
-    combColors[i].a = a;
+    combColors[i].r = color[0];
+    combColors[i].g = color[1];
+    combColors[i].b = color[2];
+    combColors[i].a = color[3];
 }
 
-void GpuRenderSoft::setCombBufColor(float r, float g, float b, float a) {
+void GpuRenderSoft::setCombBufColor(float *color) {
     // Set the texture combiner initial buffer color
-    combBufColor.r = r;
-    combBufColor.g = g;
-    combBufColor.b = b;
-    combBufColor.a = a;
+    combBufColor.r = color[0];
+    combBufColor.g = color[1];
+    combBufColor.b = color[2];
+    combBufColor.a = color[3];
 }
 
 void GpuRenderSoft::setCombBufMask(uint8_t mask) {
@@ -1111,12 +1117,28 @@ void GpuRenderSoft::setCombBufMask(uint8_t mask) {
     combEnd = -1;
 }
 
-void GpuRenderSoft::setBlendColor(float r, float g, float b, float a) {
+void GpuRenderSoft::setBlendOpers(BlendOper *opers) {
+    // Set all the blender operands
+    memcpy(blendOpers, opers, sizeof(blendOpers));
+}
+
+void GpuRenderSoft::setBlendModes(CalcMode *modes) {
+    // Set all the blender modes
+    memcpy(blendModes, modes, sizeof(blendModes));
+}
+
+void GpuRenderSoft::setBlendColor(float *color) {
     // Set the blender constant color
-    blendColor.r = r;
-    blendColor.g = g;
-    blendColor.b = b;
-    blendColor.a = a;
+    blendColor.r = color[0];
+    blendColor.g = color[1];
+    blendColor.b = color[2];
+    blendColor.a = color[3];
+}
+
+void GpuRenderSoft::setAlphaTest(TestFunc func, float value) {
+    // Set the alpha test function and value
+    alphaFunc = func;
+    alphaValue = value;
 }
 
 void GpuRenderSoft::setStencilTest(TestFunc func, bool enable) {

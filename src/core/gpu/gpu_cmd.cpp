@@ -396,11 +396,10 @@ void Gpu::writeViewXY(uint32_t mask, uint32_t value) {
 template <int i> void Gpu::writeTexBorder(uint32_t mask, uint32_t value) {
     // Write to one of the texture border colors and send it to the renderer
     gpuTexBorder[i] = (gpuTexBorder[i] & ~mask) | (value & mask);
-    float r = float((gpuTexBorder[i] >> 0) & 0xFF) / 0xFF;
-    float g = float((gpuTexBorder[i] >> 8) & 0xFF) / 0xFF;
-    float b = float((gpuTexBorder[i] >> 16) & 0xFF) / 0xFF;
-    float a = float((gpuTexBorder[i] >> 24) & 0xFF) / 0xFF;
-    gpuRender->setTexBorder(i, r, g, b, a);
+    float color[4];
+    for (int j = 0; j < 4; j++)
+        color[j] = float((gpuTexBorder[i] >> (j * 8)) & 0xFF) / 0xFF;
+    gpuRender->setTexBorder(i, color);
 }
 
 template <int i> void Gpu::writeTexDim(uint32_t mask, uint32_t value) {
@@ -415,8 +414,7 @@ template <int i> void Gpu::writeTexParam(uint32_t mask, uint32_t value) {
     // TODO: use bits other than coordinate wraps
     mask &= (i ? 0x1FFFFFF : 0x71FFFFFF);
     gpuTexParam[i] = (gpuTexParam[i] & ~mask) | (value & mask);
-    gpuRender->setTexWrapS(i, TexWrap((gpuTexParam[i] >> 12) & 0x3));
-    gpuRender->setTexWrapT(i, TexWrap((gpuTexParam[i] >> 8) & 0x3));
+    gpuRender->setTexWrap(i, TexWrap((gpuTexParam[i] >> 12) & 0x3), TexWrap((gpuTexParam[i] >> 8) & 0x3));
 }
 
 template <int i> void Gpu::writeTexAddr1(uint32_t mask, uint32_t value) {
@@ -444,26 +442,28 @@ template <int i> void Gpu::writeCombSrc(uint32_t mask, uint32_t value) {
     gpuCombSrc[i] = (gpuCombSrc[i] & ~mask) | (value & mask);
 
     // Set the sources for the renderer if they're valid
+    CombSrc srcs[6];
     for (int j = 0; j < 6; j++) {
         switch (uint8_t src = (gpuCombSrc[i] >> ((j + (j > 2)) * 4)) & 0xF) {
-            case 0x0: gpuRender->setCombSrc(i, j, COMB_PRIM); continue;
-            case 0x1: gpuRender->setCombSrc(i, j, COMB_FRAG0); continue;
-            case 0x2: gpuRender->setCombSrc(i, j, COMB_FRAG1); continue;
-            case 0x3: gpuRender->setCombSrc(i, j, COMB_TEX0); continue;
-            case 0x4: gpuRender->setCombSrc(i, j, COMB_TEX1); continue;
-            case 0x5: gpuRender->setCombSrc(i, j, COMB_TEX2); continue;
-            case 0x6: gpuRender->setCombSrc(i, j, COMB_TEX3); continue;
-            case 0xD: gpuRender->setCombSrc(i, j, COMB_PRVBUF); continue;
-            case 0xE: gpuRender->setCombSrc(i, j, COMB_CONST); continue;
-            case 0xF: gpuRender->setCombSrc(i, j, COMB_PREV); continue;
+            case 0x0: srcs[j] = COMB_PRIM; continue;
+            case 0x1: srcs[j] = COMB_FRAG0; continue;
+            case 0x2: srcs[j] = COMB_FRAG1; continue;
+            case 0x3: srcs[j] = COMB_TEX0; continue;
+            case 0x4: srcs[j] = COMB_TEX1; continue;
+            case 0x5: srcs[j] = COMB_TEX2; continue;
+            case 0x6: srcs[j] = COMB_TEX3; continue;
+            case 0xD: srcs[j] = COMB_PRVBUF; continue;
+            case 0xE: srcs[j] = COMB_CONST; continue;
+            case 0xF: srcs[j] = COMB_PREV; continue;
 
         default:
             // Catch unknown texture combiner source values
             LOG_WARN("GPU texture combiner %d source %d set to unknown value: 0x%X\n", i, j, src);
-            gpuRender->setCombSrc(i, j, COMB_UNK);
+            srcs[j] = COMB_UNK;
             continue;
         }
     }
+    gpuRender->setCombSrcs(i, srcs);
 }
 
 template <int i> void Gpu::writeCombOper(uint32_t mask, uint32_t value) {
@@ -472,23 +472,24 @@ template <int i> void Gpu::writeCombOper(uint32_t mask, uint32_t value) {
     gpuCombOper[i] = (gpuCombOper[i] & ~mask) | (value & mask);
 
     // Set RGB operands for the renderer if they're valid
+    CombOper opers[6];
     for (int j = 0; j < 3; j++) {
         switch (uint8_t oper = (gpuCombOper[i] >> (j * 4)) & 0xF) {
-            case 0x0: gpuRender->setCombOper(i, j, OPER_SRC); continue;
-            case 0x1: gpuRender->setCombOper(i, j, OPER_1MSRC); continue;
-            case 0x2: gpuRender->setCombOper(i, j, OPER_SRCA); continue;
-            case 0x3: gpuRender->setCombOper(i, j, OPER_1MSRCA); continue;
-            case 0x4: gpuRender->setCombOper(i, j, OPER_SRCR); continue;
-            case 0x5: gpuRender->setCombOper(i, j, OPER_1MSRCR); continue;
-            case 0x8: gpuRender->setCombOper(i, j, OPER_SRCG); continue;
-            case 0x9: gpuRender->setCombOper(i, j, OPER_1MSRCG); continue;
-            case 0xC: gpuRender->setCombOper(i, j, OPER_SRCB); continue;
-            case 0xD: gpuRender->setCombOper(i, j, OPER_1MSRCB); continue;
+            case 0x0: opers[j] = OPER_SRC; continue;
+            case 0x1: opers[j] = OPER_1MSRC; continue;
+            case 0x2: opers[j] = OPER_SRCA; continue;
+            case 0x3: opers[j] = OPER_1MSRCA; continue;
+            case 0x4: opers[j] = OPER_SRCR; continue;
+            case 0x5: opers[j] = OPER_1MSRCR; continue;
+            case 0x8: opers[j] = OPER_SRCG; continue;
+            case 0x9: opers[j] = OPER_1MSRCG; continue;
+            case 0xC: opers[j] = OPER_SRCB; continue;
+            case 0xD: opers[j] = OPER_1MSRCB; continue;
 
         default:
             // Catch unknown RGB operand values
             LOG_WARN("GPU texture combiner %d operand %d set to unknown value: 0x%X\n", i, j, oper);
-            gpuRender->setCombOper(i, j, OPER_SRC);
+            opers[j] = OPER_SRC;
             continue;
         }
     }
@@ -496,16 +497,17 @@ template <int i> void Gpu::writeCombOper(uint32_t mask, uint32_t value) {
     // Set alpha operands for the renderer
     for (int j = 3; j < 6; j++) {
         switch ((gpuCombOper[i] >> (j * 4)) & 0x7) {
-            case 0x0: gpuRender->setCombOper(i, j, OPER_SRCA); continue;
-            case 0x1: gpuRender->setCombOper(i, j, OPER_1MSRCA); continue;
-            case 0x2: gpuRender->setCombOper(i, j, OPER_SRCR); continue;
-            case 0x3: gpuRender->setCombOper(i, j, OPER_1MSRCR); continue;
-            case 0x4: gpuRender->setCombOper(i, j, OPER_SRCG); continue;
-            case 0x5: gpuRender->setCombOper(i, j, OPER_1MSRCG); continue;
-            case 0x6: gpuRender->setCombOper(i, j, OPER_SRCB); continue;
-            default: gpuRender->setCombOper(i, j, OPER_1MSRCB); continue;
+            case 0x0: opers[j] = OPER_SRCA; continue;
+            case 0x1: opers[j] = OPER_1MSRCA; continue;
+            case 0x2: opers[j] = OPER_SRCR; continue;
+            case 0x3: opers[j] = OPER_1MSRCR; continue;
+            case 0x4: opers[j] = OPER_SRCG; continue;
+            case 0x5: opers[j] = OPER_1MSRCG; continue;
+            case 0x6: opers[j] = OPER_SRCB; continue;
+            default: opers[j] = OPER_1MSRCB; continue;
         }
     }
+    gpuRender->setCombOpers(i, opers);
 }
 
 template <int i> void Gpu::writeCombMode(uint32_t mask, uint32_t value) {
@@ -514,25 +516,26 @@ template <int i> void Gpu::writeCombMode(uint32_t mask, uint32_t value) {
     gpuCombMode[i] = (gpuCombMode[i] & ~mask) | (value & mask);
 
     // Set the modes for the renderer if they're valid
+    CalcMode combModes[2];
     for (int j = 0; j < 2; j++) {
         uint8_t mode = (gpuCombMode[i] >> (j * 16)) & 0xF;
         if (mode < 0xA) {
-            gpuRender->setCombMode(i, j, CalcMode(mode));
+            combModes[j] = CalcMode(mode);
             continue;
         }
         LOG_WARN("GPU texture combiner %d mode %d set to unknown value: 0x%X\n", i, j, mode);
-        gpuRender->setCombMode(i, j, MODE_UNK);
+        combModes[j] = MODE_UNK;
     }
+    gpuRender->setCombModes(i, combModes);
 }
 
 template <int i> void Gpu::writeCombColor(uint32_t mask, uint32_t value) {
     // Write to one of the texture combiner colors and send it to the renderer
     gpuCombColor[i] = (gpuCombColor[i] & ~mask) | (value & mask);
-    float r = float((gpuCombColor[i] >> 0) & 0xFF) / 0xFF;
-    float g = float((gpuCombColor[i] >> 8) & 0xFF) / 0xFF;
-    float b = float((gpuCombColor[i] >> 16) & 0xFF) / 0xFF;
-    float a = float((gpuCombColor[i] >> 24) & 0xFF) / 0xFF;
-    gpuRender->setCombColor(i, r, g, b, a);
+    float color[4];
+    for (int j = 0; j < 4; j++)
+        color[j] = float((gpuCombColor[i] >> (j * 8)) & 0xFF) / 0xFF;
+    gpuRender->setCombColor(i, color);
 }
 
 void Gpu::writeCombBufUpd(uint32_t mask, uint32_t value) {
@@ -546,11 +549,10 @@ void Gpu::writeCombBufUpd(uint32_t mask, uint32_t value) {
 void Gpu::writeCombBufCol(uint32_t mask, uint32_t value) {
     // Write to the texture combiner buffer color and send it to the renderer
     gpuCombBufCol = (gpuCombBufCol & ~mask) | (value & mask);
-    float r = float((gpuCombBufCol >> 0) & 0xFF) / 0xFF;
-    float g = float((gpuCombBufCol >> 8) & 0xFF) / 0xFF;
-    float b = float((gpuCombBufCol >> 16) & 0xFF) / 0xFF;
-    float a = float((gpuCombBufCol >> 24) & 0xFF) / 0xFF;
-    gpuRender->setCombBufColor(r, g, b, a);
+    float color[4];
+    for (int j = 0; j < 4; j++)
+        color[j] = float((gpuCombBufCol >> (j * 8)) & 0xFF) / 0xFF;
+    gpuRender->setCombBufColor(color);
 }
 
 void Gpu::writeBlendFunc(uint32_t mask, uint32_t value) {
@@ -559,44 +561,47 @@ void Gpu::writeBlendFunc(uint32_t mask, uint32_t value) {
     gpuBlendFunc = (gpuBlendFunc & ~mask) | (value & mask);
 
     // Set the blend modes for the renderer
+    CalcMode modes[2];
     for (int i = 0; i < 2; i++) {
         switch ((gpuBlendFunc >> (i * 8)) & 0x7) {
-            default: gpuRender->setBlendMode(i, MODE_ADD); continue;
-            case 0x1: gpuRender->setBlendMode(i, MODE_SUB); continue;
-            case 0x2: gpuRender->setBlendMode(i, MODE_RSUB); continue;
-            case 0x3: gpuRender->setBlendMode(i, MODE_MIN); continue;
-            case 0x4: gpuRender->setBlendMode(i, MODE_MAX); continue;
+            default: modes[i] = MODE_ADD; continue;
+            case 0x1: modes[i] = MODE_SUB; continue;
+            case 0x2: modes[i] = MODE_RSUB; continue;
+            case 0x3: modes[i] = MODE_MIN; continue;
+            case 0x4: modes[i] = MODE_MAX; continue;
         }
     }
+    gpuRender->setBlendModes(modes);
 
     // Set the blend operands for the renderer if they're valid
+    BlendOper opers[4];
     for (int i = 0; i < 4; i++) {
         uint8_t oper = (gpuBlendFunc >> (16 + (i * 4))) & 0xF;
         if (oper < 0xF) {
-            gpuRender->setBlendOper(i, BlendOper(oper));
+            opers[i] = BlendOper(oper);
             continue;
         }
         LOG_WARN("GPU blender operand %d set to unknown value: 0x%X\n", i, oper);
-        gpuRender->setBlendOper(i, BLND_ONE);
+        opers[i] = BLND_ONE;
     }
+    gpuRender->setBlendOpers(opers);
 }
 
 void Gpu::writeBlendColor(uint32_t mask, uint32_t value) {
     // Write to the blender constant color and send it to the renderer
     gpuBlendColor = (gpuBlendColor & ~mask) | (value & mask);
-    float r = float((gpuBlendColor >> 0) & 0xFF) / 0xFF;
-    float g = float((gpuBlendColor >> 8) & 0xFF) / 0xFF;
-    float b = float((gpuBlendColor >> 16) & 0xFF) / 0xFF;
-    float a = float((gpuBlendColor >> 24) & 0xFF) / 0xFF;
-    gpuRender->setBlendColor(r, g, b, a);
+    float color[4];
+    for (int j = 0; j < 4; j++)
+        color[j] = float((gpuBlendColor >> (j * 8)) & 0xFF) / 0xFF;
+    gpuRender->setBlendColor(color);
 }
 
 void Gpu::writeAlphaTest(uint32_t mask, uint32_t value) {
     // Write to the alpha test register and update the renderer's state
     mask &= 0xFF71;
     gpuAlphaTest = (gpuAlphaTest & ~mask) | (value & mask);
-    gpuRender->setAlphaFunc((gpuAlphaTest & BIT(0)) ? TestFunc((gpuAlphaTest >> 4) & 0x7) : TEST_AL);
-    gpuRender->setAlphaValue(float(gpuAlphaTest >> 8) / 0xFF);
+    TestFunc func = (gpuAlphaTest & BIT(0)) ? TestFunc((gpuAlphaTest >> 4) & 0x7) : TEST_AL;
+    gpuRender->setAlphaTest(func, float(gpuAlphaTest >> 8) / 0xFF);
 }
 
 void Gpu::writeStencilTest(uint32_t mask, uint32_t value) {

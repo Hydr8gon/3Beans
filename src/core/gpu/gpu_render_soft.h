@@ -65,21 +65,19 @@ public:
 
     void setTexAddr(int i, uint32_t address);
     void setTexDims(int i, uint16_t width, uint16_t height);
-    void setTexBorder(int i, float r, float g, float b, float a);
+    void setTexBorder(int i, float *color);
     void setTexFmt(int i, TexFmt format);
-    void setTexWrapS(int i, TexWrap wrap) { texWrapS[i] = wrap; }
-    void setTexWrapT(int i, TexWrap wrap) { texWrapT[i] = wrap; }
-    void setCombSrc(int i, int j, CombSrc src);
-    void setCombOper(int i, int j, CombOper oper);
-    void setCombMode(int i, int j, CalcMode mode);
-    void setCombColor(int i, float r, float g, float b, float a);
-    void setCombBufColor(float r, float g, float b, float a);
+    void setTexWrap(int i, TexWrap wrapS, TexWrap wrapT);
+    void setCombSrcs(int i, CombSrc *srcs);
+    void setCombOpers(int i, CombOper *opers);
+    void setCombModes(int i, CalcMode *modes);
+    void setCombColor(int i, float *color);
+    void setCombBufColor(float *color);
     void setCombBufMask(uint8_t mask);
-    void setBlendOper(int i, BlendOper oper) { blendOpers[i] = oper; }
-    void setBlendMode(int i, CalcMode mode) { blendModes[i] = mode; }
-    void setBlendColor(float r, float g, float b, float a);
-    void setAlphaFunc(TestFunc func) { alphaFunc = func; }
-    void setAlphaValue(float value) { alphaValue = value; }
+    void setBlendOpers(BlendOper *opers);
+    void setBlendModes(CalcMode *modes);
+    void setBlendColor(float *color);
+    void setAlphaTest(TestFunc func, float value);
     void setStencilTest(TestFunc Func, bool enable);
     void setStencilOps(StenOper fail, StenOper depFail, StenOper depPass);
     void setStencilMasks(uint8_t bufMask, uint8_t refMask);
@@ -105,7 +103,7 @@ public:
     void setViewStepH(float step) { viewStepH = step; }
     void setViewScaleV(float scale) { viewScaleV = scale; }
     void setViewStepV(float step) { viewStepV = step; }
-    void setViewOffset(int x, int y) { viewX = x, viewY = y; }
+    void setViewOffset(int16_t x, int16_t y) { viewX = x, viewY = y; }
     void setBufferDims(uint16_t width, uint16_t height, bool flip);
     void setColbufAddr(uint32_t address) { colbufAddr = address; }
     void setColbufFmt(ColbufFmt format) { colbufFmt = format; }
@@ -176,7 +174,7 @@ private:
     float viewStepH = 0;
     float viewScaleV = 0;
     float viewStepV = 0;
-    int viewX = 0, viewY = 0;
+    int16_t viewX = 0, viewY = 0;
     bool flipY = false;
     uint16_t bufWidth = 0;
     uint16_t bufHeight = 0;

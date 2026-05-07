@@ -60,21 +60,19 @@ public:
 
     void setTexAddr(int i, uint32_t address);
     void setTexDims(int i, uint16_t width, uint16_t height);
-    void setTexBorder(int i, float r, float g, float b, float a);
+    void setTexBorder(int i, float *color);
     void setTexFmt(int i, TexFmt format);
-    void setTexWrapS(int i, TexWrap wrap);
-    void setTexWrapT(int i, TexWrap wrap);
-    void setCombSrc(int i, int j, CombSrc src);
-    void setCombOper(int i, int j, CombOper oper);
-    void setCombMode(int i, int j, CalcMode mode);
-    void setCombColor(int i, float r, float g, float b, float a);
-    void setCombBufColor(float r, float g, float b, float a);
+    void setTexWrap(int i, TexWrap wrapS, TexWrap wrapT);
+    void setCombSrcs(int i, CombSrc *srcs);
+    void setCombOpers(int i, CombOper *opers);
+    void setCombModes(int i, CalcMode *modes);
+    void setCombColor(int i, float *color);
+    void setCombBufColor(float *color);
     void setCombBufMask(uint8_t mask);
-    void setBlendOper(int i, BlendOper oper);
-    void setBlendMode(int i, CalcMode mode);
-    void setBlendColor(float r, float g, float b, float a);
-    void setAlphaFunc(TestFunc func);
-    void setAlphaValue(float value);
+    void setBlendOpers(BlendOper *opers);
+    void setBlendModes(CalcMode *modes);
+    void setBlendColor(float *color);
+    void setAlphaTest(TestFunc func, float value);
     void setStencilTest(TestFunc Func, bool enable);
     void setStencilOps(StenOper fail, StenOper depFail, StenOper depPass);
     void setStencilMasks(uint8_t bufMask, uint8_t refMask);
@@ -100,7 +98,7 @@ public:
     void setViewStepH(float step) {}
     void setViewScaleV(float scale);
     void setViewStepV(float step) {}
-    void setViewOffset(int x, int y);
+    void setViewOffset(int16_t x, int16_t y);
     void setBufferDims(uint16_t width, uint16_t height, bool flip);
     void setColbufAddr(uint32_t address);
     void setColbufFmt(ColbufFmt format);
@@ -166,8 +164,6 @@ private:
     GLfloat combColors[6][4] = {};
     GLfloat combBufColor[4] = {};
     uint8_t combBufMask = 0;
-    GLenum blendOpers[4] = {};
-    GLenum blendModes[2] = {};
     TestFunc alphaFunc = TEST_AL;
     float alphaValue = 0;
 
