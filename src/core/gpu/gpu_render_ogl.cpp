@@ -122,10 +122,16 @@ const char *GpuRenderOgl::fragCode = R"(
     vec4 prevColor = vec4(0.0, 0.0, 0.0, 0.0);
     vec4 combBuffer = combBufColor;
     vec4 fragColors[2];
+    float fragIdxs[7];
     bool fragDone = false;
 
     float dot3(vec3 c0, vec3 c1) {
         return 4.0 * c0.r - 0.5 * c1.r - 0.5 + c0.g - 0.5 * c1.g - 0.5 + c0.b - 0.5 * c1.b - 0.5;
+    }
+
+    float readLut(sampler1D lut, int i) {
+        float idx = (lutAbsFlags[i] != 0) ? abs(fragIdxs[lutInputs[i]]) : fragIdxs[lutInputs[i]];
+        return texture(lut, (idx * 0x7F + 0x80) / 0xFF).r * lutScales[i];
     }
 
     void updateFrag() {
@@ -145,39 +151,32 @@ const char *GpuRenderOgl::fragCode = R"(
             vec3 spotVec = normalize(lightSpot[id]);
             lightVec = normalize(lightVec);
 
-            float inp[7];
-            inp[0] = dot(normalVec, halfVec);
-            inp[1] = dot(viewVec, halfVec);
-            inp[2] = dot(normalVec, viewVec);
-            inp[3] = dot(lightVec, normalVec);
-            inp[4] = dot(-lightVec, spotVec);
-            inp[5] = inp[6] = 0.0;
+            fragIdxs[0] = dot(normalVec, halfVec);
+            fragIdxs[1] = dot(viewVec, halfVec);
+            fragIdxs[2] = dot(normalVec, viewVec);
+            fragIdxs[3] = dot(lightVec, normalVec);
+            fragIdxs[4] = dot(-lightVec, spotVec);
+            fragIdxs[5] = fragIdxs[6] = 0.0;
 
-            float idx = (lutAbsFlags[0] != 0) ? abs(inp[lutInputs[0]]) : inp[lutInputs[0]];
-            float d0 = ((lutMask & (1 << 0)) != 0) ? texture(lutD0, (idx * 0x7F + 0x80) / 0xFF).r * lutScales[0] : 1.0;
-            idx = (lutAbsFlags[1] != 0) ? abs(inp[lutInputs[1]]) : inp[lutInputs[1]];
-            float d1 = ((lutMask & (1 << 1)) != 0) ? texture(lutD1, (idx * 0x7F + 0x80) / 0xFF).r * lutScales[1] : 1.0;
-            idx = (lutAbsFlags[3] != 0) ? abs(inp[lutInputs[3]]) : inp[lutInputs[3]];
-            float fr = ((lutMask & (1 << 3)) != 0) ? texture(lutFr, (idx * 0x7F + 0x80) / 0xFF).r * lutScales[3] : 1.0;
-            idx = (lutAbsFlags[6] != 0) ? abs(inp[lutInputs[6]]) : inp[lutInputs[6]];
-            float rr = ((lutMask & (1 << 6)) != 0) ? texture(lutRr, (idx * 0x7F + 0x80) / 0xFF).r * lutScales[6] : 1.0;
-            idx = (lutAbsFlags[5] != 0) ? abs(inp[lutInputs[5]]) : inp[lutInputs[5]];
-            float rg = ((lutMask & (1 << 5)) != 0) ? texture(lutRg, (idx * 0x7F + 0x80) / 0xFF).r * lutScales[5] : rr;
-            idx = (lutAbsFlags[4] != 0) ? abs(inp[lutInputs[4]]) : inp[lutInputs[4]];
-            float rb = ((lutMask & (1 << 4)) != 0) ? texture(lutRb, (idx * 0x7F + 0x80) / 0xFF).r * lutScales[4] : rr;
+            float d0 = ((lutMask & (1 << 0)) != 0) ? readLut(lutD0, 0) : 1.0;
+            float d1 = ((lutMask & (1 << 1)) != 0) ? readLut(lutD1, 1) : 1.0;
+            float fr = ((lutMask & (1 << 3)) != 0) ? readLut(lutFr, 3) : 1.0;
+            float rr = ((lutMask & (1 << 6)) != 0) ? readLut(lutRr, 6) : 1.0;
+            float rg = ((lutMask & (1 << 5)) != 0) ? readLut(lutRg, 5) : rr;
+            float rb = ((lutMask & (1 << 4)) != 0) ? readLut(lutRb, 4) : rr;
             vec3 r = vec3(rr, rg, rb);
 
             float sp = 1.0;
             if ((lutMask & (1 << (8 + id))) != 0) {
-                idx = (lutAbsFlags[2] != 0) ? abs(inp[lutInputs[2]]) : inp[lutInputs[2]];
+                float idx = (lutAbsFlags[2] != 0) ? abs(fragIdxs[lutInputs[2]]) : fragIdxs[lutInputs[2]];
                 sp = texture(lutSp, vec2((idx * 0x7F + 0x80) / 0xFF, id)).r * lutScales[2];
             }
             if ((lutMask & (1 << (16 + id))) != 0) {
-                idx = lightAtten[id][0] + gl_FragCoord.z * lightAtten[id][1];
+                float idx = lightAtten[id][0] + gl_FragCoord.z * lightAtten[id][1];
                 sp *= texture(lutDa, vec2(idx, id)).r;
             }
 
-            fragColors[0] += vec4(sp * (lightAmb[id] + lightDiff[id] * inp[3]), fr);
+            fragColors[0] += vec4(sp * (lightAmb[id] + lightDiff[id] * fragIdxs[3]), fr);
             fragColors[1] += vec4(sp * (lightSpec0[id] * d0 + lightSpec1[id] * d1 * r), fr);
         }
         fragColors[0] = min(max(fragColors[0], 0.0), 1.0);
@@ -187,7 +186,7 @@ const char *GpuRenderOgl::fragCode = R"(
 
     vec4 getSrc(int i, int j) {
         vec4 color;
-        switch (combSrcs[i * 2 + ((j > 2) ? 1 : 0)][j % 3]) {
+        switch (combSrcs[i][j]) {
             case 0: color = vtxColor; break;
             case 1: if (!fragDone) updateFrag(); color = fragColors[0]; break;
             case 2: if (!fragDone) updateFrag(); color = fragColors[1]; break;
@@ -196,12 +195,12 @@ const char *GpuRenderOgl::fragCode = R"(
             case 5: color = texture(texUnits[2], vec2(vtxCoordsS[2], vtxCoordsT[2])); break;
             case 6: color = vec4(1.0, 1.0, 1.0, 1.0); break;
             case 7: color = combBuffer; break;
-            case 8: color = combColors[i]; break;
+            case 8: color = combColors[i / 2]; break;
             case 9: color = prevColor; break;
             default: color = vec4(0.0, 0.0, 0.0, 0.0); break;
         }
 
-        switch (combOpers[i * 2 + ((j > 2) ? 1 : 0)][j % 3]) {
+        switch (combOpers[i][j]) {
             default: return color;
             case 1: return 1.0 - color;
             case 2: return color.aaaa;
@@ -217,8 +216,8 @@ const char *GpuRenderOgl::fragCode = R"(
 
     void main() {
         vec4 color;
-        for (int i = 0; i < 6; i++) {
-            switch (combModes[i][0]) {
+        for (int i = 0; i < 12; i++) {
+            switch (combModes[i / 2][0]) {
                 case 0: color.rgb = getSrc(i, 0).rgb; break;
                 case 1: color.rgb = getSrc(i, 0).rgb * getSrc(i, 1).rgb; break;
                 case 2: color.rgb = getSrc(i, 0).rgb + getSrc(i, 1).rgb; break;
@@ -232,24 +231,23 @@ const char *GpuRenderOgl::fragCode = R"(
                 default: color.rgb = vec3(0.0, 0.0, 0.0); break;
             }
 
-            switch (combModes[i][1]) {
-                case 0: color.a = getSrc(i, 3).a; break;
-                case 1: color.a = getSrc(i, 3).a * getSrc(i, 4).a; break;
-                case 2: color.a = getSrc(i, 3).a + getSrc(i, 4).a; break;
-                case 3: color.a = getSrc(i, 3).a + getSrc(i, 4).a - 0.5; break;
-                case 4: color.a = mix(getSrc(i, 4).a, getSrc(i, 3).a, getSrc(i, 5).a); break;
-                case 5: color.a = getSrc(i, 3).a - getSrc(i, 4).a; break;
-                case 6: color.a = 1.0; break;
-                case 7: color.a = dot3(getSrc(i, 3).aaa, getSrc(i, 4).aaa); break;
-                case 8: color.a = (getSrc(i, 3).a * getSrc(i, 4).a) + getSrc(i, 5).a; break;
-                case 9: color.a = (getSrc(i, 3).a + getSrc(i, 4).a) * getSrc(i, 5).a; break;
+            switch (combModes[i++ / 2][1]) {
+                case 0: color.a = getSrc(i, 0).a; break;
+                case 1: color.a = getSrc(i, 0).a * getSrc(i, 1).a; break;
+                case 2: color.a = getSrc(i, 0).a + getSrc(i, 1).a; break;
+                case 3: color.a = getSrc(i, 0).a + getSrc(i, 1).a - 0.5; break;
+                case 4: color.a = mix(getSrc(i, 1).a, getSrc(i, 0).a, getSrc(i, 2).a); break;
+                case 5: color.a = getSrc(i, 0).a - getSrc(i, 1).a; break;
+                case 7: color.a = dot3(getSrc(i, 0).aaa, getSrc(i, 1).aaa); break;
+                case 8: color.a = (getSrc(i, 0).a * getSrc(i, 1).a) + getSrc(i, 2).a; break;
+                case 9: color.a = (getSrc(i, 0).a + getSrc(i, 1).a) * getSrc(i, 2).a; break;
                 default: color.a = 1.0; break;
             }
 
             prevColor = color;
-            if (i >= 4) continue;
-            if ((combBufMask & (0x01 << i)) != 0) combBuffer.rgb = color.rgb;
-            if ((combBufMask & (0x10 << i)) != 0) combBuffer.a = color.a;
+            if (i >= 8) continue;
+            if ((combBufMask & (0x01 << (i / 2))) != 0) combBuffer.rgb = color.rgb;
+            if ((combBufMask & (0x10 << (i / 2))) != 0) combBuffer.a = color.a;
         }
 
         switch (alphaFunc) {
