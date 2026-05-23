@@ -52,6 +52,8 @@ install_name_tool -add_rpath "@executable_path/../Frameworks" $contents/MacOS/3B
 
 fixup_libs $contents/MacOS/3Beans
 
+cp "icon/mac.icns" "$contents/Resources/3Beans.icns"
+
 codesign --deep -s - 3Beans.app
 
 if [[ $1 == '--dmg' ]]; then

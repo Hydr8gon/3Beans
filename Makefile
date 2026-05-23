@@ -29,6 +29,10 @@ CPPFILES := $(foreach dir,$(SRCS),$(wildcard $(dir)/*.cpp))
 HFILES := $(foreach dir,$(SRCS),$(wildcard $(dir)/*.h))
 OFILES := $(patsubst %.cpp,$(BUILD)/%.o,$(CPPFILES))
 
+ifeq ($(OS),Windows_NT)
+  OFILES += $(BUILD)/icon-windows.o
+endif
+
 all: $(NAME)
 
 ifneq ($(OS),Windows_NT)
@@ -56,10 +60,12 @@ flatpak-clean:
 install: $(NAME)
 	install -Dm755 $(NAME) "$(DESTDIR)/bin/$(NAME)"
 	install -Dm644 $(META)/$(PKGNAME).desktop "$(DESTDIR)/share/applications/$(PKGNAME).desktop"
+	install -Dm644 icon/linux.png "$(DESTDIR)/share/icons/hicolor/256x256/apps/$(PKGNAME).png"
 
-uninstall: 
+uninstall:
 	rm -f "$(DESTDIR)/bin/$(NAME)"
 	rm -f "$(DESTDIR)/share/applications/$(PKGNAME).desktop"
+	rm -f "$(DESTDIR)/share/icons/hicolor/256x256/apps/$(PKGNAME).png"
 
 endif
 endif
@@ -69,6 +75,9 @@ $(NAME): $(OFILES)
 
 $(BUILD)/%.o: %.cpp $(HFILES) $(BUILD)
 	$(CXX) -c -o $@ $(ARGS) $(INCS) $<
+
+$(BUILD)/icon-windows.o:
+	windres $(shell wx-config-static --cppflags) icon/windows.rc $@
 
 $(BUILD):
 	for dir in $(SRCS); do mkdir -p $(BUILD)/$$dir; done
