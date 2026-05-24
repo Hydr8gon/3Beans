@@ -2,4 +2,4 @@
 #define wxUSE_DPI_AWARE_MANIFEST 1
 #include <wx/msw/wx.rc>
 
-3Beans ICON "windows.ico"
+Beans ICON "windows.ico"

@@ -33,24 +33,13 @@ you're just a user!
 
 ### Building
 **Windows:** Install [MSYS2](https://www.msys2.org) and run the command
-`pacman -Syu mingw-w64-x86_64-{gcc,pkg-config,wxwidgets-msw,portaudio,libepoxy,jbigkit} make` to get dependencies.
-Navigate to the project root directory and run `make -j$(nproc)` to start building.
+`pacman -Syu mingw-w64-ucrt-x86_64-{gcc,pkg-config,wxwidgets3.3-msw,portaudio,libepoxy,jbigkit} make` to get
+dependencies. Navigate to the project root directory and run `make -j$(nproc)` to start building.
 
-**macOS/Linux:** On the target system, install [wxWidgets](https://www.wxwidgets.org),
+**macOS/Linux:** On the target system, install [wxWidgets](https://www.wxwidgets.org) (v3.3.2 or higher),
 [PortAudio](https://www.portaudio.com), and [Epoxy](https://github.com/anholt/libepoxy). This can be done with a package
 manager like [Homebrew](https://brew.sh) on macOS, or a built-in one on Linux. Run `make` in the project root directory
 to start building.
-
-**Notice:** Current wxWidgets releases might not have features that 3Beans requires. As a temporary workaround, you can
-install a custom build by running the following commands:
-```
-git clone --recursive https://github.com/wxWidgets/wxWidgets.git
-cd wxWidgets
-git reset --hard 9720f1fdce0e11313d383a6ceb92275e7910e540
-./configure --disable-sys-libs --disable-shared --disable-tests --without-libcurl
-make -j4
-sudo make install
-```
 
 ### References
 * [GBATEK](https://problemkaputt.de/gbatek.htm) - Incomplete but great reference for the 3DS hardware
