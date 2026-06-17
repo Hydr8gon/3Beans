@@ -211,13 +211,15 @@ template <bool geo> void GpuShaderInterp::runShader() {
 
         // Adjust the loop counter and loop again or end on program counter match
         if (!loopStack.empty() && !((cmpPc ^ loopStack.front()) & mask)) {
-            op = &code[((loopStack.front() >> 12) - 1) & mask];
-            shdAddr[2] += shdInts[(op->value >> 22) & 0x3][2];
-            shdPc = (loopStack.front() >> 12) & 0xFFF;
-            if (loopStack.front() >> 24)
+            if (loopStack.front() >> 24) {
                 loopStack[loopStack.size() - 1] -= BIT(24);
-            else
+                op = &code[((loopStack.front() >> 12) - 1) & mask];
+                shdAddr[2] += shdInts[(op->value >> 22) & 0x3][2];
+                shdPc = (loopStack.front() >> 12) & 0xFFF;
+            }
+            else {
                 loopStack.pop_front();
+            }
         }
     }
 }
