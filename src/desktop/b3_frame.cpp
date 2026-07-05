@@ -21,6 +21,7 @@
 #include "b3_canvas_ogl.h"
 #include "b3_canvas_soft.h"
 #include "gpu_dialog.h"
+#include "hardware_dialog.h"
 #include "input_dialog.h"
 #include "path_dialog.h"
 
@@ -31,6 +32,7 @@ enum FrameEvent {
     PAUSE,
     RESTART,
     STOP,
+    SET_HARDWARE,
     FPS_LIMITER,
     CART_AUTO_BOOT,
     DSP_INTERP,
@@ -48,6 +50,7 @@ EVT_MENU(QUIT, b3Frame::quit)
 EVT_MENU(PAUSE, b3Frame::pause)
 EVT_MENU(RESTART, b3Frame::restart)
 EVT_MENU(STOP, b3Frame::stop)
+EVT_MENU(SET_HARDWARE, b3Frame::setHardware)
 EVT_MENU(FPS_LIMITER, b3Frame::fpsLimiter)
 EVT_MENU(CART_AUTO_BOOT, b3Frame::cartAutoBoot)
 EVT_MENU(DSP_INTERP, b3Frame::dspBackend<0>)
@@ -73,6 +76,8 @@ b3Frame::b3Frame(): wxFrame(nullptr, wxID_ANY, "3Beans") {
     systemMenu->Append(PAUSE, "&Pause");
     systemMenu->Append(RESTART, "&Restart");
     systemMenu->Append(STOP, "&Stop");
+    systemMenu->AppendSeparator();
+    systemMenu->Append(SET_HARDWARE, "&Set Hardware");
 
     // Set up the DSP backend submenu
     wxMenu *dspMenu = new wxMenu();
@@ -355,6 +360,12 @@ void b3Frame::restart(wxCommandEvent &event) {
 void b3Frame::stop(wxCommandEvent &event) {
     // Stop the core
     stopCore(true);
+}
+
+void b3Frame::setHardware(wxCommandEvent &event) {
+    // Show the set hardware dialog
+    HardwareDialog hardwareDialog;
+    hardwareDialog.ShowModal();
 }
 
 void b3Frame::fpsLimiter(wxCommandEvent &event) {

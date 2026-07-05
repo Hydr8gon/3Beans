@@ -71,6 +71,7 @@ private:
     void pause(wxCommandEvent &event);
     void restart(wxCommandEvent &event);
     void stop(wxCommandEvent &event);
+    void setHardware(wxCommandEvent &event);
     void fpsLimiter(wxCommandEvent &event);
     void cartAutoBoot(wxCommandEvent &event);
     template <int i> void dspBackend(wxCommandEvent &event);

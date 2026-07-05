@@ -39,6 +39,7 @@ namespace Settings {
     extern int gpuRenderer;
     extern int gpuVtxShader;
     extern int gpuFragShader;
+    extern int systemType;
     extern int unitType;
 
     extern std::string boot11Path;

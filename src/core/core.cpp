@@ -27,9 +27,12 @@ Core::Core(std::string &cartPath, std::function<void()> *contextFunc): aes(*this
         ndma(*this), pdc(*this), pxi(*this), rsa(*this), sdMmcs { SdMmc(*this), SdMmc(*this) }, shas { Sha(*this,
         0), Sha(*this, 1) }, timers(*this), vfp11s { Vfp11Interp(*this, ARM11A), Vfp11Interp(*this, ARM11B),
         Vfp11Interp(*this, ARM11C), Vfp11Interp(*this, ARM11D) }, wifi(*this), y2rs { Y2r(*this, 0), Y2r(*this, 1) } {
-    // Initialize things that need to be done after construction
-    n3dsMode = sdMmcs[0].init(sdMmcs[1]);
+    // Determine system type automatically, or override if hardcoded
+    n3dsMode = sdMmcs[0].init(sdMmcs[1]); // MMC init tells us
+    if (Settings::systemType) n3dsMode = (Settings::systemType == 2);
     LOG_INFO("Running in %s 3DS mode\n", n3dsMode ? "new" : "old");
+
+    // Run any other post-construction initializers
     if (!memory.init()) throw ERROR_BOOTROM;
     for (int i = 0; i < MAX_CPUS; i++)
         arms[i].init();

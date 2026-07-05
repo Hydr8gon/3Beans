@@ -28,6 +28,7 @@ namespace Settings {
     int gpuRenderer = 0;
     int gpuVtxShader = 0;
     int gpuFragShader = 0;
+    int systemType = 0;
     int unitType = 0;
 
     std::string boot11Path = "boot11.bin";
@@ -44,6 +45,7 @@ namespace Settings {
         Setting("gpuRenderer", &gpuRenderer, false),
         Setting("gpuVtxShader", &gpuVtxShader, false),
         Setting("gpuFragShader", &gpuFragShader, false),
+        Setting("systemType", &systemType, false),
         Setting("unitType", &unitType, false),
         Setting("boot11Path", &boot11Path, true),
         Setting("boot9Path", &boot9Path, true),
