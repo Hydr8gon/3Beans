@@ -165,7 +165,7 @@ void b3CanvasOgl::draw(wxPaintEvent &event) {
 void b3CanvasOgl::resize(wxSizeEvent &event) {
     // Update the canvas dimensions
     SetCurrent(*contexts[0]);
-    wxSize size = GetSize();
+    wxSize size = ToPhys(GetSize());
     glViewport(0, 0, size.x, size.y);
     glUniform2f(winSizeLoc, size.x, size.y);
 
@@ -201,8 +201,9 @@ void b3CanvasOgl::releaseKey(wxKeyEvent &event) {
 void b3CanvasOgl::pressScreen(wxMouseEvent &event) {
     // Trigger a screen touch relative to the bottom screen if clicked
     if (!event.LeftIsDown()) return;
-    int x = (event.GetX() - scrX) * 400 / scrW - 40;
-    int y = (event.GetY() - scrY) * 480 / scrH - 240;
+    wxSize loc = ToPhys(wxSize(event.GetX(), event.GetY()));
+    int x = (loc.x - scrX) * 400 / scrW - 40;
+    int y = (loc.y - scrY) * 480 / scrH - 240;
     frame->pressScreen(x, y);
 }
 
