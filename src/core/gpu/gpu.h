@@ -240,7 +240,7 @@ public:
     Gpu(Core &core, std::function<void()> *contextFunc);
     ~Gpu();
 
-    void syncRender();
+    void syncRender(bool end = false);
     void endFill(int i);
     void endCopy();
 
