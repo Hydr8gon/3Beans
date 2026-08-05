@@ -120,7 +120,7 @@ private:
     static SoftColor zeroColor, oneColor;
 
     std::vector<CombOpcode> combCache;
-    SoftColor combBuffer[6] = {};
+    SoftColor prevBuffer[6] = {};
     SoftColor texColors[3] = {};
     SoftColor fragColors[2] = {};
     SoftColor primColor = {};

@@ -121,7 +121,7 @@ const char *GpuRenderOgl::fragBase = R"(
     uniform sampler2D texUnits[3];
 
     vec4 prevColor = vec4(0.0);
-    vec4 combBuffer = combBufColor;
+    vec4 prevBuffer = combBufColor;
     vec4 fragColors[2];
     float fragIdxs[7];
     bool fragDone = false;
@@ -197,7 +197,7 @@ const char *GpuRenderOgl::fragBodyUber = R"(
             case 4: color = texture(texUnits[1], vec2(vtxCoordsS[1], vtxCoordsT[1])); break;
             case 5: color = texture(texUnits[2], vec2(vtxCoordsS[2], vtxCoordsT[2])); break;
             case 6: color = vec4(1.0); break;
-            case 7: color = combBuffer; break;
+            case 7: color = prevBuffer; break;
             case 8: color = combColors[i / 2]; break;
             case 9: color = prevColor; break;
             default: color = vec4(0.0); break;
@@ -247,10 +247,11 @@ const char *GpuRenderOgl::fragBodyUber = R"(
                 default: color.a = 1.0; break;
             }
 
+            if (i >= 2 && i < 10) {
+                if ((combBufMask & (0x01 << (i / 2 - 1))) != 0) prevBuffer.rgb = prevColor.rgb;
+                if ((combBufMask & (0x10 << (i / 2 - 1))) != 0) prevBuffer.a = prevColor.a;
+            }
             prevColor = color;
-            if (i >= 8) continue;
-            if ((combBufMask & (0x01 << (i / 2))) != 0) combBuffer.rgb = color.rgb;
-            if ((combBufMask & (0x10 << (i / 2))) != 0) combBuffer.a = color.a;
         }
 
         switch (alphaFunc) {
@@ -944,7 +945,7 @@ std::string GpuRenderOgl::getSrc(int i, int j) {
         case COMB_TEX1: color = "texture(texUnits[1], vec2(vtxCoordsS[1], vtxCoordsT[1]))"; break;
         case COMB_TEX2: color = "texture(texUnits[2], vec2(vtxCoordsS[2], vtxCoordsT[2]))"; break;
         case COMB_TEX3: color = "vec4(1.0)"; break; // Stub
-        case COMB_PRVBUF: color = "combBuffer"; break;
+        case COMB_PRVBUF: color = "prevBuffer"; break;
         case COMB_CONST: color = "combColors[" + std::to_string(i / 2) + "]"; break;
         case COMB_PREV: color = "prevColor"; break;
         default: color = "vec4(0.0)"; break;
@@ -1023,10 +1024,11 @@ void GpuRenderOgl::updateFragShader() {
         fragCode += ";\n";
 
         // Emit code to update previous colors
+        if (i >= 2 && i < 10) {
+            if (cd.combBufMask & (0x01 << (i / 2 - 1))) fragCode += "prevBuffer.rgb = prevColor.rgb;\n";
+            if (cd.combBufMask & (0x10 << (i / 2 - 1))) fragCode += "prevBuffer.a = prevColor.a;\n";
+        }
         fragCode += "prevColor = color;\n";
-        if (i >= 8) continue;
-        if (cd.combBufMask & (0x01 << (i / 2))) fragCode += "combBuffer.rgb = color.rgb;\n";
-        if (cd.combBufMask & (0x10 << (i / 2))) fragCode += "combBuffer.a = color.a;\n";
     }
 
     // Emit code for alpha testing

@@ -399,7 +399,7 @@ void GpuRenderSoft::updateCombine(SoftVertex &v) {
             }
 
             // Calculate RGB values for a combiner using cached information
-            SoftColor &out = combBuffer[op.id];
+            SoftColor &out = prevBuffer[op.id];
             switch (op.mode) {
             case MODE_REPLACE:
                 out.r = c[0].r;
@@ -473,7 +473,7 @@ void GpuRenderSoft::updateCombine(SoftVertex &v) {
             }
 
             // Calculate alpha values for a combiner using cached information
-            SoftColor &out = combBuffer[op.id - 6];
+            SoftColor &out = prevBuffer[op.id - 6];
             switch (op.mode) {
             case MODE_REPLACE:
                 out.a = c[0].a;
@@ -542,13 +542,13 @@ CombParam GpuRenderSoft::cacheParam(int i, int j) {
 
         // Cache the previous RGB or alpha combiner and have it computed first
         ((combOpers[i][j] & ~0x1) != OPER_SRCA) ? cacheCombRgb(i - 1) : cacheCombA(i - 1);
-        param.color = &combBuffer[i - 1];
+        param.color = &prevBuffer[i - 1];
         return param;
 
     case COMB_PRVBUF:
         if ((combOpers[i][j] & ~0x1) != OPER_SRCA) { // RGB
             // Check which RGB combiner should be buffered at this stage
-            int idx = std::min(3, i - 1);
+            int idx = std::min(3, i - 2);
             while (idx >= 0 && !(combBufMask & BIT(idx))) idx--;
 
             // Read the buffer color if nothing replaced it
@@ -559,11 +559,11 @@ CombParam GpuRenderSoft::cacheParam(int i, int j) {
 
             // Cache the buffered combiner and have it computed first
             cacheCombRgb(idx);
-            param.color = &combBuffer[idx];
+            param.color = &prevBuffer[idx];
         }
         else { // Alpha
             // Check which alpha combiner should be buffered at this stage
-            int idx = std::min(3, i - 1);
+            int idx = std::min(3, i - 2);
             while (idx >= 0 && !(combBufMask & BIT(idx + 4))) idx--;
 
             // Read the buffer color if nothing replaced it
@@ -574,7 +574,7 @@ CombParam GpuRenderSoft::cacheParam(int i, int j) {
 
             // Cache the buffered combiner and have it computed first
             cacheCombA(idx);
-            param.color = &combBuffer[idx];
+            param.color = &prevBuffer[idx];
         }
         return param;
     }
@@ -688,7 +688,7 @@ void GpuRenderSoft::drawPixel(SoftVertex &p) {
 
     // Get source color values from the texture combiner
     updateCombine(p);
-    SoftColor s0 = combBuffer[combEnd], d0;
+    SoftColor s0 = prevBuffer[combEnd], d0;
 
     // Compare the source alpha value with the provided one
     switch (alphaFunc) {
